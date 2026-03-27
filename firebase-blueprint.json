@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "Folder": {
+      "title": "Folder",
+      "description": "A folder to contain links",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID of the owner" },
+        "name": { "type": "string", "description": "Name of the folder" },
+        "isPinned": { "type": "boolean" },
+        "isLocked": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "isPinned", "isLocked", "createdAt"]
+    },
+    "Link": {
+      "title": "Link",
+      "description": "A saved URL link",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "folderId": { "type": "string" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "favorite", "liked", "disliked", "blocked"] },
+        "points": { "type": "number" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "folderId", "url", "title", "status", "points", "isPinned", "createdAt"]
+    },
+    "History": {
+      "title": "History",
+      "description": "Record of an opened link",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "linkId": { "type": "string" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "openedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "linkId", "url", "title", "openedAt"]
+    }
+  },
+  "firestore": {
+    "/folders/{folderId}": {
+      "schema": { "$ref": "#/entities/Folder" },
+      "description": "User folders"
+    },
+    "/links/{linkId}": {
+      "schema": { "$ref": "#/entities/Link" },
+      "description": "User links"
+    },
+    "/history/{historyId}": {
+      "schema": { "$ref": "#/entities/History" },
+      "description": "User link opening history"
+    }
+  }
+}

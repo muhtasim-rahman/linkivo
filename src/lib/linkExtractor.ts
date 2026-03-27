@@ -1,7 +1,12 @@
 import JSZip from 'jszip';
 
-export const extractLinks = async (file: File): Promise<string[]> => {
+export const extractLinksFromText = (text: string): string[] => {
   const urlRegex = /(https?:\/\/[^\s"'<>]+)/g;
+  const matches = text.match(urlRegex) || [];
+  return [...new Set(matches)];
+};
+
+export const extractLinks = async (file: File): Promise<string[]> => {
   let text = '';
 
   try {
@@ -22,7 +27,5 @@ export const extractLinks = async (file: File): Promise<string[]> => {
     console.error("Error reading file:", error);
   }
 
-  const matches = text.match(urlRegex) || [];
-  // Return unique links
-  return [...new Set(matches)];
+  return extractLinksFromText(text);
 };

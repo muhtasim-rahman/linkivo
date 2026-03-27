@@ -1,0 +1,28 @@
+import JSZip from 'jszip';
+
+export const extractLinks = async (file: File): Promise<string[]> => {
+  const urlRegex = /(https?:\/\/[^\s"'<>]+)/g;
+  let text = '';
+
+  try {
+    if (file.name.endsWith('.zip')) {
+      const zip = new JSZip();
+      const contents = await zip.loadAsync(file);
+      for (const filename of Object.keys(contents.files)) {
+        if (!contents.files[filename].dir) {
+          const fileData = await contents.files[filename].async('text');
+          text += fileData + '\n';
+        }
+      }
+    } else {
+      // Fallback for text, html, json, and raw binary of pdf/images
+      text = await file.text();
+    }
+  } catch (error) {
+    console.error("Error reading file:", error);
+  }
+
+  const matches = text.match(urlRegex) || [];
+  // Return unique links
+  return [...new Set(matches)];
+};

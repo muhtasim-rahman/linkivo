@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import appInfo from '../data/appInfo.json';
 import { LogOut, Moon, Sun, Download, Upload, Shield, X, FileJson, FileText, FileCode, Printer, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -16,6 +16,27 @@ export default function Settings() {
   const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
   const [exportFormat, setExportFormat] = useState('json');
   const [isExporting, setIsExporting] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      toast.error('আপনার ব্রাউজারটি অ্যাপ ইনস্টল সাপোর্ট করে না, অথবা অ্যাপটি আগে থেকেই ইনস্টল করা আছে।');
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -102,14 +123,42 @@ export default function Settings() {
   };
 
   const handleImport = () => {
-    // Mock import for now
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json,.csv';
-    input.onchange = (e: any) => {
+    input.accept = '.json';
+    input.onchange = async (e: any) => {
       const file = e.target.files[0];
       if (file) {
-        toast.success(`${file.name} ইমপোর্ট করা হচ্ছে... (শীঘ্রই আসছে)`);
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const data = JSON.parse(event.target?.result as string);
+            if (!data.folders || !data.links) {
+              toast.error('ভুল ফরম্যাট! সঠিক JSON ফাইল নির্বাচন করুন।');
+              return;
+            }
+            toast.loading('ডাটা ইমপোর্ট হচ্ছে...', { id: 'import' });
+            
+            const folderIdMap: Record<string, string> = {};
+            
+            for (const folder of data.folders) {
+              const { id, ...folderData } = folder;
+              const docRef = await addDoc(collection(db, 'folders'), { ...folderData, uid: user?.uid });
+              folderIdMap[id] = docRef.id;
+            }
+            
+            for (const link of data.links) {
+              const { id, folderId, ...linkData } = link;
+              const newFolderId = folderIdMap[folderId] || folderId;
+              await addDoc(collection(db, 'links'), { ...linkData, folderId: newFolderId, uid: user?.uid });
+            }
+            
+            toast.success('ডাটা ইমপোর্ট সফল হয়েছে!', { id: 'import' });
+          } catch (error) {
+            toast.error('ফাইল পড়তে সমস্যা হয়েছে।', { id: 'import' });
+          }
+        };
+        reader.readAsText(file);
       }
     };
     input.click();
@@ -125,7 +174,7 @@ export default function Settings() {
           <h3 className="font-bold text-lg mb-1">Linkivo অ্যাপ ইনস্টল করুন</h3>
           <p className="text-blue-100 text-sm">অফলাইনে ব্যবহারের জন্য এবং দ্রুত অ্যাক্সেস পেতে</p>
         </div>
-        <button className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-blue-50">
+        <button onClick={handleInstallClick} className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold text-sm shadow-sm hover:bg-blue-50">
           ইনস্টল
         </button>
       </div>
@@ -137,7 +186,7 @@ export default function Settings() {
           <h2 className="font-bold text-lg dark:text-white truncate">{user?.displayName || 'ব্যবহারকারী'}</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm truncate">{user?.email}</p>
         </div>
-        <button onClick={signOut} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors shrink-0">
+        <button onClick={() => setShowSignOutConfirm(true)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors shrink-0">
           <LogOut size={20} />
         </button>
       </div>
@@ -179,7 +228,7 @@ export default function Settings() {
           </div>
         </button>
 
-        <div className="p-4 flex items-center gap-3 text-left">
+        <button onClick={() => toast('ফোল্ডার লক করার জন্য ফোল্ডার ট্যাবে গিয়ে ফোল্ডারের ৩-ডট মেনু থেকে "লক করুন" নির্বাচন করুন।', { icon: '🔒' })} className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
           <div className="p-2 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg">
             <Shield size={20} />
           </div>
@@ -187,7 +236,7 @@ export default function Settings() {
             <span className="font-medium block dark:text-white">সিকিউরিটি পিন</span>
             <span className="text-xs text-gray-500 dark:text-gray-400">ফোল্ডার লক করার জন্য পিন সেট করুন</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* App Info */}
@@ -276,6 +325,30 @@ export default function Settings() {
             >
               {isExporting ? 'এক্সপোর্ট হচ্ছে...' : <><Download size={20} /> এক্সপোর্ট করুন</>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sign Out Confirm Modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-xl font-bold mb-2 dark:text-white">লগআউট</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 py-3 rounded-xl font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                বাতিল
+              </button>
+              <button 
+                onClick={signOut}
+                className="flex-1 py-3 rounded-xl font-medium bg-red-600 hover:bg-red-700 text-white transition-colors"
+              >
+                লগআউট
+              </button>
+            </div>
           </div>
         </div>
       )}

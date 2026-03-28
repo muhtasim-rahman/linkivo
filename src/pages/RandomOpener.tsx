@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import { Shuffle, Folder, Settings, Settings2, Heart, ThumbsUp, ThumbsDown, Ban, Trash2, Maximize, ExternalLink, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shuffle, Folder, Settings, Heart, ThumbsUp, ThumbsDown, Ban, Trash2, Maximize, ExternalLink, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export default function RandomOpener() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialFolderId = searchParams.get('folderId');
+
   const [folders, setFolders] = useState<any[]>([]);
   const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
   const [currentLink, setCurrentLink] = useState<any>(null);
@@ -25,15 +29,24 @@ export default function RandomOpener() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setFolders(data);
       
-      const saved = localStorage.getItem('selectedFolders');
-      if (saved) {
-        setSelectedFolders(JSON.parse(saved));
+      if (initialFolderId) {
+        setSelectedFolders([initialFolderId]);
+        localStorage.setItem('selectedFolders', JSON.stringify([initialFolderId]));
       } else {
-        setSelectedFolders(data.map(f => f.id));
+        const saved = localStorage.getItem('selectedFolders');
+        if (saved) {
+          try {
+            setSelectedFolders(JSON.parse(saved));
+          } catch (e) {
+            setSelectedFolders(data.map(f => f.id));
+          }
+        } else {
+          setSelectedFolders(data.map(f => f.id));
+        }
       }
     };
     fetchFolders();
-  }, [user]);
+  }, [user, initialFolderId]);
 
   const toggleFolder = (id: string) => {
     const newSelection = selectedFolders.includes(id) 
@@ -174,56 +187,58 @@ export default function RandomOpener() {
       )}
 
       {/* Advanced Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-6">
-        <button 
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-xl">
-              <Settings size={20} />
+      {!isFullscreen && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-6">
+          <button 
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-xl">
+                <Settings size={20} />
+              </div>
+              <span className="font-bold text-gray-900 dark:text-white">অ্যাডভান্সড সেটিংস</span>
             </div>
-            <span className="font-bold text-gray-900 dark:text-white">অ্যাডভান্সড সেটিংস</span>
-          </div>
-          {showAdvanced ? <ChevronUp size={20} className="text-gray-500" /> : <ChevronDown size={20} className="text-gray-500" />}
-        </button>
-        
-        {showAdvanced && (
-          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">লিংক ফিল্টার</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600" />
-                  <span className="text-sm dark:text-gray-300">ফেভারিট</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600" />
-                  <span className="text-sm dark:text-gray-300">লাইকড</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600" />
-                  <span className="text-sm dark:text-gray-300">সাধারণ</span>
-                </label>
-                <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-blue-600" />
-                  <span className="text-sm dark:text-gray-300">ডিসলাইকড</span>
-                </label>
+            {showAdvanced ? <ChevronUp size={20} className="text-gray-500" /> : <ChevronDown size={20} className="text-gray-500" />}
+          </button>
+          
+          {showAdvanced && (
+            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">লিংক ফিল্টার</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded text-blue-600" />
+                    <span className="text-sm dark:text-gray-300">ফেভারিট</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded text-blue-600" />
+                    <span className="text-sm dark:text-gray-300">লাইকড</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded text-blue-600" />
+                    <span className="text-sm dark:text-gray-300">সাধারণ</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded text-blue-600" />
+                    <span className="text-sm dark:text-gray-300">ডিসলাইকড</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ওপেন করার নিয়ম</h4>
+                <select className="w-full p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm dark:text-white">
+                  <option value="weighted">পয়েন্ট অনুযায়ী (ডিফল্ট)</option>
+                  <option value="random">সম্পূর্ণ র‍্যান্ডম</option>
+                  <option value="oldest">পুরোনো লিংক আগে</option>
+                  <option value="newest">নতুন লিংক আগে</option>
+                </select>
               </div>
             </div>
-            
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ওপেন করার নিয়ম</h4>
-              <select className="w-full p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm dark:text-white">
-                <option value="weighted">পয়েন্ট অনুযায়ী (ডিফল্ট)</option>
-                <option value="random">সম্পূর্ণ র‍্যান্ডম</option>
-                <option value="oldest">পুরোনো লিংক আগে</option>
-                <option value="newest">নতুন লিংক আগে</option>
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Embedded Link View */}
       {currentLink && (
@@ -234,11 +249,9 @@ export default function RandomOpener() {
               <h3 className="font-bold text-gray-900 dark:text-white truncate" title={currentLink.title}>{currentLink.title}</h3>
               <p className="text-xs text-blue-500 truncate">{currentLink.url}</p>
             </div>
-            {isFullscreen && (
-              <button onClick={() => setIsFullscreen(false)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-2" title="বন্ধ করুন">
-                <X size={20} />
-              </button>
-            )}
+            <button onClick={() => setCurrentLink(null)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 ml-2" title="বন্ধ করুন">
+              <X size={20} />
+            </button>
           </div>
           
           {/* Iframe */}
@@ -276,7 +289,7 @@ export default function RandomOpener() {
             <button onClick={deleteLink} className="p-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="ডিলিট করুন">
               <Trash2 size={20} />
             </button>
-            <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="ফুলস্ক্রিন">
+            <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2.5 rounded-xl transition-colors ${isFullscreen ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="ফুলস্ক্রিন">
               <Maximize size={20} />
             </button>
             <a href={currentLink.url} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="নতুন ট্যাবে ওপেন করুন">

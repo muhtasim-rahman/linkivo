@@ -1,20 +1,15 @@
 {
   "name": "Linkivo",
   "short_name": "Linkivo",
+  "description": "Smart Link Manager",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#3b82f6",
-  "description": "Smart link management app with auto-extraction, folder organization, and random link opener.",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "/src/assets/logo-light.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/src/assets/logo-light.svg",
-      "sizes": "512x512",
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512 any",
       "type": "image/svg+xml"
     }
   ]

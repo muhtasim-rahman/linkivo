@@ -1,13 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
-  <defs>
-    <linearGradient id="gradDark" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6" />
-      <stop offset="100%" stop-color="#22d3ee" />
-    </linearGradient>
-  </defs>
-  <path d="M30 15 v15 a15 15 0 0 0 30 0 v-15 a15 15 0 0 0 -30 0 z" fill="none" stroke="url(#gradDark)" stroke-width="8" stroke-linecap="round"/>
-  <circle cx="30" cy="40" r="15" fill="none" stroke="url(#gradDark)" stroke-width="8"/>
-  <circle cx="60" cy="40" r="15" fill="none" stroke="url(#gradDark)" stroke-width="8"/>
-  <path d="M40 40 h10" fill="none" stroke="url(#gradDark)" stroke-width="8" stroke-linecap="round"/>
-  <text x="90" y="45" font-family="Inter, sans-serif" font-size="36" font-weight="bold" fill="#f8fafc">Linkivo</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" width="240" height="100">
+  <rect x="10" y="20" width="60" height="60" rx="16" fill="#3b82f6" />
+  <path d="M30 55 A 10 10 0 0 1 50 55 M50 45 A 10 10 0 0 1 30 45" stroke="#ffffff" stroke-width="6" stroke-linecap="round" fill="none" />
+  <line x1="36" y1="50" x2="44" y2="50" stroke="#ffffff" stroke-width="6" stroke-linecap="round" />
+  <text x="85" y="64" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="44" fill="#f8fafc" letter-spacing="-1">Linkivo</text>
 </svg>

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { extractLinks } from '../lib/linkExtractor';
-import { Upload, Link as LinkIcon, MoreVertical, ArrowLeft, LayoutGrid, List as ListIcon, Heart, ThumbsUp, ThumbsDown, Trash2, Ban, Pin, CheckSquare, Square, SortDesc } from 'lucide-react';
+import { Upload, Link as LinkIcon, MoreVertical, ArrowLeft, LayoutGrid, List as ListIcon, Heart, ThumbsUp, ThumbsDown, Trash2, Ban, Pin, CheckSquare, Square, SortDesc, Shuffle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function FolderView() {
@@ -151,6 +151,15 @@ export default function FolderView() {
         </button>
         <h1 className="text-2xl font-bold flex-1 truncate dark:text-white">{folder.name}</h1>
         
+        {/* Random Link Open Button */}
+        <button 
+          onClick={() => navigate(`/random?folderId=${folder.id}`)}
+          className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 rounded-lg shadow-sm flex items-center gap-2 hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors"
+          title="র‍্যান্ডম লিংক ওপেন"
+        >
+          <Shuffle size={20} />
+        </button>
+
         {/* Sort Dropdown */}
         <div className="relative group">
           <button className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex items-center gap-2 dark:text-white">

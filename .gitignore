@@ -1,9 +1,43 @@
+# ============================================
+# Linkivo — .gitignore
+# ============================================
+
+# Firebase sensitive config — NEVER commit this
+firebase-config.js
+.env
+.env.local
+.env.*.local
+
+# Firebase hosting artifacts
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+
+# Node / npm (if used for tooling)
 node_modules/
-build/
-dist/
-coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# OS artifacts
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+
+# Build outputs
+dist/
+build/
+
+# Logs
 *.log
-.env*
-!.env.example
-firebase-applet-config.json
+logs/
+
+# Temporary files
+*.tmp
+*.temp

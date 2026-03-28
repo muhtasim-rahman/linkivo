@@ -1,30 +1,507 @@
-<!doctype html>
-<html lang="bn">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="description" content="Linkivo - আপনার সব লিংক গুছিয়ে রাখুন এক জায়গায়" />
-    <meta name="theme-color" content="#3b82f6" />
-    <link rel="manifest" href="/manifest.json" />
-    <title>Linkivo</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50 antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registered: ', registration);
-          }).catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
-          });
-        });
-      }
-    </script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
+  <!-- SEO Meta -->
+  <title>Linkivo — Smart Link Manager</title>
+  <meta name="description"   content="Save, organize and randomly discover links smarter. Import from any file format.">
+  <meta name="keywords"      content="link manager, bookmark manager, link organizer, save links, random link discovery, linkivo">
+  <meta name="author"        content="Linkivo">
+  <meta name="theme-color"   content="#3b82f6">
+  <link rel="canonical"      href="https://linkivo.web.app">
+
+  <!-- Open Graph -->
+  <meta property="og:title"       content="Linkivo — Smart Link Manager">
+  <meta property="og:description" content="Save, organize, and randomly discover links smarter.">
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://linkivo.web.app">
+  <meta property="og:image"       content="https://linkivo.web.app/assets/og-image.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="Linkivo">
+  <meta name="twitter:description" content="Save, organize and discover links smarter.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable"      content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title"  content="Linkivo">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/assets/css/variables.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/nav.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/home.css">
+  <link rel="stylesheet" href="/assets/css/folder.css">
+  <link rel="stylesheet" href="/assets/css/links.css">
+  <link rel="stylesheet" href="/assets/css/random.css">
+  <link rel="stylesheet" href="/assets/css/history.css">
+  <link rel="stylesheet" href="/assets/css/settings.css">
+  <link rel="stylesheet" href="/assets/css/import.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/assets/svg/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-96.png">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     SPLASH SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="splash-screen" style="
+  position:fixed;inset:0;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:20px;z-index:9999;
+  transition:opacity 0.4s ease;">
+  <img src="/assets/svg/icon.svg" width="72" height="72" alt="Linkivo"
+       style="animation:splashPulse 1.8s ease-in-out infinite">
+  <div style="font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;
+              background:linear-gradient(135deg,#3b82f6,#22d3ee);
+              -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+              background-clip:text">Linkivo</div>
+  <div style="width:120px;height:3px;border-radius:999px;background:var(--border);overflow:hidden">
+    <div style="height:100%;border-radius:999px;background:linear-gradient(135deg,#3b82f6,#22d3ee);
+                animation:splashBar 1.5s ease-in-out infinite"></div>
+  </div>
+</div>
+<style>
+  @keyframes splashPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+  @keyframes splashBar   { 0%{width:0;margin-left:0} 60%{width:100%;margin-left:0} 100%{width:0;margin-left:100%} }
+</style>
+
+
+<!-- ════════════════════════════════════════════════════════
+     AUTH CONTAINER
+════════════════════════════════════════════════════════ -->
+<div id="auth-container" class="hidden">
+  <div class="auth-layout">
+
+    <!-- Left: Branding Panel (desktop) -->
+    <div class="auth-brand">
+      <div class="auth-brand-top">
+        <div class="auth-brand-logo">
+          <img src="/assets/svg/icon.svg" width="42" height="42" alt="Linkivo">
+          <span class="auth-brand-logo-name">Linkivo</span>
+        </div>
+        <h1 class="auth-brand-headline">
+          Save links.<br>
+          <span>Discover more.</span>
+        </h1>
+        <div class="auth-brand-features">
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon"><i class="fa-solid fa-file-import"></i></div>
+            Import from any file format
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon"><i class="fa-solid fa-folder-open"></i></div>
+            Smart folder organization
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon"><i class="fa-solid fa-shuffle"></i></div>
+            Weighted random link discovery
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon"><i class="fa-solid fa-lock"></i></div>
+            PIN-locked private folders
+          </div>
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon"><i class="fa-solid fa-wifi"></i></div>
+            Offline-first PWA
+          </div>
+        </div>
+      </div>
+      <div class="auth-brand-footer">© 2025 Linkivo · v1.0.0</div>
+    </div>
+
+    <!-- Right: Form Panel -->
+    <div class="auth-form-panel">
+      <div class="auth-card">
+
+        <!-- Mobile logo -->
+        <div class="auth-mobile-logo">
+          <img src="/assets/svg/icon.svg" width="36" height="36" alt="">
+          <span class="auth-mobile-logo-name">Linkivo</span>
+        </div>
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-view="login">Sign In</button>
+          <button class="auth-tab" data-view="signup">Create Account</button>
+        </div>
+
+        <!-- ── Login View ──────────────────────────────── -->
+        <div id="auth-login" class="auth-view active">
+          <div class="auth-form-header">
+            <h2 class="auth-form-title">Welcome back</h2>
+            <p class="auth-form-subtitle">Sign in to access your saved links</p>
+          </div>
+          <div class="auth-form-body">
+            <!-- Google -->
+            <button id="login-google-btn" class="btn btn-google w-full">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+              Continue with Google
+            </button>
+            <div class="divider">or</div>
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label" for="login-email">Email</label>
+              <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <!-- Password -->
+            <div class="form-group">
+              <label class="form-label" for="login-password">Password</label>
+              <div class="input-password-wrap">
+                <input id="login-password" class="form-input" type="password" placeholder="Your password" autocomplete="current-password">
+                <button class="input-toggle-pw" type="button" tabindex="-1">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="forgot-pw">
+              <a href="#" id="login-forgot">Forgot password?</a>
+            </div>
+            <button id="login-submit" class="btn btn-primary btn-lg w-full">
+              <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Signup View ─────────────────────────────── -->
+        <div id="auth-signup" class="auth-view">
+          <div class="auth-form-header">
+            <h2 class="auth-form-title">Create account</h2>
+            <p class="auth-form-subtitle">Start saving and discovering links</p>
+          </div>
+          <div class="auth-form-body">
+            <!-- Google -->
+            <button id="signup-google-btn" class="btn btn-google w-full">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+              Sign up with Google
+            </button>
+            <div class="divider">or</div>
+            <!-- Name -->
+            <div class="form-group">
+              <label class="form-label" for="signup-name">Full Name</label>
+              <input id="signup-name" class="form-input" type="text" placeholder="Your name" autocomplete="name">
+            </div>
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label" for="signup-email">Email</label>
+              <input id="signup-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <!-- Password -->
+            <div class="form-group">
+              <label class="form-label" for="signup-password">Password</label>
+              <div class="input-password-wrap">
+                <input id="signup-password" class="form-input" type="password" placeholder="Min. 6 characters" autocomplete="new-password">
+                <button class="input-toggle-pw" type="button" tabindex="-1">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+              <div class="pw-strength">
+                <div class="pw-strength-bar"></div>
+                <div class="pw-strength-bar"></div>
+                <div class="pw-strength-bar"></div>
+                <div class="pw-strength-bar"></div>
+              </div>
+            </div>
+            <button id="signup-submit" class="btn btn-primary btn-lg w-full">
+              <i class="fa-solid fa-user-plus"></i> Create Account
+            </button>
+          </div>
+        </div>
+
+        <p class="auth-footer">
+          By continuing, you agree to Linkivo's
+          <a href="https://linkivo.web.app/terms" target="_blank">Terms</a> &
+          <a href="https://linkivo.web.app/privacy" target="_blank">Privacy Policy</a>
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN APP CONTAINER
+════════════════════════════════════════════════════════ -->
+<div id="app-container" class="hidden">
+
+  <!-- ── Sidebar (Desktop) ───────────────────────────── -->
+  <nav id="sidebar" role="navigation" aria-label="Main navigation">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <img src="/assets/svg/icon.svg" class="logo-icon" width="32" height="32" alt="Linkivo">
+      <span class="sidebar-logo-name">Linkivo</span>
+      <span class="sidebar-logo-version" data-app-version>v1.0.0</span>
+    </div>
+
+    <!-- Import button -->
+    <button class="sidebar-import-btn" id="sidebar-import-btn">
+      <i class="fa-solid fa-file-import"></i> Import Links
+    </button>
+
+    <!-- Nav items -->
+    <div class="sidebar-nav">
+      <div class="sidebar-label">Navigation</div>
+      <button class="sidebar-nav-item" data-page="home">
+        <i class="fa-solid fa-folder-open"></i> My Links
+      </button>
+      <button class="sidebar-nav-item" data-page="random">
+        <i class="fa-solid fa-shuffle"></i> Random Discover
+      </button>
+      <button class="sidebar-nav-item" data-page="history">
+        <i class="fa-solid fa-clock-rotate-left"></i> History
+      </button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-nav-item" data-page="settings">
+        <i class="fa-solid fa-gear"></i> Settings
+      </button>
+    </div>
+
+    <!-- Profile card -->
+    <div class="sidebar-profile" id="sidebar-profile">
+      <div class="avatar user-avatar">U</div>
+      <div class="sidebar-profile-info">
+        <div class="sidebar-profile-name"  data-user-name>User</div>
+        <div class="sidebar-profile-email" data-user-email></div>
+      </div>
+      <i class="fa-solid fa-ellipsis sidebar-profile-more"></i>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ──────────────────────────────────── -->
+  <div id="main-content">
+
+    <!-- Top Bar -->
+    <header id="app-topbar" role="banner">
+      <!-- Mobile: Logo -->
+      <div class="topbar-logo" id="topbar-logo-wrap">
+        <img src="/assets/svg/icon.svg" class="logo-light" width="28" height="28" alt="">
+        <img src="/assets/svg/icon.svg" class="logo-dark hidden" width="28" height="28" alt="">
+        <span class="topbar-logo-name">Linkivo</span>
+      </div>
+
+      <!-- Search bar (shown on relevant pages) -->
+      <div class="topbar-search hidden" id="topbar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" placeholder="Search links…" id="search-input" autocomplete="off">
+      </div>
+
+      <div style="flex:1"></div>
+
+      <!-- Theme toggle -->
+      <button class="topbar-btn" data-action="toggle-theme" title="Toggle theme">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+
+      <!-- Avatar / profile dropdown -->
+      <div class="avatar user-avatar topbar-avatar" id="topbar-avatar" role="button" tabindex="0" title="Account">U</div>
+    </header>
+
+    <!-- Pages scroll area -->
+    <div class="page-scroll" id="page-scroll">
+
+      <!-- ─ PAGE: Home / Folder Manager ─────────────── -->
+      <section id="page-home" class="page" role="main" aria-label="My Links">
+        <!-- Header -->
+        <div class="home-header">
+          <div class="home-header-left">
+            <h2>My Links</h2>
+            <p>All your saved folders</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="create-folder-btn">
+            <i class="fa-solid fa-folder-plus"></i> New Folder
+          </button>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="folder-stats" id="folder-stats">
+          <div class="stat-pill">
+            <i class="fa-solid fa-folder"></i>
+            <span id="stat-folders">0</span> folders
+          </div>
+          <div class="stat-pill">
+            <i class="fa-solid fa-link"></i>
+            <span id="stat-links">0</span> links
+          </div>
+          <div class="stat-pill">
+            <i class="fa-solid fa-thumbtack"></i>
+            <span id="stat-pinned">0</span> pinned
+          </div>
+          <div class="stat-pill">
+            <i class="fa-solid fa-lock"></i>
+            <span id="stat-locked">0</span> locked
+          </div>
+        </div>
+
+        <!-- Folder grid -->
+        <div class="folder-grid" id="folder-grid">
+          <!-- Skeleton loaders -->
+          <div class="folder-card" style="pointer-events:none">
+            <div class="folder-card-top"><div class="skeleton" style="width:44px;height:44px;border-radius:var(--r-md)"></div></div>
+            <div class="folder-card-body"><div class="skeleton" style="width:80%;height:13px;margin-bottom:6px"></div><div class="skeleton" style="width:50%;height:10px"></div></div>
+          </div>
+          <div class="folder-card" style="pointer-events:none;animation-delay:0.06s">
+            <div class="folder-card-top"><div class="skeleton" style="width:44px;height:44px;border-radius:var(--r-md)"></div></div>
+            <div class="folder-card-body"><div class="skeleton" style="width:70%;height:13px;margin-bottom:6px"></div><div class="skeleton" style="width:40%;height:10px"></div></div>
+          </div>
+        </div>
+
+        <!-- Recycle Bin -->
+        <div class="recycle-section" id="recycle-bin-btn">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>Recycle Bin</span>
+          <span class="recycle-count hidden" id="recycle-count">0</span>
+          <i class="fa-solid fa-chevron-right" style="margin-left:auto;font-size:12px;opacity:0.5"></i>
+        </div>
+      </section>
+
+      <!-- ─ PAGE: Folder View (links inside folder) ── -->
+      <section id="page-folder" class="page" role="main" aria-label="Folder">
+        <div id="folder-view-content" style="padding:var(--sp-4)">
+          <p class="text-muted text-center" style="padding-top:40px">Loading folder…</p>
+        </div>
+      </section>
+
+      <!-- ─ PAGE: Random Discover ──────────────────── -->
+      <section id="page-random" class="page" role="main" aria-label="Random Discover">
+        <!-- Fully built by random.js initRandomPage() -->
+      </section>
+
+      <!-- ─ PAGE: History ──────────────────────────── -->
+      <section id="page-history" class="page" role="main" aria-label="History">
+        <!-- Fully built by history.js initHistoryPage() -->
+      </section>
+
+      <!-- ─ PAGE: Settings ─────────────────────────── -->
+      <section id="page-settings" class="page" role="main" aria-label="Settings">
+        <!-- Fully built by settings.js initSettingsPage() -->
+      </section>
+
+    </div><!-- /page-scroll -->
+
+    <!-- ── Bottom Navigation (Mobile) ──────────────── -->
+    <nav id="bottom-nav" role="navigation" aria-label="Bottom navigation">
+      <button class="nav-item" data-page="home">
+        <i class="fa-solid fa-folder-open"></i>
+        <span class="nav-label">Links</span>
+      </button>
+      <button class="nav-item" data-page="random">
+        <i class="fa-solid fa-shuffle"></i>
+        <span class="nav-label">Discover</span>
+      </button>
+      <!-- Center FAB -->
+      <div class="nav-item-fab">
+        <button class="nav-fab-btn" id="fab-import-btn" title="Import links">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+      <button class="nav-item" data-page="history">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span class="nav-label">History</span>
+      </button>
+      <button class="nav-item" data-page="settings">
+        <i class="fa-solid fa-gear"></i>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+
+  </div><!-- /main-content -->
+</div><!-- /app-container -->
+
+
+<!-- ── Toast Container ──────────────────────────────────── -->
+<div id="toast-container" role="status" aria-live="polite"></div>
+
+
+<!-- ── App Scripts ───────────────────────────────────────── -->
+<script type="module">
+  import '/assets/js/app.js';
+  import { initHomePage }    from '/assets/js/folders.js';
+  import { openFolderView, showRecycleBin } from '/assets/js/links.js';
+  import { initRandomPage }  from '/assets/js/random.js';
+  import { initHistoryPage } from '/assets/js/history.js';
+  import { initSettingsPage } from '/assets/js/settings.js';
+  import { Theme, Storage, toast } from '/assets/js/utils.js';
+
+  // Expose modules for router
+  window.HomeModule     = { init: initHomePage };
+  window.RandomModule   = { init: initRandomPage };
+  window.HistoryModule  = { init: initHistoryPage };
+  window.SettingsModule = { init: initSettingsPage };
+  window.FolderModule   = { open: ({ folder } = {}) => { if (folder) openFolderView(folder); } };
+
+  // Open folder event from folders.js
+  document.addEventListener('linkivo:openFolder', ({ detail: { folder } }) => {
+    window.Router?.go?.('folder', { folder });
+    openFolderView(folder);
+  });
+
+  // Recycle bin
+  document.getElementById('recycle-bin-btn')?.addEventListener('click', showRecycleBin);
+
+  // ── PWA install prompt ───────────────────────────────
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById('install-banner')?.classList.remove('hidden');
+  });
+  document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('install-banner')?.classList.add('hidden');
+    deferredPrompt = null;
+  });
+
+  // ── Dark mode toggle ─────────────────────────────────
+  const darkToggle = document.getElementById('settings-dark-mode');
+  if (darkToggle) {
+    darkToggle.checked = Storage.get('theme','light') === 'dark';
+    darkToggle.addEventListener('change', () => {
+      Theme.apply(darkToggle.checked ? 'dark' : 'light');
+      document.querySelectorAll('[data-action="toggle-theme"] i').forEach(i => {
+        i.className = darkToggle.checked ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      });
+    });
+  }
+
+  // ── Folder stats ──────────────────────────────────────
+  document.addEventListener('linkivo:userReady', ({ detail: { uid } }) => {
+    import('/assets/js/firebase-init.js').then(({ db, ref, onValue }) => {
+      onValue(ref(db, `users/${uid}/folders`), (snap) => {
+        const folders = snap.exists() ? Object.values(snap.val()) : [];
+        document.getElementById('stat-folders').textContent = folders.length;
+        document.getElementById('stat-links').textContent   = folders.reduce((a,f) => a+(f.linkCount||0), 0);
+        document.getElementById('stat-pinned').textContent  = folders.filter(f => f.pinned).length;
+        document.getElementById('stat-locked').textContent  = folders.filter(f => f.locked).length;
+      });
+      onValue(ref(db, `users/${uid}/recycleBin`), (snap) => {
+        const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+        const el = document.getElementById('recycle-count');
+        if (el) { el.textContent = count; el.classList.toggle('hidden', count === 0); }
+      });
+    });
+  });
+
+  // ── Hide splash ──────────────────────────────────────
+  setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) { splash.style.opacity='0'; setTimeout(()=>splash?.remove(),400); }
+  }, 1800);
+</script>
+
+</body>
+</html>

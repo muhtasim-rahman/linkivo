@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none" role="img" aria-label="Linkivo Logo">
+  <defs>
+    <linearGradient id="grad-icon" x1="5" y1="5" x2="65" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <clipPath id="clip-left-ring">
+      <rect x="0" y="0" width="37.5" height="80"/>
+    </clipPath>
+    <clipPath id="clip-right-overlap">
+      <rect x="37.5" y="0" width="42.5" height="80"/>
+    </clipPath>
+  </defs>
+
+  <!-- Top U / shackle shape (the "L" stylized as chain shackle) -->
+  <path d="M15 56 L15 24 Q15 8 27 8 Q39 8 39 24 L39 56"
+        stroke="url(#grad-icon)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Left chain link ring (drawn first — goes behind right ring) -->
+  <rect x="6" y="51" width="34" height="22" rx="11"
+        stroke="url(#grad-icon)" stroke-width="7" fill="none"/>
+
+  <!-- Right chain link ring clipped so it appears to go BEHIND the left ring -->
+  <g clip-path="url(#clip-right-overlap)">
+    <rect x="30" y="51" width="34" height="22" rx="11"
+          stroke="url(#grad-icon)" stroke-width="7" fill="none"/>
+  </g>
+
+  <!-- Left ring front section — drawn on top of right ring for interlocked look -->
+  <g clip-path="url(#clip-left-ring)">
+    <rect x="6" y="51" width="34" height="22" rx="11"
+          stroke="url(#grad-icon)" stroke-width="7" fill="none"/>
+  </g>
+
+  <!-- Connection tech dots -->
+  <circle cx="33" cy="62" r="3.8" fill="url(#grad-icon)"/>
+  <circle cx="51" cy="62" r="3.8" fill="url(#grad-icon)"/>
+</svg>

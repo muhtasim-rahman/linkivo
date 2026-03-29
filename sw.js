@@ -3,8 +3,8 @@
 // Handles: App Shell caching, offline fallback
 // ============================================================
 
-const CACHE_NAME      = 'linkivo-shell-v1.3.0';
-const RUNTIME_CACHE   = 'linkivo-runtime-v1.3.0';
+const CACHE_NAME      = 'linkivo-shell-v1.4.0';
+const RUNTIME_CACHE   = 'linkivo-runtime-v1.4.0';
 
 // App shell assets — cache on install
 const SHELL_ASSETS = [
@@ -28,8 +28,8 @@ const SHELL_ASSETS = [
   '/assets/js/firebase-init.js',
   '/assets/js/auth.js',
   '/assets/js/router.js',
-  '/assets/js/app.js',
   '/assets/js/utils.js',
+  '/assets/js/app.js',
   '/assets/js/import.js',
   '/assets/js/folders.js',
   '/assets/js/links.js',

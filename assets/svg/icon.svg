@@ -1,16 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Linkivo">
   <defs>
     <linearGradient id="lg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="var(--primary, #3b82f6)"/>
-      <stop offset="100%" stop-color="var(--secondary, #22d3ee)"/>
+      <stop offset="0%" stop-color="var(--lv-c1,#3b82f6)"/>
+      <stop offset="100%" stop-color="var(--lv-c2,#22d3ee)"/>
     </linearGradient>
   </defs>
-  <path d="M12 46 L12 20 Q12 6 22 6 Q32 6 32 20 L32 46" stroke="url(#lg)" stroke-width="7" stroke-linecap="round" fill="none"/>
-  <rect x="5" y="41" width="26" height="17" rx="8.5" stroke="url(#lg)" stroke-width="5.5" fill="none"/>
-  <clipPath id="cr"><rect x="26" y="0" width="38" height="64"/></clipPath>
-  <rect x="24" y="41" width="26" height="17" rx="8.5" stroke="url(#lg)" stroke-width="5.5" fill="none" clip-path="url(#cr)"/>
-  <clipPath id="cl"><rect x="0" y="0" width="26" height="64"/></clipPath>
-  <rect x="5" y="41" width="26" height="17" rx="8.5" stroke="url(#lg)" stroke-width="5.5" fill="none" clip-path="url(#cl)"/>
-  <circle cx="24.5" cy="49.5" r="3" fill="url(#lg)"/>
-  <circle cx="39.5" cy="49.5" r="3" fill="url(#lg)"/>
+  <!-- Shackle / U-bar -->
+  <path d="M13 46 L13 20 Q13 7 23 7 Q33 7 33 20 L33 46"
+        stroke="url(#lg)" stroke-width="6.5" stroke-linecap="round" fill="none"/>
+  <!-- Left ring -->
+  <rect x="6"  y="42" width="25" height="16" rx="8"
+        stroke="url(#lg)" stroke-width="5.5" fill="none"/>
+  <!-- Right ring — interlocked -->
+  <clipPath id="cr"><rect x="25" y="0" width="40" height="64"/></clipPath>
+  <rect x="24" y="42" width="25" height="16" rx="8"
+        stroke="url(#lg)" stroke-width="5.5" fill="none" clip-path="url(#cr)"/>
+  <clipPath id="cl"><rect x="0" y="0" width="25" height="64"/></clipPath>
+  <rect x="6"  y="42" width="25" height="16" rx="8"
+        stroke="url(#lg)" stroke-width="5.5" fill="none" clip-path="url(#cl)"/>
+  <!-- Tech dots -->
+  <circle cx="24.5" cy="50" r="2.8" fill="url(#lg)"/>
+  <circle cx="38.5" cy="50" r="2.8" fill="url(#lg)"/>
 </svg>

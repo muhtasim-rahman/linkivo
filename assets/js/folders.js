@@ -1,23 +1,22 @@
 // ============================================================
-// Linkivo — folders.js  v1.4.0
-// Folder CRUD, PIN lock with session, tag system, description
+// Linkivo — folders.js  v1.4.2
+// Folder CRUD, PIN session, blur locked content, tags
 // ============================================================
 
-import { db, ref, set, get, update, remove, push, onValue, serverTimestamp } from './firebase-init.js';
+import { db, ref, set, get, update, remove, onValue, serverTimestamp } from './firebase-init.js';
 import { getCurrentUser } from './auth.js';
 import { toast, genId, confirm, showDropdown, pinDialog, Storage, escapeHtml } from './utils.js';
-import { showImportModal } from './import.js';
 
-const uid      = () => getCurrentUser()?.uid;
-const fRef     = (fid) => ref(db, `users/${uid()}/folders/${fid}`);
-const rbRef    = (id)  => ref(db, `users/${uid()}/recycleBin/${id}`);
-const allFRef  = ()    => ref(db, `users/${uid()}/folders`);
+const uid    = () => getCurrentUser()?.uid;
+const fRef   = fid => ref(db, `users/${uid()}/folders/${fid}`);
+const rbRef  = id  => ref(db, `users/${uid()}/recycleBin/${id}`);
+const allRef = ()  => ref(db, `users/${uid()}/folders`);
 
-// ── PIN session (unlocked folders persist until reload) ───
-const _unlockedFolders = new Set();
-export function isFolderUnlocked(fid) { return _unlockedFolders.has(fid); }
-export function lockFolderSession(fid) { _unlockedFolders.delete(fid); }
-export function unlockFolderSession(fid) { _unlockedFolders.add(fid); }
+// ── PIN session — unlocked for entire page session ────────
+const _unlocked = new Set();
+export const isFolderUnlocked    = fid  => _unlocked.has(fid);
+export const unlockFolderSession = fid  => _unlocked.add(fid);
+export const lockFolderSession   = fid  => _unlocked.delete(fid);
 
 // ══════════════════════════════════════════════════════════
 // FOLDER CRUD
@@ -27,18 +26,14 @@ export async function createFolder(name, opts = {}) {
   if (!name?.trim()) return null;
   const id   = genId('f_');
   const data = {
-    id,
-    name:        name.trim(),
+    id, name: name.trim(),
     description: opts.description || '',
     tags:        opts.tags || [],
-    createdAt:   Date.now(),
-    updatedAt:   Date.now(),
-    pinned:      false,
-    locked:      false,
-    pin:         null,
-    linkCount:   0,
-    color:       opts.color || _randomColor(),
-    icon:        opts.icon  || 'fa-folder',
+    createdAt:   Date.now(), updatedAt: Date.now(),
+    pinned: false, locked: false, pin: null,
+    linkCount: 0,
+    color: opts.color || _rndColor(),
+    icon:  opts.icon  || 'fa-folder',
   };
   await set(fRef(id), data);
   return data;
@@ -47,13 +42,12 @@ export async function createFolder(name, opts = {}) {
 export async function renameFolder(fid, newName) {
   if (!newName?.trim()) return;
   await update(fRef(fid), { name: newName.trim(), updatedAt: Date.now() });
-  // Also update history entries with old folder name
+  // Sync history entries
   try {
-    const hSnap = await get(ref(db, `users/${uid()}/history`));
-    if (hSnap.exists()) {
-      const entries = Object.entries(hSnap.val());
-      const toUpdate = entries.filter(([,v]) => v.folderId === fid);
-      for (const [key] of toUpdate) {
+    const snap = await get(ref(db, `users/${uid()}/history`));
+    if (!snap.exists()) return;
+    for (const [key, val] of Object.entries(snap.val())) {
+      if (val.folderId === fid) {
         await update(ref(db, `users/${uid()}/history/${key}`), { folderName: newName.trim() });
       }
     }
@@ -64,14 +58,9 @@ export async function deleteFolder(fid) {
   const snap = await get(fRef(fid));
   if (!snap.exists()) return;
   const data = snap.val();
-  const rbId = genId('rb_');
-  await set(rbRef(rbId), {
-    id: rbId, type: 'folder', originalId: fid, data,
-    deletedAt: Date.now(),
-    expireAt:  Date.now() + 30 * 24 * 60 * 60 * 1000,
-  });
+  await set(rbRef(genId('rb_')), { id: genId(), type: 'folder', originalId: fid, data, deletedAt: Date.now(), expireAt: Date.now()+30*24*60*60*1000 });
   await remove(fRef(fid));
-  _unlockedFolders.delete(fid);
+  _unlocked.delete(fid);
   toast(`"${data.name}" moved to Recycle Bin`, 'success');
 }
 
@@ -84,13 +73,13 @@ export async function restoreFolder(rbId) {
   toast(`"${data.name}" restored`, 'success');
 }
 
-export async function togglePin(fid, currentPinned) {
-  await update(fRef(fid), { pinned: !currentPinned, updatedAt: Date.now() });
+export async function toggleFolderPin(fid, pinned) {
+  await update(fRef(fid), { pinned: !pinned, updatedAt: Date.now() });
 }
 
-// ── Lock/Unlock with proper UI ────────────────────────────
+// ── Lock / Unlock ─────────────────────────────────────────
 export async function setFolderLock(fid) {
-  const pin1 = await pinDialog('Set Folder PIN', 'Choose a 6-digit PIN to lock this folder');
+  const pin1 = await pinDialog('Set Folder PIN', 'Choose a 6-digit PIN for this folder');
   if (!pin1) return;
   const pin2 = await pinDialog('Confirm PIN', 'Re-enter the PIN to confirm');
   if (!pin2) return;
@@ -101,8 +90,7 @@ export async function setFolderLock(fid) {
 }
 
 export async function verifyAndUnlockFolder(folder) {
-  // Already unlocked this session?
-  if (_unlockedFolders.has(folder.id)) return true;
+  if (_unlocked.has(folder.id)) return true;
   const entered = await pinDialog('Unlock Folder', `Enter PIN for "${folder.name}"`);
   if (!entered) return false;
   if (entered !== folder.pin) { toast('Wrong PIN ❌', 'error'); return false; }
@@ -113,8 +101,7 @@ export async function verifyAndUnlockFolder(folder) {
 export async function removeFolderLock(fid) {
   const snap = await get(fRef(fid));
   if (!snap.exists()) return;
-  const folder = snap.val();
-  const ok = await verifyAndUnlockFolder(folder);
+  const ok = await verifyAndUnlockFolder(snap.val());
   if (!ok) return;
   await update(fRef(fid), { locked: false, pin: null, updatedAt: Date.now() });
   toast('Folder unlocked 🔓', 'success');
@@ -128,58 +115,53 @@ export async function incrementLinkCount(fid, delta = 1) {
   await set(ref(db, `users/${uid()}/folders/${fid}/updatedAt`), Date.now());
 }
 
-// ── Save links to folder (with progress callback) ────────
+// ── Save links with progress ──────────────────────────────
 export async function saveLinksToFolder(fid, links, { onProgress } = {}) {
-  const linksRef = ref(db, `users/${uid()}/folders/${fid}/links`);
-  const snap     = await get(linksRef);
-  const existing = snap.val() || {};
-  const existingUrls = new Set(Object.values(existing).map(l => l.url));
+  const lref   = ref(db, `users/${uid()}/folders/${fid}/links`);
+  const snap   = await get(lref);
+  const exist  = snap.val() || {};
+  const existUrls = new Set(Object.values(exist).map(l => l.url));
+  const toAdd  = links.filter(l => !existUrls.has(l.url));
 
   let added = 0;
-  const toAdd = links.filter(l => !existingUrls.has(l.url));
-
   for (let i = 0; i < toAdd.length; i++) {
-    const link = toAdd[i];
-    const lid  = genId('l_');
-    await set(ref(db, `users/${uid()}/folders/${fid}/links/${lid}`), { ...link, id: lid });
+    const lid = genId('l_');
+    await set(ref(db, `users/${uid()}/folders/${fid}/links/${lid}`), { ...toAdd[i], id: lid });
     added++;
     onProgress?.(i + 1, toAdd.length);
   }
-
-  const total = Object.keys(existing).length + added;
+  const total = Object.keys(exist).length + added;
   await update(fRef(fid), { linkCount: total, updatedAt: Date.now() });
   return added;
 }
 
 export async function getFolders() {
-  const snap = await get(allFRef());
+  const snap = await get(allRef());
   return snap.exists() ? Object.values(snap.val()) : [];
 }
 
-export function subscribeFolders(callback) {
-  onValue(allFRef(), (snap) => {
-    const folders = snap.exists() ? Object.values(snap.val()) : [];
-    callback(sortFolders(folders));
-  });
+export function subscribeFolders(cb) {
+  onValue(allRef(), snap => cb(snap.exists() ? _sort(Object.values(snap.val())) : []));
 }
 
-export function sortFolders(folders) {
-  return [...folders].sort((a, b) => {
+export function sortFolders(folders) { return _sort(folders); }
+
+function _sort(f) {
+  return [...f].sort((a,b) => {
     if (a.pinned !== b.pinned) return b.pinned - a.pinned;
-    return (b.updatedAt || 0) - (a.updatedAt || 0);
+    return (b.updatedAt||0) - (a.updatedAt||0);
   });
 }
 
-function _randomColor() {
-  const c = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#06b6d4','#f97316','#6366f1','#14b8a6'];
-  return c[Math.floor(Math.random() * c.length)];
+function _rndColor() {
+  return ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#06b6d4','#f97316','#6366f1','#14b8a6'][Math.floor(Math.random()*10)];
 }
 
 // ══════════════════════════════════════════════════════════
-// HOME PAGE — Folder Manager
+// HOME PAGE
 // ══════════════════════════════════════════════════════════
 
-let _unsubFolders = null;
+let _foldersUnsub = null;
 
 export function initHomePage() {
   const grid      = document.getElementById('folder-grid');
@@ -187,63 +169,63 @@ export function initHomePage() {
   if (!grid) return;
 
   // Real-time subscription
-  if (_unsubFolders) _unsubFolders();
-  onValue(allFRef(), (snap) => {
-    const folders = snap.exists() ? sortFolders(Object.values(snap.val())) : [];
-    renderFolderGrid(folders, grid);
+  if (_foldersUnsub) _foldersUnsub();
+  onValue(allRef(), snap => {
+    const folders = snap.exists() ? _sort(Object.values(snap.val())) : [];
+    _renderGrid(folders, grid);
   });
 
-  createBtn?.addEventListener('click', _promptCreateFolder);
-  document.getElementById('home-import-btn')?.addEventListener('click', _openImportModal);
+  createBtn?.addEventListener('click', async () => {
+    const { prompt: uiPrompt } = await import('./utils.js');
+    const name = await uiPrompt('New Folder', 'Enter a folder name…', '');
+    if (!name?.trim()) return;
+    const f = await createFolder(name);
+    if (f) toast(`Folder "${f.name}" created`, 'success');
+  });
+
+  // Import button inside empty state
+  document.addEventListener('click', e => {
+    if (e.target.closest('#home-import-empty')) _triggerImport();
+  });
 }
 
-async function _promptCreateFolder() {
-  const { prompt: uiPrompt } = await import('./utils.js');
-  const name = await uiPrompt('New Folder', 'Folder name…', '');
-  if (!name) return;
-  const folder = await createFolder(name);
-  if (folder) toast(`Folder "${folder.name}" created`, 'success');
-}
-
-async function _openImportModal() {
+async function _triggerImport() {
+  const { showImportModal } = await import('./import.js');
   const folders = await getFolders();
-  showImportModal(folders, async (links, fTarget, isNew, { onProgress } = {}) => {
+  showImportModal(folders, async (links, fTarget, isNew, opts) => {
     let fid = fTarget;
-    if (isNew) { const nf = await createFolder(fTarget); if (!nf) { toast('Failed to create folder','error'); return; } fid = nf.id; }
-    const added = await saveLinksToFolder(fid, links, { onProgress });
+    if (isNew) { const nf = await createFolder(fTarget); fid = nf?.id; }
+    if (!fid) return;
+    const added = await saveLinksToFolder(fid, links, opts);
     toast(`${added} link${added!==1?'s':''} saved!`, 'success');
   });
 }
 
-// Export for app.js usage
-export { _openImportModal as triggerImportModal };
-
-function renderFolderGrid(folders, grid) {
+function _renderGrid(folders, grid) {
   if (!folders.length) {
     grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-state" style="grid-column:1/-1;padding:var(--sp-12) var(--sp-5)">
         <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
         <h3>No folders yet</h3>
-        <p>Create a folder to start saving links, or import from a file.</p>
-        <button class="btn btn-primary" id="home-import-btn">
+        <p>Create a folder to start saving links, or import from a file</p>
+        <button class="btn btn-primary" id="home-import-empty">
           <i class="fa-solid fa-file-import"></i> Import Links
         </button>
       </div>`;
-    document.getElementById('home-import-btn')?.addEventListener('click', _openImportModal);
     return;
   }
   grid.innerHTML = '';
-  folders.forEach(folder => grid.appendChild(_createFolderCard(folder)));
+  folders.forEach(f => grid.appendChild(_mkCard(f)));
 }
 
-function _createFolderCard(folder) {
+function _mkCard(folder) {
   const card = document.createElement('div');
   card.className = `folder-card${folder.pinned?' pinned':''}`;
   card.dataset.fid = folder.id;
 
-  const isLocked   = folder.locked && !_unlockedFolders.has(folder.id);
-  const iconBg     = _hexRgba(folder.color||'#3b82f6', 0.12);
-  const count      = folder.linkCount || 0;
+  const isLocked = folder.locked && !_unlocked.has(folder.id);
+  const iconBg   = _hexRgba(folder.color||'#3b82f6', 0.12);
+  const cnt      = folder.linkCount || 0;
 
   card.innerHTML = `
     <div class="folder-card-top">
@@ -261,74 +243,61 @@ function _createFolderCard(folder) {
       </div>
       ${folder.description?`<div class="folder-card-desc">${escapeHtml(folder.description)}</div>`:''}
       <div class="folder-card-meta">
-        <span>${count} link${count!==1?'s':''}</span>
-        <span>${_timeAgoShort(folder.updatedAt)}</span>
+        <span>${cnt} link${cnt!==1?'s':''}</span>
+        <span>${_ago(folder.updatedAt)}</span>
       </div>
       ${folder.tags?.length?`<div class="folder-tags">${folder.tags.map(t=>`<span class="folder-tag">${escapeHtml(t)}</span>`).join('')}</div>`:''}
     </div>
-    ${isLocked?'<div class="folder-locked-bar"><i class="fa-solid fa-lock"></i> Locked</div>':''}
-  `;
+    ${isLocked?'<div class="folder-locked-bar"><i class="fa-solid fa-lock"></i> Locked</div>':''}`;
 
-  card.addEventListener('click', (e) => {
+  card.addEventListener('click', e => {
     if (e.target.closest('.folder-card-menu')) return;
     _openFolder(folder);
   });
-
-  card.querySelector('.folder-card-menu').addEventListener('click', (e) => {
+  card.querySelector('.folder-card-menu')?.addEventListener('click', e => {
     e.stopPropagation();
-    _showFolderMenu(e.currentTarget, folder);
+    _cardMenu(e.currentTarget, folder);
   });
-
   return card;
 }
 
-function _showFolderMenu(anchor, folder) {
-  const isLocked = folder.locked && !_unlockedFolders.has(folder.id);
+function _cardMenu(anchor, folder) {
+  const isLocked = folder.locked && !_unlocked.has(folder.id);
   showDropdown(anchor, [
-    { label: folder.pinned?'Unpin':'Pin to top', icon:'fa-solid fa-thumbtack',
-      action: () => togglePin(folder.id, folder.pinned) },
+    { label: folder.pinned?'Unpin':'Pin to top', icon:'fa-solid fa-thumbtack', action:()=>toggleFolderPin(folder.id,folder.pinned) },
     { label: 'Rename', icon:'fa-solid fa-pencil',
       action: async () => {
-        const { prompt: uiPrompt } = await import('./utils.js');
-        const name = await uiPrompt('Rename Folder','Folder name…',folder.name);
-        if (name) renameFolder(folder.id, name);
+        const { prompt: uiP } = await import('./utils.js');
+        const n = await uiP('Rename Folder','Folder name…',folder.name);
+        if (n) renameFolder(folder.id, n);
       }},
     { label: 'Edit description', icon:'fa-solid fa-align-left',
       action: async () => {
-        const { prompt: uiPrompt } = await import('./utils.js');
-        const desc = await uiPrompt('Folder Description','Short description…',folder.description||'');
-        if (desc !== null) await update(fRef(folder.id), { description: desc });
+        const { prompt: uiP } = await import('./utils.js');
+        const d = await uiP('Description','Short description…',folder.description||'');
+        if (d !== null) await update(fRef(folder.id), { description: d, updatedAt: Date.now() });
       }},
     { label: isLocked?'Remove Lock':'Lock with PIN', icon:`fa-solid fa-${isLocked?'lock-open':'lock'}`,
       action: () => isLocked ? removeFolderLock(folder.id) : setFolderLock(folder.id) },
     'divider',
-    { label: 'Open in Random Discover', icon:'fa-solid fa-shuffle',
+    { label:'Open in Random Discover', icon:'fa-solid fa-shuffle',
       action: () => {
-        // Navigate to random with this folder pre-selected
+        // Navigate to random page with this folder pre-selected
         document.dispatchEvent(new CustomEvent('linkivo:openRandomWithFolder', { detail: { folderId: folder.id } }));
         window.Router?.go?.('random');
       }},
-    { label: 'Import to folder', icon:'fa-solid fa-file-import',
-      action: async () => {
-        const folders = await getFolders();
-        showImportModal(folders, async (links, fTarget, isNew, opts) => {
-          let fid = isNew ? (await createFolder(fTarget))?.id : fTarget;
-          if (!fid) return;
-          const added = await saveLinksToFolder(fid||folder.id, links, opts);
-          toast(`${added} link${added!==1?'s':''} saved!`,'success');
-        });
-      }},
+    { label:'Import to folder', icon:'fa-solid fa-file-import', action: _triggerImport },
     'divider',
-    { label: 'Delete', icon:'fa-solid fa-trash', danger:true,
+    { label:'Delete', icon:'fa-solid fa-trash', danger:true,
       action: async () => {
-        const ok = await confirm('Delete Folder', `Move "${folder.name}" to recycle bin?`, true);
+        const ok = await confirm('Delete Folder',`Move "${folder.name}" to recycle bin?`,true);
         if (ok) deleteFolder(folder.id);
       }},
   ], { align:'right' });
 }
 
 async function _openFolder(folder) {
-  if (folder.locked && !_unlockedFolders.has(folder.id)) {
+  if (folder.locked && !_unlocked.has(folder.id)) {
     const ok = await verifyAndUnlockFolder(folder);
     if (!ok) return;
   }
@@ -337,15 +306,13 @@ async function _openFolder(folder) {
 }
 
 // ── Helpers ───────────────────────────────────────────────
-function _hexRgba(hex, alpha) {
+function _hexRgba(hex, a) {
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${alpha})`;
+  return `rgba(${r},${g},${b},${a})`;
 }
-function _timeAgoShort(ts) {
+function _ago(ts) {
   if (!ts) return '';
-  const s = Math.floor((Date.now()-ts)/1000);
-  if (s<60)    return 'just now';
-  if (s<3600)  return `${Math.floor(s/60)}m`;
-  if (s<86400) return `${Math.floor(s/3600)}h`;
-  return `${Math.floor(s/86400)}d`;
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return'just now';if(s<3600)return`${Math.floor(s/60)}m`;
+  if(s<86400)return`${Math.floor(s/3600)}h`;return`${Math.floor(s/86400)}d`;
 }

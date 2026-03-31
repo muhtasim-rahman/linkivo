@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Documentation — Linkivo</title>
+  <link rel="icon" href="/assets/svg/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/variables.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh;overflow-x:hidden;font-size:16px}
+    .doc-nav{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:100}
+    .doc-nav a{display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500}
+    .doc-nav a:hover{color:var(--primary)}
+    .doc-logo{display:flex;align-items:center;gap:8px;text-decoration:none;margin-left:auto}
+    .doc-logo img{width:22px;height:22px}
+    .doc-logo span{font-size:16px;font-weight:800;color:var(--text)}
+    .doc-layout{display:flex;max-width:1100px;margin:0 auto;min-height:calc(100vh - 57px)}
+    .doc-sidebar{width:240px;flex-shrink:0;padding:24px 16px;border-right:1px solid var(--border);position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto}
+    .doc-sidebar::-webkit-scrollbar{display:none}
+    .doc-main{flex:1;padding:40px 32px 80px;min-width:0}
+    .doc-nav-group{margin-bottom:20px}
+    .doc-nav-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-subtle);padding:0 8px 8px}
+    .doc-nav-link{display:block;padding:7px 8px;font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;border-radius:var(--r-sm);transition:all .15s}
+    .doc-nav-link:hover{background:var(--surface-hover);color:var(--text)}
+    .doc-nav-link.active{background:var(--gradient-soft);color:var(--primary);font-weight:600}
+    .doc-header{margin-bottom:40px}
+    .doc-badge{display:inline-flex;align-items:center;gap:6px;background:var(--success-bg);color:var(--success);padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:16px}
+    .doc-title{font-size:clamp(24px,4vw,38px);font-weight:800;letter-spacing:-0.5px;margin-bottom:8px}
+    .doc-sub{font-size:15px;color:var(--text-muted);max-width:580px}
+    h2{font-size:22px;font-weight:700;margin:44px 0 14px;color:var(--text)}
+    h3{font-size:16px;font-weight:700;margin:24px 0 8px}
+    p{color:var(--text-muted);margin-bottom:12px;font-size:15px}
+    ul,ol{padding-left:22px;margin-bottom:14px}
+    li{color:var(--text-muted);margin-bottom:6px;font-size:15px}
+    .feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:20px 0}
+    .feature-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-lg);padding:18px;transition:border-color .15s}
+    .feature-card:hover{border-color:var(--primary)}
+    .feature-icon{font-size:24px;margin-bottom:10px}
+    .feature-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+    .feature-desc{font-size:12px;color:var(--text-muted)}
+    code{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:13px;font-family:monospace;color:var(--primary)}
+    .kbd{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid var(--border-2);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600;color:var(--text)}
+    footer{text-align:center;padding:24px;font-size:12px;color:var(--text-subtle);border-top:1px solid var(--border)}
+    @media(max-width:768px){.doc-sidebar{display:none}.doc-main{padding:24px 16px 60px}}
+    @media(max-width:480px){.feature-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<nav class="doc-nav">
+  <a href="/">← Back to Linkivo</a>
+  <a class="doc-logo" href="/"><img src="/assets/svg/icon.svg" alt=""><span>Linkivo</span></a>
+</nav>
+<div class="doc-layout">
+  <aside class="doc-sidebar">
+    <div class="doc-nav-group">
+      <div class="doc-nav-title">Getting Started</div>
+      <a href="#intro"    class="doc-nav-link active">Introduction</a>
+      <a href="#install"  class="doc-nav-link">Installing the app</a>
+      <a href="#import"   class="doc-nav-link">Importing links</a>
+    </div>
+    <div class="doc-nav-group">
+      <div class="doc-nav-title">Features</div>
+      <a href="#folders"  class="doc-nav-link">Folders & locking</a>
+      <a href="#random"   class="doc-nav-link">Random discover</a>
+      <a href="#preview"  class="doc-nav-link">Link preview</a>
+      <a href="#export"   class="doc-nav-link">Export</a>
+      <a href="#search"   class="doc-nav-link">Global search</a>
+    </div>
+    <div class="doc-nav-group">
+      <div class="doc-nav-title">Settings</div>
+      <a href="#lock"     class="doc-nav-link">App lock PIN</a>
+      <a href="#themes"   class="doc-nav-link">Themes & fonts</a>
+      <a href="#shortcuts" class="doc-nav-link">Keyboard shortcuts</a>
+    </div>
+  </aside>
+  <main class="doc-main">
+    <div class="doc-header">
+      <div class="doc-badge">📚 Documentation</div>
+      <h1 class="doc-title">Linkivo Docs</h1>
+      <p class="doc-sub">Everything you need to know about using Linkivo effectively.</p>
+    </div>
+
+    <h2 id="intro">What is Linkivo?</h2>
+    <p>Linkivo is a smart, offline-first link manager that runs in your browser as a Progressive Web App (PWA). Save links from any source, organise them into folders, and rediscover them through a weighted random system.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card"><div class="feature-icon">📥</div><div class="feature-title">Universal Import</div><div class="feature-desc">TXT, HTML, JSON, CSV, PDF, ZIP, Markdown, browser bookmarks</div></div>
+      <div class="feature-card"><div class="feature-icon">🗂️</div><div class="feature-title">Smart Folders</div><div class="feature-desc">Pin, lock with PIN, add tags and descriptions</div></div>
+      <div class="feature-card"><div class="feature-icon">🎲</div><div class="feature-title">Random Discover</div><div class="feature-desc">Weighted random selection with domain filtering</div></div>
+      <div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">Global Search</div><div class="feature-desc">Search across all folders with Ctrl+K</div></div>
+      <div class="feature-card"><div class="feature-icon">👁️</div><div class="feature-title">Embedded Preview</div><div class="feature-desc">iframe → og:image → jpg → favicon fallback chain</div></div>
+      <div class="feature-card"><div class="feature-icon">🔒</div><div class="feature-title">Privacy Options</div><div class="feature-desc">PIN-locked folders, app lock, incognito mode</div></div>
+    </div>
+
+    <h2 id="install">Installing as an app</h2>
+    <p>Linkivo is a PWA — install it for the best experience:</p>
+    <ul>
+      <li><strong>Chrome/Edge (desktop):</strong> Click the install icon in the address bar, or go to Settings → Install Linkivo</li>
+      <li><strong>Chrome (Android):</strong> Tap the three-dot menu → Add to Home Screen</li>
+      <li><strong>Safari (iPhone/iPad):</strong> Tap Share → Add to Home Screen</li>
+    </ul>
+    <p>Once installed, Linkivo works offline and loads instantly.</p>
+
+    <h2 id="import">Importing links</h2>
+    <p>Tap the <strong>+</strong> button (mobile) or <strong>Import Links</strong> (sidebar) to open the import modal.</p>
+    <h3>Supported formats</h3>
+    <ul>
+      <li><code>.txt</code> — one URL per line, or any text with URLs mixed in</li>
+      <li><code>.html</code> / <code>.htm</code> — browser bookmark exports (NETSCAPE format)</li>
+      <li><code>.json</code> — Linkivo exports, or any JSON with URL fields</li>
+      <li><code>.csv</code> — spreadsheets with URL columns</li>
+      <li><code>.pdf</code> — extracts URLs from PDF text content</li>
+      <li><code>.zip</code> — extracts links from all supported files inside</li>
+      <li><code>.md</code> — Markdown files with <code>[title](url)</code> syntax</li>
+    </ul>
+    <p>Linkivo also detects URLs without <code>https://</code> — e.g., <code>example.com</code> or <code>www.site.io/page</code>.</p>
+
+    <h2 id="folders">Folders &amp; PIN lock</h2>
+    <p>Create folders to organise links. Each folder can be:</p>
+    <ul>
+      <li><strong>Pinned</strong> — appears at the top of the list</li>
+      <li><strong>Locked</strong> — requires a 6-digit PIN to view; once unlocked it stays open until the page reloads</li>
+      <li><strong>Tagged</strong> — add custom tags for quick identification</li>
+    </ul>
+    <p>To set a PIN lock, tap the ⋮ menu on a folder → Lock with PIN.</p>
+
+    <h2 id="random">Random discover</h2>
+    <p>The random page uses a weighted selection algorithm. Links with higher points (from likes, stars, and low open counts) are more likely to be picked. You can customise:</p>
+    <ul>
+      <li><strong>Folder filter:</strong> choose which folders to include</li>
+      <li><strong>Domain filter:</strong> auto-detected from your links — filter to specific sites</li>
+      <li><strong>Weight mode:</strong> by points, equal chance, liked links, or favourites only</li>
+      <li><strong>Auto-advance:</strong> automatically pick a new link every 10–60 seconds</li>
+    </ul>
+
+    <h2 id="preview">Link preview</h2>
+    <p>When you open a link, Linkivo tries to load a preview using this fallback chain:</p>
+    <ol>
+      <li><strong>iframe embed</strong> — loads the actual page inline (if the site allows it)</li>
+      <li><strong>og:image</strong> — fetches the OpenGraph preview image via a proxy</li>
+      <li><strong>First JPEG</strong> — uses the first jpg/jpeg image found in the page</li>
+      <li><strong>Favicon</strong> — shows the site's favicon as a last resort</li>
+    </ol>
+    <p>Drag the resize handle at the top of the preview panel to adjust its height. The height is saved for next time.</p>
+
+    <h2 id="export">Exporting your data</h2>
+    <p>Go to Settings → Export Links. Choose one or more folders and a format:</p>
+    <ul>
+      <li><strong>JSON</strong> — full data with all metadata (best for backup)</li>
+      <li><strong>CSV</strong> — spreadsheet-friendly, opens in Excel/Sheets</li>
+      <li><strong>Markdown</strong> — <code>.md</code> file with clickable links, starred/liked badges</li>
+      <li><strong>HTML Bookmarks</strong> — import into any browser</li>
+      <li><strong>PDF</strong> — styled document with favicons, print directly</li>
+    </ul>
+
+    <h2 id="search">Global search</h2>
+    <p>Press <span class="kbd">Ctrl</span> + <span class="kbd">K</span> (or <span class="kbd">/</span>) to open global search. This searches link titles, URLs, and domains across <em>all</em> your folders.</p>
+
+    <h2 id="lock">App lock PIN</h2>
+    <p>Set a 6-digit PIN in Settings → Security → App Lock PIN. When set:</p>
+    <ul>
+      <li>A lock button appears in the header — tap to lock immediately</li>
+      <li>The app automatically locks after your chosen inactivity period (5/15/30 min)</li>
+      <li>Reloading within 10 minutes does not re-lock the app</li>
+    </ul>
+
+    <h2 id="themes">Themes &amp; fonts</h2>
+    <p>In Settings → Appearance, you can:</p>
+    <ul>
+      <li>Switch between <strong>Light</strong> and <strong>Dark</strong> mode</li>
+      <li>Choose an <strong>accent colour</strong>: Blue, Purple, Green, Orange, or Rose (applied to the logo and UI)</li>
+      <li>Set <strong>font size</strong>: Small, Medium, or Large</li>
+    </ul>
+
+    <h2 id="shortcuts">Keyboard shortcuts</h2>
+    <ul>
+      <li><span class="kbd">Ctrl</span>+<span class="kbd">K</span> or <span class="kbd">/</span> — Open global search</li>
+      <li><span class="kbd">Esc</span> — Close modals and overlays</li>
+      <li><span class="kbd">Enter</span> — Submit forms and dialogs</li>
+    </ul>
+  </main>
+</div>
+<footer>© 2026 Linkivo · <a href="/docs/privacy.html">Privacy</a> · <a href="/docs/terms.html">Terms</a></footer>
+<script>
+  const t = localStorage.getItem('theme'); if(t) document.documentElement.setAttribute('data-theme',t);
+  const a = localStorage.getItem('accent'); if(a) document.documentElement.setAttribute('data-accent',a);
+  // Sidebar active link
+  const links = document.querySelectorAll('.doc-nav-link');
+  const sections = [...links].map(l => l.getAttribute('href').slice(1)).map(id => document.getElementById(id)).filter(Boolean);
+  window.addEventListener('scroll', () => {
+    let cur = '';
+    sections.forEach(s => { if (s.getBoundingClientRect().top < 100) cur = s.id; });
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#'+cur));
+  }, { passive:true });
+</script>
+</body></html>

@@ -5,19 +5,17 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "firebase-config.js",
-      "README.md",
-      "docs/**"
+      "firebase-config.js"
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "/privacy", "destination": "/docs/privacy.html" },
+      { "source": "/terms",   "destination": "/docs/terms.html"   },
+      { "source": "/docs",    "destination": "/docs/docs.html"    },
+      { "source": "**",       "destination": "/index.html"        }
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css|svg|json|png|jpg|webp|ico|woff2)",
+        "source": "**/*.@(js|css|svg|woff2|ico|png|jpg)",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
         ]
@@ -29,11 +27,16 @@
         ]
       },
       {
-        "source": "**",
+        "source": "/sw.js",
         "headers": [
-          { "key": "X-Content-Type-Options", "value": "nosniff" },
-          { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
-          { "key": "X-XSS-Protection",       "value": "1; mode=block" }
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Service-Worker-Allowed", "value": "/" }
+        ]
+      },
+      {
+        "source": "/app.json",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
         ]
       }
     ]

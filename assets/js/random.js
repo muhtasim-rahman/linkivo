@@ -1,719 +1,623 @@
 // ============================================================
-// Linkivo — random.js  v1.3.0
-// Random Link Discovery: weighted selection, folder filter,
-// customization options, embedded viewer with history tracking
+// Linkivo — random.js  v1.4.2
+// Random discover: weighted selection, folder selector,
+// domain auto-detect + filter, options panel, resizable
+// preview (iframe→og:image→jpg→favicon), auto-advance
 // ============================================================
 
-import {
-  db, ref, get, onValue, update, set
-} from './firebase-init.js';
-import { getCurrentUser }  from './auth.js';
-import { toast, Storage, genId, escapeHtml, timeAgo, confirm, copyToClipboard, showDropdown } from './utils.js';
-import { openEmbeddedPreview, addToHistory, toggleLike, toggleDislike, toggleStar, toggleBlock, deleteLink } from './links.js';
+import { db, ref, get, onValue } from './firebase-init.js';
+import { getCurrentUser } from './auth.js';
+import { toast, Storage, escapeHtml, calcLinkPoints, weightedRandom, copyToClipboard } from './utils.js';
+import { addToHistory, toggleLike, toggleDislike, toggleStar, toggleBlock } from './links.js';
+import { isFolderUnlocked } from './folders.js';
 
-// ── DB helpers ─────────────────────────────────────────────
 const uid = () => getCurrentUser()?.uid;
 
-// ── State ──────────────────────────────────────────────────
-let _folders      = [];
-let _allLinks     = [];   // flat list of all links across selected folders
-let _selFolders   = [];   // folder IDs selected for random
-let _options      = {};
-let _lastOpenedIds= [];   // recent history to avoid repeats
-let _unsubFolders = null;
-let _panelOpen    = false;
-let _optOpen      = false;
+let _folders    = [];
+let _allLinks   = [];
+let _selFolders = [];
+let _selDomains = [];   // domain filter
+let _allDomains = [];   // auto-detected domains
+let _options    = {};
+let _recent     = [];
+let _unsub      = null;
+let _autoTimer  = null;
+let _autoCount  = 0;
+let _curLink    = null;
+let _previewH   = Storage.get('randomPreviewHeight', 360);
 
-const DEFAULT_OPTIONS = {
-  avoidRecent:     true,
-  recentWindow:    5,
-  skipDisliked:    true,
-  skipBlocked:     true,
-  skipLowPoints:   false,
-  lowPointsThresh: 20,
-  onlyStarred:     false,
-  onlyLiked:       false,
-  weightMode:      'points',   // 'points' | 'equal' | 'inverse'
-  autoAdvance:     false,
-  autoAdvanceSec:  30,
+const DEFAULTS = {
+  avoidRecent:      true,  recentWindow:   5,
+  skipDisliked:     true,  skipBlocked:    true,
+  skipLowPoints:    false, lowPointsThresh:20,
+  onlyStarred:      false, onlyLiked:      false,
+  weightMode:       'points',
+  autoAdvance:      false, autoAdvanceSec: 30,
 };
 
-// ══════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════
-
+// ── Init ──────────────────────────────────────────────────
 export function initRandomPage() {
-  _options = { ...DEFAULT_OPTIONS, ...Storage.get('randomOptions', {}) };
+  _options    = { ...DEFAULTS, ...Storage.get('randomOptions', {}) };
   _selFolders = Storage.get('randomFolders', []);
+  _selDomains = Storage.get('randomDomains', []);
 
-  buildRandomPageUI();
-  subscribeToFolders();
+  _buildUI();
+  _subscribe();
+
+  // Listen for pre-selected folder from folder 3-dot menu
+  document.addEventListener('linkivo:openRandomWithFolder', e => {
+    const fid = e.detail?.folderId;
+    if (!fid) return;
+    _selFolders = [fid];
+    Storage.set('randomFolders', _selFolders);
+    _refreshFolderUI();
+    _loadLinks();
+  }, { once: true });
 }
 
-// ── Subscribe real-time folders ────────────────────────────
-function subscribeToFolders() {
-  if (_unsubFolders) _unsubFolders();
-  onValue(ref(db, `users/${uid()}/folders`), (snap) => {
+function _subscribe() {
+  if (_unsub) _unsub();
+  onValue(ref(db, `users/${uid()}/folders`), snap => {
     _folders = snap.exists() ? Object.values(snap.val()) : [];
-
-    // Validate selected folders (remove deleted ones)
-    _selFolders = _selFolders.filter(id => _folders.some(f => f.id === id));
-    if (!_selFolders.length && _folders.length) {
-      _selFolders = _folders.map(f => f.id); // select all by default
+    // Filter out locked folders not yet unlocked
+    const accessible = _folders.filter(f => !f.locked || isFolderUnlocked(f.id));
+    if (_selFolders.length) {
+      _selFolders = _selFolders.filter(id => accessible.some(f => f.id === id));
     }
+    if (!_selFolders.length) _selFolders = accessible.map(f => f.id);
     Storage.set('randomFolders', _selFolders);
-
-    refreshFolderPanel();
-    loadAllLinks();
+    _refreshFolderUI();
+    _loadLinks();
   });
 }
 
-// ── Load all links from selected folders ───────────────────
-async function loadAllLinks() {
-  _allLinks = [];
+async function _loadLinks() {
+  _allLinks   = [];
+  _allDomains = [];
+  const domainSet = new Set();
+
   for (const fid of _selFolders) {
     const snap = await get(ref(db, `users/${uid()}/folders/${fid}/links`));
     if (!snap.exists()) continue;
     const folder = _folders.find(f => f.id === fid);
     Object.values(snap.val()).forEach(link => {
       _allLinks.push({ ...link, folderId: fid, folderName: folder?.name || '' });
+      if (link.domain) domainSet.add(link.domain);
     });
   }
-  updateReadyState();
+
+  _allDomains = [...domainSet].sort();
+  _refreshDomainUI();
+  _updateSubtitle();
 }
 
-// ══════════════════════════════════════════════════════════
-// PAGE UI BUILD
-// ══════════════════════════════════════════════════════════
-
-function buildRandomPageUI() {
+// ── Build UI ──────────────────────────────────────────────
+function _buildUI() {
   const page = document.getElementById('page-random');
   if (!page) return;
 
   page.innerHTML = `
-    <div class="random-page">
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
 
       <!-- Header -->
       <div class="random-header">
-        <div class="random-header-left">
+        <div>
           <h2 class="random-title">Random Discover</h2>
-          <p class="random-subtitle" id="random-subtitle">Loading links…</p>
+          <p class="random-sub" id="random-sub">Loading…</p>
         </div>
-        <button class="topbar-btn" id="random-opts-btn" title="Options">
+        <button class="topbar-btn" id="r-opts-btn" title="Options">
           <i class="fa-solid fa-sliders"></i>
         </button>
       </div>
 
-      <!-- Folder selector panel (expandable) -->
-      <div class="random-folder-panel" id="random-folder-panel">
-        <button class="random-panel-toggle" id="random-panel-toggle">
-          <i class="fa-solid fa-folder-open"></i>
-          <span id="panel-toggle-label">Select folders</span>
-          <i class="fa-solid fa-chevron-down random-panel-chevron" id="panel-chevron"></i>
-        </button>
-        <div class="random-folder-list hidden" id="random-folder-list"></div>
-      </div>
+      <!-- Scrollable body -->
+      <div class="random-scroll">
 
-      <!-- Options panel (expandable) -->
-      <div class="random-opts-panel hidden" id="random-opts-panel">
-        <div class="random-opts-grid" id="random-opts-grid"></div>
-      </div>
+        <!-- Folder selector -->
+        <div>
+          <div class="r-folder-label">Folders</div>
+          <div class="r-folder-bar" id="r-folder-bar"></div>
+        </div>
 
-      <!-- Main discover area -->
-      <div class="random-discover-area" id="random-discover-area">
-
-        <!-- Idle state: big Discover button -->
-        <div class="random-idle" id="random-idle">
-          <div class="random-idle-orb" id="random-orb">
-            <button class="random-big-btn" id="random-fire-btn" title="Open random link">
-              <i class="fa-solid fa-shuffle"></i>
-            </button>
+        <!-- Domain filter (auto-detected) -->
+        <div id="r-domain-wrap" class="hidden">
+          <div class="r-folder-label" style="display:flex;align-items:center;gap:6px">
+            <span>Filter by domain</span>
+            <button class="btn btn-ghost btn-sm" id="r-domain-clear" style="font-size:10px;padding:2px 6px">Clear</button>
           </div>
-          <div class="random-idle-text">
-            <div class="random-idle-title" id="random-idle-title">Ready to discover</div>
-            <div class="random-idle-sub" id="random-idle-sub">Tap to open a random link</div>
+          <div class="r-domain-bar" id="r-domain-bar"></div>
+        </div>
+
+        <!-- Options panel (collapsible) -->
+        <div id="r-options-panel" class="r-options-section hidden">
+          <div class="r-opts-title">Customization</div>
+
+          <!-- Weight mode -->
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Weight by</div><div class="r-opt-sub">How links are chosen</div></div>
+            <select class="r-select" id="r-weight-mode">
+              <option value="points" ${_options.weightMode==='points'?'selected':''}>Points</option>
+              <option value="uniform" ${_options.weightMode==='uniform'?'selected':''}>Equal chance</option>
+              <option value="likes" ${_options.weightMode==='likes'?'selected':''}>Liked links</option>
+              <option value="starred" ${_options.weightMode==='starred'?'selected':''}>Favourites</option>
+            </select>
           </div>
-          <div class="random-quick-actions">
-            <button class="btn btn-secondary btn-sm" id="random-fire-btn-2">
-              <i class="fa-solid fa-shuffle"></i> Open Random Link
-            </button>
+
+          <!-- Auto-advance -->
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Auto-advance</div><div class="r-opt-sub">Auto-pick next link</div></div>
+            <label class="switch">
+              <input type="checkbox" id="r-auto" ${_options.autoAdvance?'checked':''}>
+              <span class="switch-track"></span>
+            </label>
+          </div>
+          <div class="r-opt-row" id="r-auto-sec-row" ${!_options.autoAdvance?'style="display:none"':''}>
+            <div><div class="r-opt-label">Auto-advance delay</div></div>
+            <select class="r-select" id="r-auto-sec">
+              <option value="10" ${_options.autoAdvanceSec===10?'selected':''}>10s</option>
+              <option value="20" ${_options.autoAdvanceSec===20?'selected':''}>20s</option>
+              <option value="30" ${_options.autoAdvanceSec===30?'selected':''}>30s</option>
+              <option value="60" ${_options.autoAdvanceSec===60?'selected':''}>60s</option>
+            </select>
+          </div>
+
+          <!-- Skip options -->
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Skip disliked</div></div>
+            <label class="switch"><input type="checkbox" id="r-skip-dis" ${_options.skipDisliked?'checked':''}><span class="switch-track"></span></label>
+          </div>
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Skip blocked</div></div>
+            <label class="switch"><input type="checkbox" id="r-skip-blk" ${_options.skipBlocked?'checked':''}><span class="switch-track"></span></label>
+          </div>
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Avoid recent</div><div class="r-opt-sub">Don't repeat last ${_options.recentWindow} links</div></div>
+            <label class="switch"><input type="checkbox" id="r-avoid-rec" ${_options.avoidRecent?'checked':''}><span class="switch-track"></span></label>
+          </div>
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Favourites only</div></div>
+            <label class="switch"><input type="checkbox" id="r-only-star" ${_options.onlyStarred?'checked':''}><span class="switch-track"></span></label>
+          </div>
+          <div class="r-opt-row">
+            <div><div class="r-opt-label">Liked only</div></div>
+            <label class="switch"><input type="checkbox" id="r-only-like" ${_options.onlyLiked?'checked':''}><span class="switch-track"></span></label>
           </div>
         </div>
 
-        <!-- Viewer: embedded link preview inside random page -->
-        <div class="random-viewer hidden" id="random-viewer">
-          <!-- Viewer topbar -->
-          <div class="random-viewer-bar">
-            <img class="random-viewer-favicon" id="rv-favicon" src="" width="18" height="18" onerror="this.style.display='none'">
-            <div class="random-viewer-info">
-              <div class="random-viewer-title" id="rv-title">—</div>
-              <div class="random-viewer-url"   id="rv-url">—</div>
-            </div>
-            <button class="topbar-btn" id="rv-shuffle-btn" title="Next random link">
-              <i class="fa-solid fa-shuffle"></i>
-            </button>
-            <button class="topbar-btn" id="rv-fullscreen-btn" title="Fullscreen">
-              <i class="fa-solid fa-expand"></i>
-            </button>
-            <button class="topbar-btn" id="rv-close-btn" title="Close viewer">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-          </div>
+        <!-- Auto-advance progress bar -->
+        <div class="r-auto-bar hidden" id="r-auto-bar">
+          <i class="fa-solid fa-forward" style="font-size:14px;color:var(--primary);flex-shrink:0"></i>
+          <div class="r-auto-progress"><div class="r-auto-fill" id="r-auto-fill" style="width:0%"></div></div>
+          <span style="font-size:var(--fs-xs);font-weight:700;color:var(--primary);flex-shrink:0" id="r-auto-count">30</span>
+          <button class="btn btn-ghost btn-sm" id="r-auto-stop" style="flex-shrink:0;font-size:11px">Stop</button>
+        </div>
 
-          <!-- iframe -->
-          <div class="random-iframe-wrap">
-            <div class="random-loading" id="rv-loading">
-              <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--primary)"></i>
-              <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-top:8px">Loading…</div>
+        <!-- Roll button -->
+        <div class="random-main">
+          <button class="r-roll-btn" id="r-roll-btn">
+            <i class="fa-solid fa-dice"></i>
+            <span>Roll</span>
+          </button>
+          <div style="font-size:var(--fs-xs);color:var(--text-subtle)" id="r-empty-hint" class="hidden">
+            No links available — try adjusting filters
+          </div>
+        </div>
+
+        <!-- Preview card (shown after roll) -->
+        <div class="r-preview-card hidden" id="r-preview-card">
+
+          <!-- Resizable preview area -->
+          <div class="r-preview-iframe-wrap" id="r-iframe-wrap"
+            style="height:${_previewH}px;position:relative;background:var(--surface-2)">
+
+            <!-- Loading -->
+            <div id="r-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:var(--surface-2);z-index:3">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary)"></i>
+              <div style="font-size:12px;color:var(--text-muted)">Loading preview…</div>
             </div>
-            <iframe id="rv-iframe" class="random-iframe"
+
+            <!-- Resize handle -->
+            <div class="r-preview-resize-handle" id="r-resize-handle">
+              <div class="r-preview-resize-bar"></div>
+            </div>
+
+            <!-- Layer 1: iframe -->
+            <iframe id="r-iframe" class="r-preview-iframe"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              loading="lazy" title="Random link preview"></iframe>
+              loading="lazy" title="Preview"></iframe>
+
+            <!-- Layer 2: og:image / jpg fallback -->
+            <div id="r-thumb" class="r-preview-fallback hidden">
+              <img id="r-thumb-img" src="" alt="Preview">
+              <div class="r-fallback-actions">
+                <button class="btn btn-primary btn-sm" id="r-thumb-open">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+                </button>
+                <button class="btn btn-secondary btn-sm" id="r-thumb-incognito">
+                  <i class="fa-solid fa-user-secret"></i> Incognito
+                </button>
+              </div>
+            </div>
+
+            <!-- Layer 3: favicon fallback -->
+            <div id="r-fav-fb" class="r-preview-fallback hidden">
+              <img id="r-fav-img" src="" width="56" height="56" style="border-radius:12px;opacity:0.6">
+              <div style="font-size:12px;color:var(--text-muted);text-align:center">Preview not available</div>
+              <button class="btn btn-primary btn-sm" id="r-fav-open">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Website
+              </button>
+            </div>
           </div>
 
-          <!-- Auto-advance bar -->
-          <div class="random-auto-bar hidden" id="rv-auto-bar">
-            <div class="random-auto-progress" id="rv-auto-progress"></div>
-            <span class="random-auto-label" id="rv-auto-label">Next in <strong id="rv-auto-count">30</strong>s</span>
-            <button class="btn btn-ghost btn-sm" id="rv-auto-cancel">Pause</button>
+          <!-- Link info -->
+          <div class="r-preview-info" id="r-info">
+            <img id="r-info-fav" src="" width="20" height="20" style="border-radius:4px;flex-shrink:0" onerror="this.style.display='none'">
+            <div style="flex:1;min-width:0">
+              <div class="r-preview-title" id="r-info-title">—</div>
+              <div class="r-preview-domain" id="r-info-domain"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="r-copy-btn" title="Copy URL">
+              <i class="fa-solid fa-copy"></i>
+            </button>
           </div>
 
-          <!-- Action bar -->
-          <div class="random-action-bar" id="rv-action-bar">
-            <button class="random-action-btn" id="rv-star"    title="Favourite"><i class="fa-regular fa-star"></i><span>Fav</span></button>
-            <button class="random-action-btn" id="rv-like"    title="Like">     <i class="fa-regular fa-heart"></i><span>Like</span></button>
-            <button class="random-action-btn" id="rv-dislike" title="Dislike">  <i class="fa-regular fa-thumbs-down"></i><span>Dislike</span></button>
-            <button class="random-action-btn" id="rv-block"   title="Block">    <i class="fa-solid fa-ban"></i><span>Block</span></button>
-            <button class="random-action-btn" id="rv-copy"    title="Copy URL"> <i class="fa-solid fa-copy"></i><span>Copy</span></button>
-            <button class="random-action-btn" id="rv-open"    title="Open tab"> <i class="fa-solid fa-arrow-up-right-from-square"></i><span>Open</span></button>
-            <button class="random-action-btn danger" id="rv-delete" title="Delete"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+          <!-- Actions -->
+          <div class="r-actions">
+            <button class="r-action-btn" id="rv-star"   ><i class="fa-regular fa-star"></i><span>Fav</span></button>
+            <button class="r-action-btn" id="rv-like"   ><i class="fa-regular fa-heart"></i><span>Like</span></button>
+            <button class="r-action-btn" id="rv-dislike"><i class="fa-regular fa-thumbs-down"></i><span>Dislike</span></button>
+            <button class="r-action-btn" id="rv-block"  ><i class="fa-solid fa-ban"></i><span>Block</span></button>
+            <button class="r-action-btn" id="rv-open"   ><i class="fa-solid fa-arrow-up-right-from-square"></i><span>Open</span></button>
+            <button class="r-action-btn" id="rv-next"   ><i class="fa-solid fa-forward"></i><span>Next</span></button>
           </div>
         </div>
 
-      </div>
+      </div><!-- /random-scroll -->
+    </div>`;
 
-      <!-- Points info strip -->
-      <div class="random-points-strip" id="random-points-strip" style="display:none">
-        <i class="fa-solid fa-bolt" style="color:var(--warning)"></i>
-        <span id="rp-current-pts">—</span> pts
-        <span class="rp-sep">·</span>
-        Pool: <strong id="rp-pool">0</strong> links
-        <span class="rp-sep">·</span>
-        <i class="fa-solid fa-heart" style="color:var(--like-color)"></i> <span id="rp-liked">0</span>
-        <span class="rp-sep">·</span>
-        <i class="fa-solid fa-star"  style="color:var(--fav-color)"></i> <span id="rp-starred">0</span>
-      </div>
-
-    </div>
-  `;
-
-  bindRandomEvents();
+  _bindUI(page);
+  _refreshFolderUI();
+  _refreshDomainUI();
 }
 
-// ══════════════════════════════════════════════════════════
-// EVENTS
-// ══════════════════════════════════════════════════════════
-
-function bindRandomEvents() {
-  // Big fire button
-  document.getElementById('random-fire-btn') ?.addEventListener('click', fireRandom);
-  document.getElementById('random-fire-btn-2')?.addEventListener('click', fireRandom);
-
-  // Panel toggle (folder selector)
-  document.getElementById('random-panel-toggle')?.addEventListener('click', () => {
-    _panelOpen = !_panelOpen;
-    const list    = document.getElementById('random-folder-list');
-    const chevron = document.getElementById('panel-chevron');
-    list?.classList.toggle('hidden', !_panelOpen);
-    chevron?.classList.toggle('rotated', _panelOpen);
-  });
+// ── Bind events ───────────────────────────────────────────
+function _bindUI(page) {
+  const $ = id => page.querySelector(`#${id}`);
 
   // Options panel toggle
-  document.getElementById('random-opts-btn')?.addEventListener('click', () => {
-    _optOpen = !_optOpen;
-    document.getElementById('random-opts-panel')?.classList.toggle('hidden', !_optOpen);
-    if (_optOpen) renderOptionsPanel();
+  $('r-opts-btn')?.addEventListener('click', () => {
+    $('r-options-panel')?.classList.toggle('hidden');
   });
 
-  // Viewer controls
-  document.getElementById('rv-shuffle-btn') ?.addEventListener('click', fireRandom);
-  document.getElementById('rv-close-btn')   ?.addEventListener('click', closeViewer);
-  document.getElementById('rv-fullscreen-btn')?.addEventListener('click', toggleFullscreen);
-  document.getElementById('rv-copy')        ?.addEventListener('click', () => { if (_currentLink) { copyToClipboard(_currentLink.url); toast('Copied!','success'); }});
-  document.getElementById('rv-open')        ?.addEventListener('click', () => { if (_currentLink) window.open(_currentLink.url,'_blank','noopener'); });
-  document.getElementById('rv-auto-cancel') ?.addEventListener('click', pauseAutoAdvance);
+  // Roll button
+  $('r-roll-btn')?.addEventListener('click', () => _pick(page));
+
+  // Auto-advance controls
+  $('r-auto')?.addEventListener('change', e => {
+    _options.autoAdvance = e.target.checked;
+    $('r-auto-sec-row')?.style.setProperty('display', e.target.checked ? '' : 'none');
+    _saveOptions();
+    if (!e.target.checked) _stopAuto(page);
+  });
+  $('r-auto-sec')?.addEventListener('change', e => { _options.autoAdvanceSec = Number(e.target.value); _saveOptions(); });
+  $('r-auto-stop')?.addEventListener('click', () => _stopAuto(page));
+
+  // Option toggles
+  const optMap = {
+    'r-weight-mode': v => { _options.weightMode   = v; },
+    'r-skip-dis':    v => { _options.skipDisliked  = v; },
+    'r-skip-blk':    v => { _options.skipBlocked   = v; },
+    'r-avoid-rec':   v => { _options.avoidRecent   = v; },
+    'r-only-star':   v => { _options.onlyStarred   = v; },
+    'r-only-like':   v => { _options.onlyLiked     = v; },
+  };
+  Object.entries(optMap).forEach(([id, setter]) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('change', e => {
+      setter(el.type === 'checkbox' ? el.checked : el.value);
+      _saveOptions();
+    });
+  });
+
+  // Domain filter
+  $('r-domain-clear')?.addEventListener('click', () => {
+    _selDomains = []; Storage.set('randomDomains', []);
+    page.querySelectorAll('.r-domain-chip').forEach(c => c.classList.remove('sel'));
+  });
 }
 
-// ══════════════════════════════════════════════════════════
-// FOLDER PANEL
-// ══════════════════════════════════════════════════════════
+function _saveOptions() {
+  Storage.set('randomOptions', _options);
+}
 
-function refreshFolderPanel() {
-  const list  = document.getElementById('random-folder-list');
-  const label = document.getElementById('panel-toggle-label');
-  if (!list) return;
+// ── Folder chips ──────────────────────────────────────────
+function _refreshFolderUI() {
+  const page = document.getElementById('page-random');
+  const bar  = page?.querySelector('#r-folder-bar');
+  if (!bar) return;
 
-  const selCount = _selFolders.length;
-  if (label) label.textContent = selCount === _folders.length
-    ? 'All folders selected'
-    : `${selCount} of ${_folders.length} folders`;
+  const accessible = _folders.filter(f => !f.locked || isFolderUnlocked(f.id));
+  bar.innerHTML = accessible.map(f => `
+    <button class="r-folder-chip${_selFolders.includes(f.id)?' selected':''}" data-fid="${f.id}">
+      <i class="fa-solid fa-folder" style="font-size:10px"></i>
+      ${escapeHtml(f.name)}
+    </button>`).join('');
 
-  list.innerHTML = `
-    <div class="random-folder-chips">
-      <button class="random-folder-chip ${_selFolders.length === _folders.length ? 'selected' : ''}" id="rf-select-all">
-        <i class="fa-solid fa-check-double"></i> All
-      </button>
-      ${_folders.map(f => `
-        <button class="random-folder-chip ${_selFolders.includes(f.id) ? 'selected' : ''}" data-fid="${f.id}">
-          ${f.locked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-folder"></i>'}
-          ${escapeHtml(f.name)}
-          <span class="rf-chip-count">${f.linkCount || 0}</span>
-        </button>
-      `).join('')}
-    </div>
-  `;
-
-  // Select all
-  list.querySelector('#rf-select-all')?.addEventListener('click', () => {
-    _selFolders = _folders.map(f => f.id);
-    Storage.set('randomFolders', _selFolders);
-    refreshFolderPanel();
-    loadAllLinks();
-  });
-
-  // Individual folder chips
-  list.querySelectorAll('.random-folder-chip[data-fid]').forEach(chip => {
+  bar.querySelectorAll('.r-folder-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const fid = chip.dataset.fid;
       if (_selFolders.includes(fid)) {
-        if (_selFolders.length === 1) { toast('Select at least one folder','warning'); return; }
+        if (_selFolders.length === 1) return; // at least one
         _selFolders = _selFolders.filter(id => id !== fid);
       } else {
         _selFolders.push(fid);
       }
       Storage.set('randomFolders', _selFolders);
-      refreshFolderPanel();
-      loadAllLinks();
+      chip.classList.toggle('selected', _selFolders.includes(fid));
+      _loadLinks();
     });
   });
 }
 
-// ══════════════════════════════════════════════════════════
-// OPTIONS PANEL
-// ══════════════════════════════════════════════════════════
+// ── Domain chips ──────────────────────────────────────────
+function _refreshDomainUI() {
+  const page = document.getElementById('page-random');
+  if (!page) return;
+  const wrap = page.querySelector('#r-domain-wrap');
+  const bar  = page.querySelector('#r-domain-bar');
+  if (!wrap || !bar) return;
 
-function renderOptionsPanel() {
-  const grid = document.getElementById('random-opts-grid');
-  if (!grid) return;
+  if (_allDomains.length === 0) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
 
-  const opts = _options;
+  bar.innerHTML = _allDomains.map(d => `
+    <button class="r-domain-chip${_selDomains.includes(d)?' sel':''}" data-domain="${escapeHtml(d)}">
+      ${escapeHtml(d)}
+    </button>`).join('');
 
-  grid.innerHTML = `
-    <!-- Weight mode -->
-    <div class="ropt-section">
-      <div class="ropt-label"><i class="fa-solid fa-bolt"></i> Link weighting</div>
-      <div class="ropt-radio-group">
-        ${[
-          { val:'points',  label:'By points (smart)',  desc:'Liked/starred links appear more' },
-          { val:'equal',   label:'Equal chance',       desc:'Every link equally likely'        },
-          { val:'inverse', label:'Inverse (discovery)',desc:'Less-opened links appear more'    },
-        ].map(o => `
-          <label class="ropt-radio ${opts.weightMode === o.val ? 'active' : ''}">
-            <input type="radio" name="weightMode" value="${o.val}" ${opts.weightMode === o.val ? 'checked' : ''}>
-            <div>
-              <div class="ropt-radio-label">${o.label}</div>
-              <div class="ropt-radio-desc">${o.desc}</div>
-            </div>
-          </label>
-        `).join('')}
-      </div>
-    </div>
-
-    <!-- Toggles -->
-    <div class="ropt-section">
-      <div class="ropt-label"><i class="fa-solid fa-filter"></i> Filters</div>
-      <div class="ropt-toggles">
-        ${renderToggle('avoidRecent', 'Avoid recent links', 'Skip links opened in last N picks', opts.avoidRecent)}
-        ${renderToggle('skipDisliked','Skip disliked links','Don\'t show links you disliked',    opts.skipDisliked)}
-        ${renderToggle('skipBlocked', 'Skip blocked links', 'Don\'t show blocked links',        opts.skipBlocked)}
-        ${renderToggle('onlyStarred', 'Favourites only',    'Only show starred links',          opts.onlyStarred)}
-        ${renderToggle('onlyLiked',   'Liked only',         'Only show liked links',            opts.onlyLiked)}
-        ${renderToggle('skipLowPoints','Skip low-point links','Skip links below point threshold',opts.skipLowPoints)}
-      </div>
-    </div>
-
-    <!-- Recent window -->
-    <div class="ropt-section">
-      <div class="ropt-label"><i class="fa-solid fa-clock-rotate-left"></i> Avoid recent — window</div>
-      <div class="ropt-slider-row">
-        <input type="range" class="ropt-slider" id="ropt-recentWin" min="1" max="20" value="${opts.recentWindow}">
-        <span class="ropt-slider-val" id="ropt-recentWin-val">${opts.recentWindow} links</span>
-      </div>
-    </div>
-
-    <!-- Low points threshold -->
-    <div class="ropt-section">
-      <div class="ropt-label"><i class="fa-solid fa-gauge-low"></i> Low-points threshold</div>
-      <div class="ropt-slider-row">
-        <input type="range" class="ropt-slider" id="ropt-lowPts" min="0" max="100" step="5" value="${opts.lowPointsThresh}">
-        <span class="ropt-slider-val" id="ropt-lowPts-val">${opts.lowPointsThresh} pts</span>
-      </div>
-    </div>
-
-    <!-- Auto-advance -->
-    <div class="ropt-section">
-      <div class="ropt-label"><i class="fa-solid fa-forward-fast"></i> Auto-advance</div>
-      ${renderToggle('autoAdvance', 'Auto open next link', 'Automatically open next link after delay', opts.autoAdvance)}
-      <div class="ropt-slider-row" style="margin-top:10px">
-        <input type="range" class="ropt-slider" id="ropt-autoSec" min="5" max="120" step="5" value="${opts.autoAdvanceSec}">
-        <span class="ropt-slider-val" id="ropt-autoSec-val">${opts.autoAdvanceSec}s</span>
-      </div>
-    </div>
-
-    <button class="btn btn-secondary btn-sm" id="ropt-reset">
-      <i class="fa-solid fa-rotate-left"></i> Reset to defaults
-    </button>
-  `;
-
-  // Bind weight radios
-  grid.querySelectorAll('input[name="weightMode"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      saveOpt('weightMode', radio.value);
-      grid.querySelectorAll('.ropt-radio').forEach(l => l.classList.remove('active'));
-      radio.closest('.ropt-radio').classList.add('active');
+  bar.querySelectorAll('.r-domain-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const d = chip.dataset.domain;
+      if (_selDomains.includes(d)) _selDomains = _selDomains.filter(x => x !== d);
+      else _selDomains.push(d);
+      Storage.set('randomDomains', _selDomains);
+      chip.classList.toggle('sel', _selDomains.includes(d));
     });
   });
-
-  // Bind toggles
-  grid.querySelectorAll('.ropt-toggle-input').forEach(cb => {
-    cb.addEventListener('change', () => saveOpt(cb.dataset.key, cb.checked));
-  });
-
-  // Sliders
-  bindSlider(grid, 'ropt-recentWin', 'recentWindow', v => `${v} links`);
-  bindSlider(grid, 'ropt-lowPts',    'lowPointsThresh', v => `${v} pts`);
-  bindSlider(grid, 'ropt-autoSec',   'autoAdvanceSec', v => `${v}s`);
-
-  // Reset
-  grid.querySelector('#ropt-reset')?.addEventListener('click', () => {
-    _options = { ...DEFAULT_OPTIONS };
-    Storage.set('randomOptions', _options);
-    renderOptionsPanel();
-    toast('Options reset to defaults','info');
-  });
 }
 
-function renderToggle(key, label, desc, checked) {
-  return `
-    <label class="ropt-toggle-row">
-      <div class="ropt-toggle-info">
-        <div class="ropt-toggle-label">${label}</div>
-        <div class="ropt-toggle-desc">${desc}</div>
-      </div>
-      <label class="switch">
-        <input type="checkbox" class="ropt-toggle-input" data-key="${key}" ${checked ? 'checked' : ''}>
-        <span class="switch-track"></span>
-      </label>
-    </label>`;
-}
+// ── Pick a link ───────────────────────────────────────────
+function _pick(page) {
+  _stopAuto(page);
 
-function bindSlider(grid, id, optKey, formatFn) {
-  const slider = grid.querySelector(`#${id}`);
-  const valEl  = grid.querySelector(`#${id}-val`);
-  if (!slider || !valEl) return;
-  slider.addEventListener('input', () => {
-    const v = Number(slider.value);
-    valEl.textContent = formatFn(v);
-    saveOpt(optKey, v);
-  });
-}
-
-function saveOpt(key, val) {
-  _options[key] = val;
-  Storage.set('randomOptions', _options);
-}
-
-// ══════════════════════════════════════════════════════════
-// WEIGHTED RANDOM SELECTION
-// ══════════════════════════════════════════════════════════
-
-function buildPool() {
   let pool = [..._allLinks];
-  const o  = _options;
 
-  // Filters
-  if (o.skipBlocked)   pool = pool.filter(l => !l.blocked);
-  if (o.skipDisliked)  pool = pool.filter(l => !l.disliked);
-  if (o.onlyStarred)   pool = pool.filter(l => l.starred);
-  if (o.onlyLiked)     pool = pool.filter(l => l.liked);
-  if (o.skipLowPoints) pool = pool.filter(l => (l.points || 100) >= o.lowPointsThresh);
-  if (o.avoidRecent && _lastOpenedIds.length) {
-    const recent = _lastOpenedIds.slice(-o.recentWindow);
+  // Domain filter
+  if (_selDomains.length > 0) pool = pool.filter(l => _selDomains.includes(l.domain));
+
+  // Option filters
+  if (_options.skipDisliked)    pool = pool.filter(l => !l.disliked);
+  if (_options.skipBlocked)     pool = pool.filter(l => !l.blocked);
+  if (_options.skipLowPoints)   pool = pool.filter(l => (l.points||100) >= (_options.lowPointsThresh||20));
+  if (_options.onlyStarred)     pool = pool.filter(l => l.starred);
+  if (_options.onlyLiked)       pool = pool.filter(l => l.liked);
+  if (_options.avoidRecent && _recent.length > 0) {
+    const recent = _recent.slice(-_options.recentWindow);
     const filtered = pool.filter(l => !recent.includes(l.id));
-    if (filtered.length > 0) pool = filtered; // only filter if there's still something left
+    if (filtered.length > 0) pool = filtered;
   }
 
-  return pool;
-}
-
-function weightFn(link) {
-  const o = _options;
-  if (o.weightMode === 'equal') return 1;
-
-  if (o.weightMode === 'inverse') {
-    // Favour less-opened links
-    const opens = link.openCount || 0;
-    return Math.max(1, 200 - opens * 5);
-  }
-
-  // Default: 'points'
-  let pts = link.points ?? 100;
-  if (link.liked)    pts += 50;
-  if (link.starred)  pts += 100;
-  if (link.disliked) pts -= 40;
-  const opens = link.openCount || 0;
-  if (opens > 10) pts *= Math.max(0.4, 1 - (opens - 10) * 0.02);
-  return Math.max(1, pts);
-}
-
-function pickRandom(pool) {
-  if (!pool.length) return null;
-  const weights = pool.map(weightFn);
-  const total   = weights.reduce((a, b) => a + b, 0);
-  let   rand    = Math.random() * total;
-  for (let i = 0; i < pool.length; i++) {
-    rand -= weights[i];
-    if (rand <= 0) return pool[i];
-  }
-  return pool[pool.length - 1];
-}
-
-// ══════════════════════════════════════════════════════════
-// FIRE RANDOM
-// ══════════════════════════════════════════════════════════
-
-let _currentLink   = null;
-let _autoTimer     = null;
-let _autoRemaining = 0;
-
-async function fireRandom() {
-  stopAutoAdvance();
-  const pool = buildPool();
-  updatePointsStrip(pool);
-
+  const emptyHint = page.querySelector('#r-empty-hint');
   if (!pool.length) {
-    toast('No links available with current filters','warning');
+    emptyHint?.classList.remove('hidden');
     return;
   }
+  emptyHint?.classList.add('hidden');
 
-  const link = pickRandom(pool);
-  if (!link) return;
-
-  _currentLink = link;
-
-  // Track recency
-  _lastOpenedIds.push(link.id);
-  if (_lastOpenedIds.length > 50) _lastOpenedIds.shift();
-
-  // Save to history
-  addToHistory(link);
-
-  // Increment open count
-  if (link.folderId && link.id) {
-    update(ref(db, `users/${uid()}/folders/${link.folderId}/links/${link.id}`), {
-      openCount: (link.openCount || 0) + 1,
-      updatedAt: Date.now(),
-    });
-    link.openCount = (link.openCount || 0) + 1;
-  }
-
-  openViewer(link);
-}
-
-// ══════════════════════════════════════════════════════════
-// VIEWER
-// ══════════════════════════════════════════════════════════
-
-function openViewer(link) {
-  const idle   = document.getElementById('random-idle');
-  const viewer = document.getElementById('random-viewer');
-  idle?.classList.add('hidden');
-  viewer?.classList.remove('hidden');
-
-  // Set header
-  const favicon = document.getElementById('rv-favicon');
-  if (favicon) { favicon.src = link.favicon || ''; favicon.style.display = ''; }
-  const titleEl = document.getElementById('rv-title');
-  const urlEl   = document.getElementById('rv-url');
-  if (titleEl) titleEl.textContent = link.title || link.domain || 'Link';
-  if (urlEl)   urlEl.textContent   = link.url;
-
-  // Load iframe
-  const iframe  = document.getElementById('rv-iframe');
-  const loading = document.getElementById('rv-loading');
-  if (loading) loading.classList.remove('hidden');
-  if (iframe) {
-    iframe.src = '';
-    requestAnimationFrame(() => {
-      iframe.src = link.url;
-      iframe.onload  = () => loading?.classList.add('hidden');
-      iframe.onerror = () => {
-        if (loading) loading.innerHTML = `
-          <i class="fa-solid fa-circle-exclamation" style="font-size:28px;color:var(--danger)"></i>
-          <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-top:8px">Preview unavailable</div>
-          <a href="${link.url}" target="_blank" class="btn btn-primary btn-sm" style="margin-top:12px">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in browser
-          </a>`;
-      };
-    });
-  }
-
-  // Bind action buttons
-  bindViewerActions(link);
-
-  // Update points strip
-  const pool = buildPool();
-  updatePointsStrip(pool);
-  document.getElementById('rp-current-pts').textContent = link.points ?? 100;
-
-  // Auto-advance
-  if (_options.autoAdvance) {
-    startAutoAdvance();
-  }
-}
-
-function closeViewer() {
-  stopAutoAdvance();
-  const idle   = document.getElementById('random-idle');
-  const viewer = document.getElementById('random-viewer');
-  const iframe = document.getElementById('rv-iframe');
-  if (iframe) iframe.src = '';
-  viewer?.classList.add('hidden');
-  idle?.classList.remove('hidden');
-  _currentLink = null;
-}
-
-function bindViewerActions(link) {
-  const setBtn = (id, fn) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const clone = btn.cloneNode(true); // remove old listeners
-    btn.parentNode.replaceChild(clone, btn);
-    clone.addEventListener('click', fn);
+  // Weighted selection
+  const wfn = l => {
+    if (_options.weightMode === 'uniform') return 1;
+    if (_options.weightMode === 'likes')   return l.liked ? 10 : 1;
+    if (_options.weightMode === 'starred') return l.starred ? 10 : (l.liked ? 3 : 1);
+    return Math.max(1, calcLinkPoints(l));
   };
 
-  setBtn('rv-shuffle-btn', fireRandom);
-  setBtn('rv-close-btn',   closeViewer);
-  setBtn('rv-fullscreen-btn', toggleFullscreen);
-  setBtn('rv-copy',  async () => { await copyToClipboard(link.url); toast('Copied!', 'success'); });
-  setBtn('rv-open',  ()      => window.open(link.url, '_blank', 'noopener'));
+  const chosen = weightedRandom(pool, wfn);
+  _curLink = chosen;
+  _recent.push(chosen.id);
+  if (_recent.length > 20) _recent.shift();
 
-  setBtn('rv-star', async () => {
-    await toggleStar(link.folderId, link);
-    link.starred = !link.starred;
-    updateViewerBtn('rv-star', link.starred, 'fa-star', 'Fav', 'active-star');
-  });
-  setBtn('rv-like', async () => {
-    await toggleLike(link.folderId, link);
-    link.liked = !link.liked;
-    updateViewerBtn('rv-like', link.liked, 'fa-heart', 'Like', 'active-like');
-  });
-  setBtn('rv-dislike', async () => {
-    await toggleDislike(link.folderId, link);
-    link.disliked = !link.disliked;
-    updateViewerBtn('rv-dislike', link.disliked, 'fa-thumbs-down', 'Dislike', 'active-dislike');
-  });
-  setBtn('rv-block', async () => {
-    await toggleBlock(link.folderId, link);
-    link.blocked = !link.blocked;
-    toast(link.blocked ? 'Blocked from random' : 'Unblocked', 'info');
-    if (link.blocked) { closeViewer(); fireRandom(); }
-  });
-  setBtn('rv-delete', async () => {
-    const ok = await confirm('Delete Link', `Delete "${link.title || link.url}"?`, true);
-    if (ok) { closeViewer(); deleteLink(link.folderId, link); }
-  });
+  // History + open count
+  addToHistory({ ...chosen, folderId: chosen.folderId, folderName: chosen.folderName });
 
-  // Set initial button states
-  updateViewerBtn('rv-star',    link.starred,  'fa-star',       'Fav',     'active-star');
-  updateViewerBtn('rv-like',    link.liked,    'fa-heart',      'Like',    'active-like');
-  updateViewerBtn('rv-dislike', link.disliked, 'fa-thumbs-down','Dislike', 'active-dislike');
+  _showPreview(page, chosen);
+
+  // Auto-advance
+  if (_options.autoAdvance) _startAuto(page);
 }
 
-function updateViewerBtn(id, active, icon, label, activeClass) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  btn.className = `random-action-btn${active ? ` ${activeClass}` : ''}`;
-  btn.innerHTML = `<i class="fa-${active ? 'solid' : 'regular'} ${icon}"></i><span>${label}</span>`;
+// ── Preview ───────────────────────────────────────────────
+function _showPreview(page, link) {
+  const card     = page.querySelector('#r-preview-card');
+  const iframe   = page.querySelector('#r-iframe');
+  const loading  = page.querySelector('#r-loading');
+  const thumbL   = page.querySelector('#r-thumb');
+  const thumbImg = page.querySelector('#r-thumb-img');
+  const favL     = page.querySelector('#r-fav-fb');
+  const favImg   = page.querySelector('#r-fav-img');
+
+  if (!card || !iframe) return;
+
+  card.classList.remove('hidden');
+
+  // Reset layers
+  iframe.classList.remove('hidden');
+  thumbL.classList.add('hidden');
+  favL.classList.add('hidden');
+  loading?.classList.remove('hidden');
+
+  // Update info strip
+  const infoFav = page.querySelector('#r-info-fav');
+  const infoTit = page.querySelector('#r-info-title');
+  const infoDom = page.querySelector('#r-info-domain');
+  if (infoFav) infoFav.src = link.favicon || '';
+  if (infoTit) infoTit.textContent = link.title || link.domain || link.url;
+  if (infoDom) infoDom.textContent = link.domain || '';
+
+  _syncActionBtns(page, link);
+
+  // Bind action buttons
+  page.querySelector('#rv-star')?.addEventListener('click',    () => _act(page, link, 'star'),    { once:true });
+  page.querySelector('#rv-like')?.addEventListener('click',    () => _act(page, link, 'like'),    { once:true });
+  page.querySelector('#rv-dislike')?.addEventListener('click', () => _act(page, link, 'dislike'), { once:true });
+  page.querySelector('#rv-block')?.addEventListener('click',   () => _act(page, link, 'block'),   { once:true });
+  page.querySelector('#rv-open')?.addEventListener('click',  () => window.open(link.url,'_blank','noopener'), { once:true });
+  page.querySelector('#rv-next')?.addEventListener('click',  () => _pick(page), { once:true });
+  page.querySelector('#r-copy-btn')?.addEventListener('click', async () => { await copyToClipboard(link.url); toast('Copied!','success'); });
+
+  // Fallback buttons
+  page.querySelector('#r-thumb-open')?.addEventListener('click',   () => window.open(link.url,'_blank','noopener'));
+  page.querySelector('#r-thumb-incognito')?.addEventListener('click', () => window.open(link.url,'_blank','noopener'));
+  page.querySelector('#r-fav-open')?.addEventListener('click',     () => window.open(link.url,'_blank','noopener'));
+
+  // Iframe preview strategy: iframe → og:image → first jpg → favicon
+  let blocked = false;
+  let iframeTO;
+
+  const hideLoading  = () => loading?.classList.add('hidden');
+  const showThumb    = () => { hideLoading(); iframe.classList.add('hidden'); thumbL.classList.remove('hidden'); };
+  const showFavLayer = () => {
+    hideLoading(); iframe.classList.add('hidden'); thumbL.classList.add('hidden');
+    favL.classList.remove('hidden');
+    if (favImg) { favImg.src = link.favicon || ''; favImg.onerror = () => { favImg.src = ''; }; }
+  };
+
+  const tryOgImage = async () => {
+    try {
+      const r    = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(link.url)}`, { signal: AbortSignal.timeout(6000) });
+      const data = await r.json();
+      const doc  = new DOMParser().parseFromString(data.contents||'', 'text/html');
+      let img    = doc.querySelector('meta[property="og:image"]')?.content
+                || doc.querySelector('meta[name="twitter:image"]')?.content;
+      if (!img) {
+        const imgs = [...doc.querySelectorAll('img[src]')];
+        const jpg  = imgs.find(i => /\.(jpe?g)/i.test(i.getAttribute('src')));
+        if (jpg) {
+          let src = jpg.getAttribute('src');
+          if (src && !src.startsWith('http')) src = new URL(src, link.url).href;
+          img = src;
+        }
+      }
+      if (img) {
+        if (!thumbImg) { showFavLayer(); return; }
+        thumbImg.src    = img;
+        thumbImg.onload = () => showThumb();
+        thumbImg.onerror= () => showFavLayer();
+      } else {
+        showFavLayer();
+      }
+    } catch { showFavLayer(); }
+  };
+
+  iframeTO = setTimeout(() => { if (!blocked) tryOgImage(); }, 5000);
+
+  iframe.addEventListener('load', () => { clearTimeout(iframeTO); hideLoading(); }, { once:true });
+  iframe.addEventListener('error', () => {
+    clearTimeout(iframeTO); blocked = true;
+    iframe.classList.add('hidden');
+    tryOgImage();
+  }, { once:true });
+
+  iframe.src = link.url;
+
+  // Resize handle
+  _bindResize(page);
 }
 
-// ── Fullscreen ─────────────────────────────────────────────
-let _isFullscreen = false;
-function toggleFullscreen() {
-  _isFullscreen = !_isFullscreen;
-  const viewer = document.getElementById('random-viewer');
-  viewer?.classList.toggle('random-viewer-fullscreen', _isFullscreen);
-  const btn = document.getElementById('rv-fullscreen-btn');
-  if (btn) btn.innerHTML = _isFullscreen
-    ? '<i class="fa-solid fa-compress"></i>'
-    : '<i class="fa-solid fa-expand"></i>';
+function _bindResize(page) {
+  const handle = page.querySelector('#r-resize-handle');
+  const wrap   = page.querySelector('#r-iframe-wrap');
+  if (!handle || !wrap) return;
+
+  const doResize = (startY, startH, moveEv, upEv, getY) => {
+    const onMove = ev => {
+      const delta = getY(ev) - startY;
+      const newH  = Math.max(180, Math.min(window.innerHeight * 0.75, startH + delta));
+      wrap.style.height = newH + 'px';
+    };
+    const onUp = () => {
+      _previewH = wrap.getBoundingClientRect().height;
+      Storage.set('randomPreviewHeight', _previewH);
+      window.removeEventListener(moveEv, onMove);
+      window.removeEventListener(upEv,   onUp);
+    };
+    window.addEventListener(moveEv, onMove);
+    window.addEventListener(upEv,   onUp);
+  };
+
+  handle.addEventListener('mousedown', e => doResize(e.clientY, wrap.offsetHeight, 'mousemove','mouseup', ev => ev.clientY));
+  handle.addEventListener('touchstart', e => doResize(e.touches[0].clientY, wrap.offsetHeight, 'touchmove','touchend', ev => ev.touches[0].clientY), { passive:true });
 }
 
-// ── Auto-advance ───────────────────────────────────────────
-function startAutoAdvance() {
-  _autoRemaining = _options.autoAdvanceSec;
-  const bar      = document.getElementById('rv-auto-bar');
-  const label    = document.getElementById('rv-auto-label');
-  const progress = document.getElementById('rv-auto-progress');
-  const count    = document.getElementById('rv-auto-count');
-  bar?.classList.remove('hidden');
+// ── Auto-advance ──────────────────────────────────────────
+function _startAuto(page) {
+  const bar   = page.querySelector('#r-auto-bar');
+  const count = page.querySelector('#r-auto-count');
+  const fill  = page.querySelector('#r-auto-fill');
+  if (!bar) return;
+  bar.classList.remove('hidden');
+  _autoCount = _options.autoAdvanceSec || 30;
+  if (count) count.textContent = _autoCount;
+  if (fill)  fill.style.width  = '0%';
 
-  const total = _options.autoAdvanceSec;
   _autoTimer = setInterval(() => {
-    _autoRemaining--;
-    if (count)    count.textContent = _autoRemaining;
-    if (progress) progress.style.width = `${(1 - _autoRemaining / total) * 100}%`;
-    if (_autoRemaining <= 0) { stopAutoAdvance(); fireRandom(); }
+    _autoCount--;
+    if (count) count.textContent = _autoCount;
+    const pct = (1 - _autoCount / (_options.autoAdvanceSec||30)) * 100;
+    if (fill) fill.style.width = pct + '%';
+    if (_autoCount <= 0) { _stopAuto(page); _pick(page); }
   }, 1000);
 }
 
-function stopAutoAdvance() {
+function _stopAuto(page) {
   if (_autoTimer) { clearInterval(_autoTimer); _autoTimer = null; }
-  document.getElementById('rv-auto-bar')?.classList.add('hidden');
+  page.querySelector('#r-auto-bar')?.classList.add('hidden');
 }
 
-function pauseAutoAdvance() {
-  stopAutoAdvance();
-  toast('Auto-advance paused', 'info');
+// ── Action buttons ────────────────────────────────────────
+function _syncActionBtns(page, link) {
+  const set = (id, active, solidIcon, label, cls) => {
+    const b = page.querySelector(id);
+    if (!b) return;
+    b.className = `r-action-btn${active?' '+cls:''}`;
+    b.innerHTML = `<i class="fa-${active?'solid':'regular'} ${solidIcon}"></i><span>${label}</span>`;
+  };
+  set('#rv-star',    link.starred,  'fa-star',        'Fav',     'starred');
+  set('#rv-like',    link.liked,    'fa-heart',       'Like',    'liked');
+  set('#rv-dislike', link.disliked, 'fa-thumbs-down', 'Dislike', 'liked');
+  const bb = page.querySelector('#rv-block');
+  if (bb) bb.className = `r-action-btn${link.blocked?' blocked':''}`;
 }
 
-// ── Points strip ───────────────────────────────────────────
-function updatePointsStrip(pool) {
-  const strip = document.getElementById('random-points-strip');
-  if (!strip) return;
-  strip.style.display = 'flex';
-  document.getElementById('rp-pool').textContent    = pool.length;
-  document.getElementById('rp-liked').textContent   = pool.filter(l => l.liked).length;
-  document.getElementById('rp-starred').textContent = pool.filter(l => l.starred).length;
+async function _act(page, link, action) {
+  if (action==='star')    { await toggleStar(link.folderId,link);    link.starred  =!link.starred; }
+  if (action==='like')    { await toggleLike(link.folderId,link);    link.liked    =!link.liked;    if(link.liked)link.disliked=false; }
+  if (action==='dislike') { await toggleDislike(link.folderId,link); link.disliked =!link.disliked; if(link.disliked)link.liked=false; }
+  if (action==='block')   { await toggleBlock(link.folderId,link);   link.blocked  =!link.blocked; }
+  _syncActionBtns(page, link);
+
+  // Re-bind buttons after toggling
+  setTimeout(() => {
+    page.querySelector('#rv-star')?.addEventListener('click',    () => _act(page, link, 'star'),    { once:true });
+    page.querySelector('#rv-like')?.addEventListener('click',    () => _act(page, link, 'like'),    { once:true });
+    page.querySelector('#rv-dislike')?.addEventListener('click', () => _act(page, link, 'dislike'), { once:true });
+    page.querySelector('#rv-block')?.addEventListener('click',   () => _act(page, link, 'block'),   { once:true });
+  }, 50);
 }
 
-function updateReadyState() {
-  const pool     = buildPool();
-  const idleTitle= document.getElementById('random-idle-title');
-  const idleSub  = document.getElementById('random-idle-sub');
-  const orb      = document.getElementById('random-orb');
-  const fireBtn  = document.getElementById('random-fire-btn');
-
-  if (!pool.length) {
-    if (idleTitle) idleTitle.textContent = 'No links available';
-    if (idleSub)   idleSub.textContent   = 'Import links or adjust your folder/filter selection';
-    orb?.classList.add('orb-empty');
-    if (fireBtn) fireBtn.disabled = true;
-  } else {
-    if (idleTitle) idleTitle.textContent = 'Ready to discover';
-    if (idleSub)   idleSub.textContent   = `${pool.length} link${pool.length !== 1 ? 's' : ''} in pool`;
-    orb?.classList.remove('orb-empty');
-    if (fireBtn) fireBtn.disabled = false;
-  }
-  updatePointsStrip(pool);
+function _updateSubtitle() {
+  const el  = document.getElementById('random-sub');
+  const cnt = _allLinks.length;
+  if (el) el.textContent = cnt > 0 ? `${cnt} link${cnt!==1?'s':''} available` : 'No links — select folders or add some';
 }

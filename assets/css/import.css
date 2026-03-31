@@ -1,176 +1,176 @@
 /* ============================================================
-   Linkivo — import.css  v1.3.0 — Import Modal Styles
+   Linkivo — import.css  v1.4.2
+   Import modal: mobile fullscreen, tabs, dropzone, preview
    ============================================================ */
 
-/* ── Import Modal sizing ────────────────────────────────── */
-.import-modal { max-width: 520px; max-height: 92vh; }
+/* ── Backdrop ────────────────────────────────────────────── */
+.import-backdrop {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.55); backdrop-filter:blur(4px);
+  z-index:var(--z-modal);
+  display:flex; align-items:flex-end; justify-content:center;
+  padding:var(--sp-3);
+  opacity:0; transition:opacity 0.2s ease;
+}
+.import-backdrop.open { opacity:1; }
+@media(min-width:769px) { .import-backdrop { align-items:center; } }
 
-/* ── Import tabs ────────────────────────────────────────── */
+/* ── Modal ───────────────────────────────────────────────── */
+.import-modal {
+  background:var(--surface); width:100%; max-width:520px;
+  border-radius:var(--r-2xl) var(--r-2xl) var(--r-lg) var(--r-lg);
+  box-shadow:var(--shadow-xl);
+  display:flex; flex-direction:column;
+  max-height:92dvh;
+  transform:translateY(40px) scale(0.97);
+  transition:transform 0.28s cubic-bezier(0.34,1.26,0.64,1);
+}
+.import-backdrop.open .import-modal {
+  transform:translateY(0) scale(1);
+}
+@media(min-width:769px) {
+  .import-modal { border-radius:var(--r-2xl); transform:scale(0.95) translateY(0); max-height:88dvh; }
+  .import-backdrop.open .import-modal { transform:scale(1); }
+}
+
+/* Mobile fullscreen — covers entire screen including header/nav */
+@media(max-width:768px) {
+  .import-backdrop {
+    padding:0; align-items:stretch;
+  }
+  .import-modal {
+    max-width:100%; width:100%;
+    border-radius:0; max-height:100dvh; height:100dvh;
+    padding-top:env(safe-area-inset-top,0);
+  }
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.import-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:var(--sp-4) var(--sp-5);
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.import-title {
+  font-size:var(--fs-lg); font-weight:700;
+  display:flex; align-items:center; gap:var(--sp-2);
+}
+
+/* ── Tabs ────────────────────────────────────────────────── */
 .import-tabs {
-  display: flex;
-  background: var(--surface-2);
-  border-radius: var(--r-md);
-  padding: 3px; gap: 3px;
+  display:flex; gap:3px;
+  background:var(--surface-2); margin:var(--sp-3) var(--sp-4);
+  border-radius:var(--r-md); padding:3px; flex-shrink:0;
 }
 .import-tab {
-  flex: 1; padding: 8px;
-  font-size: var(--fs-sm); font-weight: 600;
-  border-radius: calc(var(--r-md) - 3px);
-  border: none; background: transparent;
-  color: var(--text-muted); cursor: pointer;
-  transition: all var(--t-base);
-  display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex:1; padding:8px 6px; font-size:var(--fs-xs); font-weight:600;
+  border-radius:calc(var(--r-md) - 2px); border:none; background:transparent;
+  color:var(--text-muted); cursor:pointer; transition:all var(--t-base);
+  display:flex; align-items:center; justify-content:center; gap:4px;
 }
-.import-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.import-tab.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); }
+.import-tab i { font-size:12px; }
 
-/* ── Dropzone ───────────────────────────────────────────── */
+/* ── Scrollable body ─────────────────────────────────────── */
+.import-body {
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:0 var(--sp-4) var(--sp-4);
+  display:flex; flex-direction:column; gap:var(--sp-4);
+}
+.import-tab-content { display:none; flex-direction:column; gap:var(--sp-3); }
+.import-tab-content.active { display:flex; }
+
+/* ── Dropzone ────────────────────────────────────────────── */
 .import-dropzone {
-  border: 2px dashed var(--border-2);
-  border-radius: var(--r-xl);
-  background: var(--surface-2);
-  cursor: pointer;
-  transition: all var(--t-base);
-  position: relative;
-  overflow: hidden;
+  border:2px dashed var(--border-2); border-radius:var(--r-xl);
+  background:var(--surface-2); cursor:pointer;
+  transition:all var(--t-base); position:relative; overflow:hidden;
+  min-height:140px;
 }
-.import-dropzone:hover,
-.import-dropzone.dragover {
-  border-color: var(--primary);
-  background: var(--gradient-soft);
+.import-dropzone:hover,.import-dropzone.dz-over {
+  border-color:var(--primary); background:var(--gradient-soft);
 }
-.import-dropzone-inner {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 6px; padding: var(--sp-8) var(--sp-5);
-  pointer-events: none;
+.import-dz-inner {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; padding:var(--sp-6) var(--sp-5); pointer-events:none;
 }
-.import-drop-icon {
-  font-size: 36px;
-  background: var(--gradient);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+.import-dz-icon {
+  font-size:36px; background:var(--gradient);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
-.import-drop-title { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
-.import-drop-sub   { font-size: var(--fs-sm); color: var(--text-muted); }
-.import-drop-formats {
-  font-size: var(--fs-xs); color: var(--text-subtle);
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-full); padding: 4px 12px; margin-top: 4px;
+.import-dz-title   { font-size:var(--fs-sm); font-weight:700; color:var(--text); }
+.import-dz-formats {
+  font-size:var(--fs-xs); color:var(--text-subtle);
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-full); padding:3px 10px;
 }
 .import-dropzone input[type="file"] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer; z-index: 1;
+  position:absolute; inset:0; opacity:0; cursor:pointer; z-index:1;
 }
 
-/* ── File list ──────────────────────────────────────────── */
-.import-file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.import-file-item {
-  display: flex; align-items: center; gap: var(--sp-3);
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 8px var(--sp-3);
-  font-size: var(--fs-sm); animation: fadeUp 0.2s ease;
-}
-.import-file-icon { color: var(--primary); font-size: 16px; flex-shrink: 0; }
-.import-file-size { color: var(--text-subtle); font-size: var(--fs-xs); flex-shrink: 0; margin-left: auto; }
-.import-file-status { color: var(--text-subtle); font-size: 13px; flex-shrink: 0; }
-.import-file-status.done { color: var(--success); }
-
-/* ── Paste area ─────────────────────────────────────────── */
-.import-paste-area {
-  resize: vertical;
-  min-height: 140px;
-  font-size: var(--fs-sm);
-  font-family: var(--font-body);
+/* File list */
+.import-file-row {
+  display:flex; align-items:center; gap:var(--sp-2);
+  padding:8px var(--sp-3);
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--r-sm); font-size:var(--fs-sm);
+  animation:fadeUp 0.18s ease;
+  margin-bottom:4px;
 }
 
-/* ── Links preview list ─────────────────────────────────── */
-.import-preview-title {
-  font-size: var(--fs-sm); font-weight: 600; color: var(--text);
-  display: flex; align-items: center; gap: 6px;
+/* ── Paste area ──────────────────────────────────────────── */
+.import-paste {
+  width:100%; resize:vertical; min-height:120px;
+  padding:10px var(--sp-3);
+  font-family:var(--font-body); font-size:var(--fs-sm);
+  color:var(--text); background:var(--surface-2);
+  border:1.5px solid var(--border); border-radius:var(--r-md);
+  outline:none; transition:all var(--t-base);
+}
+.import-paste:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--border-focus); }
+.import-paste::placeholder { color:var(--text-subtle); }
+
+/* Live count */
+.import-live-count {
+  display:flex; align-items:center; gap:6px;
+  font-size:var(--fs-xs); font-weight:600; color:var(--primary);
+  padding:6px 10px; background:var(--gradient-soft);
+  border-radius:var(--r-sm); animation:fadeUp 0.15s ease;
+}
+
+/* ── Preview ─────────────────────────────────────────────── */
+.import-preview-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding-bottom:8px; border-bottom:1px solid var(--border);
 }
 .import-links-list {
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
+  max-height:220px; overflow-y:auto;
+  border:1px solid var(--border); border-radius:var(--r-md);
+  background:var(--surface-2);
 }
 .import-link-row {
-  border-bottom: 1px solid var(--border);
-  transition: background var(--t-fast);
+  border-bottom:1px solid var(--border); padding:8px var(--sp-3);
+  transition:background var(--t-fast);
 }
-.import-link-row:last-child { border-bottom: none; }
-.import-link-row:hover { background: var(--surface-hover); }
-.import-link-label {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: 8px var(--sp-3); cursor: pointer;
+.import-link-row:last-child { border-bottom:none; }
+.import-link-row:hover { background:var(--surface-hover); }
+
+/* ── Folder chips ────────────────────────────────────────── */
+.import-folder-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.import-folder-chip {
+  display:flex; align-items:center; gap:5px;
+  padding:7px var(--sp-3);
+  background:var(--surface-2); border:1.5px solid var(--border);
+  border-radius:var(--r-full); font-size:var(--fs-xs); font-weight:600;
+  color:var(--text-muted); cursor:pointer; transition:all var(--t-base);
 }
-.import-link-label input[type="checkbox"] { flex-shrink: 0; accent-color: var(--primary); }
-.import-link-favicon { border-radius: 3px; flex-shrink: 0; object-fit: contain; }
-.import-link-info { flex: 1; min-width: 0; }
-.import-link-title {
-  font-size: var(--fs-xs); font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.import-link-url {
-  font-size: 10px; color: var(--text-subtle);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.import-folder-chip:hover { border-color:var(--primary); color:var(--primary); }
+.import-folder-chip.selected {
+  background:var(--gradient-soft); border-color:var(--primary); color:var(--primary);
 }
 
-/* ── Folder chips ───────────────────────────────────────── */
-.import-folder-chips {
-  display: flex; flex-wrap: wrap; gap: 6px;
-}
-.folder-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px var(--sp-3);
-  background: var(--surface-2); border: 1.5px solid var(--border);
-  border-radius: var(--r-full);
-  font-size: var(--fs-xs); font-weight: 600;
-  color: var(--text-muted); cursor: pointer;
-  transition: all var(--t-base);
-}
-.folder-chip:hover { border-color: var(--primary); color: var(--primary); }
-.folder-chip.selected {
-  background: var(--gradient-soft); border-color: var(--primary);
-  color: var(--primary);
-}
-.folder-chip i { color: var(--warning); font-size: 11px; }
-
-/* ══ v1.4.0 additions ═══════════════════════════════════ */
-
-/* Mobile full screen modal */
-@media(max-width:768px){
-  .import-modal.mobile-full {
-    max-width:100%;
-    height:100dvh;
-    border-radius:0;
-    margin:0;
-  }
-  .modal-backdrop:has(.import-modal.mobile-full) {
-    padding:0;
-    align-items:flex-start;
-  }
-}
-
-/* URL tab */
-#import-tab-url .form-group { margin-bottom:0; }
-
-/* Import tabs — 3 columns */
-.import-tabs { grid-template-columns:repeat(3,1fr); display:grid; }
-.import-tab {
-  flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:600;
-  border-radius:calc(var(--r-md) - 3px);border:none;background:transparent;
-  color:var(--text-muted);cursor:pointer;transition:all var(--t-base);
-  display:flex;align-items:center;justify-content:center;gap:4px;
-}
-.import-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);}
-
-/* Duplicate badge */
-#import-dup-badge { display:inline-flex; }
-
-/* Progress live bar */
-#import-progress-wrap {
-  border-top:1px solid var(--border);
-  padding-top:12px;
+/* ── Footer ─────────────────────────────────────────────── */
+.import-footer {
+  display:flex; gap:var(--sp-3); justify-content:flex-end;
+  padding:var(--sp-4) var(--sp-5); border-top:1px solid var(--border); flex-shrink:0;
 }

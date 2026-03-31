@@ -1,12 +1,13 @@
 // ============================================================
-// Linkivo Service Worker — v1.0.0
-// Handles: App Shell caching, offline fallback
+// Linkivo — sw.js  v1.4.2
+// Service Worker: cache-first for assets, network-first for
+// HTML. Auto-update: skip-waiting when new version available.
 // ============================================================
 
-const CACHE_NAME      = 'linkivo-shell-v1.4.0';
-const RUNTIME_CACHE   = 'linkivo-runtime-v1.4.0';
+const CACHE_SHELL   = 'linkivo-shell-v1.4.2';
+const CACHE_RUNTIME = 'linkivo-runtime-v1.4.2';
+const ALL_CACHES    = [CACHE_SHELL, CACHE_RUNTIME];
 
-// App shell assets — cache on install
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -38,64 +39,73 @@ const SHELL_ASSETS = [
   '/assets/js/settings.js',
   '/assets/svg/icon.svg',
   '/assets/svg/logo-light.svg',
-  '/assets/svg/logo-dark.svg'
+  '/assets/svg/logo-dark.svg',
 ];
 
-// ── Install: cache app shell ──────────────────────────────
-self.addEventListener('install', (event) => {
+// ── Install: cache shell assets ───────────────────────────
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(CACHE_SHELL)
       .then(cache => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting())  // activate immediately
   );
 });
 
-// ── Activate: clear old caches ────────────────────────────
-self.addEventListener('activate', (event) => {
-  const validCaches = [CACHE_NAME, RUNTIME_CACHE];
+// ── Activate: remove old caches ───────────────────────────
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => !validCaches.includes(key))
-          .map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => !ALL_CACHES.includes(k)).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())  // take control of existing pages
   );
 });
 
-// ── Fetch: Cache-first for shell, Network-first for API ───
-self.addEventListener('fetch', (event) => {
+// ── Skip waiting on demand (from app.js updatefound handler) ─
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// ── Fetch strategy ────────────────────────────────────────
+self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET, Firebase calls, and cross-origin requests
+  // Skip non-GET and cross-origin Firebase/CDN requests
   if (request.method !== 'GET') return;
-  if (url.hostname.includes('firebase') || url.hostname.includes('google')) return;
-  if (url.hostname.includes('fonts.googleapis') || url.hostname.includes('fonts.gstatic')) return;
+  if (!url.origin.includes(self.location.origin)) return;
 
-  // App shell → cache-first
-  if (SHELL_ASSETS.some(path => url.pathname === path || url.pathname.endsWith(path))) {
+  // HTML pages: network-first (always get fresh HTML)
+  if (request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
-      caches.match(request).then(cached => cached || fetch(request).then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-        return response;
-      }))
+      fetch(request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE_SHELL).then(c => c.put(request, clone));
+          return res;
+        })
+        .catch(() => caches.match(request).then(r => r || caches.match('/index.html')))
     );
     return;
   }
 
-  // Everything else → network-first with runtime cache fallback
+  // SW and app.json: always network-first
+  if (url.pathname === '/sw.js' || url.pathname === '/app.json') {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    return;
+  }
+
+  // Assets (JS, CSS, SVG): cache-first with network fallback
   event.respondWith(
-    fetch(request)
-      .then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(RUNTIME_CACHE).then(cache => cache.put(request, clone));
-        }
-        return response;
-      })
-      .catch(() => caches.match(request))
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(res => {
+        if (!res || res.status !== 200 || res.type === 'opaque') return res;
+        const clone = res.clone();
+        caches.open(CACHE_RUNTIME).then(c => c.put(request, clone));
+        return res;
+      });
+    })
   );
 });

@@ -1,12 +1,16 @@
 // ============================================================
-// Linkivo — import.js  v1.4.0
-// Universal link extractor: advanced detection, live count,
-// progress bar, background save, duplicate detection
+// Linkivo — import.js  v1.4.2
+// Advanced link extraction: all formats, consecutive URL
+// detection, live count, progress bar, background save,
+// mobile fullscreen, duplicate smart dedup
 // ============================================================
 
-import { extractUrls, validateAndNormalizeUrl, getDomain, getFavicon, isSameUrl, escapeHtml } from './utils.js';
+import {
+  extractUrls, validateAndNormalizeUrl, isSameUrl,
+  getDomain, getFavicon, escapeHtml, genId
+} from './utils.js';
 
-// ── Build link object ─────────────────────────────────────
+// ── Make a link object ────────────────────────────────────
 function makeLink(url, extra = {}) {
   let domain = '';
   try { domain = new URL(url).hostname.replace('www.', ''); } catch {}
@@ -16,41 +20,63 @@ function makeLink(url, extra = {}) {
     domain,
     favicon:   getFavicon(url) || '',
     addedAt:   Date.now(),
-    liked:     false,
-    disliked:  false,
-    starred:   false,
-    blocked:   false,
-    pinned:    false,
-    openCount: 0,
-    points:    100,
+    liked:     false, disliked: false, starred: false,
+    blocked:   false, pinned:   false,
+    openCount: 0, points: 100,
     ...extra,
   };
 }
 
-// ── Detect consecutive duplicate spaces/links in text ─────
-function detectConsecutiveGroups(text) {
-  // Find lines that have multiple URLs close together without separation
-  const lines = text.split('\n');
-  const groups = [];
-  let currentGroup = [];
+// ══════════════════════════════════════════════════════════
+// ADVANCED CONSECUTIVE URL DETECTION
+// Detects 2+ URLs on consecutive lines with no blank line
+// separating them — likely auto-pasted list, not intentional
+// ══════════════════════════════════════════════════════════
+function detectConsecutiveDuplicateGroups(text) {
+  const lines  = text.split('\n');
+  const groups = [];     // groups of URLs that appear consecutive
+  let   curr   = [];
 
   for (const line of lines) {
-    const urls = extractUrls(line);
-    if (urls.length >= 2) {
-      // Multiple URLs on same line — likely a space-separated list
-      currentGroup.push(...urls);
-    } else if (urls.length === 1) {
-      currentGroup.push(urls[0]);
-    } else {
-      if (currentGroup.length >= 2) groups.push([...currentGroup]);
-      currentGroup = [];
+    const trimmed = line.trim();
+    const urls    = extractUrls(trimmed);
+
+    if (urls.length > 0) {
+      curr.push(...urls);
+    } else if (trimmed === '' && curr.length > 0) {
+      if (curr.length >= 2) groups.push([...curr]);
+      curr = [];
     }
   }
-  if (currentGroup.length >= 2) groups.push([...currentGroup]);
+  if (curr.length >= 2) groups.push([...curr]);
   return groups;
 }
 
-// ── Format parsers ────────────────────────────────────────
+// Smarter dedup: normalise URL before comparing
+function normalizeForDedup(url) {
+  try {
+    const u = new URL(url);
+    // Remove tracking params
+    const TRACKING = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid','ref','source','campaign'];
+    TRACKING.forEach(p => u.searchParams.delete(p));
+    return u.origin + u.pathname.replace(/\/+$/, '') + (u.search || '') + (u.hash || '');
+  } catch { return url.toLowerCase(); }
+}
+
+function smartDedup(links) {
+  const seen  = new Set();
+  const clean = [];
+  for (const l of links) {
+    const key = normalizeForDedup(l.url);
+    if (!seen.has(key)) { seen.add(key); clean.push(l); }
+  }
+  return clean;
+}
+
+// ══════════════════════════════════════════════════════════
+// FORMAT PARSERS
+// ══════════════════════════════════════════════════════════
+
 function parsePlainText(text) {
   return extractUrls(text).map(url => makeLink(url));
 }
@@ -59,7 +85,7 @@ function parseJson(text) {
   try {
     const data = JSON.parse(text);
     const links = [];
-    const traverse = (val) => {
+    const walk  = val => {
       if (!val) return;
       if (typeof val === 'string') {
         const n = validateAndNormalizeUrl(val);
@@ -69,21 +95,20 @@ function parseJson(text) {
           const n = validateAndNormalizeUrl(val.url);
           if (n) { links.push(makeLink(n, { title: val.title || val.name || '' })); return; }
         }
-        Object.values(val).forEach(traverse);
+        Object.values(val).forEach(walk);
       }
     };
-    traverse(data);
+    walk(data);
     return links;
   } catch { return parsePlainText(text); }
 }
 
 function parseCsv(text) {
-  const rows = text.split('\n').map(r => r.split(','));
   const links = [];
-  for (const row of rows) {
-    for (const cell of row) {
+  for (const row of text.split('\n')) {
+    for (const cell of row.split(',')) {
       const val = cell.replace(/^["']|["']$/g, '').trim();
-      const n = validateAndNormalizeUrl(val);
+      const n   = validateAndNormalizeUrl(val);
       if (n) links.push(makeLink(n));
     }
   }
@@ -92,14 +117,12 @@ function parseCsv(text) {
 
 function parseMarkdown(text) {
   const links = [];
-  // Extract [title](url) markdown links
-  const mdRe = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
+  const mdRe  = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
   let m;
   while ((m = mdRe.exec(text)) !== null) {
     const n = validateAndNormalizeUrl(m[2]);
     if (n) links.push(makeLink(n, { title: m[1] || '' }));
   }
-  // Also extract bare URLs
   parsePlainText(text).forEach(l => {
     if (!links.some(x => isSameUrl(x.url, l.url))) links.push(l);
   });
@@ -107,10 +130,9 @@ function parseMarkdown(text) {
 }
 
 function parseHtml(text) {
-  const parser = new DOMParser();
-  const doc    = parser.parseFromString(text, 'text/html');
-  const links  = [];
-  const seen   = new Set();
+  const doc   = new DOMParser().parseFromString(text, 'text/html');
+  const links = [];
+  const seen  = new Set();
   doc.querySelectorAll('a[href]').forEach(a => {
     const href  = a.getAttribute('href')?.trim();
     const title = a.textContent?.trim();
@@ -118,7 +140,6 @@ function parseHtml(text) {
     const n = validateAndNormalizeUrl(href);
     if (n && !seen.has(n)) { seen.add(n); links.push(makeLink(n, { title: title || '' })); }
   });
-  // Also grep text
   parsePlainText(doc.body?.innerText || text).forEach(l => {
     if (!seen.has(l.url)) { seen.add(l.url); links.push(l); }
   });
@@ -126,9 +147,9 @@ function parseHtml(text) {
 }
 
 async function parsePdf(file) {
-  return new Promise(resolve => {
+  return new Promise(res => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = async e => {
       try {
         if (!window.pdfjsLib) {
           await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
@@ -136,45 +157,43 @@ async function parsePdf(file) {
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
         const pdf = await window.pdfjsLib.getDocument({ data: e.target.result }).promise;
-        let allText = '';
+        let txt   = '';
         for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          allText += content.items.map(s => s.str).join(' ') + '\n';
+          const pg  = await pdf.getPage(i);
+          const ct  = await pg.getTextContent();
+          txt += ct.items.map(s => s.str).join(' ') + '\n';
         }
-        resolve(parsePlainText(allText));
-      } catch(err) { console.warn('[Import PDF]', err); resolve([]); }
+        res(parsePlainText(txt));
+      } catch { res([]); }
     };
     reader.readAsArrayBuffer(file);
   });
 }
 
 async function parseZip(file) {
-  return new Promise(resolve => {
+  return new Promise(res => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = async e => {
       try {
         if (!window.JSZip) await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
-        const zip  = await window.JSZip.loadAsync(e.target.result);
+        const zip   = await window.JSZip.loadAsync(e.target.result);
         const links = [];
         const seen  = new Set();
-        const entries = Object.values(zip.files).filter(f => !f.dir);
-        for (const entry of entries) {
+        for (const entry of Object.values(zip.files).filter(f => !f.dir)) {
           const name = entry.name.toLowerCase();
           if (/\.(png|jpg|jpeg|gif|webp|mp4|mp3|zip|exe|bin)$/.test(name)) continue;
           const text = await entry.async('string');
-          let extracted = [];
-          if (name.endsWith('.json'))       extracted = parseJson(text);
-          else if (name.endsWith('.csv'))   extracted = parseCsv(text);
-          else if (name.endsWith('.md'))    extracted = parseMarkdown(text);
-          else if (/\.html?$/.test(name))  extracted = parseHtml(text);
-          else                             extracted = parsePlainText(text);
+          let   extracted = name.endsWith('.json')     ? parseJson(text)
+                          : name.endsWith('.csv')      ? parseCsv(text)
+                          : name.endsWith('.md')       ? parseMarkdown(text)
+                          : /\.html?$/.test(name)      ? parseHtml(text)
+                          : parsePlainText(text);
           for (const l of extracted) {
             if (!seen.has(l.url)) { seen.add(l.url); links.push(l); }
           }
         }
-        resolve(links);
-      } catch(err) { console.warn('[Import ZIP]', err); resolve([]); }
+        res(links);
+      } catch { res([]); }
     };
     reader.readAsArrayBuffer(file);
   });
@@ -194,279 +213,343 @@ export async function extractLinksFromFile(file) {
   const name = file.name?.toLowerCase() || '';
   const mime = file.type?.toLowerCase() || '';
   if (mime === 'application/pdf' || name.endsWith('.pdf')) return parsePdf(file);
-  if (mime === 'application/zip' || mime === 'application/x-zip-compressed' || name.endsWith('.zip')) return parseZip(file);
+  if (mime === 'application/zip' || name.endsWith('.zip')) return parseZip(file);
   if (mime.startsWith('image/')) return [];
   const text = await file.text();
   if (name.endsWith('.json') || mime === 'application/json') return parseJson(text);
   if (name.endsWith('.csv')  || mime === 'text/csv')         return parseCsv(text);
   if (name.endsWith('.md') || name.endsWith('.markdown'))    return parseMarkdown(text);
-  if (name.endsWith('.html') || name.endsWith('.htm') ||
-      text.trimStart().startsWith('<!DOCTYPE') ||
-      text.includes('<DL>') || text.includes('<A HREF')) return parseHtml(text);
+  if (name.endsWith('.html') || name.endsWith('.htm') || text.includes('<A HREF') || text.includes('<a href')) return parseHtml(text);
   return parsePlainText(text);
 }
 
 export function extractLinksFromText(text) {
   if (!text?.trim()) return [];
   const t = text.trim();
-  if (t.startsWith('{') || t.startsWith('[')) return parseJson(t);
-  if (t.startsWith('#') || /\[[^\]]+\]\(https?/.test(t))   return parseMarkdown(t);
-  if (t.startsWith('<') || t.includes('<a '))               return parseHtml(t);
+  if (t.startsWith('{') || t.startsWith('['))      return parseJson(t);
+  if (t.startsWith('#') || /\[[^\]]+\]\(https?/.test(t)) return parseMarkdown(t);
+  if (t.startsWith('<') || t.includes('<a '))      return parseHtml(t);
   return parsePlainText(t);
 }
 
-export function deduplicateLinks(links) {
-  const seen = new Set();
-  return links.filter(l => {
-    if (seen.has(l.url)) return false;
-    seen.add(l.url);
-    return true;
-  });
-}
+export function deduplicateLinks(links) { return smartDedup(links); }
 
 // ══════════════════════════════════════════════════════════
-// IMPORT MODAL UI — v1.4.0
-// Full screen on mobile, live link count, progress bar,
-// background save, consecutive URL detection
+// IMPORT MODAL  v1.4.2
+// - Mobile: full screen (hides bottom nav + header via z-index)
+// - Live URL count in paste tab (updates as you type)
+// - Progress bar while saving
+// - Background banner if modal closed mid-save
+// - Consecutive URL detection warning
+// - Smart deduplication across files + existing links
 // ══════════════════════════════════════════════════════════
 
 export function showImportModal(folders, onImport) {
-  document.getElementById('import-modal-backdrop')?.remove();
+  document.getElementById('import-backdrop')?.remove();
 
-  const backdrop = document.createElement('div');
-  backdrop.id = 'import-modal-backdrop';
-  backdrop.className = 'modal-backdrop';
-  backdrop.innerHTML = `
-    <div class="modal mobile-full import-modal" id="import-modal">
-      <div class="modal-header">
-        <span class="modal-title"><i class="fa-solid fa-file-import" style="color:var(--primary);margin-right:8px"></i>Import Links</span>
-        <button class="btn btn-ghost btn-icon" id="import-modal-close"><i class="fa-solid fa-xmark"></i></button>
+  const bd = document.createElement('div');
+  bd.id = 'import-backdrop';
+  bd.className = 'import-backdrop';
+
+  bd.innerHTML = `
+    <div class="import-modal" id="import-modal">
+
+      <!-- Header -->
+      <div class="import-header">
+        <span class="import-title">
+          <i class="fa-solid fa-file-import" style="color:var(--primary)"></i>
+          Import Links
+        </span>
+        <button class="btn btn-ghost btn-icon" id="import-close"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="modal-body" id="import-modal-body" style="display:flex;flex-direction:column;gap:18px;padding:16px">
+      <!-- Tab pills -->
+      <div class="import-tabs" id="import-tabs">
+        <button class="import-tab active" data-tab="file"><i class="fa-solid fa-file-arrow-up"></i> File</button>
+        <button class="import-tab" data-tab="paste"><i class="fa-solid fa-clipboard"></i> Paste</button>
+        <button class="import-tab" data-tab="url"><i class="fa-solid fa-link"></i> URL</button>
+      </div>
 
-        <!-- Tabs -->
-        <div class="import-tabs">
-          <button class="import-tab active" data-tab="file"><i class="fa-solid fa-file-arrow-up"></i> File</button>
-          <button class="import-tab" data-tab="paste"><i class="fa-solid fa-clipboard"></i> Paste / Text</button>
-          <button class="import-tab" data-tab="url"><i class="fa-solid fa-link"></i> URL</button>
-        </div>
+      <!-- Scrollable body -->
+      <div class="import-body" id="import-body">
 
-        <!-- File tab -->
-        <div id="import-tab-file" class="import-tab-content active">
-          <div id="import-dropzone" class="import-dropzone">
-            <div class="import-dropzone-inner">
-              <div class="import-drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-              <div class="import-drop-title">Drop files here or tap to browse</div>
-              <div class="import-drop-formats">TXT · HTML · JSON · CSV · PDF · ZIP · MD · Bookmarks</div>
+        <!-- ── FILE TAB ─────────────────────────────────── -->
+        <div id="tab-file" class="import-tab-content active">
+          <div class="import-dropzone" id="import-dropzone">
+            <div class="import-dz-inner">
+              <div class="import-dz-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+              <div class="import-dz-title">Drop files here or tap to browse</div>
+              <div class="import-dz-formats">TXT · HTML · JSON · CSV · PDF · ZIP · MD · Bookmarks</div>
             </div>
             <input type="file" id="import-file-input" multiple
               accept=".txt,.html,.htm,.json,.csv,.pdf,.zip,.md,.markdown,.xbel">
           </div>
-          <div id="import-file-list" class="import-file-list hidden"></div>
+          <div id="import-file-list" class="hidden"></div>
         </div>
 
-        <!-- Paste tab -->
-        <div id="import-tab-paste" class="import-tab-content hidden">
-          <textarea id="import-paste-area" class="form-input import-paste-area"
-            placeholder="Paste URLs, HTML, JSON, Markdown, or any text containing links…" rows="7"></textarea>
-          <!-- Live link counter -->
+        <!-- ── PASTE TAB ────────────────────────────────── -->
+        <div id="tab-paste" class="import-tab-content hidden">
+          <textarea id="import-paste" class="import-paste"
+            placeholder="Paste URLs, HTML, JSON, Markdown, or any text containing links…" rows="6"></textarea>
+          <!-- Live link count — updates as you type -->
           <div class="import-live-count hidden" id="import-live-count">
             <i class="fa-solid fa-link" style="color:var(--primary)"></i>
-            <span id="import-live-num">0</span> links detected
+            <strong id="import-live-num">0</strong> links detected
+            <span id="import-consec-warn" class="hidden" style="color:var(--warning);margin-left:6px;font-size:11px">
+              <i class="fa-solid fa-triangle-exclamation"></i> Consecutive URLs detected
+            </span>
           </div>
-          <button class="btn btn-secondary btn-sm" id="import-paste-extract" style="margin-top:8px;width:100%">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Extract & Preview Links
+          <button class="btn btn-secondary btn-sm w-full" id="import-paste-extract" style="margin-top:8px">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Extract & Preview
           </button>
         </div>
 
-        <!-- URL tab -->
-        <div id="import-tab-url" class="import-tab-content hidden">
-          <div class="form-group">
-            <label class="form-label">Add a single URL</label>
-            <div style="display:flex;gap:8px">
-              <input id="import-single-url" class="form-input" type="url" placeholder="https://example.com" style="flex:1">
-              <button class="btn btn-primary btn-sm" id="import-url-add" style="flex-shrink:0">Add</button>
-            </div>
+        <!-- ── URL TAB ──────────────────────────────────── -->
+        <div id="tab-url" class="import-tab-content hidden">
+          <div style="display:flex;gap:8px">
+            <input id="import-single-url" class="form-input" type="url"
+              placeholder="https://example.com" style="flex:1">
+            <button class="btn btn-primary btn-sm" id="import-url-add" style="flex-shrink:0">Add</button>
           </div>
           <!-- Clipboard suggestion -->
-          <div id="clipboard-suggestion" class="hidden" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gradient-soft);border:1px solid var(--border-focus);border-radius:var(--r-md);margin-top:8px;font-size:var(--fs-xs)">
-            <i class="fa-solid fa-clipboard" style="color:var(--primary)"></i>
-            <span class="truncate" id="clipboard-url-text" style="flex:1"></span>
-            <button class="btn btn-primary btn-sm" id="clipboard-use-btn" style="flex-shrink:0">Use</button>
+          <div id="import-clip-suggest" class="hidden" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gradient-soft);border:1px solid var(--border-focus);border-radius:var(--r-md);margin-top:10px">
+            <i class="fa-solid fa-clipboard" style="color:var(--primary);flex-shrink:0"></i>
+            <span id="import-clip-url" class="truncate" style="flex:1;font-size:var(--fs-xs)"></span>
+            <button class="btn btn-primary btn-sm" id="import-clip-use" style="flex-shrink:0">Use</button>
           </div>
         </div>
 
-        <!-- Extracted preview -->
+        <!-- ── EXTRACTED PREVIEW ─────────────────────────── -->
         <div id="import-preview" class="hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div class="import-preview-title">
+          <div class="import-preview-header">
+            <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);font-weight:600;color:var(--text)">
               <i class="fa-solid fa-link" style="color:var(--primary)"></i>
               <strong id="import-count">0</strong> links found
-              <span id="import-dup-badge" class="hidden" style="font-size:10px;color:var(--warning);margin-left:4px"></span>
+              <span id="import-dup-note" class="hidden" style="font-size:10px;color:var(--warning);font-weight:500"></span>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-ghost btn-sm" id="import-select-all">All</button>
-              <button class="btn btn-ghost btn-sm" id="import-deselect-all">None</button>
+              <button class="btn btn-ghost btn-sm" id="import-sel-all">All</button>
+              <button class="btn btn-ghost btn-sm" id="import-desel-all">None</button>
             </div>
           </div>
           <div id="import-links-list" class="import-links-list"></div>
         </div>
 
-        <!-- Folder selector -->
+        <!-- ── FOLDER SELECTOR ───────────────────────────── -->
         <div id="import-folder-section" class="hidden">
-          <div class="form-label" style="margin-bottom:8px"><i class="fa-solid fa-folder" style="color:var(--warning)"></i> Save to folder</div>
-          <div id="import-folder-list" class="import-folder-chips"></div>
+          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text-2);margin-bottom:8px">
+            <i class="fa-solid fa-folder" style="color:var(--warning)"></i> Save to folder
+          </div>
+          <div id="import-folder-chips" class="import-folder-chips"></div>
           <button class="btn btn-ghost btn-sm" id="import-new-folder-btn" style="margin-top:8px">
             <i class="fa-solid fa-plus"></i> New folder
           </button>
-          <input type="text" id="import-new-folder-input" class="form-input hidden" placeholder="Folder name…" style="margin-top:8px">
+          <input type="text" id="import-new-folder-input" class="form-input hidden"
+            placeholder="Folder name…" style="margin-top:8px">
         </div>
 
-      </div>
+      </div><!-- /import-body -->
 
-      <!-- Progress bar (shown during save) -->
-      <div id="import-progress-wrap" class="hidden" style="padding:0 16px 8px;flex-shrink:0">
+      <!-- Progress bar (visible during save) -->
+      <div id="import-progress-wrap" class="hidden" style="padding:0 var(--sp-4) 8px;flex-shrink:0">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <span style="font-size:var(--fs-xs);font-weight:600;color:var(--text-muted)" id="import-progress-label">Saving links…</span>
-          <span style="font-size:var(--fs-xs);font-weight:700;color:var(--primary)" id="import-progress-pct">0%</span>
+          <span style="font-size:var(--fs-xs);font-weight:600;color:var(--text-muted)" id="import-prog-label">Saving…</span>
+          <span style="font-size:var(--fs-xs);font-weight:700;color:var(--primary)" id="import-prog-pct">0%</span>
         </div>
-        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="import-progress-fill" style="width:0%"></div></div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="import-prog-fill" style="width:0%"></div></div>
       </div>
 
-      <div class="modal-footer" style="flex-shrink:0">
-        <button class="btn btn-secondary btn-sm" id="import-cancel-btn">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="import-confirm-btn" disabled>
+      <!-- Footer -->
+      <div class="import-footer">
+        <button class="btn btn-secondary btn-sm" id="import-cancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="import-save" disabled>
           <i class="fa-solid fa-cloud-arrow-up"></i> Save Links
         </button>
       </div>
     </div>
   `;
 
-  document.body.appendChild(backdrop);
+  document.body.appendChild(bd);
+  requestAnimationFrame(() => bd.classList.add('open'));
 
-  // ── State ─────────────────────────────────────────────────
-  let extractedLinks = [];
-  let selectedFolder = null;
-  let newFolderName  = '';
+  // ── State ─────────────────────────────────────────────
+  let extracted    = [];
+  let selFolder    = null;
+  let newFolderName= '';
+  let isSaving     = false;
 
-  const $ = id => document.getElementById(id);
+  const $ = id => bd.querySelector(`#${id}`);
 
-  // ── Close ─────────────────────────────────────────────────
-  const close = () => backdrop.remove();
-  $('import-modal-close').onclick = close;
-  $('import-cancel-btn').onclick  = close;
-  backdrop.addEventListener('click', e => { if(e.target===backdrop) close(); });
+  // ── Close ──────────────────────────────────────────────
+  const close = () => {
+    bd.classList.remove('open');
+    setTimeout(() => bd.remove(), 250);
+  };
+  $('import-close').onclick  = close;
+  $('import-cancel').onclick = close;
+  bd.addEventListener('click', e => { if (e.target === bd) close(); });
 
-  // ── Tab switching ─────────────────────────────────────────
-  backdrop.querySelectorAll('.import-tab').forEach(tab => {
+  // ── Tab switching ──────────────────────────────────────
+  bd.querySelectorAll('.import-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      backdrop.querySelectorAll('.import-tab').forEach(t=>t.classList.remove('active'));
-      backdrop.querySelectorAll('.import-tab-content').forEach(c=>c.classList.add('hidden'));
+      bd.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
+      bd.querySelectorAll('.import-tab-content').forEach(c => c.classList.add('hidden'));
       tab.classList.add('active');
-      $(`import-tab-${tab.dataset.tab}`)?.classList.remove('hidden');
+      $(`tab-${tab.dataset.tab}`)?.classList.remove('hidden');
     });
   });
 
-  // ── Live paste counter ────────────────────────────────────
-  const pasteArea = $('import-paste-area');
-  pasteArea?.addEventListener('input', () => {
-    const urls = extractLinksFromText(pasteArea.value);
-    const counter = $('import-live-count');
-    const numEl   = $('import-live-num');
-    if (counter && numEl) {
-      numEl.textContent = urls.length;
-      counter.classList.toggle('hidden', urls.length === 0);
-    }
+  // ── Live paste counter ─────────────────────────────────
+  let _liveTimer;
+  $('import-paste')?.addEventListener('input', () => {
+    clearTimeout(_liveTimer);
+    _liveTimer = setTimeout(() => {
+      const text   = $('import-paste').value;
+      const urls   = extractLinksFromText(text);
+      const count  = $('import-live-count');
+      const numEl  = $('import-live-num');
+      const warn   = $('import-consec-warn');
+      if (numEl) numEl.textContent = urls.length;
+      count?.classList.toggle('hidden', urls.length === 0);
+      // Consecutive URL detection
+      const groups = detectConsecutiveDuplicateGroups(text);
+      warn?.classList.toggle('hidden', groups.length === 0);
+    }, 150);
   });
 
-  // ── Clipboard check ───────────────────────────────────────
+  // ── Clipboard suggestion ────────────────────────────────
   navigator.clipboard?.readText?.().then(text => {
-    if (!text) return;
-    const url = validateAndNormalizeUrl(text.trim());
+    const url = text ? validateAndNormalizeUrl(text.trim()) : null;
     if (url) {
-      $('clipboard-suggestion')?.classList.remove('hidden');
-      const el = $('clipboard-url-text');
+      $('import-clip-suggest')?.classList.remove('hidden');
+      const el = $('import-clip-url');
       if (el) el.textContent = url;
-      $('clipboard-use-btn')?.addEventListener('click', () => {
+      $('import-clip-use')?.addEventListener('click', () => {
         const inp = $('import-single-url');
-        if (inp) { inp.value = url; $('clipboard-suggestion')?.classList.add('hidden'); }
+        if (inp) { inp.value = url; $('import-clip-suggest')?.classList.add('hidden'); }
       });
     }
   }).catch(() => {});
 
-  // ── Single URL add ────────────────────────────────────────
+  // ── Single URL add ─────────────────────────────────────
   $('import-url-add')?.addEventListener('click', () => {
-    const input = $('import-single-url');
-    const raw   = input?.value.trim();
-    const url   = validateAndNormalizeUrl(raw);
-    if (!url) { input?.classList.add('error'); setTimeout(()=>input?.classList.remove('error'),1500); return; }
-    renderPreview([makeLink(url)]);
-    if (input) input.value = '';
+    const inp = $('import-single-url');
+    const url = validateAndNormalizeUrl(inp?.value.trim() || '');
+    if (!url) { inp?.classList.add('error'); setTimeout(() => inp?.classList.remove('error'), 1500); return; }
+    _renderPreview([makeLink(url)]);
+    if (inp) inp.value = '';
+  });
+  $('import-single-url')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('import-url-add')?.click(); });
+
+  // ── Paste extract ──────────────────────────────────────
+  $('import-paste-extract')?.addEventListener('click', () => {
+    const text  = $('import-paste')?.value || '';
+    const links = extractLinksFromText(text);
+    _renderPreview(links);
   });
 
-  // ── Render extracted links ────────────────────────────────
-  function renderPreview(links) {
-    // Dedup against already extracted
-    const newLinks = links.filter(l => !extractedLinks.some(e => isSameUrl(e.url, l.url)));
-    const dups     = links.length - newLinks.length;
-    extractedLinks = [...extractedLinks, ...newLinks];
+  // ── File drag + drop ────────────────────────────────────
+  const dz   = $('import-dropzone');
+  const finp = $('import-file-input');
+  dz?.addEventListener('click', () => finp?.click());
+  dz?.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dz-over'); });
+  dz?.addEventListener('dragleave', () => dz.classList.remove('dz-over'));
+  dz?.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dz-over'); _handleFiles([...e.dataTransfer.files]); });
+  finp?.addEventListener('change', () => _handleFiles([...finp.files]));
 
-    $('import-count').textContent = extractedLinks.length;
-    const dupBadge = $('import-dup-badge');
-    if (dups > 0 && dupBadge) { dupBadge.textContent = `(${dups} duplicate${dups>1?'s':''} removed)`; dupBadge.classList.remove('hidden'); }
+  async function _handleFiles(files) {
+    if (!files.length) return;
+    const listEl = $('import-file-list');
+    listEl?.classList.remove('hidden');
+    listEl.innerHTML = files.map(f => `
+      <div class="import-file-row" data-name="${escapeHtml(f.name)}">
+        <i class="fa-solid ${_fIcon(f.name)}" style="color:var(--primary);font-size:16px;flex-shrink:0"></i>
+        <span class="truncate" style="flex:1;font-size:var(--fs-sm)">${escapeHtml(f.name)}</span>
+        <span style="font-size:var(--fs-xs);color:var(--text-subtle);flex-shrink:0">${_fSize(f.size)}</span>
+        <i class="fa-solid fa-spinner fa-spin file-status" style="color:var(--text-subtle);font-size:13px;flex-shrink:0"></i>
+      </div>`).join('');
+
+    const allLinks = []; const seenUrls = new Set();
+    for (let i = 0; i < files.length; i++) {
+      const links = await extractLinksFromFile(files[i]);
+      for (const l of links) {
+        const key = normalizeForDedup(l.url);
+        if (!seenUrls.has(key)) { seenUrls.add(key); allLinks.push(l); }
+      }
+      // Mark file done
+      listEl.querySelectorAll('.file-status')[i]?.setAttribute('class','fa-solid fa-circle-check file-status');
+      listEl.querySelectorAll('.file-status')[i] && (listEl.querySelectorAll('.file-status')[i].style.color = 'var(--success)');
+    }
+    _renderPreview(allLinks);
+  }
+
+  // ── Render extracted links ──────────────────────────────
+  function _renderPreview(newLinks) {
+    const dupsRemoved = newLinks.filter(l => extracted.some(e => isSameUrl(e.url, l.url))).length;
+    const fresh       = newLinks.filter(l => !extracted.some(e => isSameUrl(e.url, l.url)));
+    extracted = [...extracted, ...fresh];
+
+    $('import-count').textContent = extracted.length;
+    const dupNote = $('import-dup-note');
+    if (dupsRemoved > 0 && dupNote) {
+      dupNote.textContent = `(${dupsRemoved} duplicate${dupsRemoved>1?'s':''} removed)`;
+      dupNote.classList.remove('hidden');
+    }
 
     const list = $('import-links-list');
     list.innerHTML = '';
-    if (!extractedLinks.length) {
-      list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:13px">No links found</div>';
+    if (!extracted.length) {
+      list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">No links found</div>';
     } else {
-      extractedLinks.forEach((link, i) => {
+      extracted.forEach((link, i) => {
         const row = document.createElement('div');
         row.className = 'import-link-row';
         row.innerHTML = `
-          <label class="import-link-label">
-            <input type="checkbox" class="import-link-check" data-i="${i}" checked>
-            <img class="import-link-favicon" src="${link.favicon}" onerror="this.style.display='none'" width="16" height="16">
-            <div class="import-link-info">
-              <div class="import-link-title">${escapeHtml(link.title||link.domain)}</div>
-              <div class="import-link-url">${escapeHtml(link.url)}</div>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;width:100%">
+            <input type="checkbox" class="import-link-cb" data-i="${i}" checked
+              style="flex-shrink:0;width:16px;height:16px;accent-color:var(--primary)">
+            <img src="${link.favicon}" onerror="this.style.display='none'" width="16" height="16"
+              style="border-radius:3px;flex-shrink:0">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(link.title||link.domain)}</div>
+              <div style="font-size:10px;color:var(--text-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(link.url)}</div>
             </div>
           </label>`;
         list.appendChild(row);
       });
     }
     $('import-preview')?.classList.remove('hidden');
-    renderFolderList();
+    _renderFolders();
     $('import-folder-section')?.classList.remove('hidden');
-    updateConfirmBtn();
+    _updSaveBtn();
   }
 
-  function getSelectedLinks() {
-    return [...($('import-links-list')?.querySelectorAll('.import-link-check:checked')||[])]
-      .map(cb => extractedLinks[+cb.dataset.i]);
-  }
+  // ── Select all / none ───────────────────────────────────
+  $('import-sel-all')?.addEventListener('click', () => {
+    $('import-links-list')?.querySelectorAll('.import-link-cb').forEach(cb => cb.checked = true);
+    _updSaveBtn();
+  });
+  $('import-desel-all')?.addEventListener('click', () => {
+    $('import-links-list')?.querySelectorAll('.import-link-cb').forEach(cb => cb.checked = false);
+    _updSaveBtn();
+  });
+  $('import-links-list')?.addEventListener('change', _updSaveBtn);
 
-  function updateConfirmBtn() {
-    const btn = $('import-confirm-btn');
-    if (!btn) return;
-    btn.disabled = !(getSelectedLinks().length > 0 && (selectedFolder !== null || newFolderName.trim()));
-  }
-
-  // ── Folder chips ──────────────────────────────────────────
-  function renderFolderList() {
-    const el = $('import-folder-list');
+  // ── Folder chips ────────────────────────────────────────
+  function _renderFolders() {
+    const el = $('import-folder-chips');
     if (!el) return;
     el.innerHTML = folders.map(f => `
-      <button class="folder-chip${selectedFolder===f.id?' selected':''}" data-fid="${f.id}">
-        <i class="fa-solid fa-folder"></i> ${escapeHtml(f.name)}
+      <button class="import-folder-chip${selFolder===f.id?' selected':''}" data-fid="${f.id}">
+        <i class="fa-solid fa-folder" style="font-size:11px"></i>
+        ${escapeHtml(f.name)}
       </button>`).join('');
-    el.querySelectorAll('.folder-chip').forEach(chip => {
+    el.querySelectorAll('.import-folder-chip').forEach(chip => {
       chip.addEventListener('click', () => {
-        selectedFolder = chip.dataset.fid; newFolderName='';
+        selFolder = chip.dataset.fid; newFolderName = '';
         $('import-new-folder-input')?.classList.add('hidden');
         if ($('import-new-folder-input')) $('import-new-folder-input').value = '';
-        renderFolderList(); updateConfirmBtn();
+        _renderFolders(); _updSaveBtn();
       });
     });
   }
@@ -477,117 +560,92 @@ export function showImportModal(folders, onImport) {
     if (!inp?.classList.contains('hidden')) inp?.focus();
   });
   $('import-new-folder-input')?.addEventListener('input', e => {
-    newFolderName = e.target.value.trim(); selectedFolder = null;
-    $('import-folder-list')?.querySelectorAll('.folder-chip').forEach(c=>c.classList.remove('selected'));
-    updateConfirmBtn();
+    newFolderName = e.target.value.trim();
+    selFolder     = null;
+    $('import-folder-chips')?.querySelectorAll('.import-folder-chip').forEach(c => c.classList.remove('selected'));
+    _updSaveBtn();
   });
 
-  // ── Select all / none ─────────────────────────────────────
-  $('import-select-all')?.addEventListener('click', () => { $('import-links-list')?.querySelectorAll('.import-link-check').forEach(c=>c.checked=true); updateConfirmBtn(); });
-  $('import-deselect-all')?.addEventListener('click', () => { $('import-links-list')?.querySelectorAll('.import-link-check').forEach(c=>c.checked=false); updateConfirmBtn(); });
-  $('import-links-list')?.addEventListener('change', updateConfirmBtn);
-
-  // ── File input / dropzone ─────────────────────────────────
-  const dropzone  = $('import-dropzone');
-  const fileInput = $('import-file-input');
-  dropzone?.addEventListener('click', () => fileInput?.click());
-  dropzone?.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
-  dropzone?.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-  dropzone?.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); handleFiles([...e.dataTransfer.files]); });
-  fileInput?.addEventListener('change', () => handleFiles([...fileInput.files]));
-
-  async function handleFiles(files) {
-    if (!files.length) return;
-    const fileList = $('import-file-list');
-    fileList?.classList.remove('hidden');
-    fileList.innerHTML = files.map(f => `
-      <div class="import-file-item" data-name="${escapeHtml(f.name)}">
-        <i class="fa-solid ${_fileIcon(f.name)} import-file-icon"></i>
-        <span class="truncate">${escapeHtml(f.name)}</span>
-        <span class="import-file-size">${_fmtSize(f.size)}</span>
-        <i class="fa-solid fa-spinner fa-spin import-file-status"></i>
-      </div>`).join('');
-
-    const allLinks = []; const seenUrls = new Set();
-    for (let i = 0; i < files.length; i++) {
-      const links = await extractLinksFromFile(files[i]);
-      for (const l of links) {
-        if (!seenUrls.has(l.url)) { seenUrls.add(l.url); allLinks.push(l); }
-      }
-      // Mark done
-      fileList.querySelectorAll('.import-file-status')[i]?.setAttribute('class','fa-solid fa-circle-check import-file-status done');
-    }
-    renderPreview(allLinks);
+  function _getSelected() {
+    return [...($('import-links-list')?.querySelectorAll('.import-link-cb:checked') || [])]
+      .map(cb => extracted[+cb.dataset.i]).filter(Boolean);
   }
 
-  // ── Paste extract ─────────────────────────────────────────
-  $('import-paste-extract')?.addEventListener('click', () => {
-    const text  = pasteArea?.value;
-    const links = extractLinksFromText(text || '');
-    renderPreview(links);
-  });
+  function _updSaveBtn() {
+    const saveBtn = $('import-save');
+    if (!saveBtn) return;
+    saveBtn.disabled = !(_getSelected().length > 0 && (selFolder || newFolderName.trim()));
+  }
 
-  // ── Confirm / Save with progress ──────────────────────────
-  $('import-confirm-btn')?.addEventListener('click', async () => {
-    const sel    = getSelectedLinks();
-    const folder = newFolderName.trim() || selectedFolder;
-    if (!sel.length || !folder) return;
+  // ── Save with live progress ─────────────────────────────
+  $('import-save')?.addEventListener('click', async () => {
+    if (isSaving) return;
+    const sel    = _getSelected();
+    const target = newFolderName.trim() || selFolder;
+    if (!sel.length || !target) return;
 
-    const confirmBtn  = $('import-confirm-btn');
-    const progressWrap= $('import-progress-wrap');
-    const progressFill= $('import-progress-fill');
-    const progressPct = $('import-progress-pct');
-    const progressLbl = $('import-progress-label');
+    isSaving = true;
+    const saveBtn    = $('import-save');
+    const progWrap   = $('import-progress-wrap');
+    const progFill   = $('import-prog-fill');
+    const progPct    = $('import-prog-pct');
+    const progLabel  = $('import-prog-label');
 
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML= '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
-    progressWrap?.classList.remove('hidden');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
+    progWrap?.classList.remove('hidden');
 
     // Show global banner in case user closes modal
-    _showGlobalProgress(0, sel.length);
+    _showGlobalBanner(0, sel.length);
+
+    const onProgress = (done, total) => {
+      const pct = Math.round((done / total) * 100);
+      if (progFill)  progFill.style.width  = pct + '%';
+      if (progPct)   progPct.textContent    = pct + '%';
+      if (progLabel) progLabel.textContent  = `Saving ${done}/${total} links…`;
+      _showGlobalBanner(done, total);
+    };
 
     try {
-      await onImport(sel, folder, !!newFolderName.trim(), {
-        onProgress: (done, total) => {
-          const pct = Math.round((done/total)*100);
-          if (progressFill) progressFill.style.width = pct+'%';
-          if (progressPct)  progressPct.textContent   = pct+'%';
-          if (progressLbl)  progressLbl.textContent   = `Saving ${done}/${total} links…`;
-          _showGlobalProgress(done, total);
-        }
-      });
+      await onImport(sel, target, !!newFolderName.trim(), { onProgress });
+      _finishGlobalBanner(sel.length);
       close();
-      _hideGlobalProgress();
-    } catch(e) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML= '<i class="fa-solid fa-cloud-arrow-up"></i> Save Links';
-      progressWrap?.classList.add('hidden');
-      _hideGlobalProgress();
+    } catch (e) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Save Links'; }
+      progWrap?.classList.add('hidden');
+      _hideGlobalBanner();
     }
+    isSaving = false;
   });
 }
 
 // ── Global progress banner ────────────────────────────────
-function _showGlobalProgress(done, total) {
+function _showGlobalBanner(done, total) {
   const banner = document.getElementById('global-progress-banner');
   if (!banner) return;
-  const pct = total > 0 ? Math.round((done/total)*100) : 0;
   banner.classList.remove('hidden');
-  const fill = document.getElementById('gpb-fill');
-  const pctEl= document.getElementById('gpb-pct');
-  const text = document.getElementById('gpb-text');
-  if (fill)  fill.style.width  = pct+'%';
-  if (pctEl) pctEl.textContent = pct+'%';
-  if (text)  text.textContent  = done < total ? `Saving links… ${done}/${total}` : `✓ Saved ${total} links`;
-  document.getElementById('gpb-close')?.addEventListener('click', _hideGlobalProgress, { once:true });
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const fill  = document.getElementById('gpb-fill');
+  const pctEl = document.getElementById('gpb-pct');
+  const text  = document.getElementById('gpb-text');
+  if (fill)  fill.style.width   = pct + '%';
+  if (pctEl) pctEl.textContent  = pct + '%';
+  if (text)  text.textContent   = done < total ? `Saving links… ${done}/${total}` : `✓ Done!`;
 }
 
-function _hideGlobalProgress() {
-  setTimeout(() => document.getElementById('global-progress-banner')?.classList.add('hidden'), 2000);
+function _finishGlobalBanner(total) {
+  const text = document.getElementById('gpb-text');
+  const fill = document.getElementById('gpb-fill');
+  if (text) text.textContent  = `✓ Saved ${total} link${total!==1?'s':''}`;
+  if (fill) fill.style.width  = '100%';
+  setTimeout(_hideGlobalBanner, 3000);
+}
+
+function _hideGlobalBanner() {
+  document.getElementById('global-progress-banner')?.classList.add('hidden');
 }
 
 // ── File helpers ──────────────────────────────────────────
-function _fileIcon(name) {
+function _fIcon(name) {
   const n = name.toLowerCase();
   if (n.endsWith('.pdf'))  return 'fa-file-pdf';
   if (n.endsWith('.zip'))  return 'fa-file-zipper';
@@ -598,9 +656,8 @@ function _fileIcon(name) {
   if (/\.(png|jpg|jpeg|webp|gif)$/.test(n)) return 'fa-file-image';
   return 'fa-file-lines';
 }
-
-function _fmtSize(bytes) {
-  if (bytes < 1024)    return bytes+'B';
-  if (bytes < 1048576) return (bytes/1024).toFixed(1)+'KB';
-  return (bytes/1048576).toFixed(1)+'MB';
+function _fSize(b) {
+  if (b < 1024) return b+'B';
+  if (b < 1048576) return (b/1024).toFixed(1)+'KB';
+  return (b/1048576).toFixed(1)+'MB';
 }

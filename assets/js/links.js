@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — links.js  v1.4.2
+// Linkivo — links.js  v1.4.3
 // Step 2 fixes: grid height, multi-select, search bar,
 // scroll issue, link move, blur locked folders, PIN session,
 // advanced preview (iframe→og:image→jpg→favicon), resizable

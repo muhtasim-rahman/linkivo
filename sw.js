@@ -1,11 +1,11 @@
 // ============================================================
-// Linkivo — sw.js  v1.4.2
+// Linkivo — sw.js  v1.4.3
 // Service Worker: cache-first for assets, network-first for
 // HTML. Auto-update: skip-waiting when new version available.
 // ============================================================
 
-const CACHE_SHELL   = 'linkivo-shell-v1.4.2';
-const CACHE_RUNTIME = 'linkivo-runtime-v1.4.2';
+const CACHE_SHELL   = 'linkivo-shell-v1.4.3';
+const CACHE_RUNTIME = 'linkivo-runtime-v1.4.3';
 const ALL_CACHES    = [CACHE_SHELL, CACHE_RUNTIME];
 
 const SHELL_ASSETS = [
@@ -43,10 +43,15 @@ const SHELL_ASSETS = [
 ];
 
 // ── Install: cache shell assets ───────────────────────────
+// FIX v1.4.3: Use cache:'reload' so the browser fetches assets
+// from the network, bypassing the HTTP cache. This ensures old
+// users always get the latest JS/CSS after a new deploy.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_SHELL)
-      .then(cache => cache.addAll(SHELL_ASSETS))
+      .then(cache => cache.addAll(
+        SHELL_ASSETS.map(url => new Request(url, { cache: 'reload' }))
+      ))
       .then(() => self.skipWaiting())  // activate immediately
   );
 });

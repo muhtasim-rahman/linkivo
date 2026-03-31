@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — app.js  v1.4.2
+// Linkivo — app.js  v1.4.3
 // Main entry: auth, sidebar collapse, More menu, profile sheet,
 // header tab title, theme, app lock, all critical bug fixes
 // ============================================================
@@ -132,9 +132,11 @@ function bindGlobalActions(user){
   });
   _syncThemeIcon();
 
-  // Logout
+  // Logout — FIX v1.4.3: require PIN before logout if PIN is set
   document.querySelectorAll('[data-action="logout"]').forEach(btn=>{
     btn.addEventListener('click',async()=>{
+      const ok=await pinConfirm('Confirm Sign Out');
+      if(!ok) return;
       const{confirm}=await import('./utils.js');
       if(await confirm('Sign Out','Are you sure you want to sign out?',false)) logout();
     });
@@ -204,17 +206,55 @@ function showMoreMenu(user){
 // ── Sidebar collapse ──────────────────────────────────────
 function initSidebar(){
   const sb=document.getElementById('sidebar');if(!sb)return;
+
+  // Apply saved state
   const collapsed=Storage.get('sidebarCollapsed',false);
   if(collapsed) sb.classList.add('collapsed');
 
-  const btn=document.createElement('button');
-  btn.className='sb-collapse-btn'; btn.title='Toggle sidebar';
-  btn.innerHTML='<i class="fa-solid fa-chevron-left"></i>';
-  sb.appendChild(btn);
-  btn.addEventListener('click',()=>{
-    const c=sb.classList.toggle('collapsed');
-    Storage.set('sidebarCollapsed',c);
+  const logoEl=sb.querySelector('.sidebar-logo');
+  if(logoEl){
+    // Mark the logo img for CSS transition targeting
+    const imgEl=logoEl.querySelector('img');
+    if(imgEl) imgEl.classList.add('sidebar-logo-icon');
+
+    // Hamburger icon — fades in on logo hover when collapsed
+    const ham=document.createElement('i');
+    ham.className='fa-solid fa-bars sidebar-logo-ham';
+    ham.setAttribute('aria-hidden','true');
+    logoEl.appendChild(ham);
+
+    // Collapse chevron — shown in logo area when expanded (sb-hide hides when collapsed)
+    const colBtn=document.createElement('button');
+    colBtn.className='sidebar-collapse-btn sb-hide';
+    colBtn.title='Collapse sidebar';
+    colBtn.setAttribute('aria-label','Collapse sidebar');
+    colBtn.innerHTML='<i class="fa-solid fa-chevron-left"></i>';
+    logoEl.appendChild(colBtn);
+
+    // Click logo → expand (only fires when sidebar is collapsed)
+    logoEl.addEventListener('click',()=>{
+      if(!sb.classList.contains('collapsed')) return; // expanded: ignore, colBtn handles it
+      sb.classList.remove('collapsed');
+      Storage.set('sidebarCollapsed',false);
+    });
+
+    // Click collapse btn → collapse
+    colBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      sb.classList.add('collapsed');
+      Storage.set('sidebarCollapsed',true);
+    });
+  }
+
+  // Add tooltip text to all nav items (shown via CSS on collapsed hover)
+  sb.querySelectorAll('.sidebar-nav-item').forEach(btn=>{
+    const label=btn.querySelector('.sidebar-nav-label');
+    if(label) btn.dataset.tooltip=label.textContent.trim();
   });
+  const recycleBtn=sb.querySelector('#sidebar-recycle-btn');
+  if(recycleBtn) recycleBtn.dataset.tooltip='Recycle Bin';
+  const importBtn=sb.querySelector('#sidebar-import-btn');
+  if(importBtn) importBtn.dataset.tooltip='Import Links';
 }
 
 // ── Profile sheet ─────────────────────────────────────────
@@ -231,18 +271,25 @@ async function showProfileSheet(user){
   bd.innerHTML=`
     <div id="profile-sheet">
       <div class="profile-handle"></div>
-      <div style="padding:0 var(--sp-5) var(--sp-4)">
-        <div class="profile-cover"></div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div class="profile-avatar-wrap">
-            <div class="avatar avatar-lg">
-              ${photo?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:init}
-            </div>
+
+      <!-- Cover: avatar sits inside so position:absolute bottom:-28px works -->
+      <div class="profile-cover">
+        <div class="profile-avatar-wrap">
+          <div class="avatar avatar-lg">
+            \${photo?`<img src="\${photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:\`\${init}\`}
           </div>
-          <div style="font-size:var(--fs-lg);font-weight:800;color:var(--text)">${escapeHtml(name)}</div>
-          <div style="font-size:var(--fs-sm);color:var(--text-muted)">${escapeHtml(email)}</div>
-          <div style="font-size:10px;color:var(--text-subtle)">via ${provider==='google.com'?'Google':'Email'}</div>
         </div>
+      </div>
+
+      <!-- Name / email / provider (margin-top accounts for avatar overhang) -->
+      <div style="padding:0 var(--sp-5) var(--sp-3);text-align:center;margin-top:var(--sp-3)">
+        <div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);margin-bottom:2px">\${escapeHtml(name)}</div>
+        <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:6px">\${escapeHtml(email)}</div>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-subtle);
+          background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:999px">
+          <i class="fa-brands fa-\${provider==='google.com'?'google':'square-envelope'}" style="font-size:10px"></i>
+          via \${provider==='google.com'?'Google':'Email'}
+        </span>
       </div>
 
       <div style="padding:0 var(--sp-4) var(--sp-2)">
@@ -288,8 +335,11 @@ async function showProfileSheet(user){
   bd.querySelector('#ps-export')?.addEventListener('click',()=>{ bd.remove(); Router.go('settings'); setTimeout(()=>document.getElementById('st-export-btn')?.click(),400); });
   bd.querySelector('#ps-logout')?.addEventListener('click',async()=>{
     bd.remove();
+    // FIX v1.4.3: Require PIN before logout if PIN lock is set
+    const ok=await pinConfirm('Confirm Sign Out');
+    if(!ok) return;
     const{confirm:uiConfirm}=await import('./utils.js');
-    if(await uiConfirm('Sign Out','Are you sure?',false)) logout();
+    if(await uiConfirm('Sign Out','Are you sure you want to sign out?',false)) logout();
   });
 }
 
@@ -332,6 +382,13 @@ function initAppLock(){
 
 export function showAppLockScreen(pin){
   document.getElementById('app-lock-screen')?.remove();
+
+  // FIX v1.4.3: Hide app content from DOM visibility entirely —
+  // blur alone is inspectable. Use visibility:hidden + inert so
+  // no data is readable or tab-able while locked.
+  const appEl=document.getElementById('app-container');
+  if(appEl){ appEl.style.visibility='hidden'; appEl.setAttribute('inert',''); }
+
   const sc=document.createElement('div');sc.id='app-lock-screen';
   sc.innerHTML=`
     <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
@@ -346,6 +403,16 @@ export function showAppLockScreen(pin){
     <button class="btn btn-ghost btn-sm" id="llb" style="color:var(--text-muted)">Sign out instead</button>`;
   document.body.appendChild(sc);
 
+  function _unlock(){
+    sc.style.animation='fadeOut 0.3s ease forwards';
+    setTimeout(()=>{
+      sc.remove();
+      // Restore app content visibility
+      if(appEl){ appEl.style.visibility=''; appEl.removeAttribute('inert'); }
+    },300);
+    Storage.set('lastActiveTs',Date.now());
+  }
+
   const inp=sc.querySelector('#lpi');const dots=sc.querySelectorAll('.lock-pin-dot');
   sc.querySelector('#lfb').addEventListener('click',()=>inp.focus());
   inp.focus();
@@ -354,17 +421,78 @@ export function showAppLockScreen(pin){
     const v=inp.value.replace(/\D/g,'').slice(0,6);inp.value=v;
     dots.forEach((d,i)=>{ d.classList.toggle('filled',i<v.length); d.classList.remove('error'); });
     if(v.length===6){
-      if(v===pin){
-        sc.style.animation='fadeOut 0.3s ease forwards';
-        setTimeout(()=>sc.remove(),300);
-        Storage.set('lastActiveTs',Date.now());
-      } else {
+      if(v===pin){ _unlock(); }
+      else {
         dots.forEach(d=>d.classList.add('error'));
         setTimeout(()=>{ inp.value=''; dots.forEach(d=>{d.classList.remove('filled','error');}); inp.focus(); },700);
       }
     }
   });
-  sc.querySelector('#llb').addEventListener('click',()=>{ sc.remove(); logout(); });
+  sc.querySelector('#llb').addEventListener('click',()=>{
+    sc.remove();
+    if(appEl){ appEl.style.visibility=''; appEl.removeAttribute('inert'); }
+    logout();
+  });
+}
+
+// ── PIN confirmation for sensitive actions ─────────────────
+// Returns Promise<boolean>. If no PIN set, resolves true immediately.
+export function pinConfirm(label='Confirm'){
+  const pin=Storage.get('appLockPin');
+  if(!pin) return Promise.resolve(true); // no PIN set → proceed
+  return new Promise(resolve=>{
+    const modal=document.createElement('div');
+    modal.style.cssText=\`position:fixed;inset:0;background:rgba(0,0,0,0.55);
+      backdrop-filter:blur(6px);z-index:calc(var(--z-top) + 10);
+      display:flex;align-items:center;justify-content:center;padding:16px\`;
+    modal.innerHTML=\`
+      <div style="background:var(--surface);border-radius:var(--r-xl);padding:var(--sp-6) var(--sp-5);
+        max-width:310px;width:100%;box-shadow:var(--shadow-xl);text-align:center">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--gradient-soft);
+          display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;color:var(--primary)">
+          <i class="fa-solid fa-lock"></i></div>
+        <div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);margin-bottom:4px">\${label}</div>
+        <div style="font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:18px">Enter your PIN to continue</div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px" id="pc-dots">
+          \${[0,1,2,3,4,5].map(i=>\`<div style="width:13px;height:13px;border-radius:50%;
+            border:2px solid var(--border);transition:all 0.12s" data-dot="\${i}"></div>\`).join('')}
+        </div>
+        <input type="password" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="off"
+          id="pc-inp" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px">
+        <button class="btn btn-primary w-full" id="pc-focus-btn">
+          <i class="fa-solid fa-keyboard"></i> Tap to enter PIN</button>
+        <div style="font-size:11px;color:var(--danger);margin-top:8px;min-height:16px" id="pc-err"></div>
+        <button class="btn btn-ghost btn-sm w-full" style="margin-top:6px;color:var(--text-muted)"
+          id="pc-cancel">Cancel</button>
+      </div>\`;
+    document.body.appendChild(modal);
+
+    const inp=modal.querySelector('#pc-inp');
+    const dots=modal.querySelectorAll('[data-dot]');
+    const errEl=modal.querySelector('#pc-err');
+    const _dot=(v)=>dots.forEach((d,i)=>{
+      d.style.background=i<v.length?'var(--primary)':'transparent';
+      d.style.borderColor=i<v.length?'var(--primary)':'var(--border)';
+    });
+
+    modal.querySelector('#pc-focus-btn').addEventListener('click',()=>inp.focus());
+    inp.focus();
+
+    inp.addEventListener('input',()=>{
+      const v=inp.value.replace(/\D/g,'').slice(0,6);inp.value=v;
+      _dot(v); errEl.textContent='';
+      if(v.length===6){
+        if(v===pin){
+          modal.remove(); resolve(true);
+        } else {
+          errEl.textContent='Incorrect PIN — try again';
+          setTimeout(()=>{inp.value='';_dot('');errEl.textContent='';inp.focus();},850);
+        }
+      }
+    });
+    modal.querySelector('#pc-cancel').addEventListener('click',()=>{ modal.remove(); resolve(false); });
+    modal.addEventListener('click',e=>{ if(e.target===modal){ modal.remove(); resolve(false); } });
+  });
 }
 
 // ── Clipboard suggestion ──────────────────────────────────

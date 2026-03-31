@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — settings.js  v1.4.2
+// Linkivo — settings.js  v1.4.3
 // Complete settings: profile, appearance, security (app lock
 // with 10-min reload exemption), link prefs, notifications,
 // data/export, history, danger zone, app info
@@ -353,7 +353,7 @@ function _build() {
             <div class="st-app-tagline">${cfg.tagline||'Smart link manager'}</div>
           </div>
         </div>
-        <div class="st-info-row"><span class="st-info-label">Version</span><span class="st-info-value" data-app-version>${cfg.version||'v1.4.2'}</span></div>
+        <div class="st-info-row"><span class="st-info-label">Version</span><span class="st-info-value" data-app-version>${cfg.version||'v1.4.3'}</span></div>
         <div class="st-info-row"><span class="st-info-label">Build date</span><span class="st-info-value">${cfg.buildDate||'2026'}</span></div>
         <div class="st-info-row"><span class="st-info-label">Copyright</span><span class="st-info-value">${cfg.copyright||'© 2026 Linkivo'}</span></div>
         <div class="st-links-row">
@@ -366,7 +366,7 @@ function _build() {
       </div>
     </div>
 
-    <div class="st-footer">Made with <i class="fa-solid fa-heart"></i> · ${cfg.name||'Linkivo'} ${cfg.version||'v1.4.2'}</div>
+    <div class="st-footer">Made with <i class="fa-solid fa-heart"></i> · ${cfg.name||'Linkivo'} ${cfg.version||'v1.4.3'}</div>
 
   </div></div></div>`;
 
@@ -782,7 +782,7 @@ async function _doExport(links, format, selFids, allFolders) {
   });
 
   if (format==='json') {
-    _dl(JSON.stringify({ exported:new Date().toISOString(), version:'v1.4.2', totalLinks:links.length, folders:groups }, null, 2), `${name}.json`, 'application/json');
+    _dl(JSON.stringify({ exported:new Date().toISOString(), version:'v1.4.3', totalLinks:links.length, folders:groups }, null, 2), `${name}.json`, 'application/json');
     toast('JSON exported!', 'success');
 
   } else if (format==='csv') {

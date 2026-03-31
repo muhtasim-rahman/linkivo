@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — folders.js  v1.4.2
+// Linkivo — folders.js  v1.4.3
 // Folder CRUD, PIN session, blur locked content, tags
 // ============================================================
 

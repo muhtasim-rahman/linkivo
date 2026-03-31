@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — router.js  v1.4.2
+// Linkivo — router.js  v1.4.3
 // Hash-based SPA router: no reload, URL updates on tab switch
 // Routes: #home, #random, #history, #settings, #folder/ID
 // ============================================================
@@ -20,13 +20,21 @@ const Router=(()=>{
   function go(id,params={},replace=false){
     if(!pages[id]){ console.warn(`[Router] Unknown: ${id}`); return; }
 
-    // Leave current page
-    if(current&&pages[current]){
-      pages[current].el.classList.remove('active');
+    // FIX v1.4.3: Force-hide ALL pages via inline style — no CSS
+    // specificity or cache issue can leave a stale page visible.
+    Object.values(pages).forEach(p=>{
+      p.el.classList.remove('active');
+      p.el.style.display='none';
+    });
+
+    // Run onLeave for the previous page
+    if(current&&pages[current]&&current!==id){
       pages[current].onLeave?.();
     }
 
     current=id;
+    // Clear inline style so CSS .page.active{display:flex} takes over
+    pages[id].el.style.display='';
     pages[id].el.classList.add('active');
     pages[id].onEnter?.(params);
 

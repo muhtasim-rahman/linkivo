@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — history.js  v1.4.2
+// Linkivo — history.js  v1.4.3
 // History page: date-grouped, search, locked folder blur,
 // auto-clear, clear = single remove() call (bug fix)
 // ============================================================

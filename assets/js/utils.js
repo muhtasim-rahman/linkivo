@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — utils.js  v1.4.2
+// Linkivo — utils.js  v1.4.3
 // Single source of truth: calcLinkPoints, URL detection,
 // toast, modal, confirm, PIN, dropdown, theme, storage
 // ============================================================

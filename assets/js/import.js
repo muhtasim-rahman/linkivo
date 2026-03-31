@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — import.js  v1.4.2
+// Linkivo — import.js  v1.4.3
 // Advanced link extraction: all formats, consecutive URL
 // detection, live count, progress bar, background save,
 // mobile fullscreen, duplicate smart dedup
@@ -235,7 +235,7 @@ export function extractLinksFromText(text) {
 export function deduplicateLinks(links) { return smartDedup(links); }
 
 // ══════════════════════════════════════════════════════════
-// IMPORT MODAL  v1.4.2
+// IMPORT MODAL  v1.4.3
 // - Mobile: full screen (hides bottom nav + header via z-index)
 // - Live URL count in paste tab (updates as you type)
 // - Progress bar while saving

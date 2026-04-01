@@ -1,5 +1,5 @@
 /* ============================================================
-   Linkivo — nav.css  v1.4.3
+   Linkivo — nav.css  v1.4.4
    Sidebar (desktop, collapsible) + Bottom nav (mobile + More popup)
    PC: sidebar only | Mobile: bottom nav only
    ============================================================ */
@@ -9,8 +9,17 @@
   width:var(--sidebar-w); flex-shrink:0;
   background:var(--surface); border-right:1px solid var(--border);
   display:flex; flex-direction:column; height:100%; overflow:hidden;
-  transition:width var(--t-slow),background var(--t-slow),border-color var(--t-slow);
+  transition:width 0.28s cubic-bezier(0.4,0,0.2,1),
+             background var(--t-slow),border-color var(--t-slow);
   position:relative;
+}
+/* Animate text labels fading in/out */
+#sidebar .sb-hide {
+  transition:opacity 0.15s ease, transform 0.2s ease;
+  opacity:1; transform:translateX(0);
+}
+#sidebar.collapsed .sb-hide {
+  opacity:0 !important; transform:translateX(-6px);
 }
 /* Collapsed */
 #sidebar.collapsed { width:var(--sidebar-w-coll); }
@@ -19,100 +28,47 @@
   justify-content:center; padding:10px 0; width:var(--sidebar-w-coll);
 }
 #sidebar.collapsed .sidebar-nav-item i { margin:0; width:auto; }
-#sidebar.collapsed .sidebar-logo {
-  justify-content:center; padding:0;
-  height:var(--topbar-h);
-}
-#sidebar.collapsed .sidebar-import-btn {
-  width:42px; height:42px; padding:0;
-  margin:var(--sp-2) auto; border-radius:50%;
-  justify-content:center;
-  position:relative;
-}
-#sidebar.collapsed .sidebar-import-btn[data-tooltip]:hover::after {
-  content:attr(data-tooltip);
-  position:absolute;
-  left:calc(100% + 10px); top:50%; transform:translateY(-50%);
-  background:var(--text); color:var(--bg);
-  font-size:12px; font-weight:600;
-  padding:5px 10px; border-radius:var(--r-sm);
-  white-space:nowrap; z-index:200;
-  pointer-events:none; box-shadow:var(--shadow-md);
-  animation:fadeIn 0.15s ease;
-}
-#sidebar.collapsed .sidebar-profile {
-  justify-content:center; padding:var(--sp-2) 0; margin:var(--sp-2);
-}
+#sidebar.collapsed .sidebar-logo { justify-content:center; padding:var(--sp-4) 0; }
+#sidebar.collapsed .sidebar-import-btn { width:42px; height:42px; padding:0; margin:var(--sp-2) auto; border-radius:50%; }
+#sidebar.collapsed .sidebar-profile { justify-content:center; padding:var(--sp-2) 0; margin:var(--sp-2); }
 #sidebar.collapsed .sidebar-logo-version { display:none; }
-/* Collapsed: hide the collapse button (sb-hide handles it, but be explicit) */
-#sidebar.collapsed .sidebar-collapse-btn { display:none !important; }
 
-/* ── Sidebar toggle: collapse/expand via logo area ── */
-
-/* Logo becomes a clickable toggle */
-.sidebar-logo { cursor:pointer; user-select:none; }
-.sidebar-logo:hover { background:var(--surface-hover); }
-
-/* Hamburger icon — shows on logo hover when collapsed */
-.sidebar-logo-ham {
-  position:absolute;
-  font-size:18px; color:var(--primary);
-  opacity:0; transform:scale(0.6) rotate(-30deg);
-  transition:opacity 0.22s ease, transform 0.22s ease;
-  pointer-events:none;
-}
-.sidebar-logo-icon {
-  transition:opacity 0.22s ease, transform 0.22s ease;
-}
-/* Collapsed + hover: swap logo → hamburger */
-#sidebar.collapsed .sidebar-logo:hover .sidebar-logo-icon {
-  opacity:0; transform:scale(0.5) rotate(30deg);
-}
-#sidebar.collapsed .sidebar-logo:hover .sidebar-logo-ham {
-  opacity:1; transform:scale(1) rotate(0deg);
-}
-
-/* Collapse button (appears inside logo area when expanded) */
-.sidebar-collapse-btn {
-  margin-left:auto; flex-shrink:0;
+/* Collapse toggle — only visible when sidebar is expanded */
+.sb-collapse-btn {
+  position:absolute; right:-13px; top:20px;
   width:26px; height:26px; border-radius:50%;
-  background:transparent; border:1.5px solid var(--border);
-  color:var(--text-subtle); font-size:10px;
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; transition:all var(--t-base);
+  background:var(--surface); border:1.5px solid var(--border);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:var(--text-muted); box-shadow:var(--shadow-sm);
+  transition:all var(--t-base); z-index:10;
+  opacity:0; pointer-events:none;
 }
-.sidebar-collapse-btn:hover {
-  background:var(--primary); color:#fff; border-color:var(--primary);
-  transform:scale(1.1);
-}
-
-/* Collapsed tooltip for nav items */
-#sidebar.collapsed .sidebar-nav-item,
-#sidebar.collapsed #sidebar-recycle-btn { position:relative; }
-#sidebar.collapsed [data-tooltip]:hover::after {
-  content:attr(data-tooltip);
-  position:absolute;
-  left:calc(100% + 10px); top:50%; transform:translateY(-50%);
-  background:var(--text); color:var(--bg);
-  font-size:12px; font-weight:600; letter-spacing:0;
-  padding:5px 10px; border-radius:var(--r-sm);
-  white-space:nowrap; z-index:200;
-  pointer-events:none;
-  box-shadow:var(--shadow-md);
-  animation:fadeIn 0.15s ease;
-}
+#sidebar:hover .sb-collapse-btn { opacity:1; pointer-events:auto; }
+.sb-collapse-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+/* Hide the button entirely when collapsed (logo click is the toggle) */
+#sidebar.collapsed .sb-collapse-btn { display:none; }
 
 /* Logo */
 .sidebar-logo {
   display:flex; align-items:center; gap:var(--sp-3);
   padding:0 var(--sp-4); height:var(--topbar-h);
   border-bottom:1px solid var(--border); flex-shrink:0;
-  transition:background var(--t-base); overflow:hidden;
-  position:relative; /* needed for hamburger icon absolute centering */
+  transition:all var(--t-slow); overflow:hidden;
 }
-.sidebar-logo img, .sidebar-logo-icon {
-  width:26px; height:26px; flex-shrink:0;
+.sidebar-logo img  { width:26px; height:26px; flex-shrink:0; transition:opacity var(--t-base); }
+/* On logo hover show menu-burger icon as overlay */
+.sidebar-logo { position:relative; }
+.sidebar-logo-hover-icon {
+  position:absolute; left:calc(var(--sp-4) - 1px);
+  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+  font-size:16px; color:var(--primary);
+  opacity:0; transition:opacity var(--t-base); pointer-events:none;
 }
+#sidebar:not(.collapsed) .sidebar-logo:hover .sidebar-logo-hover-icon { opacity:1; }
+#sidebar:not(.collapsed) .sidebar-logo:hover img { opacity:0; }
+/* Collapsed state: logo itself acts as the toggle, show menu icon */
+#sidebar.collapsed .sidebar-logo:hover img { opacity:0; }
+#sidebar.collapsed .sidebar-logo:hover .sidebar-logo-hover-icon { opacity:1; }
 .sidebar-logo-name { font-size:var(--fs-md); font-weight:800; color:var(--text); letter-spacing:-0.3px; white-space:nowrap; }
 .sidebar-logo-version {
   font-size:10px; color:var(--text-subtle); margin-left:auto;
@@ -270,6 +226,25 @@
 .more-menu-item.active { background:var(--gradient-soft); color:var(--primary); }
 .more-menu-item i      { font-size:20px; }
 .more-menu-item span   { font-size:11px; font-weight:600; text-align:center; white-space:nowrap; }
+
+
+/* ══ Sidebar tooltips (collapsed state) ═══════════════════ */
+#sidebar.collapsed .sidebar-nav-item {
+  position: relative;
+}
+#sidebar.collapsed .sidebar-nav-item::after {
+  content: attr(data-tooltip);
+  position: absolute; left: calc(100% + 10px); top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface-3,#1e293b); color: var(--text);
+  font-size: 12px; font-weight: 600;
+  padding: 5px 10px; border-radius: var(--r-md);
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity var(--t-base);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border); z-index: 200;
+}
+#sidebar.collapsed .sidebar-nav-item:hover::after { opacity: 1; }
 
 /* ══ Responsive rules ══════════════════════════════════ */
 @media(max-width:768px) {

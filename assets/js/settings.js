@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — settings.js  v1.4.3
+// Linkivo — settings.js  v1.4.4
 // Complete settings: profile, appearance, security (app lock
 // with 10-min reload exemption), link prefs, notifications,
 // data/export, history, danger zone, app info
@@ -22,6 +22,17 @@ import Config from './config.js';
 const uid = () => getCurrentUser()?.uid;
 
 // ── FIX: subscribeSettings actually applies DB values ─────
+
+// ── PIN gate helper — requires PIN if one is set ──────────
+async function _requirePinIfSet(actionLabel = 'this action') {
+  const pin = Storage.get('appLockPin');
+  if (!pin) return true; // no PIN set, allow freely
+  const entered = await pinDialog(`Confirm: ${actionLabel}`, 'Enter your app PIN to continue');
+  if (!entered) return false;
+  if (entered !== pin) { toast('Wrong PIN', 'error'); return false; }
+  return true;
+}
+
 export function initSettingsPage() {
   _build();
   onValue(ref(db, `users/${uid()}/settings`), snap => {
@@ -353,7 +364,7 @@ function _build() {
             <div class="st-app-tagline">${cfg.tagline||'Smart link manager'}</div>
           </div>
         </div>
-        <div class="st-info-row"><span class="st-info-label">Version</span><span class="st-info-value" data-app-version>${cfg.version||'v1.4.3'}</span></div>
+        <div class="st-info-row"><span class="st-info-label">Version</span><span class="st-info-value" data-app-version>${cfg.version||'v1.4.4'}</span></div>
         <div class="st-info-row"><span class="st-info-label">Build date</span><span class="st-info-value">${cfg.buildDate||'2026'}</span></div>
         <div class="st-info-row"><span class="st-info-label">Copyright</span><span class="st-info-value">${cfg.copyright||'© 2026 Linkivo'}</span></div>
         <div class="st-links-row">
@@ -366,7 +377,7 @@ function _build() {
       </div>
     </div>
 
-    <div class="st-footer">Made with <i class="fa-solid fa-heart"></i> · ${cfg.name||'Linkivo'} ${cfg.version||'v1.4.3'}</div>
+    <div class="st-footer">Made with <i class="fa-solid fa-heart"></i> · ${cfg.name||'Linkivo'} ${cfg.version||'v1.4.4'}</div>
 
   </div></div></div>`;
 
@@ -469,9 +480,11 @@ function _bind(user, isPw, isGoogle) {
     } catch { toast('Update failed', 'error'); }
   });
 
-  // Sign out
+  // Sign out — PIN gated if app lock is set
   $('st-logout')?.addEventListener('click', async () => {
-    if (await confirm('Sign Out', 'Are you sure you want to sign out?', false)) logout();
+    if (!await confirm('Sign Out', 'Are you sure you want to sign out?', false)) return;
+    if (!await _requirePinIfSet('Sign Out')) return;
+    logout();
   });
 
   // Link prefs
@@ -546,9 +559,10 @@ function _bind(user, isPw, isGoogle) {
     setTimeout(() => window.location.reload(true), 1200);
   });
 
-  // Reset settings
+  // Reset settings — PIN gated
   $('st-reset-settings')?.addEventListener('click', async () => {
     if (!await confirm('Reset Settings', 'Restore all settings to defaults? Your links are not affected.', false)) return;
+    if (!await _requirePinIfSet('Reset Settings')) return;
     const def = { theme:'light', accent:'blue', fontSize:'medium', historyMax:500, showLinkUrls:true, openLinksNewTab:false };
     await update(ref(db, `users/${uid()}/settings`), def);
     Object.entries(def).forEach(([k,v]) => Storage.set(k,v));
@@ -563,6 +577,7 @@ function _bind(user, isPw, isGoogle) {
     if (!ok1) return;
     const ok2 = await confirm('Final Confirmation', 'Are you 100% sure? All folders and links will be lost forever.', true);
     if (!ok2) return;
+    if (!await _requirePinIfSet('Delete Account')) return;
     try {
       const u = getCurrentUser();
       await u.delete(); // auth first — if this fails, no data loss
@@ -782,7 +797,7 @@ async function _doExport(links, format, selFids, allFolders) {
   });
 
   if (format==='json') {
-    _dl(JSON.stringify({ exported:new Date().toISOString(), version:'v1.4.3', totalLinks:links.length, folders:groups }, null, 2), `${name}.json`, 'application/json');
+    _dl(JSON.stringify({ exported:new Date().toISOString(), version:'v1.4.4', totalLinks:links.length, folders:groups }, null, 2), `${name}.json`, 'application/json');
     toast('JSON exported!', 'success');
 
   } else if (format==='csv') {

@@ -1,11 +1,13 @@
 // ============================================================
-// Linkivo — sw.js  v1.4.3
-// Service Worker: cache-first for assets, network-first for
-// HTML. Auto-update: skip-waiting when new version available.
+// Linkivo — sw.js  v1.4.4
+// Service Worker: stale-while-revalidate for assets,
+// network-first for HTML. Forces update on new deploy so
+// existing users always get the latest version.
 // ============================================================
 
-const CACHE_SHELL   = 'linkivo-shell-v1.4.3';
-const CACHE_RUNTIME = 'linkivo-runtime-v1.4.3';
+const VERSION       = 'v1.4.4';
+const CACHE_SHELL   = `linkivo-shell-${VERSION}`;
+const CACHE_RUNTIME = `linkivo-runtime-${VERSION}`;
 const ALL_CACHES    = [CACHE_SHELL, CACHE_RUNTIME];
 
 const SHELL_ASSETS = [
@@ -43,31 +45,30 @@ const SHELL_ASSETS = [
 ];
 
 // ── Install: cache shell assets ───────────────────────────
-// FIX v1.4.3: Use cache:'reload' so the browser fetches assets
-// from the network, bypassing the HTTP cache. This ensures old
-// users always get the latest JS/CSS after a new deploy.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_SHELL)
-      .then(cache => cache.addAll(
-        SHELL_ASSETS.map(url => new Request(url, { cache: 'reload' }))
-      ))
-      .then(() => self.skipWaiting())  // activate immediately
+      .then(cache => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// ── Activate: remove old caches ───────────────────────────
+// ── Activate: remove ALL old caches, claim clients, notify tabs
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
         keys.filter(k => !ALL_CACHES.includes(k)).map(k => caches.delete(k))
       ))
-      .then(() => self.clients.claim())  // take control of existing pages
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
+      .then(clients => {
+        clients.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: VERSION }));
+      })
   );
 });
 
-// ── Skip waiting on demand (from app.js updatefound handler) ─
+// ── Skip waiting on demand ─────────────────────────────────
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
@@ -77,17 +78,17 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET and cross-origin Firebase/CDN requests
   if (request.method !== 'GET') return;
-  if (!url.origin.includes(self.location.origin)) return;
+  if (url.origin !== self.location.origin) return;
 
-  // HTML pages: network-first (always get fresh HTML)
+  // HTML: network-first (always fresh)
   if (request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       fetch(request)
         .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_SHELL).then(c => c.put(request, clone));
+          if (res.ok) {
+            caches.open(CACHE_SHELL).then(c => c.put(request, res.clone()));
+          }
           return res;
         })
         .catch(() => caches.match(request).then(r => r || caches.match('/index.html')))
@@ -95,20 +96,39 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // SW and app.json: always network-first
+  // Version-signal files: network-first
   if (url.pathname === '/sw.js' || url.pathname === '/app.json') {
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    event.respondWith(
+      fetch(request)
+        .then(res => { if (res.ok) caches.open(CACHE_SHELL).then(c => c.put(request, res.clone())); return res; })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 
-  // Assets (JS, CSS, SVG): cache-first with network fallback
+  // JS / CSS / SVG: stale-while-revalidate
+  // Serve cached copy immediately; fetch + update cache in background.
+  if (/\.(js|css|svg)$/.test(url.pathname)) {
+    event.respondWith(
+      caches.open(CACHE_SHELL).then(async cache => {
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request).then(res => {
+          if (res.ok) cache.put(request, res.clone());
+          return res;
+        }).catch(() => null);
+        return cached || networkFetch;
+      })
+    );
+    return;
+  }
+
+  // Everything else: cache-first, network fallback
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
       return fetch(request).then(res => {
         if (!res || res.status !== 200 || res.type === 'opaque') return res;
-        const clone = res.clone();
-        caches.open(CACHE_RUNTIME).then(c => c.put(request, clone));
+        caches.open(CACHE_RUNTIME).then(c => c.put(request, res.clone()));
         return res;
       });
     })

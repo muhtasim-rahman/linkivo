@@ -1,5 +1,5 @@
 /* ============================================================
-   Linkivo — folder.css  v1.4.3
+   Linkivo — folder.css  v1.4.4
    Folder card styles
    ============================================================ */
 
@@ -105,4 +105,19 @@
 .recycle-count {
   margin-left:auto; background:var(--danger-bg); color:var(--danger);
   font-size:var(--fs-xs); font-weight:700; padding:2px 8px; border-radius:var(--r-full);
+}
+
+/* Locked folder card meta row */
+.folder-locked-meta {
+  color: var(--pin-color);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  gap: 4px;
+}
+.folder-locked-overlay {
+  cursor: pointer;
+  transition: background var(--t-base);
+}
+.folder-locked-overlay:hover {
+  background: rgba(139,92,246,0.15);
 }

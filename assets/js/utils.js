@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — utils.js  v1.4.3
+// Linkivo — utils.js  v1.4.4
 // Single source of truth: calcLinkPoints, URL detection,
 // toast, modal, confirm, PIN, dropdown, theme, storage
 // ============================================================
@@ -208,23 +208,32 @@ export async function readClipboard(){try{return await navigator.clipboard.readT
 export async function registerSW(){
   if(!('serviceWorker'in navigator))return;
   try{
-    const reg=await navigator.serviceWorker.register('/sw.js');
-    // Auto-update: when new SW is waiting, activate it
-    reg.addEventListener('updatefound',()=>{
-      const newSW=reg.installing;
-      newSW?.addEventListener('statechange',()=>{
-        if(newSW.state==='installed'&&navigator.serviceWorker.controller){
-          // New version available — skip waiting
-          newSW.postMessage({type:'SKIP_WAITING'});
-        }
-      });
+    const reg=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
+
+    // Listen for SW_UPDATED message from newly activated SW
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='SW_UPDATED'){
+        if(document._swReloading)return;
+        document._swReloading=true;
+        window.location.reload();
+      }
     });
-    // When new SW takes control, reload for fresh content
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(document._swReloading)return;
-      document._swReloading=true;
-      window.location.reload();
-    });
+
+    // Tell a waiting SW to skip waiting immediately
+    const handleNewSW=(sw)=>{
+      if(!sw)return;
+      const activate=()=>{ if(navigator.serviceWorker.controller) sw.postMessage({type:'SKIP_WAITING'}); };
+      if(sw.state==='installed'){ activate(); return; }
+      sw.addEventListener('statechange',()=>{ if(sw.state==='installed') activate(); });
+    };
+
+    // Handle SW that is already waiting on page load
+    if(reg.waiting) handleNewSW(reg.waiting);
+    reg.addEventListener('updatefound',()=>handleNewSW(reg.installing));
+
+    // Poll for updates every 30 s while tab is open
+    setInterval(()=>reg.update().catch(()=>{}),30000);
+
   }catch(e){console.warn('[SW]',e);}
 }
 

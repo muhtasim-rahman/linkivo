@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — random.js  v1.4.3
+// Linkivo — random.js  v1.4.4
 // Random discover: weighted selection, folder selector,
 // domain auto-detect + filter, options panel, resizable
 // preview (iframe→og:image→jpg→favicon), auto-advance

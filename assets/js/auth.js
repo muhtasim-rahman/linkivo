@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — auth.js  v1.4.3
+// Linkivo — auth.js  v1.4.4
 // Auth: Google, Email/Password, Forgot Password (proper flow)
 // Like/Dislike mutual exclusion handled in utils.js
 // ============================================================

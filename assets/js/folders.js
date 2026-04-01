@@ -1,5 +1,5 @@
 // ============================================================
-// Linkivo — folders.js  v1.4.3
+// Linkivo — folders.js  v1.4.4
 // Folder CRUD, PIN session, blur locked content, tags
 // ============================================================
 
@@ -227,28 +227,52 @@ function _mkCard(folder) {
   const iconBg   = _hexRgba(folder.color||'#3b82f6', 0.12);
   const cnt      = folder.linkCount || 0;
 
-  card.innerHTML = `
-    <div class="folder-card-top">
-      <div class="folder-card-icon" style="background:${iconBg};color:${folder.color||'var(--primary)'}">
-        ${isLocked ? '<i class="fa-solid fa-lock"></i>' : `<i class="${folder.icon||'fa-solid fa-folder'}"></i>`}
+  if (isLocked) {
+    // SECURE: don't put real content in DOM at all for locked folders.
+    // Only show folder name (not sensitive), icon, and lock overlay.
+    // Clicking the overlay triggers PIN prompt.
+    card.innerHTML = `
+      <div class="folder-card-top">
+        <div class="folder-card-icon" style="background:${iconBg};color:${folder.color||'var(--primary)'}">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <button class="folder-card-menu btn btn-ghost btn-icon" title="Options">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
       </div>
-      <button class="folder-card-menu btn btn-ghost btn-icon" title="Options">
-        <i class="fa-solid fa-ellipsis-vertical"></i>
-      </button>
-    </div>
-    <div class="folder-card-body">
-      <div class="folder-card-name" title="${escapeHtml(folder.name)}">
-        ${escapeHtml(folder.name)}
-        ${folder.pinned?'<i class="fa-solid fa-thumbtack folder-pin-icon"></i>':''}
+      <div class="folder-card-body">
+        <div class="folder-card-name">${escapeHtml(folder.name)}</div>
+        <div class="folder-card-meta folder-locked-meta">
+          <i class="fa-solid fa-lock" style="font-size:10px"></i>
+          <span>Locked · tap to unlock</span>
+        </div>
       </div>
-      ${folder.description?`<div class="folder-card-desc">${escapeHtml(folder.description)}</div>`:''}
-      <div class="folder-card-meta">
-        <span>${cnt} link${cnt!==1?'s':''}</span>
-        <span>${_ago(folder.updatedAt)}</span>
+      <div class="folder-locked-bar folder-locked-overlay">
+        <i class="fa-solid fa-lock"></i> PIN required · tap to unlock
+      </div>`;
+  } else {
+    card.innerHTML = `
+      <div class="folder-card-top">
+        <div class="folder-card-icon" style="background:${iconBg};color:${folder.color||'var(--primary)'}">
+          <i class="${folder.icon||'fa-solid fa-folder'}"></i>
+        </div>
+        <button class="folder-card-menu btn btn-ghost btn-icon" title="Options">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
       </div>
-      ${folder.tags?.length?`<div class="folder-tags">${folder.tags.map(t=>`<span class="folder-tag">${escapeHtml(t)}</span>`).join('')}</div>`:''}
-    </div>
-    ${isLocked?'<div class="folder-locked-bar"><i class="fa-solid fa-lock"></i> Locked</div>':''}`;
+      <div class="folder-card-body">
+        <div class="folder-card-name" title="${escapeHtml(folder.name)}">
+          ${escapeHtml(folder.name)}
+          ${folder.pinned?'<i class="fa-solid fa-thumbtack folder-pin-icon"></i>':''}
+        </div>
+        ${folder.description?`<div class="folder-card-desc">${escapeHtml(folder.description)}</div>`:''}
+        <div class="folder-card-meta">
+          <span>${cnt} link${cnt!==1?'s':''}</span>
+          <span>${_ago(folder.updatedAt)}</span>
+        </div>
+        ${folder.tags?.length?`<div class="folder-tags">${folder.tags.map(t=>`<span class="folder-tag">${escapeHtml(t)}</span>`).join('')}</div>`:''}
+      </div>`;
+  }
 
   card.addEventListener('click', e => {
     if (e.target.closest('.folder-card-menu')) return;

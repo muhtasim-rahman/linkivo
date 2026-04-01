@@ -65,7 +65,7 @@
           <div class="auth-feature-item"><div class="auth-feature-icon"><i class="fa-solid fa-wifi"></i></div>Offline-first PWA</div>
         </div>
       </div>
-      <div class="auth-brand-footer">© 2026 Linkivo · v1.4.3</div>
+      <div class="auth-brand-footer">© 2026 Linkivo · v1.4.4</div>
     </div>
 
     <!-- Form panel -->
@@ -148,8 +148,9 @@
   <nav id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="sidebar-logo">
       <img src="/assets/svg/icon.svg" width="24" height="24" alt="Linkivo">
+      <span class="sidebar-logo-hover-icon"><i class="fa-solid fa-bars"></i></span>
       <span class="sidebar-logo-name sb-hide">Linkivo</span>
-      <span class="sidebar-logo-version sb-hide" data-app-version>v1.4.3</span>
+      <span class="sidebar-logo-version sb-hide" data-app-version>v1.4.4</span>
     </div>
     <button class="sidebar-import-btn" id="sidebar-import-btn">
       <i class="fa-solid fa-file-import"></i>
@@ -157,16 +158,16 @@
     </button>
     <div class="sidebar-nav">
       <div class="sidebar-label sb-hide">Navigation</div>
-      <button class="sidebar-nav-item" data-page="home"><i class="fa-solid fa-folder-open"></i><span class="sidebar-nav-label sb-hide">My Links</span></button>
-      <button class="sidebar-nav-item" data-page="random"><i class="fa-solid fa-shuffle"></i><span class="sidebar-nav-label sb-hide">Random Discover</span></button>
-      <button class="sidebar-nav-item" data-page="history"><i class="fa-solid fa-clock-rotate-left"></i><span class="sidebar-nav-label sb-hide">History</span></button>
+      <button class="sidebar-nav-item" data-page="home" data-tooltip="My Links"><i class="fa-solid fa-folder-open"></i><span class="sidebar-nav-label sb-hide">My Links</span></button>
+      <button class="sidebar-nav-item" data-page="random" data-tooltip="Random Discover"><i class="fa-solid fa-shuffle"></i><span class="sidebar-nav-label sb-hide">Random Discover</span></button>
+      <button class="sidebar-nav-item" data-page="history" data-tooltip="History"><i class="fa-solid fa-clock-rotate-left"></i><span class="sidebar-nav-label sb-hide">History</span></button>
       <div class="sidebar-divider"></div>
-      <button class="sidebar-nav-item" id="sidebar-recycle-btn">
+      <button class="sidebar-nav-item" id="sidebar-recycle-btn" data-tooltip="Recycle Bin">
         <i class="fa-solid fa-trash-can"></i>
         <span class="sidebar-nav-label sb-hide">Recycle Bin</span>
         <span class="sidebar-nav-badge hidden" id="sidebar-recycle-count">0</span>
       </button>
-      <button class="sidebar-nav-item" data-page="settings"><i class="fa-solid fa-gear"></i><span class="sidebar-nav-label sb-hide">Settings</span></button>
+      <button class="sidebar-nav-item" data-page="settings" data-tooltip="Settings"><i class="fa-solid fa-gear"></i><span class="sidebar-nav-label sb-hide">Settings</span></button>
     </div>
     <div id="sidebar-profile" class="sidebar-profile">
       <div class="avatar user-avatar avatar-sm">U</div>
@@ -205,7 +206,7 @@
     </div>
 
     <!-- Pages -->
-    <div class="page-scroll" id="page-scroll">
+    <div class="page-scroll" id="page-scroll" style="display:flex;flex-direction:column;">
 
       <!-- Home -->
       <section id="page-home" class="page" role="main" aria-label="My Links">
@@ -415,11 +416,22 @@
   // gpb close
   document.getElementById('gpb-close')?.addEventListener('click',()=>document.getElementById('global-progress-banner')?.classList.add('hidden'));
 
-  // Hide splash
-  setTimeout(()=>{
+  // Hide splash — listen for app or auth becoming visible (max 4s safety timeout)
+  function _hideSplash(){
     const s=document.getElementById('splash-screen');
-    if(s){s.style.opacity='0';setTimeout(()=>s?.remove(),400);}
-  },1500);
+    if(!s||s._removed)return; s._removed=true;
+    s.style.opacity='0'; setTimeout(()=>s?.remove(),400);
+  }
+  const _splashObserver=new MutationObserver(()=>{
+    const app=document.getElementById('app-container');
+    const auth=document.getElementById('auth-container');
+    if((app&&!app.classList.contains('hidden'))||(auth&&!auth.classList.contains('hidden'))){
+      _splashObserver.disconnect(); _hideSplash();
+    }
+  });
+  _splashObserver.observe(document.body,{attributes:true,subtree:true,attributeFilter:['class']});
+  // Safety timeout — never let splash block UI
+  setTimeout(()=>{ _splashObserver.disconnect(); _hideSplash(); },4000);
 </script>
 
 </body>

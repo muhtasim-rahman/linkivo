@@ -3,15 +3,16 @@
   "shortName": "Linkivo",
   "tagline": "Save, Organize & Discover Links Smarter",
   "description": "Linkivo is a smart link management web app that lets you save, organize, and randomly discover links — imported from text, PDF, bookmarks, HTML, JSON and more.",
-  "version": "v1.4.4",
-  "buildDate": "2026-03-31",
+  "version": "v1.3.0",
+  "buildDate": "2025-03-28",
   "author": "Linkivo",
   "url": "https://linkivo.web.app",
   "repoUrl": "https://github.com/yourusername/linkivo",
   "theme": {
     "primary": "#3b82f6",
     "secondary": "#22d3ee",
-    "accent": "blue"
+    "gradientStart": "#3b82f6",
+    "gradientEnd": "#22d3ee"
   },
   "features": [
     "Import links from 10+ file formats",
@@ -21,35 +22,15 @@
     "Embedded link preview without leaving the app",
     "Cross-device sync via Firebase",
     "Works offline as a PWA",
-    "Export to JSON, CSV, PDF, Markdown, Bookmarks",
-    "Full light & dark mode support",
-    "App lock with PIN",
-    "Accent theme colors",
-    "Global search across all folders"
+    "Export to JSON, CSV, PDF, Bookmarks",
+    "Full light & dark mode support"
   ],
   "supportedImportFormats": [
-    "txt",
-    "pdf",
-    "html",
-    "json",
-    "csv",
-    "zip",
-    "png",
-    "jpg",
-    "jpeg",
-    "webp",
-    "bookmarks",
-    "htm",
-    "md"
+    "txt", "pdf", "html", "json", "csv", "zip",
+    "png", "jpg", "jpeg", "webp",
+    "bookmarks", "htm"
   ],
-  "exportFormats": [
-    "json",
-    "csv",
-    "pdf",
-    "html",
-    "markdown",
-    "print"
-  ],
+  "exportFormats": ["json", "csv", "pdf", "html", "print"],
   "pointSystem": {
     "basePoints": 100,
     "likeBonus": 50,
@@ -59,10 +40,9 @@
   },
   "recycleBinDays": 30,
   "historyMaxItems": 500,
-  "copyright": "© 2026 Linkivo. All rights reserved.",
+  "copyright": "© 2025 Linkivo. All rights reserved.",
   "privacyUrl": "https://linkivo.web.app/privacy",
   "termsUrl": "https://linkivo.web.app/terms",
-  "docsUrl": "https://linkivo.web.app/docs",
   "meta": {
     "ogImage": "https://linkivo.web.app/assets/og-image.png",
     "keywords": "link manager, bookmark manager, link organizer, save links, random link discovery",

@@ -1,15 +1,12 @@
 // ============================================================
-// Linkivo — sw.js  v1.4.4
-// Service Worker: stale-while-revalidate for assets,
-// network-first for HTML. Forces update on new deploy so
-// existing users always get the latest version.
+// Linkivo Service Worker — v1.0.0
+// Handles: App Shell caching, offline fallback
 // ============================================================
 
-const VERSION       = 'v1.4.4';
-const CACHE_SHELL   = `linkivo-shell-${VERSION}`;
-const CACHE_RUNTIME = `linkivo-runtime-${VERSION}`;
-const ALL_CACHES    = [CACHE_SHELL, CACHE_RUNTIME];
+const CACHE_NAME      = 'linkivo-shell-v1.3.0';
+const RUNTIME_CACHE   = 'linkivo-runtime-v1.3.0';
 
+// App shell assets — cache on install
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -31,8 +28,8 @@ const SHELL_ASSETS = [
   '/assets/js/firebase-init.js',
   '/assets/js/auth.js',
   '/assets/js/router.js',
-  '/assets/js/utils.js',
   '/assets/js/app.js',
+  '/assets/js/utils.js',
   '/assets/js/import.js',
   '/assets/js/folders.js',
   '/assets/js/links.js',
@@ -41,96 +38,64 @@ const SHELL_ASSETS = [
   '/assets/js/settings.js',
   '/assets/svg/icon.svg',
   '/assets/svg/logo-light.svg',
-  '/assets/svg/logo-dark.svg',
+  '/assets/svg/logo-dark.svg'
 ];
 
-// ── Install: cache shell assets ───────────────────────────
-self.addEventListener('install', event => {
+// ── Install: cache app shell ──────────────────────────────
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_SHELL)
+    caches.open(CACHE_NAME)
       .then(cache => cache.addAll(SHELL_ASSETS))
       .then(() => self.skipWaiting())
   );
 });
 
-// ── Activate: remove ALL old caches, claim clients, notify tabs
-self.addEventListener('activate', event => {
+// ── Activate: clear old caches ────────────────────────────
+self.addEventListener('activate', (event) => {
+  const validCaches = [CACHE_NAME, RUNTIME_CACHE];
   event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => !ALL_CACHES.includes(k)).map(k => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
-      .then(clients => {
-        clients.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: VERSION }));
-      })
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => !validCaches.includes(key))
+          .map(key => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// ── Skip waiting on demand ─────────────────────────────────
-self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
-// ── Fetch strategy ────────────────────────────────────────
-self.addEventListener('fetch', event => {
+// ── Fetch: Cache-first for shell, Network-first for API ───
+self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Skip non-GET, Firebase calls, and cross-origin requests
   if (request.method !== 'GET') return;
-  if (url.origin !== self.location.origin) return;
+  if (url.hostname.includes('firebase') || url.hostname.includes('google')) return;
+  if (url.hostname.includes('fonts.googleapis') || url.hostname.includes('fonts.gstatic')) return;
 
-  // HTML: network-first (always fresh)
-  if (request.headers.get('accept')?.includes('text/html')) {
+  // App shell → cache-first
+  if (SHELL_ASSETS.some(path => url.pathname === path || url.pathname.endsWith(path))) {
     event.respondWith(
-      fetch(request)
-        .then(res => {
-          if (res.ok) {
-            caches.open(CACHE_SHELL).then(c => c.put(request, res.clone()));
-          }
-          return res;
-        })
-        .catch(() => caches.match(request).then(r => r || caches.match('/index.html')))
+      caches.match(request).then(cached => cached || fetch(request).then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+        return response;
+      }))
     );
     return;
   }
 
-  // Version-signal files: network-first
-  if (url.pathname === '/sw.js' || url.pathname === '/app.json') {
-    event.respondWith(
-      fetch(request)
-        .then(res => { if (res.ok) caches.open(CACHE_SHELL).then(c => c.put(request, res.clone())); return res; })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // JS / CSS / SVG: stale-while-revalidate
-  // Serve cached copy immediately; fetch + update cache in background.
-  if (/\.(js|css|svg)$/.test(url.pathname)) {
-    event.respondWith(
-      caches.open(CACHE_SHELL).then(async cache => {
-        const cached = await cache.match(request);
-        const networkFetch = fetch(request).then(res => {
-          if (res.ok) cache.put(request, res.clone());
-          return res;
-        }).catch(() => null);
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
-
-  // Everything else: cache-first, network fallback
+  // Everything else → network-first with runtime cache fallback
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(res => {
-        if (!res || res.status !== 200 || res.type === 'opaque') return res;
-        caches.open(CACHE_RUNTIME).then(c => c.put(request, res.clone()));
-        return res;
-      });
-    })
+    fetch(request)
+      .then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(RUNTIME_CACHE).then(cache => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });

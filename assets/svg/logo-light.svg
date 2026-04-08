@@ -1,17 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" fill="none" role="img" aria-label="Linkivo">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 72" fill="none" role="img" aria-label="Linkivo">
   <defs>
-    <linearGradient id="lgl" x1="4" y1="4" x2="44" y2="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="var(--lv-c1,#3b82f6)"/>
-      <stop offset="100%" stop-color="var(--lv-c2,#22d3ee)"/>
+    <linearGradient id="grad-lt" x1="4" y1="4" x2="52" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
     </linearGradient>
+    <clipPath id="clip-lt-left">
+      <rect x="0" y="0" width="35" height="72"/>
+    </clipPath>
+    <clipPath id="clip-lt-right">
+      <rect x="35" y="0" width="38" height="72"/>
+    </clipPath>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700&amp;display=swap');
+    </style>
   </defs>
-  <path d="M10 38 L10 16 Q10 6 18 6 Q26 6 26 16 L26 38" stroke="url(#lgl)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-  <rect x="5" y="34" width="20" height="13" rx="6.5" stroke="url(#lgl)" stroke-width="4.5" fill="none"/>
-  <clipPath id="crl"><rect x="20" y="0" width="30" height="56"/></clipPath>
-  <rect x="19" y="34" width="20" height="13" rx="6.5" stroke="url(#lgl)" stroke-width="4.5" fill="none" clip-path="url(#crl)"/>
-  <clipPath id="cll"><rect x="0" y="0" width="20" height="56"/></clipPath>
-  <rect x="5" y="34" width="20" height="13" rx="6.5" stroke="url(#lgl)" stroke-width="4.5" fill="none" clip-path="url(#cll)"/>
-  <circle cx="19.5" cy="40.5" r="2.2" fill="url(#lgl)"/>
-  <circle cx="30.5" cy="40.5" r="2.2" fill="url(#lgl)"/>
-  <text x="52" y="38" font-family="'Outfit','DM Sans',system-ui,sans-serif" font-weight="800" font-size="28" letter-spacing="-0.5" fill="#0f172a">Linkivo</text>
+
+  <!-- Icon: U/shackle -->
+  <path d="M13 52 L13 22 Q13 8 24 8 Q35 8 35 22 L35 52"
+        stroke="url(#grad-lt)" stroke-width="7.5" stroke-linecap="round"/>
+
+  <!-- Left chain ring -->
+  <rect x="5" y="47" width="30" height="19" rx="9.5"
+        stroke="url(#grad-lt)" stroke-width="6" fill="none"/>
+
+  <!-- Right chain ring (back section) -->
+  <g clip-path="url(#clip-lt-right)">
+    <rect x="27" y="47" width="30" height="19" rx="9.5"
+          stroke="url(#grad-lt)" stroke-width="6" fill="none"/>
+  </g>
+
+  <!-- Left ring front section -->
+  <g clip-path="url(#clip-lt-left)">
+    <rect x="5" y="47" width="30" height="19" rx="9.5"
+          stroke="url(#grad-lt)" stroke-width="6" fill="none"/>
+  </g>
+
+  <!-- Tech dots -->
+  <circle cx="30" cy="56.5" r="3.2" fill="url(#grad-lt)"/>
+  <circle cx="47" cy="56.5" r="3.2" fill="url(#grad-lt)"/>
+
+  <!-- Wordmark: "Linkivo" — dark color for light backgrounds -->
+  <text x="72" y="48"
+        font-family="'Outfit', 'Plus Jakarta Sans', 'DM Sans', sans-serif"
+        font-weight="700"
+        font-size="33"
+        letter-spacing="-0.5"
+        fill="#0f172a">Linkivo</text>
 </svg>

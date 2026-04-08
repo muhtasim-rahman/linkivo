@@ -54,5 +54,5 @@ export const DbPaths = {
   deletedItem:    (uid, id)           => `users/${uid}/recycleBin/${id}`,
   history:        (uid)               => `users/${uid}/history`,
   historyItem:    (uid, id)           => `users/${uid}/history/${id}`,
-  pinnedFolders:  (uid)               => `users/${uid}/pinnedFolders`,
+  pingedFolders:  (uid)               => `users/${uid}/pinnedFolders`,
 };

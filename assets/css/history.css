@@ -1,63 +1,107 @@
 /* ============================================================
-   Linkivo — history.css  v1.4.4
-   History page styles
+   Linkivo — history.css  v1.3.0 — History Page
    ============================================================ */
 
-#page-history { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.history-page {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+}
 
-/* Date groups */
-.hist-date-group { display:flex; flex-direction:column; }
-.hist-date-label {
-  font-size:var(--fs-xs); font-weight:700; color:var(--text-subtle);
-  text-transform:uppercase; letter-spacing:0.7px;
-  padding:10px var(--sp-4) 5px; background:var(--bg);
-  position:sticky; top:0; z-index:10;
+/* Header */
+.history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.history-title    { font-size: var(--fs-xl); font-weight: 800; }
+.history-subtitle { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+/* Search bar */
+.history-search-bar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; animation: fadeUp 0.2s ease;
+}
+.history-search-bar i { color: var(--text-subtle); font-size: 14px; }
+.history-search-bar input {
+  flex: 1; border: none; background: none; outline: none;
+  font-size: var(--fs-sm); color: var(--text); font-family: var(--font-ui);
+}
+.history-search-bar input::placeholder { color: var(--text-subtle); }
+#hist-search-close {
+  border: none; background: none; cursor: pointer;
+  color: var(--text-subtle); font-size: 14px; padding: 4px;
+}
+
+/* Scrollable list */
+.history-list {
+  flex: 1; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: var(--sp-10);
+}
+
+/* Date group header */
+.history-date-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px var(--sp-5) 4px;
+  font-size: var(--fs-xs); font-weight: 700;
+  color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.6px;
+  position: sticky; top: 0;
+  background: var(--bg);
+  backdrop-filter: blur(8px);
+  z-index: 1;
+  border-bottom: 1px solid var(--border);
 }
 
 /* History item */
-.hist-item {
-  display:flex; align-items:center; gap:var(--sp-3);
-  padding:10px var(--sp-4); border-bottom:1px solid var(--border);
-  cursor:pointer; transition:background var(--t-fast);
-  position:relative;
+.history-item {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 10px var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background var(--t-fast);
+  animation: fadeIn 0.2s ease both;
 }
-.hist-item:hover { background:var(--surface-hover); }
-.hist-item img {
-  width:32px; height:32px; border-radius:var(--r-sm);
-  object-fit:contain; background:var(--surface-2);
-  border:1px solid var(--border); flex-shrink:0;
-}
-.hist-item-info { flex:1; min-width:0; }
-.hist-item-title { font-size:var(--fs-sm); font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.hist-item-meta  { display:flex; gap:var(--sp-2); font-size:var(--fs-xs); color:var(--text-subtle); flex-wrap:wrap; margin-top:1px; }
-.hist-item-domain{ color:var(--primary); font-weight:500; }
-.hist-item-del   {
-  width:30px; height:30px; border:none; background:none; cursor:pointer;
-  color:var(--text-subtle); font-size:13px; border-radius:var(--r-sm);
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; transition:all var(--t-fast); flex-shrink:0;
-}
-.hist-item:hover .hist-item-del  { opacity:1; }
-.hist-item-del:hover { background:var(--danger-bg); color:var(--danger); }
-@media(max-width:768px){ .hist-item-del { opacity:1; } }
+.history-item:hover { background: var(--surface-hover); }
 
-/* Locked folder blur in history */
-.hist-item.locked-link {
-  filter:blur(4px); pointer-events:none; user-select:none;
+.hist-thumb { flex-shrink: 0; }
+.hist-info  { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hist-title {
+  font-size: var(--fs-sm); font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hist-item-locked-overlay {
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; background:rgba(0,0,0,0.04); z-index:2;
-  filter:none !important;
+.hist-url {
+  font-size: var(--fs-xs); color: var(--text-subtle);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hist-meta {
+  display: flex; gap: var(--sp-3); font-size: 10px; color: var(--text-subtle);
+  margin-top: 1px;
+}
+.hist-time   { display: flex; align-items: center; gap: 3px; }
+.hist-time i { font-size: 9px; }
+.hist-folder { display: flex; align-items: center; gap: 3px; color: var(--warning); font-weight: 600; }
+.hist-folder i { font-size: 9px; }
+
+/* Menu button */
+.hist-menu-btn {
+  width: 28px; height: 28px;
+  border: none; background: none; cursor: pointer;
+  color: var(--text-subtle); font-size: 14px;
+  border-radius: var(--r-sm); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all var(--t-fast);
+}
+.history-item:hover .hist-menu-btn { opacity: 1; }
+.hist-menu-btn:hover { background: var(--surface-hover); color: var(--text); }
+@media (max-width: 768px) { .hist-menu-btn { opacity: 1; } }
+
+/* Skeleton */
+.history-item-skeleton {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 12px var(--sp-4); border-bottom: 1px solid var(--border);
 }
 
-/* Search bar */
-.hist-search-bar {
-  display:flex; align-items:center; gap:var(--sp-2);
-  padding:8px var(--sp-4); background:var(--surface-2);
-  border-bottom:1px solid var(--border); flex-shrink:0;
-}
-.hist-search-bar input {
-  flex:1; border:none; background:none; outline:none;
-  font-size:var(--fs-sm); color:var(--text); font-family:var(--font-ui);
-}
+/* fadeOut for removal */
+@keyframes fadeOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(20px); } }

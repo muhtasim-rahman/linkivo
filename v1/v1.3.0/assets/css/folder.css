@@ -1,0 +1,18 @@
+/* ============================================================
+   Linkivo — folder.css  v1.3.0 — Folder Page Shell
+   ============================================================ */
+
+/* Page fills the scroll area */
+#page-folder {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+#folder-view-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}

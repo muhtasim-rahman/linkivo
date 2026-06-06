@@ -1,0 +1,63 @@
+/* ============================================================
+   Linkivo — history.css  v1.4.2
+   History page styles
+   ============================================================ */
+
+#page-history { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+
+/* Date groups */
+.hist-date-group { display:flex; flex-direction:column; }
+.hist-date-label {
+  font-size:var(--fs-xs); font-weight:700; color:var(--text-subtle);
+  text-transform:uppercase; letter-spacing:0.7px;
+  padding:10px var(--sp-4) 5px; background:var(--bg);
+  position:sticky; top:0; z-index:10;
+}
+
+/* History item */
+.hist-item {
+  display:flex; align-items:center; gap:var(--sp-3);
+  padding:10px var(--sp-4); border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background var(--t-fast);
+  position:relative;
+}
+.hist-item:hover { background:var(--surface-hover); }
+.hist-item img {
+  width:32px; height:32px; border-radius:var(--r-sm);
+  object-fit:contain; background:var(--surface-2);
+  border:1px solid var(--border); flex-shrink:0;
+}
+.hist-item-info { flex:1; min-width:0; }
+.hist-item-title { font-size:var(--fs-sm); font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hist-item-meta  { display:flex; gap:var(--sp-2); font-size:var(--fs-xs); color:var(--text-subtle); flex-wrap:wrap; margin-top:1px; }
+.hist-item-domain{ color:var(--primary); font-weight:500; }
+.hist-item-del   {
+  width:30px; height:30px; border:none; background:none; cursor:pointer;
+  color:var(--text-subtle); font-size:13px; border-radius:var(--r-sm);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:all var(--t-fast); flex-shrink:0;
+}
+.hist-item:hover .hist-item-del  { opacity:1; }
+.hist-item-del:hover { background:var(--danger-bg); color:var(--danger); }
+@media(max-width:768px){ .hist-item-del { opacity:1; } }
+
+/* Locked folder blur in history */
+.hist-item.locked-link {
+  filter:blur(4px); pointer-events:none; user-select:none;
+}
+.hist-item-locked-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; background:rgba(0,0,0,0.04); z-index:2;
+  filter:none !important;
+}
+
+/* Search bar */
+.hist-search-bar {
+  display:flex; align-items:center; gap:var(--sp-2);
+  padding:8px var(--sp-4); background:var(--surface-2);
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.hist-search-bar input {
+  flex:1; border:none; background:none; outline:none;
+  font-size:var(--fs-sm); color:var(--text); font-family:var(--font-ui);
+}

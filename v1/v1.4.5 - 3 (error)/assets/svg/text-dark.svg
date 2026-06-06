@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="220" height="48">
+  <defs>
+    <linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <text
+    font-family="Outfit, 'DM Sans', system-ui, sans-serif"
+    font-weight="800"
+    font-size="40"
+    letter-spacing="-0.5"
+    y="38"
+    x="0"
+  >
+    <tspan fill="#0f172a">l</tspan><tspan fill="url(#ig)">i</tspan><tspan fill="#0f172a">nk</tspan><tspan fill="url(#ig)">i</tspan><tspan fill="#0f172a">vo</tspan>
+  </text>
+</svg>

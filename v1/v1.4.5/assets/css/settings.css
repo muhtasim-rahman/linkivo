@@ -1,0 +1,179 @@
+/* ============================================================
+   Linkivo — settings.css  v1.4.5
+   Settings page, export modal, all sections
+   ============================================================ */
+
+/* Page shell */
+#page-settings { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.st-inner { padding:0 var(--sp-4) var(--sp-16); display:flex; flex-direction:column; gap:var(--sp-4); }
+
+/* ── Install banner ────────────────────────────────────── */
+.st-install-banner {
+  display:flex; align-items:center; gap:var(--sp-3);
+  background:var(--gradient); border-radius:var(--r-xl);
+  padding:var(--sp-4); margin:var(--sp-4) 0 0;
+  box-shadow:var(--shadow-glow); animation:fadeUp 0.3s ease;
+}
+.st-install-icon { font-size:28px; color:#fff; flex-shrink:0; }
+.st-install-text { flex:1; min-width:0; }
+.st-install-title{ font-size:var(--fs-base); font-weight:700; color:#fff; }
+.st-install-sub  { font-size:var(--fs-xs); color:rgba(255,255,255,0.75); }
+/* Installed state */
+.st-install-banner.installed {
+  background:var(--success-bg); box-shadow:none;
+}
+.st-install-banner.installed .st-install-icon { color:var(--success); }
+.st-install-banner.installed .st-install-title{ color:var(--success); }
+.st-install-banner.installed .st-install-sub  { color:var(--text-muted); }
+
+/* ── Section ────────────────────────────────────────────── */
+.st-section { display:flex; flex-direction:column; gap:var(--sp-2); }
+.st-section-title {
+  font-size:var(--fs-xs); font-weight:700; color:var(--text-subtle);
+  text-transform:uppercase; letter-spacing:0.8px;
+  padding:0 var(--sp-1); display:flex; align-items:center; gap:6px;
+}
+.st-section-title i { font-size:11px; }
+
+/* ── Card ────────────────────────────────────────────────── */
+.st-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-xl); overflow:hidden;
+}
+
+/* ── Row ─────────────────────────────────────────────────── */
+.st-row {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:var(--sp-3); padding:13px var(--sp-4); border:none; background:none;
+  width:100%; text-align:left; transition:background var(--t-fast);
+}
+.st-row + .st-row { border-top:1px solid var(--border); }
+.st-row-btn { cursor:pointer; }
+.st-row-btn:hover { background:var(--surface-hover); }
+.st-row-icon {
+  width:34px; height:34px; border-radius:var(--r-sm);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+  background:var(--gradient-soft); color:var(--primary);
+}
+.st-row-info { flex:1; min-width:0; }
+.st-row-label { font-size:var(--fs-sm); font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.st-row-sub   { font-size:var(--fs-xs); color:var(--text-muted); margin-top:1px; }
+.st-row-arrow { font-size:11px; color:var(--text-subtle); flex-shrink:0; }
+.st-row.danger .st-row-label { color:var(--danger); }
+
+/* ── Profile card ────────────────────────────────────────── */
+.st-profile-card {
+  display:flex; align-items:center; gap:var(--sp-4);
+  padding:var(--sp-4) var(--sp-4);
+}
+.st-profile-info { flex:1; min-width:0; }
+.st-name  { font-size:var(--fs-md); font-weight:800; color:var(--text); }
+.st-email { font-size:var(--fs-xs); color:var(--text-muted); }
+.st-prov  { font-size:var(--fs-xs); color:var(--text-subtle); margin-top:2px; }
+
+/* ── Accent swatches ─────────────────────────────────────── */
+.accent-swatches { display:flex; gap:var(--sp-2); flex-wrap:wrap; }
+.accent-swatch {
+  width:30px; height:30px; border-radius:50%;
+  border:2.5px solid transparent; cursor:pointer;
+  transition:all var(--t-base);
+}
+.accent-swatch.active { border-color:var(--text); box-shadow:var(--shadow-md); transform:scale(1.15); }
+.accent-swatch:not(.active):hover { transform:scale(1.08); }
+
+/* ── Font size buttons ───────────────────────────────────── */
+.font-size-btn { min-width:60px; text-align:center; }
+
+/* ── Select ──────────────────────────────────────────────── */
+.st-select {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:var(--r-sm); padding:6px 10px;
+  font-size:var(--fs-sm); font-weight:500; color:var(--text);
+  cursor:pointer; font-family:var(--font-ui); outline:none;
+  transition:border-color var(--t-base);
+}
+.st-select:focus { border-color:var(--primary); }
+
+/* ── Badge ───────────────────────────────────────────────── */
+.st-badge {
+  background:var(--danger-bg); color:var(--danger);
+  font-size:var(--fs-xs); font-weight:700;
+  padding:2px 8px; border-radius:var(--r-full); flex-shrink:0;
+}
+
+/* ── App info section ────────────────────────────────────── */
+.st-app-info {
+  display:flex; align-items:center; gap:var(--sp-3);
+  padding:var(--sp-4);
+}
+.st-app-name    { font-size:var(--fs-md); font-weight:800; color:var(--text); }
+.st-app-tagline { font-size:var(--fs-xs); color:var(--text-muted); }
+.st-info-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px var(--sp-4); font-size:var(--fs-sm);
+  border-top:1px solid var(--border);
+}
+.st-info-row + .st-info-row { }
+.st-info-label { color:var(--text-muted); }
+.st-info-value { color:var(--text); font-weight:500; }
+.st-links-row {
+  display:flex; gap:var(--sp-3); flex-wrap:wrap;
+  padding:var(--sp-3) var(--sp-4); border-top:1px solid var(--border);
+}
+.st-links-row a { font-size:var(--fs-xs); color:var(--primary); font-weight:500; }
+.st-footer {
+  text-align:center; font-size:var(--fs-xs); color:var(--text-subtle);
+  padding-bottom:var(--sp-8);
+}
+.st-footer i { color:var(--danger); }
+
+/* ── Export modal specific ───────────────────────────────── */
+.export-folder-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:6px var(--sp-3); background:var(--surface-2);
+  border:1.5px solid var(--border); border-radius:var(--r-full);
+  font-size:var(--fs-xs); font-weight:600; color:var(--text-muted);
+  cursor:pointer; transition:all var(--t-base); margin:3px;
+}
+.export-folder-chip.selected {
+  background:var(--gradient-soft); border-color:var(--primary); color:var(--primary);
+}
+.export-format-grid {
+  display:grid; grid-template-columns:repeat(2,1fr); gap:8px;
+  @media(min-width:480px){ grid-template-columns:repeat(3,1fr); }
+}
+.export-format-item {
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:var(--sp-3) var(--sp-2);
+  border:2px solid var(--border); border-radius:var(--r-lg);
+  cursor:pointer; transition:all var(--t-base); text-align:center;
+  background:var(--surface-2);
+}
+.export-format-item:has(input:checked) { border-color:var(--primary); background:var(--gradient-soft); }
+.export-format-item input { display:none; }
+.export-format-item i { font-size:22px; color:var(--primary); }
+.exp-fmt-label { font-size:var(--fs-xs); font-weight:700; color:var(--text); }
+.exp-fmt-desc  { font-size:10px; color:var(--text-muted); }
+
+/* Firebase status dot */
+.firebase-dot {
+  width:9px; height:9px; border-radius:50%;
+  flex-shrink:0; background:var(--text-subtle);
+  transition:background var(--t-base);
+}
+.firebase-dot.ok   { background:var(--success); }
+.firebase-dot.err  { background:var(--danger); }
+.firebase-dot.checking { animation:pulse 1.2s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+/* ══ Settings responsive fixes v1.4.5 ═══════════════════════ */
+/* Theme/accent/font on small screens */
+@media (max-width: 400px) {
+  .accent-swatches { flex-wrap: wrap; gap: 8px; }
+  .font-size-btns  { flex-direction: column; }
+  .font-size-btn   { width: 100%; text-align: center; }
+}
+/* Contact email in app info */
+.st-info-value a { text-decoration: none; }
+.st-info-value a:hover { text-decoration: underline; }

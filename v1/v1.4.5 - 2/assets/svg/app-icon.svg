@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Linkivo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="ic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.90"/>
+    </linearGradient>
+  </defs>
+  <!-- Background square with rounded corners -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Left ring -->
+  <path d="M92 352 L92 148 Q92 56 164 56 Q236 56 236 148 L236 352"
+    stroke="url(#ic)" stroke-width="44" stroke-linecap="round" fill="none"/>
+  <!-- Bottom bar left -->
+  <rect x="66" y="306" width="194" height="128" rx="64"
+    stroke="url(#ic)" stroke-width="40" fill="none"/>
+  <!-- Right ring clipped -->
+  <clipPath id="cr"><rect x="184" y="0" width="270" height="512"/></clipPath>
+  <rect x="175" y="306" width="194" height="128" rx="64"
+    stroke="url(#ic)" stroke-width="40" fill="none" clip-path="url(#cr)"/>
+  <!-- Left clip -->
+  <clipPath id="cl"><rect x="0" y="0" width="184" height="512"/></clipPath>
+  <rect x="66" y="306" width="194" height="128" rx="64"
+    stroke="url(#ic)" stroke-width="40" fill="none" clip-path="url(#cl)"/>
+  <!-- Connector dots -->
+  <circle cx="179" cy="370" r="22" fill="url(#ic)"/>
+  <circle cx="280" cy="370" r="22" fill="url(#ic)"/>
+</svg>

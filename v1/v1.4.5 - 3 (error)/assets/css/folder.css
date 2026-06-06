@@ -1,0 +1,216 @@
+/* ============================================================
+   Linkivo — folder.css  v1.4.5
+   Premium folder cards with equal height, accent border,
+   locked distinct design, search bar, icon picker
+   ============================================================ */
+
+/* ── Folder grid ───────────────────────────────────────── */
+.folder-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: var(--card-gap);
+  padding: 0 var(--sp-4) var(--sp-10);
+}
+@media (min-width: 480px) { .folder-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 769px) { .folder-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); padding: 0 var(--sp-5) var(--sp-8); } }
+
+/* ── Search bar ────────────────────────────────────────── */
+.folder-search-bar {
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  flex-shrink: 0;
+}
+.folder-search-input-wrap {
+  display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 8px var(--sp-4);
+  transition: border-color var(--t-base);
+}
+.folder-search-input-wrap:focus-within { border-color: var(--primary); }
+.folder-search-input-wrap i { color: var(--text-subtle); font-size: 13px; flex-shrink: 0; }
+.folder-search-input-wrap input {
+  border: none; background: transparent; outline: none;
+  font-size: var(--fs-sm); color: var(--text); flex: 1;
+  min-width: 0;
+}
+.folder-search-input-wrap input::placeholder { color: var(--text-subtle); }
+
+/* ── Folder card ───────────────────────────────────────── */
+.folder-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-left: 3px solid var(--card-accent, var(--primary));
+  border-radius: var(--r-xl);
+  overflow: hidden; cursor: pointer;
+  transition: all var(--t-base);
+  display: flex; flex-direction: column;
+  min-height: 130px;
+  position: relative; user-select: none;
+  animation: fadeUp 0.2s ease both;
+}
+@media (hover: hover) {
+  .folder-card:hover {
+    border-color: var(--card-accent, var(--primary));
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+  }
+}
+.folder-card:active { transform: translateY(0); box-shadow: none; }
+.folder-card.pinned::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; background: linear-gradient(90deg, var(--pin-color), #a78bfa);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+/* Locked folder — dashed, slightly muted */
+.folder-card-locked {
+  border-style: dashed;
+  opacity: 0.88;
+}
+.folder-card-locked .folder-card-icon {
+  background: var(--surface-hover) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── Card top ──────────────────────────────────────────── */
+.folder-card-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: var(--sp-3) var(--sp-3) var(--sp-1);
+}
+.folder-card-icon {
+  width: 42px; height: 42px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; flex-shrink: 0;
+  transition: transform var(--t-spring);
+}
+@media (hover: hover) { .folder-card:hover .folder-card-icon { transform: scale(1.07); } }
+
+/* Action buttons group (random + menu) */
+.folder-card-actions {
+  display: flex; align-items: center; gap: 0;
+}
+.folder-random-btn,
+.folder-card-menu {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  border: none; background: none; cursor: pointer;
+  color: var(--text-subtle); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all var(--t-fast); flex-shrink: 0;
+}
+.folder-card:hover .folder-random-btn,
+.folder-card:hover .folder-card-menu,
+.folder-random-btn:focus,
+.folder-card-menu:focus { opacity: 1; }
+@media (hover: hover) {
+  .folder-random-btn:hover { background: var(--surface-hover); color: var(--primary); }
+  .folder-card-menu:hover  { background: var(--surface-hover); color: var(--text); }
+}
+/* Always visible on touch */
+@media (max-width: 768px) {
+  .folder-card-menu { opacity: 1; }
+}
+
+/* ── Card body ─────────────────────────────────────────── */
+.folder-card-body {
+  padding: 2px var(--sp-3) var(--sp-3);
+  flex: 1; display: flex; flex-direction: column; gap: 3px;
+}
+.folder-card-name {
+  font-size: var(--fs-sm); font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  display: flex; align-items: center; gap: 4px;
+  line-height: 1.4;
+}
+.folder-pin-icon { font-size: 9px; color: var(--pin-color); flex-shrink: 0; }
+
+.folder-card-desc {
+  font-size: 10px; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.folder-card-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: var(--fs-xs); color: var(--text-subtle); font-weight: 500;
+  margin-top: auto;
+}
+
+/* Locked hint row */
+.folder-locked-hint {
+  font-size: 10px; font-weight: 600;
+  color: var(--pin-color);
+  display: flex; align-items: center; gap: 4px;
+  margin-top: auto;
+}
+
+/* ── Tags ──────────────────────────────────────────────── */
+.folder-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.folder-tag  {
+  font-size: 10px; padding: 1px 6px;
+  background: var(--gradient-soft); color: var(--primary);
+  border-radius: var(--r-full); font-weight: 600;
+}
+
+/* ── Home header ───────────────────────────────────────── */
+.home-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5) var(--sp-3); flex-shrink: 0;
+}
+.home-header-left h2 { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.3px; margin-bottom: 2px; }
+.home-header-left p  { font-size: var(--fs-xs); color: var(--text-muted); }
+
+/* ── Stats bar ─────────────────────────────────────────── */
+.folder-stats {
+  display: flex; gap: var(--sp-2); padding: 0 var(--sp-4) var(--sp-2);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.folder-stats::-webkit-scrollbar { display: none; }
+.stat-pill {
+  display: flex; align-items: center; gap: var(--sp-1);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-full); padding: 5px var(--sp-3);
+  white-space: nowrap; font-size: var(--fs-xs); font-weight: 600;
+  color: var(--text-muted); flex-shrink: 0;
+}
+.stat-pill i { color: var(--primary); font-size: 11px; }
+
+/* ── Recycle section ───────────────────────────────────── */
+.recycle-section {
+  margin: 0 var(--sp-4) var(--sp-4);
+  border: 1px dashed var(--border-2); border-radius: var(--r-lg);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex; align-items: center; gap: var(--sp-3);
+  cursor: pointer; transition: all var(--t-base);
+  color: var(--text-muted); font-size: var(--fs-sm); font-weight: 500;
+}
+@media (hover: hover) { .recycle-section:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); } }
+.recycle-count {
+  margin-left: auto; background: var(--danger-bg); color: var(--danger);
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px; border-radius: var(--r-full);
+}
+
+/* ── Folder locked overlay ─────────────────────────────── */
+.folder-locked-bar {
+  background: rgba(139,92,246,0.08); border-top: 1px solid rgba(139,92,246,0.15);
+  padding: 5px var(--sp-3); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--pin-color); display: flex; align-items: center; gap: 4px;
+}
+
+/* ── Icon picker grid ──────────────────────────────────── */
+.cf-icon-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
+}
+.cf-icon-btn {
+  width: 40px; height: 40px; border-radius: var(--r-md);
+  border: 1.5px solid var(--border); background: var(--surface-2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--text-muted);
+  transition: all var(--t-base);
+}
+.cf-icon-btn.active,
+.cf-icon-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--gradient-soft); }
+
+/* Mobile: always show menu btn */
+@media (hover: none) and (pointer: coarse) {
+  .folder-card-menu { opacity: 1; }
+  .folder-card:hover { box-shadow: none; transform: none; }
+}

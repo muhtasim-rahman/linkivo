@@ -1,0 +1,47 @@
+{
+  "name": "Linkivo \u2014 Smart Link Manager",
+  "short_name": "Linkivo",
+  "description": "Save, organise and randomly discover links smarter.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#3b82f6",
+  "background_color": "#f8fafc",
+  "scope": "/",
+  "lang": "en",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/svg/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Random Discover",
+      "url": "/#random",
+      "description": "Open a random link"
+    },
+    {
+      "name": "Import Links",
+      "url": "/?import=1",
+      "description": "Import from file or text"
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+/* ============================================================
+   Linkivo — folder.css  v1.4.0
+   Folder view layout
+   ============================================================ */
+
+.folder-view-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.folder-back-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-base); flex-shrink: 0;
+}
+.folder-back-btn:hover { background: var(--surface-hover); color: var(--text); }
+
+.folder-view-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+
+.folder-view-title-wrap { flex: 1; min-width: 0; }
+.folder-view-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.folder-view-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-subtle);
+}
+
+.folder-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.folder-search-bar input {
+  flex: 1;
+  border: none; background: none; outline: none;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.folder-search-bar input::placeholder { color: var(--text-subtle); }
+
+.links-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.links-sort-wrap { flex-shrink: 0; }
+
+.multi-select-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--gradient-soft);
+  flex-shrink: 0;
+}
+.multi-select-count {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Folder lock bar on cards */
+.folder-locked-bar {
+  margin: var(--sp-2) var(--sp-3) var(--sp-3);
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Folder lock modal — improved UI ─────────────────────── */
+.folder-lock-setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: center;
+  padding: var(--sp-4) 0;
+}
+.folder-lock-icon-big {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--gradient-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  color: var(--primary);
+}

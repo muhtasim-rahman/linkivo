@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" fill="none">
+  <defs>
+    <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon part -->
+  <rect width="36" height="36" x="2" y="2" rx="10" fill="url(#lg)"/>
+  <g transform="translate(8, 9)">
+    <rect x="0" y="5" width="11" height="7" rx="3.5" fill="white" opacity="0.95"/>
+    <rect x="2" y="7" width="7" height="3" rx="1.5" fill="#3b82f6"/>
+    <rect x="11" y="7" width="11" height="7" rx="3.5" fill="white" opacity="0.95"/>
+    <rect x="13" y="9" width="7" height="3" rx="1.5" fill="#3b82f6"/>
+    <rect x="9.5" y="8.5" width="3" height="3" rx="1" fill="white" opacity="0.8"/>
+    <path d="M16 2 L21 2 L21 7" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+    <path d="M14 4 L21 2" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.85"/>
+  </g>
+  <!-- Text -->
+  <text x="46" y="26" font-family="'Outfit', 'DM Sans', system-ui, sans-serif" font-size="22" font-weight="800" letter-spacing="-0.5" fill="#0f172a">Linkivo</text>
+</svg>

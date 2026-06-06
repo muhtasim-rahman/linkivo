@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 40" fill="none" role="img" aria-label="Linkivo">
+  <defs>
+    <linearGradient id="dotg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <!-- Full text "Linkivo" - currentColor so it works on any bg -->
+  <text font-family="'Outfit','DM Sans',system-ui,sans-serif"
+        font-weight="800" font-size="32" letter-spacing="-1" fill="currentColor">
+    <tspan x="0" y="31">Linkivo</tspan>
+  </text>
+  <!-- Gradient dot over the "i" - position tuned for Outfit font -->
+  <circle cx="64.5" cy="4.5" r="4" fill="url(#dotg)"/>
+</svg>

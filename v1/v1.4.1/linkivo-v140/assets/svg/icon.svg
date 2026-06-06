@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="16" fill="url(#g1)"/>
+  <!-- Link chain icon — two connected chain links -->
+  <g transform="translate(12, 14)">
+    <!-- Left link ring -->
+    <rect x="0" y="10" width="20" height="12" rx="6" fill="white" opacity="0.95"/>
+    <rect x="4" y="14" width="12" height="4" rx="2" fill="url(#g2)"/>
+    <!-- Right link ring -->
+    <rect x="20" y="14" width="20" height="12" rx="6" fill="white" opacity="0.95"/>
+    <rect x="24" y="18" width="12" height="4" rx="2" fill="url(#g2)"/>
+    <!-- Connector bar -->
+    <rect x="17" y="16" width="6" height="4" rx="1" fill="white" opacity="0.85"/>
+    <!-- Small arrow up-right (discover symbol) -->
+    <path d="M30 6 L38 6 L38 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+    <path d="M26 10 L38 6" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+  </g>
+</svg>

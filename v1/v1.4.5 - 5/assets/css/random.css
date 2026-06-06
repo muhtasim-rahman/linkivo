@@ -1,0 +1,220 @@
+/* ============================================================
+   Linkivo — random.css  v1.4.5
+   Random discover: split layout — controls (top, scrollable)
+   + preview (bottom, flex:1, always visible)
+   ============================================================ */
+
+/* ── Page shell ─────────────────────────────────────────── */
+#page-random { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+.random-shell {
+  display: flex; flex-direction: column;
+  height: 100%; overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.random-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.random-title { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.3px; }
+.random-sub   { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+/* ── Controls (folder chips + domain + options) ─────────── */
+.random-controls {
+  flex-shrink: 0;
+  max-height: 42vh;    /* caps at 42% of screen — never takes over */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.random-controls-inner {
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
+}
+
+/* ── Folder chips ───────────────────────────────────────── */
+.r-folder-label {
+  font-size: var(--fs-xs); font-weight: 700;
+  color: var(--text-subtle); text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 6px;
+}
+.r-folder-bar  { display: flex; flex-wrap: wrap; gap: 6px; }
+.r-folder-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px var(--sp-3); border: 1.5px solid var(--border);
+  border-radius: var(--r-full); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--text-muted); cursor: pointer;
+  transition: all var(--t-base); background: none;
+}
+@media (hover: hover) { .r-folder-chip:hover { border-color: var(--primary); color: var(--primary); } }
+.r-folder-chip.selected { background: var(--gradient-soft); border-color: var(--primary); color: var(--primary); }
+.r-folder-chip i { font-size: 10px; }
+
+/* ── Domain filter panel ────────────────────────────────── */
+.r-domain-panel {
+  padding: var(--sp-2) var(--sp-4) var(--sp-3);
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.r-domain-panel-head {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+}
+.r-domain-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 180px; overflow-y: auto;
+}
+.r-domain-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: var(--fs-sm);
+}
+@media (hover: hover) { .r-domain-row:hover { background: var(--surface-hover); } }
+.r-domain-row input[type="checkbox"] { accent-color: var(--primary); width: 14px; height: 14px; flex-shrink: 0; }
+.r-domain-name { color: var(--text-muted); flex: 1; }
+.r-domain-more {
+  margin-top: 6px; font-size: 12px; font-weight: 600;
+  color: var(--primary); background: none; border: none;
+  cursor: pointer; padding: 4px 0; text-align: left;
+}
+
+/* ── Options panel ──────────────────────────────────────── */
+.r-options-section {
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.r-opts-title {
+  font-size: var(--fs-xs); font-weight: 700; color: var(--text-subtle);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: var(--sp-3);
+}
+.r-opt-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-4); padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.r-opt-row:last-child { border-bottom: none; }
+.r-opt-label { font-size: var(--fs-sm); font-weight: 500; color: var(--text); }
+.r-opt-sub   { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 1px; }
+.r-select {
+  font-size: var(--fs-xs); padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text); flex-shrink: 0;
+}
+
+/* ── Preview area (flex:1, always visible) ──────────────── */
+.random-preview-area {
+  flex: 1;
+  min-height: 0;          /* critical: allows flex child to shrink below content */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Auto-advance bar */
+.r-auto-bar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 6px var(--sp-4);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+  background: var(--gradient-soft);
+}
+.r-auto-progress { flex: 1; height: 4px; background: var(--border); border-radius: var(--r-full); overflow: hidden; }
+.r-auto-fill     { height: 100%; background: var(--gradient); border-radius: var(--r-full); transition: width 0.5s linear; }
+
+/* Roll button (centered when no preview) */
+.random-main {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--sp-4); text-align: center;
+  padding: var(--sp-6);
+}
+.r-roll-btn {
+  width: 100px; height: 100px; border-radius: 50%;
+  background: var(--gradient); border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; color: #fff; font-size: 13px; font-weight: 700;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.40); transition: all var(--t-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+.r-roll-btn i { font-size: 28px; }
+@media (hover: hover) { .r-roll-btn:hover { transform: scale(1.06); box-shadow: 0 8px 32px rgba(59,130,246,0.55); } }
+.r-roll-btn:active { transform: scale(0.96); }
+
+/* ── Preview card (fills remaining height) ──────────────── */
+.r-preview-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeUp 0.25s ease;
+}
+
+/* iframe-wrap: fills all available space */
+.r-preview-iframe-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.r-preview-iframe {
+  width: 100%; height: 100%; border: none; display: block;
+}
+
+/* Loading overlay */
+.r-preview-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 8px;
+  background: var(--surface-2); z-index: 3;
+}
+
+/* Status badge */
+.r-preview-status {
+  position: absolute; bottom: 10px; right: 10px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(0,0,0,0.55); color: #fff;
+  padding: 3px 10px; border-radius: 999px;
+  z-index: 5; pointer-events: none;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s ease;
+}
+.r-preview-status.hidden { opacity: 0; pointer-events: none; }
+
+/* Fallback layers */
+.r-preview-fallback {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--sp-3); padding: var(--sp-5);
+  background: var(--surface-2);
+}
+.r-preview-fallback img { max-width: 100%; max-height: 55%; object-fit: contain; border-radius: var(--r-md); }
+.r-fallback-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; }
+
+/* Link info strip */
+.r-preview-info {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 10px var(--sp-4); border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.r-preview-title  { font-size: var(--fs-sm); font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-preview-domain { font-size: var(--fs-xs); color: var(--text-subtle); }
+
+/* Action bar */
+.r-actions {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 6px var(--sp-2); border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.r-action-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 8px; border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-size: 15px; border-radius: var(--r-md);
+  transition: all var(--t-fast); flex: 1; min-width: 40px;
+  -webkit-tap-highlight-color: transparent;
+}
+.r-action-btn span  { font-size: 9px; font-weight: 600; }
+@media (hover: hover) { .r-action-btn:hover { color: var(--text); background: var(--surface-hover); } }
+.r-action-btn.active { color: var(--primary); }

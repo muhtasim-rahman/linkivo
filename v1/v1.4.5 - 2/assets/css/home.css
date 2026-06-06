@@ -1,0 +1,19 @@
+/* ============================================================
+   Linkivo — home.css  v1.4.5
+   Home page — My Links
+   ============================================================ */
+
+/* Home page layout — FIXED: no extra scroll issue */
+#page-home {
+  display:flex; flex-direction:column;
+  height:100%; overflow:hidden;
+}
+
+/* Scrollable content area within home page */
+#page-home .page-scroll-inner {
+  flex:1; overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding-bottom:var(--sp-10);
+}
+/* If no inner scroll wrapper, use page-scroll directly */

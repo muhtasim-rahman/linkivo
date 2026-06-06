@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: folders
+    //   - uid: string (required, immutable)
+    //   - name: string (required, max 100 chars)
+    //   - isPinned: boolean (required)
+    //   - isLocked: boolean (required)
+    //   - createdAt: timestamp (required, immutable)
+    //   - deletedAt: timestamp | null (optional)
+    //
+    // Collection: links
+    //   - uid: string (required, immutable)
+    //   - folderId: string (required)
+    //   - url: string (required, max 2000 chars)
+    //   - title: string (required, max 500 chars)
+    //   - status: string (required, enum: active, favorite, liked, disliked, blocked)
+    //   - points: number (required)
+    //   - isPinned: boolean (required)
+    //   - createdAt: timestamp (required, immutable)
+    //   - deletedAt: timestamp | null (optional)
+    //
+    // Collection: history
+    //   - uid: string (required, immutable)
+    //   - linkId: string (required)
+    //   - url: string (required, max 2000 chars)
+    //   - title: string (required, max 500 chars)
+    //   - openedAt: timestamp (required, immutable)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function isOptionalTimestamp(field) {
+      return !(field in request.resource.data) || request.resource.data[field] == null || request.resource.data[field] is timestamp;
+    }
+
+    // Domain Validators
+    function isValidFolder() {
+      let allowed = ['uid', 'name', 'isPinned', 'isLocked', 'createdAt', 'deletedAt'];
+      let required = ['uid', 'name', 'isPinned', 'isLocked', 'createdAt'];
+      return hasOnlyAllowedFields(allowed) &&
+             hasRequiredFields(required) &&
+             isValidString('name', 1, 100) &&
+             request.resource.data.isPinned is bool &&
+             request.resource.data.isLocked is bool &&
+             request.resource.data.createdAt is timestamp &&
+             isOptionalTimestamp('deletedAt');
+    }
+
+    function isValidLink() {
+      let allowed = ['uid', 'folderId', 'url', 'title', 'status', 'points', 'isPinned', 'createdAt', 'deletedAt'];
+      let required = ['uid', 'folderId', 'url', 'title', 'status', 'points', 'isPinned', 'createdAt'];
+      return hasOnlyAllowedFields(allowed) &&
+             hasRequiredFields(required) &&
+             isValidString('folderId', 1, 100) &&
+             isValidString('url', 1, 2000) &&
+             isValidString('title', 0, 500) &&
+             request.resource.data.status in ['active', 'favorite', 'liked', 'disliked', 'blocked'] &&
+             request.resource.data.points is number &&
+             request.resource.data.isPinned is bool &&
+             request.resource.data.createdAt is timestamp &&
+             isOptionalTimestamp('deletedAt');
+    }
+
+    function isValidHistory() {
+      let allowed = ['uid', 'linkId', 'url', 'title', 'openedAt'];
+      let required = ['uid', 'linkId', 'url', 'title', 'openedAt'];
+      return hasOnlyAllowedFields(allowed) &&
+             hasRequiredFields(required) &&
+             isValidString('linkId', 1, 100) &&
+             isValidString('url', 1, 2000) &&
+             isValidString('title', 0, 500) &&
+             request.resource.data.openedAt is timestamp;
+    }
+
+    // Rules
+    match /folders/{folderId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() &&
+                       uidUnchanged() &&
+                       isValidFolder();
+      allow update: if isDocOwner() &&
+                       uidNotModified() &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       isValidFolder();
+      allow delete: if isDocOwner();
+    }
+
+    match /links/{linkId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() &&
+                       uidUnchanged() &&
+                       isValidLink();
+      allow update: if isDocOwner() &&
+                       uidNotModified() &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       isValidLink();
+      allow delete: if isDocOwner();
+    }
+
+    match /history/{historyId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() &&
+                       uidUnchanged() &&
+                       isValidHistory();
+      allow update: if false; // History is append-only
+      allow delete: if isDocOwner();
+    }
+  }
+}

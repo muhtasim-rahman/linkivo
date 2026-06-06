@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Linkivo</title>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<style>
+  body { max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+  h2 { font-size: 18px; font-weight: 700; margin-top: 32px; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  p, li { font-size: 15px; line-height: 1.7; color: var(--text-muted); }
+  ul { padding-left: 20px; }
+  a { color: var(--primary); }
+  .meta { font-size: 13px; color: var(--text-subtle); margin-bottom: 32px; }
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+<a class="back" href="/">&#8592; Back to Linkivo</a>
+<h1>Privacy Policy</h1>
+<p class="meta">Last updated: April 6, 2026 · Version v1.4.5 · Contact: <a href="mailto:linkivo.web@gmail.com">linkivo.web@gmail.com</a></p>
+
+<h2>1. Information We Collect</h2>
+<p>Linkivo collects only the minimum information necessary to provide the service:</p>
+<ul>
+  <li><strong>Account data</strong>: your name, email address, and profile photo, obtained through Firebase Authentication (Google or Email/Password sign-in).</li>
+  <li><strong>User content</strong>: links, folder names, descriptions, tags, and history that you save within the app — stored in Firebase Realtime Database under your unique user ID.</li>
+  <li><strong>Settings</strong>: your theme, sort preferences, app lock PIN, and other configuration — stored in Firebase under your user ID.</li>
+  <li><strong>Profile photos</strong>: images you upload are hosted on imgbb via a secure Cloudflare Worker proxy.</li>
+</ul>
+
+<h2>2. How We Use Your Data</h2>
+<ul>
+  <li>To provide, maintain, and improve the Linkivo service.</li>
+  <li>To sync your data across devices via Firebase Realtime Database.</li>
+  <li>To restore deleted items from the Recycle Bin (30-day retention).</li>
+  <li>We do not sell, share, or monetise your personal data.</li>
+</ul>
+
+<h2>3. Data Storage & Security</h2>
+<p>All user data is stored in Google Firebase (Realtime Database and Authentication), governed by <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase's Privacy Policy</a>. Firebase Security Rules ensure that each user can only access their own data. Your app lock PIN is stored encrypted at rest in Firebase.</p>
+
+<h2>4. Third-Party Services</h2>
+<ul>
+  <li><strong>Firebase (Google)</strong>: authentication and database.</li>
+  <li><strong>imgbb</strong>: image hosting for profile photos and folder icons, accessed via our Cloudflare Worker proxy.</li>
+  <li><strong>allorigins.win</strong>: optional CORS proxy used to fetch link thumbnails (og:image). No personal data is transmitted.</li>
+  <li><strong>Google Favicons API</strong>: used to display site favicons. No personal data is transmitted.</li>
+</ul>
+
+<h2>5. Your Rights</h2>
+<p>You may delete your account and all associated data at any time via <strong>Settings → Danger Zone → Delete Account</strong>. This permanently removes all your data from Firebase. For questions or data requests, contact <a href="mailto:linkivo.web@gmail.com">linkivo.web@gmail.com</a>.</p>
+
+<h2>6. Cookies & Local Storage</h2>
+<p>Linkivo uses browser <strong>localStorage</strong> to cache preferences (theme, sort, sidebar state) for faster loading. No cross-site tracking cookies are used.</p>
+
+<h2>7. Changes</h2>
+<p>We may update this policy. The latest version is always available at <a href="/privacy">linkivo.web.app/privacy</a>. Continued use of the service after changes constitutes acceptance.</p>
+
+<p style="margin-top:48px;font-size:13px;color:var(--text-subtle)">© 2026 Linkivo · <a href="/terms">Terms</a> · <a href="/docs">Docs</a> · <a href="mailto:linkivo.web@gmail.com">linkivo.web@gmail.com</a></p>
+</body></html>

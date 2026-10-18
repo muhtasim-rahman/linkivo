@@ -1,0 +1,20 @@
+feat(v2.0.0): project setup for the Linkivo v2 rebuild
+
+- Add the v2 project structure: css/ and js/ skeleton (core, engine, ui, workers, features/*), assets/brand and assets/icons
+- Add the "@ Creator" workspace: PLAN.md, MASTER-PROMPT.md, RULES.md, CONTEXT.md
+- Add docs: FEATURES (full spec incl. the export system), ARCHITECTURE (data model, rules design, engines, native backup format, router, service worker, Worker, security), DESIGN, SETUP-GUIDE, TESTING, V1-AUDIT
+- Add tools: check.mjs (quality gate), pack.sh (release zip without wrapper folder), make-icons.mjs (icons from the logo)
+- Generate PWA icons on a white background from assets/brand/logo.svg (192, 512, maskable, apple-touch, favicon, OG image)
+- Add firebase.json: no @ folder is deployed, no-cache headers, security headers, rewrite to index.html, database rules path inside "@ Creator"
+- Add deny-all database rules placeholder (real rules arrive in v2.1.0) and .firebaserc
+- Add .gitignore (ignores "@ Extra files" and secret/tooling patterns), .gitattributes (LF line endings) and .editorconfig
+- Add app.json (https://linkivo.web.app, developer https://mdturzo.web.app), js/core/config.js (public Firebase web config and Worker URL), README
+- Add placeholder index.html and a migration service worker that deletes all old v1 caches
+- Add reference files: v1 splash animation (v21) and the LinkIntel metadata prototype
+
+Removed files:
+- .creator/ (renamed to "@ Creator/"): delete the old .creator folder if it exists in your project
+
+Owner actions:
+- Extract the zip into the project root, delete the old .creator folder if present, commit with this message, save the zip in "@ Versions"
+- No Firebase or Cloudflare action is needed for v2.0.0

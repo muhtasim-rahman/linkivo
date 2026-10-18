@@ -1,0 +1,17 @@
+{
+  "name": "Linkivo",
+  "tagline": "Manage your links",
+  "version": "2.0.0",
+  "buildDate": "2026-10-18",
+  "stage": "setup",
+  "developer": {
+    "name": "Muhtasim Rahman",
+    "site": "https://mdturzo.web.app",
+    "github": "https://github.com/muhtasim-rahman",
+    "contact": "mdturzo.dev@gmail.com"
+  },
+  "repo": "https://github.com/muhtasim-rahman/linkivo",
+  "hosting": "https://linkivo.web.app",
+  "worker": "https://linkivo.programs-turzo.workers.dev",
+  "firebaseProject": "linkivo"
+}

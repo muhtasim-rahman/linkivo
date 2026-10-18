@@ -1,0 +1,5 @@
+# Keep line endings stable between Windows and Linux (the AI builds on Linux, the owner works on Windows)
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.zip binary

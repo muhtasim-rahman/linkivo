@@ -1,0 +1,689 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkIntel Pro Max - Advanced Deep Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --card-bg: #1e293b;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        /* Search Bar */
+        .search-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-box-container {
+            position: relative;
+            flex: 1;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 40px 14px 15px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .clear-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: none;
+            font-size: 1.2rem;
+            background: none;
+            border: none;
+        }
+
+        .analyze-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+
+        .analyze-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .analyze-btn:disabled { background: var(--border); cursor: not-allowed; transform: none; color: var(--text-secondary); }
+
+        /* Suggestions */
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-top: 5px;
+            z-index: 1000;
+            max-height: 180px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-secondary);
+        }
+
+        .suggestion-item:hover { background: #334155; color: white; }
+        .suggestion-item:last-child { border-bottom: none; }
+
+        /* Loader & Live Progress Log */
+        .loader-section {
+            display: none;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+
+        .spinner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(99, 102, 241, 0.1);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .progress-box {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .log-line { margin-bottom: 8px; line-height: 1.4; }
+        .log-info { color: var(--text-primary); }
+        .log-warning { color: var(--warning); }
+        .log-error { color: var(--error); }
+        .log-success { color: var(--success); font-weight: bold; }
+
+        /* Results Display */
+        .result-grid {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .full-card { grid-column: 1 / -1; }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-label {
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        /* Media Elements */
+        .media-frame {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+            min-height: 250px;
+            border: 1px solid var(--border);
+        }
+
+        video, img {
+            max-width: 100%;
+            max-height: 600px;
+            display: block;
+            object-fit: contain;
+        }
+
+        .no-media {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* Data Styling */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.95rem;
+        }
+        
+        .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .info-label { color: var(--text-secondary); font-weight: 500; }
+        .info-val { font-weight: 600; text-align: right; color: var(--text-primary); word-break: break-all; padding-left: 20px; }
+        .info-val.highlight { color: var(--success); }
+
+        .tag-box { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .tag {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .favicon-box { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+        .fav-img { width: 24px; height: 24px; border-radius: 4px; background: white; padding: 2px; }
+
+        .link-style {
+            color: var(--accent);
+            text-decoration: none;
+            word-break: break-all;
+            font-weight: 500;
+        }
+        .link-style:hover { text-decoration: underline; color: var(--accent-hover); }
+
+        /* Responsive Mobile */
+        @media (max-width: 768px) {
+            .result-grid { grid-template-columns: 1fr; }
+            .input-group { flex-direction: column; }
+            .analyze-btn { padding: 14px; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>LinkIntel Pro Max</h1>
+            <p style="color: var(--text-secondary)">Advanced Multi-Engine Extractor (Resistant to Blocks)</p>
+        </header>
+
+        <div class="search-section">
+            <div class="input-group">
+                <div class="input-box-container">
+                    <input type="url" id="urlInput" placeholder="Paste link eikhane (eg: site.com/video?id=123)..." autocomplete="off">
+                    <button class="clear-icon" id="clearBtn" title="Clear">✕</button>
+                    <div id="suggestions" class="suggestions"></div>
+                </div>
+                <button class="analyze-btn" id="analyzeBtn" onclick="startDeepSearch()">Start Deep Scan</button>
+            </div>
+        </div>
+
+        <!-- Live Progress Section -->
+        <div id="loaderSection" class="loader-section">
+            <div class="spinner-container">
+                <div class="spinner"></div>
+                <h3 style="color: var(--text-primary)">Bissleshon Cholche...</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 5px;">Koyekti alada engine theke data onushondhan kora hocche</p>
+            </div>
+            <div class="progress-box" id="progressLog">
+                <!-- Live logs ashbe ekhane -->
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="result-grid">
+            
+            <!-- Video Preview -->
+            <div class="card full-card" id="videoCard" style="display: none;">
+                <span class="card-label">🎬 Main Video Source</span>
+                <div class="media-frame" id="videoBox"></div>
+            </div>
+
+            <!-- Image/Thumbnail Preview -->
+            <div class="card full-card">
+                <span class="card-label">🖼️ Media / Thumbnail / Screenshot</span>
+                <div class="media-frame" id="imageBox"></div>
+            </div>
+
+            <!-- Core Details -->
+            <div class="card">
+                <span class="card-label">📝 Core Details</span>
+                <div class="info-row"><span class="info-label">Title</span> <span id="resTitle" class="info-val highlight">---</span></div>
+                <div class="info-row"><span class="info-label">Type</span> <span id="resType" class="info-val">---</span></div>
+                <div class="info-row"><span class="info-label">Domain</span> <span id="resDomain" class="info-val">---</span></div>
+                <div class="info-row"><span class="info-label">Provider</span> <span id="resProvider" class="info-val">---</span></div>
+            </div>
+
+            <!-- Technical Info -->
+            <div class="card">
+                <span class="card-label">🌐 Technical Info</span>
+                <div class="info-row"><span class="info-label">Author</span> <span id="resAuthor" class="info-val">---</span></div>
+                <div class="info-row"><span class="info-label">Language</span> <span id="resLang" class="info-val">---</span></div>
+                <div class="info-row"><span class="info-label">Favicon</span> <span class="info-val favicon-box"><img id="resFav" class="fav-img" src="" alt="F" onerror="this.style.display='none'"></span></div>
+                <div class="info-row"><span class="info-label">Extractor Engine</span> <span id="resEngine" class="info-val" style="color: #a855f7;">---</span></div>
+            </div>
+
+            <!-- Description -->
+            <div class="card full-card">
+                <span class="card-label">📄 Full Description</span>
+                <p id="resDesc" style="color: var(--text-primary); font-size: 0.95rem; line-height: 1.6;">---</p>
+            </div>
+
+            <!-- Tags -->
+            <div class="card full-card" id="tagsCard">
+                <span class="card-label">🏷️ Extracted Keywords</span>
+                <div class="tag-box" id="resTags"></div>
+            </div>
+
+            <!-- Link -->
+            <div class="card full-card">
+                <span class="card-label">🔗 Source Link</span>
+                <a id="resUrl" href="#" target="_blank" class="link-style">---</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('urlInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const sugBox = document.getElementById('suggestions');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const progressLog = document.getElementById('progressLog');
+        const HISTORY_KEY = 'linkintel_pro_history';
+
+        // --------------------------------------------------------
+        // UI & History Logic
+        // --------------------------------------------------------
+        input.addEventListener('input', () => { clearBtn.style.display = input.value ? 'block' : 'none'; });
+
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            clearBtn.style.display = 'none';
+            input.focus();
+        });
+
+        input.addEventListener('focus', () => {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            if (history.length > 0) {
+                sugBox.innerHTML = history.map(url => `<div class="suggestion-item">${url}</div>`).join('');
+                sugBox.style.display = 'block';
+                
+                document.querySelectorAll('.suggestion-item').forEach(item => {
+                    item.onclick = () => {
+                        input.value = item.innerText;
+                        sugBox.style.display = 'none';
+                        clearBtn.style.display = 'block';
+                    };
+                });
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.input-box-container')) sugBox.style.display = 'none';
+        });
+
+        function saveToHistory(url) {
+            let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            history = history.filter(h => h !== url); // Remove duplicate
+            history.unshift(url);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 6))); // Keep last 6
+        }
+
+        // Live Log Function
+        function logMsg(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `log-line log-${type}`;
+            div.innerText = `[${time}] ${msg}`;
+            progressLog.appendChild(div);
+            progressLog.scrollTop = progressLog.scrollHeight;
+        }
+
+        // --------------------------------------------------------
+        // EXTRACTOR ENGINES (Methods)
+        // --------------------------------------------------------
+        
+        // Method 1: Microlink (Best for video/screenshot but strictly blocks some sites)
+        async function fetchMicrolink(url) {
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}&video=true&screenshot=true&palette=true`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.status !== 'success') throw new Error('API returned failure status');
+            const d = json.data;
+            if (!d.title && !d.image) throw new Error('Incomplete data received');
+            
+            return {
+                engine: 'Microlink API',
+                title: d.title,
+                desc: d.description,
+                image: d.image?.url || d.screenshot?.url,
+                video: d.video?.url,
+                domain: new URL(url).hostname.replace('www.', ''),
+                author: d.author,
+                provider: d.publisher || d.provider,
+                lang: d.lang,
+                favicon: d.logo?.url,
+                url: d.url || url
+            };
+        }
+
+        // Method 2: Dub.co MetaTags (Very fast, handles parameters well)
+        async function fetchDubCo(url) {
+            const res = await fetch(`https://api.dub.co/metatags?url=${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const d = await res.json();
+            if (!d.title && !d.image) throw new Error('No valid meta tags found');
+
+            return {
+                engine: 'Dub.co Meta Engine',
+                title: d.title,
+                desc: d.description,
+                image: d.image,
+                video: null, // Usually doesn't provide direct video link
+                domain: new URL(url).hostname.replace('www.', ''),
+                author: null,
+                provider: null,
+                lang: null,
+                favicon: `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`,
+                url: url
+            };
+        }
+
+        // Method 3: JSONLink (Good fallback for standard OpenGraph data)
+        async function fetchJsonLink(url) {
+            const res = await fetch(`https://jsonlink.io/api/extract?url=${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const d = await res.json();
+            if (!d.title && (!d.images || d.images.length === 0)) throw new Error('No useful data found');
+
+            return {
+                engine: 'JSONLink Scraper',
+                title: d.title,
+                desc: d.description,
+                image: d.images ? d.images[0] : null,
+                video: null,
+                domain: d.domain || new URL(url).hostname.replace('www.', ''),
+                author: d.author,
+                provider: d.sitename,
+                lang: null,
+                favicon: d.favicon,
+                url: d.url || url
+            };
+        }
+
+        // Method 4: AllOrigins Raw HTML Parsing (Ultimate Fallback, bypasses many restrictions)
+        async function fetchRawHTML(url) {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (!json.contents) throw new Error('Blank HTML received');
+
+            // Parse HTML String to DOM
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(json.contents, "text/html");
+
+            // Extract Meta Tags
+            const title = doc.querySelector('title')?.innerText || doc.querySelector('meta[property="og:title"]')?.content;
+            const desc = doc.querySelector('meta[name="description"]')?.content || doc.querySelector('meta[property="og:description"]')?.content;
+            const image = doc.querySelector('meta[property="og:image"]')?.content || doc.querySelector('meta[name="twitter:image"]')?.content;
+            const video = doc.querySelector('meta[property="og:video:url"]')?.content || doc.querySelector('meta[property="og:video"]')?.content;
+
+            if (!title && !image) throw new Error('Raw HTML parsing failed to find tags');
+
+            return {
+                engine: 'Raw DOM Parser (AllOrigins)',
+                title: title,
+                desc: desc,
+                image: image,
+                video: video,
+                domain: new URL(url).hostname.replace('www.', ''),
+                author: null,
+                provider: doc.querySelector('meta[property="og:site_name"]')?.content,
+                lang: doc.querySelector('html')?.getAttribute('lang'),
+                favicon: `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`,
+                url: url
+            };
+        }
+
+        // --------------------------------------------------------
+        // MAIN EXECUTION LOGIC
+        // --------------------------------------------------------
+        async function startDeepSearch() {
+            let url = input.value.trim();
+            if (!url) return alert("Doya kore ekta valid URL din!");
+            if (!url.startsWith('http')) url = 'https://' + url; // Auto add https
+
+            saveToHistory(url);
+            sugBox.style.display = 'none';
+
+            // Reset UI
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('videoCard').style.display = 'none';
+            document.getElementById('loaderSection').style.display = 'block';
+            progressLog.innerHTML = '';
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerText = "Analyzing...";
+
+            logMsg(`Target URL: ${url}`, 'info');
+
+            // Define extraction methods in order of priority
+            const methods = [
+                { name: "Microlink (Primary)", fn: fetchMicrolink },
+                { name: "Dub.co (Secondary)", fn: fetchDubCo },
+                { name: "JSONLink (Fallback 1)", fn: fetchJsonLink },
+                { name: "Raw DOM Parser (Ultimate Fallback)", fn: fetchRawHTML }
+            ];
+
+            let finalData = null;
+
+            // Loop through methods until one works
+            for (let i = 0; i < methods.length; i++) {
+                try {
+                    logMsg(`Trying Engine ${i+1}: ${methods[i].name}...`, 'warning');
+                    const result = await methods[i].fn(url);
+                    
+                    if (result && (result.title || result.image)) {
+                        logMsg(`SUCCESS! Data extracted using ${methods[i].name}.`, 'success');
+                        finalData = result;
+                        break; // Stop looping if we got data!
+                    }
+                } catch (error) {
+                    logMsg(`Engine ${i+1} failed: ${error.message}`, 'error');
+                }
+            }
+
+            // Render Results or Show Final Error
+            setTimeout(() => {
+                document.getElementById('loaderSection').style.display = 'none';
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerText = "Start Deep Scan";
+
+                if (finalData) {
+                    renderData(finalData);
+                } else {
+                    alert("Sobgulo engine fail koreche! Website ti bot-protected hote pare ba link e vul ache.");
+                }
+            }, 800); // Slight delay to let user read the final log
+        }
+
+        // --------------------------------------------------------
+        // RENDER DATA TO UI
+        // --------------------------------------------------------
+        function renderData(d) {
+            // Video Processing
+            const videoBox = document.getElementById('videoBox');
+            if (d.video) {
+                videoBox.innerHTML = `<video src="${d.video}" controls poster="${d.image || ''}"></video>`;
+                document.getElementById('videoCard').style.display = 'block';
+                document.getElementById('resType').innerText = "VIDEO / MEDIA CONTENT";
+            } else {
+                document.getElementById('resType').innerText = "STANDARD WEB PAGE";
+            }
+
+            // Image Processing
+            const imageBox = document.getElementById('imageBox');
+            if (d.image) {
+                imageBox.innerHTML = `<img src="${d.image}" alt="Extracted Media">`;
+            } else {
+                imageBox.innerHTML = `<div class="no-media">Kono chobi ba thumbnail paoa jayni.</div>`;
+            }
+
+            // Text Fields
+            document.getElementById('resTitle').innerText = d.title || 'Unknown Title';
+            document.getElementById('resDomain').innerText = d.domain || 'N/A';
+            document.getElementById('resProvider').innerText = d.provider || 'N/A';
+            document.getElementById('resAuthor').innerText = d.author || 'N/A';
+            document.getElementById('resLang').innerText = d.lang ? d.lang.toUpperCase() : 'N/A';
+            document.getElementById('resDesc').innerText = d.desc || 'Ei link er kono description pawa jayni.';
+            document.getElementById('resEngine').innerText = d.engine;
+            
+            // Favicon
+            const favImg = document.getElementById('resFav');
+            if(d.favicon) {
+                favImg.src = d.favicon;
+                favImg.style.display = 'block';
+            } else {
+                favImg.style.display = 'none';
+            }
+
+            // URL
+            const urlA = document.getElementById('resUrl');
+            urlA.href = d.url;
+            urlA.innerText = d.url;
+
+            // Generate Tags from Title + Description
+            const tagBox = document.getElementById('resTags');
+            tagBox.innerHTML = '';
+            
+            let combinedText = (d.title + " " + (d.desc || '')).replace(/[^\w\s]/g, '').toLowerCase();
+            let words = combinedText.split(/\s+/).filter(w => w.length > 4); // Keep words > 4 chars
+            
+            // Remove duplicates and limit to 12
+            let uniqueKeywords = [...new Set(words)].slice(0, 12);
+            
+            if (uniqueKeywords.length > 0) {
+                document.getElementById('tagsCard').style.display = 'block';
+                uniqueKeywords.forEach(word => {
+                    const span = document.createElement('span');
+                    span.className = 'tag';
+                    span.innerText = word;
+                    tagBox.appendChild(span);
+                });
+            } else {
+                document.getElementById('tagsCard').style.display = 'none';
+            }
+
+            // Show results
+            document.getElementById('results').style.display = 'grid';
+        }
+
+        // Enter key trigger
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') startDeepSearch(); });
+    </script>
+</body>
+</html>

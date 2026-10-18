@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Linkivo</title>
+  <meta name="description" content="Linkivo: a fast, private link manager.">
+  <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <style>
+    /* v2.0.0 placeholder only. The real shell, design system and splash arrive in v2.1.0. */
+    :root { color-scheme: light dark; --bg: #eef2f8; --fg: #0c1629; --sub: #566d8a; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #060d1a; --fg: #d4e6f6; --sub: #7f9bb8; } }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; }
+    main { min-height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
+    img { width: 84px; height: auto; }
+    p { margin: 0; color: var(--sub); font-size: 15px; line-height: 1.5; max-width: 34ch; }
+    h1 { margin: 0; font-size: 22px; font-weight: 650; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/assets/brand/logo.svg" alt="Linkivo logo">
+    <h1>Linkivo v2</h1>
+    <p>Project setup is complete. The app itself arrives in v2.1.0.</p>
+  </main>
+  <script>
+    // Migration service worker (v2.0.0): replaces any old v1 worker and wipes its caches.
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  </script>
+</body>
+</html>

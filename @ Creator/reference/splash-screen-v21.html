@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linkivo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #eef2f8; --grid: #d6dfed; --text: #0c1629; --sub: #566d8a;
+      --card-bg: rgba(255,255,255,0.92); --card-b: rgba(182,200,228,0.82);
+      --ctrl-bg: rgba(255,255,255,0.9); --ctrl-b: #c6d2e4; --ctrl-c: #546880;
+      --grad-1: #3b82f6; --grad-2: #22d3ee;
+      --bg-locked: #dbeafe;
+    }
+    html.dark {
+      --bg: #060d1a; --grid: #0c1928; --text: #d4e6f6; --sub: #4d6c8a;
+      --card-bg: rgba(7,16,34,0.92); --card-b: rgba(24,48,82,0.72);
+      --ctrl-bg: rgba(5,12,26,0.9); --ctrl-b: #122036; --ctrl-c: #4d6c8a;
+      --bg-locked: #0f1c33;
+    }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: var(--bg); color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      transition: background .4s ease, color .4s ease;
+    }
+
+    /* Expanding Circular Background */
+    #bg-expand {
+      position: fixed; inset: 0; z-index: 0;
+      background: var(--bg-locked);
+      clip-path: circle(0px at 50% 50%);
+      transition: clip-path 1.2s cubic-bezier(0.4, 0, 0.2, 1), background .4s ease;
+      pointer-events: none;
+    }
+
+    /* Controls */
+    #ctrl { position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 9999; }
+    .cbtn {
+      padding: 8px 16px;
+      background: var(--ctrl-bg); border: 1.5px solid var(--ctrl-b);
+      color: var(--ctrl-c); border-radius: 10px;
+      font: 500 13px 'Outfit', sans-serif; cursor: pointer;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      transition: all .2s; user-select: none;
+    }
+    .cbtn:hover { color: var(--text); transform: translateY(-2px); }
+
+    /* Splash Area */
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100; overflow: hidden;
+    }
+    
+    /* Grid with Radial Mask */
+    .bg-grid {
+      position: absolute; inset: 0; z-index: 1;
+      background-image:
+        linear-gradient(to right, var(--grid) 1.5px, transparent 1.5px),
+        linear-gradient(to bottom, var(--grid) 1.5px, transparent 1.5px);
+      background-size: 40px 40px;
+      opacity: 0.8; 
+      mask-image: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 80%);
+      -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,1) 80%);
+    }
+
+    .glow-orb {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(59,130,246,.15) 0%, transparent 65%);
+      border-radius: 50%; z-index: 2;
+      animation: orbPulse 6s ease-in-out infinite;
+    }
+    html.dark .glow-orb { background: radial-gradient(circle, rgba(34,211,238,.1) 0%, transparent 65%); }
+    @keyframes orbPulse {
+      0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.8; }
+      50% { transform: translate(-50%,-50%) scale(1.1); opacity: 1; }
+    }
+
+    /* URL Cards Wrappers & Layers */
+    .ucard-wrapper {
+      position: absolute; z-index: 15;
+      width: 0; height: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .ucard-pos {
+      position: absolute;
+      display: flex; align-items: center; justify-content: center;
+      will-change: transform;
+    }
+    .ucard {
+      background: var(--card-bg); border: 1px solid var(--card-b);
+      border-radius: 10px; padding: 6px 12px 6px 8px; 
+      font: 500 12px 'Outfit', sans-serif; color: var(--sub); 
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0,0,0,.06);
+      display: flex; align-items: center; gap: 8px;
+      white-space: nowrap; opacity: 0; pointer-events: none;
+      will-change: transform, opacity, width, padding, border-radius, background, border-color;
+      overflow: hidden;
+      height: 36px;
+      box-sizing: border-box;
+    }
+    .ufav {
+      width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .35s cubic-bezier(0.4, 0, 0.2, 1);
+      color: white;
+    }
+    .ufav svg { width: 12px; height: 12px; }
+    .utext-wrap { display: flex; overflow: hidden; justify-content: flex-start; align-items: center; }
+    .utext {
+      display: inline-block; white-space: nowrap;
+    }
+
+    /* Drifting Animations */
+    @keyframes dA { 0%,100%{transform:translate(0,0)} 30%{transform:translate(8px,-6px)} 65%{transform:translate(-5px,6px)} }
+    @keyframes dB { 0%,100%{transform:translate(0,0)} 30%{transform:translate(-6px,8px)} 65%{transform:translate(8px,-5px)} }
+    @keyframes dC { 0%,100%{transform:translate(0,0)} 30%{transform:translate(6px,10px)} 65%{transform:translate(-8px,-6px)} }
+    @keyframes dD { 0%,100%{transform:translate(0,0)} 30%{transform:translate(-8px,-8px)} 65%{transform:translate(6px,6px)} }
+
+    /* SVG Logo Area */
+    #lwrap { position: relative; z-index: 20; width: min(55vw, 420px); will-change: transform; }
+    #lsvg { width: 100%; height: auto; overflow: visible; }
+
+    /* Brand Text */
+    #brand {
+      position: relative; z-index: 20;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      margin-top: 10px;
+    }
+    .logo-text-container {
+      display: flex; align-items: baseline; font-family: 'Outfit', sans-serif;
+      font-weight: 700; font-size: clamp(2.5rem, 6vw, 4.2rem);
+      letter-spacing: -0.03em; color: var(--text); line-height: 1;
+    }
+    .t-char {
+      opacity: 0; filter: blur(12px); transform: translateX(-15px);
+      display: inline-block; will-change: opacity, filter, transform; position: relative;
+    }
+    
+    .idot-wrap { position: relative; }
+    .idot {
+      position: absolute; top: 0.16em; left: 50%;
+      transform: translateX(-50%) scale(0); width: 0.16em; height: 0.16em;
+      background: linear-gradient(135deg, var(--grad-1), var(--grad-2));
+      border-radius: 50%; opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    }
+
+    #ltag {
+      font: 400 clamp(.85rem, 1.7vw, 1rem) 'Outfit', sans-serif; color: var(--sub);
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; filter: blur(10px); transform: translateY(10px);
+      will-change: opacity, filter, transform;
+    }
+    .badge {
+      padding: 3px 10px; background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(34,211,238,0.1));
+      color: var(--accent); font: 600 .75rem 'Outfit', monospace;
+      border-radius: 999px; border: 1px solid rgba(59,130,246,0.2);
+    }
+    html.dark .badge { color: #38bdf8; }
+
+    #splash.out { animation: splashOut 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes splashOut { to { opacity: 0; filter: blur(15px); transform: scale(1.05); } }
+
+    /* Dashboard Skeleton */
+    #dash {
+      position: fixed; inset: 0; background: var(--bg); z-index: 50; display: flex;
+      opacity: 0; transform: scale(.97); pointer-events: none;
+      transition: all 0.6s cubic-bezier(0.2, 0, 0, 1); padding: 24px; gap: 24px;
+    }
+    #dash.show { opacity: 1; transform: scale(1); pointer-events: all; }
+
+    .skel-sidebar {
+      width: 260px; height: 100%; border-radius: 20px;
+      background: var(--card-bg); border: 1px solid var(--card-b);
+      display: flex; flex-direction: column; padding: 24px; gap: 16px;
+    }
+    .skel-content { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+    .skel-header {
+      width: 100%; height: 80px; border-radius: 20px;
+      background: var(--card-bg); border: 1px solid var(--card-b);
+    }
+    .skel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+    .skel-card { height: 180px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--card-b); }
+    .shimmer { position: relative; overflow: hidden; }
+    .shimmer::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+      transform: translateX(-100%); animation: shimmer 2s infinite ease-in-out;
+    }
+    html.dark .shimmer::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent); }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .s-box { background: var(--grid); border-radius: 8px; height: 24px; }
+  </style>
+</head>
+<body>
+
+<div id="ctrl">
+  <button class="cbtn" id="breplay">↺ Replay</button>
+  <button class="cbtn" id="btheme">🌙 Dark</button>
+</div>
+
+<!-- ═══════════════════ SPLASH ═══════════════════ -->
+<div id="splash">
+  <div id="bg-expand"></div>
+  <div class="bg-grid"></div>
+  <div class="glow-orb"></div>
+
+  <div id="lwrap">
+    <svg id="lsvg" viewBox="140 286 750 600" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#22d3ee"/>
+        </linearGradient>
+        
+        <mask id="u-mask">
+          <path id="u-mask-line" d="M 259 520 L 259 340 A 94.35 94.35 0 0 1 447.7 340 L 447.7 520" fill="none" stroke="white" stroke-width="44" stroke-linecap="round" />
+        </mask>
+
+        <mask id="bar-mask">
+          <path id="bar-mask-line" d="M 310 648 L 725 648" fill="none" stroke="white" stroke-width="100" stroke-linecap="round"/>
+        </mask>
+      </defs>
+
+      <circle id="center-pulse" cx="353" cy="648" r="0" fill="none" stroke="url(#lg)" stroke-width="6" opacity="0"/>
+
+      <g id="star-sparkles"></g>
+
+      <g id="la">
+        <path id="real-shackle" mask="url(#u-mask)" fill="url(#lg)" d="M278.4,320.4 C276.8,330.4 277.2,340.1 277.2,349.7 C277.2,396.7 277.1,443.7 277.3,490.7 C277.3,495.3 276,498 271.8,500.1 C262.5,504.7 254.1,510.7 246.1,517.3 C244.8,518.3 243.7,519.7 241.8,519.7 C240,518.3 240.7,516.3 240.7,514.6 C240.7,455 240.5,395.3 240.8,335.7 C240.9,314.9 244.6,294.6 254.7,276 C266.6,254.3 285.1,240.8 308.5,234.3 C337,226.3 365.8,226.2 394.4,233.4 C432,242.9 454,267.5 462.2,304.9 C464.2,314.3 465.3,323.9 465.3,333.6 C465.3,377.6 465.3,421.5 465.4,465.5 C465.4,481.7 465.7,497.9 465.9,514 C465.9,515.9 466.4,518 464.7,519.7 C462.5,519.5 461.2,517.8 459.7,516.6 C452.2,510.5 444.3,504.8 435.6,500.6 C430.7,498.3 429.5,495.2 429.5,490.1 C429.7,440.1 429.6,390.1 429.6,340.1 C429.6,329.1 428.3,318.2 425.2,307.6 C418.4,284.8 403.4,270.6 380.4,265.2 C362.4,260.9 344.4,260.8 326.4,265.1 C299.7,271.5 284.7,289.1 279.3,315.5 C279,317 278.7,318.5 278.4,320.4 Z"/>
+
+        <g id="left-ring-group" style="transform-origin: 353px 648px; transform: scale(0);">
+          <path id="lr" fill="url(#lg)" fill-opacity="0" stroke="url(#lg)" stroke-width="3" stroke-dasharray="3000" stroke-dashoffset="3000" d="M510.9,685.6 C494.1,748 455.3,789.3 393.2,805.4 C303.3,828.7 215.3,773.2 195.3,682.9 C175.9,595.2 233.8,507.4 322.1,490.5 C409.5,473.8 494.3,529.8 511.6,615.6 C512.4,619.7 511.6,621.1 507.4,621.1 C496.6,621 485.8,620.9 474.9,621.2 C470.5,621.3 469.9,618.5 468.9,615.4 C455.1,572.2 426.4,543.8 382.6,532.3 C316,514.9 248.6,557.9 235.2,625.6 C222.3,690.8 264.7,754.3 329.9,767.3 C390.5,779.5 451.5,742.5 468.7,682.9 C470.3,677.4 472.7,675.5 478.4,675.8 C487.3,676.2 496.3,675.9 505.3,675.9 C512.7,675.9 512.7,676.1 511.3,683.2 Z"/>
+        </g>
+      </g>
+
+      <path id="real-bar" mask="url(#bar-mask)" fill="url(#lg)" d="M620,669.1 C544.1,669.1 468.8,669.2 393.5,669.1 C388.9,669.1 385.6,670 382.4,673.9 C371.5,687.2 352.9,691.1 337.6,684.1 C322.2,677.1 312.7,660.4 315.1,644.8 C318,626.3 331,612.7 348.6,610.8 C362.3,609.4 374,613.9 382.9,624.5 C384.9,626.9 387,627.8 390.1,627.8 C474.9,627.8 559.7,627.8 644.6,627.8 C648,627.8 650.3,626.9 652.7,624.1 C663.5,611.2 681.9,607.1 697.1,613.8 C713.4,620.9 722.1,636.3 720.2,654.2 C718.4,670.3 705.6,684.1 688.8,686.8 C674.1,689.2 661.4,684.8 651.9,672.9 C649.7,670.1 647.4,669 643.9,669.1 C636.1,669.3 628.3,669.1 620,669.1 Z"/>
+
+      <path id="rr" fill="url(#lg)" fill-opacity="0" stroke="url(#lg)" stroke-width="3" stroke-dasharray="3000" stroke-dashoffset="3000" d="M591.5,728.4 C615.9,755.3 645.9,769.3 681.8,769.5 C737.8,769.9 786.9,730.6 799.6,675.9 C815.2,608.3 769.6,540.8 701,530.2 C640.3,520.8 582.9,557.3 566.3,616 C565.2,620 563.4,621.3 559.3,621.2 C549.2,620.9 539,621.1 528.9,621.1 C523.1,621.1 522.6,620.6 523.8,615.1 C530.5,585.1 544.2,558.9 565.6,536.8 C593.8,507.7 628.3,491.2 668.5,487.9 C752.1,481.3 824.2,537 840,615.6 C851.8,674.4 835.5,725.5 792.2,767.2 C767.2,791.2 736.8,805 702.4,809.4 C618.4,820 542.6,765 524.2,684.4 C522.3,676 522.4,675.9 530,675.9 C539.7,675.9 549.3,676 559,675.8 C563,675.7 565,677 566,681 C570.7,698.7 579.3,714.3 591.5,728.4 Z"/>
+
+      <circle id="rp2" cx="686" cy="648" r="0" fill="none" stroke="#22d3ee" stroke-width="5" opacity="0"/>
+    </svg>
+  </div>
+
+  <div id="brand">
+    <div class="logo-text-container" id="lname"></div>
+    <div id="ltag">Manage your links &mdash; <span class="badge">v1.5.0</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ DASHBOARD SKELETON ═══════════════════ -->
+<div id="dash">
+  <div class="skel-sidebar shimmer">
+    <div class="s-box" style="width: 60%; height: 32px; margin-bottom: 20px;"></div>
+    <div class="s-box" style="width: 100%;"></div>
+    <div class="s-box" style="width: 85%;"></div>
+    <div class="s-box" style="width: 90%;"></div>
+    <div class="s-box" style="width: 70%; margin-top: auto;"></div>
+  </div>
+  <div class="skel-content">
+    <div class="skel-header shimmer"></div>
+    <div class="skel-grid">
+      <div class="skel-card shimmer"></div><div class="skel-card shimmer"></div>
+      <div class="skel-card shimmer"></div><div class="skel-card shimmer"></div>
+      <div class="skel-card shimmer"></div><div class="skel-card shimmer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const wait = ms => new Promise(r => setTimeout(r,ms));
+
+const CARDS_DATA = [
+  { url: 'youtube.com', bg: '#ef4444', svg: '<path fill="currentColor" d="M21.58 7.19A2.71 2.71 0 0019.67 5.28C17.98 4.8 12 4.8 12 4.8s-5.98 0-7.67.48A2.71 2.71 0 002.42 7.19C1.94 8.88 1.94 12 1.94 12s0 3.12.48 4.81a2.71 2.71 0 001.91 1.91C6.02 19.2 12 19.2 12 19.2s5.98 0 7.67-.48a2.71 2.71 0 001.91-1.91c.48-1.69.48-4.81.48-4.81s0-3.12-.48-4.81zM9.95 15.22V8.78L15.63 12l-5.68 3.22z"/>' },
+  { url: 'twitter.com', bg: '#111827', svg: '<path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>' },
+  { url: 'github.com', bg: '#24292e', svg: '<path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>' },
+  { url: 'linkedin.com', bg: '#2563eb', svg: '<path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>' },
+  { url: 'dribbble.com', bg: '#ea4c89', svg: '<path fill="currentColor" d="M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm10.12-10.358c-.35-.11-3.17-.953-6.384-.438 1.34 3.684 1.887 6.684 1.992 7.308 2.3-1.555 3.936-4.02 4.395-6.87zm-6.115 7.808c-.181-.742-.773-3.98-2.18-7.71-4.225 1.155-7.797 1.353-8.384 1.378-.444 3.753 1.868 7.37 5.518 8.86 1.745-.487 3.42-1.393 5.046-2.528zm-12.06-2.61c.626-.036 4.67-.294 9.167-1.583-.497-1.25-.992-2.457-1.464-3.568-5.337 1.556-10.45 1.488-10.96 1.472.247 1.376.776 2.658 1.532 3.805l1.725-.126zm-1.8-1.593c.47.01 5.05.074 10.02-1.332-2.146-4.502-4.54-8.082-4.884-8.58-4.023 2.115-6.49 6.242-5.136 9.912zm6.31-10.74c.37.525 2.67 3.985 4.792 8.35 3.013-1.026 5.367-2.64 5.67-2.85-2.02-3.195-5.364-5.39-9.155-5.992l-1.307.492zm10.19 3.864c-.31.21-2.82 1.9-6.02 2.984 3.012-.473 5.56.243 5.92.35-.197-1.2-.557-2.34-1.05-3.39l1.15.056z"/>' },
+  { url: 'figma.com', bg: '#f24e1e', svg: '<path fill="currentColor" d="M8 12.001A3.999 3.999 0 0011.996 8 4 4 0 0015.99 4 4 4 0 0011.996 0H8.005A4 4 0 004 4a4 4 0 004.005 4A4 4 0 004 12a4 4 0 004.005 4A3.995 3.995 0 004 20a4 4 0 004 4 4 4 0 004-4v-4c0-2.206-1.794-4-4-4zM8.005 4a4 4 0 000 8A4 4 0 008.005 4zM16 12a4 4 0 00-4-4v8a4 4 0 004-4z"/>' }
+];
+
+const DRIFT = ['dA','dB','dC','dD'];
+let runId = 0;
+
+const brandChars = ['l', {char: 'ı', isI: true}, 'n', 'k', {char: 'ı', isI: true}, 'v', 'o'];
+const lnameContainer = document.getElementById('lname');
+function setupText() {
+  lnameContainer.innerHTML = '';
+  brandChars.forEach(item => {
+    const span = document.createElement('span');
+    span.className = 't-char';
+    if(typeof item === 'object') {
+      span.classList.add('idot-wrap');
+      span.innerHTML = `${item.char}<span class="idot"></span>`;
+    } else {
+      span.textContent = item;
+    }
+    lnameContainer.appendChild(span);
+  });
+}
+
+function getStarPath(size) {
+  return `M 0 ${-size} Q ${size*0.2} ${-size*0.2} ${size} 0 Q ${size*0.2} ${size*0.2} 0 ${size} Q ${-size*0.2} ${size*0.2} ${-size} 0 Q ${-size*0.2} ${-size*0.2} 0 ${-size} Z`;
+}
+
+function createCreativeSparkles(x, y) {
+  const group = document.getElementById('star-sparkles');
+
+  const wave = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  wave.setAttribute("cx", x); wave.setAttribute("cy", y);
+  wave.setAttribute("r", 0); wave.setAttribute("fill", "none");
+  wave.setAttribute("stroke", "url(#lg)"); wave.setAttribute("stroke-width", "5");
+  group.appendChild(wave);
+  wave.animate([
+    { r: 0, opacity: 1, strokeWidth: 5 },
+    { r: 50, opacity: 0, strokeWidth: 0 }
+  ], { duration: 500, easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)' }).onfinish = () => wave.remove();
+
+  for(let i = 0; i < 2; i++) {
+    const star = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const size = 10 + Math.random() * 8;
+    star.setAttribute("d", getStarPath(size));
+    star.setAttribute("fill", i%2===0 ? "#22d3ee" : "#3b82f6");
+    group.appendChild(star);
+    
+    const angle = (Math.PI * 2 / 2) * i + Math.random()*0.5;
+    const dist = 25 + Math.random() * 20;
+    const endX = x + Math.cos(angle) * dist;
+    const endY = y + Math.sin(angle) * dist;
+    const rot = 45 + Math.random() * 90;
+
+    star.animate([
+      { transform: `translate(${x}px, ${y}px) scale(0) rotate(0deg)`, opacity: 1 },
+      { transform: `translate(${x + (endX-x)*0.5}px, ${y + (endY-y)*0.5}px) scale(1) rotate(${rot}deg)`, opacity: 1, offset: 0.4 },
+      { transform: `translate(${endX}px, ${endY}px) scale(0) rotate(${rot*2}deg)`, opacity: 0 }
+    ], { duration: 600 + Math.random()*200, easing: 'ease-out' }).onfinish = () => star.remove();
+  }
+
+  for(let i=0; i<4; i++){
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", x); dot.setAttribute("cy", y);
+    dot.setAttribute("r", 1.5 + Math.random()*2);
+    dot.setAttribute("fill", "#22d3ee");
+    group.appendChild(dot);
+    
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 30 + Math.random() * 40;
+    dot.animate([
+      { transform: 'translate(0,0)', opacity: 1 },
+      { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`, opacity: 0 }
+    ], { duration: 450, easing: 'cubic-bezier(0,0,0.2,1)' }).onfinish = () => dot.remove();
+  }
+}
+
+async function run() {
+  const id = ++runId;
+  const ok = () => id === runId;
+
+  const splash = document.getElementById('splash');
+  const dash   = document.getElementById('dash');
+  splash.classList.remove('out');
+  splash.style.display = 'flex';
+  dash.classList.remove('show');
+  
+  setupText();
+
+  const umask = document.getElementById('u-mask-line');
+  const bmask = document.getElementById('bar-mask-line');
+  const lrGrp = document.getElementById('left-ring-group');
+  const lr = document.getElementById('lr');
+  const rr = document.getElementById('rr');
+  const bgExpand = document.getElementById('bg-expand');
+  const lwrap = document.getElementById('lwrap');
+  const ltag = document.getElementById('ltag');
+  const la = document.getElementById('la');
+
+  const uLen = umask.getTotalLength();
+  const bLen = bmask.getTotalLength();
+  
+  umask.style.transition = bmask.style.transition = 'none';
+  umask.style.strokeDasharray = uLen; umask.style.strokeDashoffset = uLen;
+  bmask.style.strokeDasharray = bLen; bmask.style.strokeDashoffset = bLen;
+  
+  lrGrp.style.transition = lr.style.transition = rr.style.transition = 'none';
+  lrGrp.style.transform = 'scale(0)';
+  lr.style.strokeDasharray = rr.style.strokeDasharray = 3000; 
+  lr.style.strokeDashoffset = rr.style.strokeDashoffset = 3000; 
+  lr.style.fillOpacity = rr.style.fillOpacity = 0;
+
+  lwrap.style.transition = ltag.style.transition = 'none';
+  lwrap.style.transform = 'translateY(0) scale(1)';
+  ltag.style.opacity = '0'; ltag.style.filter = 'blur(10px)'; ltag.style.transform = 'translateY(10px)';
+  
+  document.getElementById('star-sparkles').innerHTML = '';
+  document.querySelectorAll('.ucard-wrapper').forEach(c => c.remove());
+
+  await wait(50); 
+  if (!ok()) return;
+
+  const getLRC = () => {
+    const rect = document.getElementById('lsvg').getBoundingClientRect();
+    return { x: rect.left + ((353-140)/750) * rect.width, y: rect.top  + ((648-286)/600) * rect.height };
+  };
+  const lrc = getLRC();
+
+  bgExpand.style.transition = 'none';
+  bgExpand.style.clipPath = `circle(0px at ${lrc.x}px ${lrc.y}px)`;
+
+  const isMobile = window.innerWidth < 768;
+  const numCards = isMobile ? 4 : 6;
+  const activeCards = CARDS_DATA.slice(0, numCards);
+
+  const startCoords = [
+    { x: 85, y: 15 }, { x: 15, y: 15 }, { x: 80, y: 75 },
+    { x: 20, y: 80 }, { x: 50, y: 15 }, { x: 50, y: 85 }
+  ];
+
+  const cardElements = activeCards.map((d, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'ucard-wrapper';
+    wrap.style.left = lrc.x + 'px'; wrap.style.top = lrc.y + 'px';
+
+    const targetX = (startCoords[i].x / 100) * window.innerWidth - lrc.x;
+    const targetY = (startCoords[i].y / 100) * window.innerHeight - lrc.y;
+
+    const pos = document.createElement('div');
+    pos.className = 'ucard-pos';
+    pos.style.transform = `translate(${targetX}px, ${targetY}px)`;
+
+    const c = document.createElement('div');
+    c.className = 'ucard';
+    c.innerHTML = `
+      <div class="ufav" style="background: ${d.bg}">
+        <svg viewBox="0 0 24 24">${d.svg}</svg>
+      </div>
+      <div class="utext-wrap"><span class="utext">${d.url}</span></div>`;
+    
+    pos.appendChild(c);
+    wrap.appendChild(pos);
+    splash.appendChild(wrap);
+
+    const textSpan = c.querySelector('.utext');
+    textSpan.style.width = textSpan.offsetWidth + 'px';
+
+    setTimeout(() => {
+      if(!ok()) return;
+      c.style.transition = 'opacity .4s ease';
+      c.style.opacity = '1';
+      setTimeout(() => { if(ok()) c.style.animation = `${DRIFT[i%4]} ${3 + i*0.3}s ease-in-out infinite`; }, 400);
+    }, 200 + i * 120);
+
+    return { wrap, pos, c };
+  });
+
+  await wait(1800);
+  if (!ok()) return;
+
+  // 2. Shrink Phase: Explicit Width capture to prevent jumping
+  for (let i = 0; i < cardElements.length; i++) {
+    if (!ok()) return;
+    const { c } = cardElements[i];
+    
+    // Capture current actual width dynamically before CSS transition
+    const startWidth = c.offsetWidth;
+    c.style.width = startWidth + 'px';
+    
+    // Force browser to paint/reflow the exact width so the next change animates smoothly
+    void c.offsetWidth;
+
+    // Apply the smooth transition to all changed properties
+    c.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s, border-color 0.4s'; 
+    c.style.background = 'rgba(59,130,246,.15)';
+    c.style.borderColor = '#3b82f6';
+    
+    // Shrink smoothly down to exactly 36px
+    c.style.width = '36px';
+    c.style.minWidth = '36px';
+    c.style.maxWidth = '36px';
+    c.style.height = '36px';
+    c.style.padding = '0px';
+    c.style.gap = '0px';
+    c.style.borderRadius = '50%';
+    c.style.justifyContent = 'center';
+    
+    const fav = c.querySelector('.ufav');
+    fav.style.transition = 'border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    fav.style.borderRadius = '50%';
+    
+    // As wrapper width animates to 0, text is pushed/cropped from right side
+    const utextWrap = c.querySelector('.utext-wrap');
+    utextWrap.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+    utextWrap.style.width = '0px';
+    utextWrap.style.minWidth = '0px';
+    utextWrap.style.opacity = '0';
+    utextWrap.style.margin = '0px';
+    
+    await wait(i < cardElements.length - 1 ? 80 : 0);
+  }
+
+  await wait(500); 
+  if (!ok()) return;
+
+  // 3. Smooth Gravity Spiral to Center Phase
+  for (let i = 0; i < cardElements.length; i++) {
+    if (!ok()) return;
+    const { wrap, pos, c } = cardElements[i];
+    
+    c.style.animation = 'none';
+    
+    const spinDir = i % 2 === 0 ? 720 : -720; 
+    wrap.style.transition = 'transform 1.6s cubic-bezier(0.4, 0, 1, 1)'; 
+    wrap.style.transform = `rotate(${spinDir}deg)`;
+
+    pos.style.transition = 'transform 1.6s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s 1.2s'; 
+    pos.style.transform = `translate(0px, 0px) scale(0)`;
+    pos.style.opacity = '0';
+
+    await wait(i < cardElements.length - 1 ? 120 : 0);
+  }
+
+  await wait(1100);
+  if (!ok()) return;
+
+  // 4. Left Circle Drop / Ripple
+  const pulse = document.getElementById('center-pulse');
+  pulse.style.opacity = '1';
+  pulse.animate([{ r: 0, opacity: 1 }, { r: 180, opacity: 0 }], { duration: 800, easing: 'ease-out' });
+
+  lrGrp.style.transition = 'transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  lrGrp.style.transform = 'scale(1)';
+  
+  lr.style.transition = 'stroke-dashoffset 0.6s ease-out';
+  lr.style.strokeDashoffset = '0';
+  
+  await wait(500);
+  if (!ok()) return;
+  lr.style.transition = 'fill-opacity 0.4s ease';
+  lr.style.fillOpacity = '1';
+
+  await wait(200);
+  if (!ok()) return;
+
+  // 5. U-Shape Lock (Triggers Particles & BG Reveal sync)
+  umask.style.transition = 'stroke-dashoffset 0.7s cubic-bezier(0.5, 0, 0.2, 1.1)';
+  umask.style.strokeDashoffset = '0';
+
+  setTimeout(() => {
+    if(ok()) {
+      la.animate([
+        { transform: 'translateY(0)' },
+        { transform: 'translateY(4px)' },
+        { transform: 'translateY(-2px)' },
+        { transform: 'translateY(0)' }
+      ], { duration: 350, easing: 'ease-out' });
+
+      createCreativeSparkles(259, 520);
+      createCreativeSparkles(447, 520);
+
+      bgExpand.style.clipPath = `circle(150vmax at ${lrc.x}px ${lrc.y}px)`;
+    }
+  }, 420);
+
+  await wait(700);
+  if (!ok()) return;
+
+  // 6. Bar Draw
+  bmask.style.transition = 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+  bmask.style.strokeDashoffset = '0';
+  await wait(400);
+  if (!ok()) return;
+
+  // 7. Right Ring
+  const rp2 = document.getElementById('rp2');
+  rp2.style.opacity = '1';
+  rp2.animate([{ r: 0, opacity: 1 }, { r: 150, opacity: 0 }], { duration: 800, easing: 'ease-out' });
+
+  rr.style.transition = 'stroke-dashoffset 0.7s ease-out';
+  rr.style.strokeDashoffset = '0';
+  await wait(500);
+  rr.style.transition = 'fill-opacity 0.4s ease';
+  rr.style.fillOpacity = '1';
+
+  await wait(400);
+  if (!ok()) return;
+
+  // 8. Logo Up
+  lwrap.style.transition = 'transform 0.8s cubic-bezier(0.2, 0, 0, 1)';
+  lwrap.style.transform = 'translateY(-30px) scale(0.9)';
+
+  await wait(250);
+  if (!ok()) return;
+
+  // 9. Brand Name Typing
+  const chars = document.querySelectorAll('.t-char');
+  for (let i = 0; i < chars.length; i++) {
+    if (!ok()) return;
+    const span = chars[i];
+    
+    span.style.transition = 'opacity 0.3s ease, filter 0.4s ease-out, transform 0.4s cubic-bezier(0.2,0,0,1)';
+    span.style.opacity = '1';
+    span.style.filter = 'blur(0px)';
+    span.style.transform = 'translateX(0)';
+
+    const dot = span.querySelector('.idot');
+    if(dot) {
+      setTimeout(() => {
+        if(ok()) {
+          dot.style.opacity = '1';
+          dot.style.transform = 'translateX(-50%) scale(1)';
+        }
+      }, 150);
+    }
+    await wait(60); 
+  }
+
+  ltag.style.transition = 'opacity 0.6s ease, filter 0.6s, transform 0.6s cubic-bezier(0.2,0,0,1)';
+  ltag.style.opacity = '1';
+  ltag.style.filter = 'blur(0px)';
+  ltag.style.transform = 'translateY(0)';
+
+  await wait(2200);
+  if (!ok()) return;
+
+  // 10. Dashboard Transition
+  splash.classList.add('out');
+  await wait(700);
+  if (!ok()) return;
+  splash.style.display = 'none';
+  dash.classList.add('show');
+}
+
+// Theme Logic
+document.getElementById('btheme').addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+});
+
+document.getElementById('breplay').addEventListener('click', run);
+window.addEventListener('load', () => setTimeout(run, 400));
+</script>
+</body>
+</html>

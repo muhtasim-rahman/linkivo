@@ -1,4 +1,9 @@
 # Tests
 
-Unit tests (`*.test.mjs`, run with `node --test "@ Creator/tests/"`) and the rules test matrix (`rules-matrix.md`) live here.
-Tests are added in the version that introduces the logic (see docs/TESTING.md). Empty in v2.0.0.
+Unit and DOM tests (`*.test.mjs`) plus the rules test matrix (`rules-matrix.md`). Run:
+
+```
+node --test "@ Creator/tests/*.test.mjs"
+```
+Overview of the files and what they can and cannot prove: `docs/TESTING.md` section 6. `helpers/` holds the fake database, the rules evaluator,
+the Worker loader and the jsdom setup (jsdom itself is installed outside the project).

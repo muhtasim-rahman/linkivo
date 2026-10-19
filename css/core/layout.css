@@ -1,0 +1,23 @@
+/* Linkivo v2.1.0 - application frame. One scroll container per page (#page-root), chrome stays outside it. */
+#app { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; }
+#app[data-chrome='none'] .sidebar, #app[data-chrome='none'] .bar { display: none; }
+.app-main { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+#page-root { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+#app:not([data-chrome='none']) #page-root { padding-bottom: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b)); }
+.sidebar { display: none; }
+
+.page { min-height: 100%; padding: calc(var(--safe-t) + var(--s4)) var(--pad) var(--s6); max-width: 960px; margin: 0 auto; }
+.page-head { display: flex; align-items: center; gap: var(--s3); min-height: 48px; margin-bottom: var(--s4); }
+.page-title { font: 650 var(--fs-xl) / 1.15 var(--font-brand); letter-spacing: -0.01em; flex: 1; min-width: 0; }
+.page-sub { color: var(--sub); margin-top: var(--s1); max-width: 60ch; }
+.page-actions { display: flex; gap: var(--s2); align-items: center; }
+
+@media (min-width: 900px) {
+  #app:not([data-chrome='none']) { grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns var(--t-large) var(--ease); }
+  #app[data-collapsed='true']:not([data-chrome='none']) { grid-template-columns: 72px 1fr; }
+  #app:not([data-chrome='none']) #page-root { padding-bottom: 0; }
+  .sidebar { display: flex; }
+  .bar { display: none !important; }
+  .page { padding-top: var(--s8); padding-inline: var(--s8); margin: 0; max-width: 1040px; }
+  .page-title { font-size: var(--fs-2xl); }
+}

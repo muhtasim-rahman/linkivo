@@ -1,0 +1,32 @@
+/* Linkivo v2.1.0 - Settings: index + section on wide screens, one at a time on phones */
+.settings { display: grid; gap: var(--s6); }
+.set-nav { display: grid; gap: var(--s1); align-content: start; }
+.set-nav .row { border-radius: var(--r-control); border: 0; padding: var(--s2) var(--s3); }
+.set-nav .row[aria-current='page'] { background: var(--accent-soft); }
+.set-nav .row[aria-current='page'] .row-ic { color: var(--accent-text); }
+.set-pane { min-width: 0; display: grid; gap: var(--s4); align-content: start; }
+.settings[data-view='detail'] .set-nav { display: none; }
+.settings[data-view='index'] .set-pane { display: none; }
+.set-back { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
+@media (min-width: 900px) {
+  .settings { grid-template-columns: 240px minmax(0, 1fr); gap: var(--s8); }
+  .settings[data-view] .set-nav, .settings[data-view] .set-pane { display: grid; }
+  .set-back { display: none; }
+}
+.ctl-end { display: flex; align-items: center; gap: var(--s2); }
+.row.is-stack { flex-wrap: wrap; }
+.row.is-stack .row-end { width: 100%; justify-content: flex-start; }
+.select { width: auto; min-width: 140px; }
+.mt-ok { color: var(--success); font-weight: 650; } .mt-bad { color: var(--danger); font-weight: 650; }
+.mt-tester { display: grid; gap: var(--s3); padding: var(--s4); }
+.mt-results { display: grid; gap: var(--s3); }
+.mt-card { border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); padding: var(--s4); display: grid; gap: var(--s3); }
+.mt-head { display: flex; gap: var(--s3); align-items: flex-start; }
+.mt-fav { width: 28px; height: 28px; border-radius: 6px; background: var(--surface-2); flex: none; }
+.mt-url { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--sub); overflow-wrap: anywhere; }
+.mt-img { max-height: 140px; border-radius: 8px; border: 1px solid var(--line); width: auto; }
+.mt-log { font-family: var(--font-mono); font-size: var(--fs-xs); display: grid; gap: 2px; }
+.debug-log { font-family: var(--font-mono); font-size: var(--fs-xs); max-height: 52dvh; overflow: auto; padding: var(--s3); display: grid; gap: 4px; }
+.debug-log .l-error { color: var(--danger); } .debug-log .l-warn { color: var(--warning); }
+.set-head { display: grid; gap: 2px; }
+@media (max-width: 899px) { .set-head .page-title { display: none; } }

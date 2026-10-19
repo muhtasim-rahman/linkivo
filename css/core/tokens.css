@@ -1,0 +1,59 @@
+/* Linkivo v2.1.0 - design tokens (docs/DESIGN.md section 2). Every color, size and timing used elsewhere comes from here. */
+:root {
+  color-scheme: light;
+  --bg: #eef2f8; --surface: #ffffff; --surface-2: #f4f7fb; --line: #d6dfed; --line-strong: #b9c7dc;
+  --text: #0c1629; --sub: #566d8a; --scrim: rgba(8, 16, 32, 0.46);
+  --success: #0e9f6e; --warning: #b45309; --danger: #d92d20; --danger-soft: rgba(217, 45, 32, 0.1);
+  --brand-a: #3b82f6; --brand-b: #22d3ee;
+  --accent: #3b82f6; --accent-strong: #2563eb; --accent-fg: #ffffff; --accent-text: #1d4fc4;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+
+  --font-brand: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  --font-ui: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --fs: 14px; --fs-xs: calc(var(--fs) - 3px); --fs-sm: calc(var(--fs) - 1px); --fs-md: calc(var(--fs) + 2px);
+  --fs-lg: calc(var(--fs) + 6px); --fs-xl: calc(var(--fs) + 12px); --fs-2xl: calc(var(--fs) + 20px);
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
+  --r-control: 10px; --r-group: 14px; --r-sheet: 22px;
+  --row-h: 44px; --pad: var(--s4);
+  --bar-h: 64px; --bar-gap: 12px; --sidebar-w: 264px;
+  --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+
+  --shadow-float: 0 10px 30px rgba(12, 22, 41, 0.16), 0 2px 6px rgba(12, 22, 41, 0.08);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --t-micro: 120ms; --t-std: 200ms; --t-large: 320ms;
+  --z-bar: 40; --z-overlay: 100; --z-pop: 120; --z-toast: 140; --z-splash: 1000;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #060d1a; --surface: #0b1730; --surface-2: #0f1f3d; --line: #17294a; --line-strong: #27406b;
+  --text: #d4e6f6; --sub: #8aa6c4; --scrim: rgba(0, 4, 12, 0.66);
+  --success: #34d399; --warning: #fbbf24; --danger: #f87171; --danger-soft: rgba(248, 113, 113, 0.14);
+  --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+/* Before the script sets data-theme, follow the system so the first paint is not a flash of the wrong theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #060d1a; --surface: #0b1730; --surface-2: #0f1f3d; --line: #17294a; --text: #d4e6f6; --sub: #8aa6c4;
+  }
+}
+/* Accent choices. --accent is for rings, markers and graphics; --accent-strong carries white text; --accent-text is for text on the page. */
+:root[data-accent='blue']    { --accent: #3b82f6; --accent-strong: #2563eb; --accent-fg: #fff; --accent-text: #1d4fc4; }
+:root[data-accent='emerald'] { --accent: #10b981; --accent-strong: #047857; --accent-fg: #fff; --accent-text: #047857; }
+:root[data-accent='violet']  { --accent: #8b5cf6; --accent-strong: #6d28d9; --accent-fg: #fff; --accent-text: #6d28d9; }
+:root[data-accent='rose']    { --accent: #f43f5e; --accent-strong: #c81e48; --accent-fg: #fff; --accent-text: #be123c; }
+:root[data-accent='amber']   { --accent: #f59e0b; --accent-strong: #f59e0b; --accent-fg: #1c1204; --accent-text: #92400e; }
+:root[data-accent='slate']   { --accent: #64748b; --accent-strong: #475569; --accent-fg: #fff; --accent-text: #475569; }
+:root[data-theme='dark'][data-accent='blue']    { --accent-text: #8ab8ff; --accent-strong: #2f6fe0; }
+:root[data-theme='dark'][data-accent='emerald'] { --accent-text: #4ade9c; --accent-strong: #0f9d6e; }
+:root[data-theme='dark'][data-accent='violet']  { --accent-text: #b79cff; --accent-strong: #7c4de6; }
+:root[data-theme='dark'][data-accent='rose']    { --accent-text: #ff8da1; --accent-strong: #e0314f; }
+:root[data-theme='dark'][data-accent='amber']   { --accent-text: #fbbf24; }
+:root[data-theme='dark'][data-accent='slate']   { --accent-text: #a3b2c7; --accent-strong: #5b6b82; }
+
+:root[data-font='small'] { --fs: 13px; }
+:root[data-font='large'] { --fs: 16px; }
+:root[data-density='comfortable'] { --row-h: 52px; --pad: var(--s5); }

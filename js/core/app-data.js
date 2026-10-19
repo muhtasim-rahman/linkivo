@@ -1,0 +1,37 @@
+/**
+ * Linkivo — js/core/app-data.js  (v2.1.0)
+ * Purpose: owns the data layer for the current session: the Engine (local for guests, cloud for accounts) and its job queue.
+ *          Features call getEngine() / getQueue(); nothing else decides which engine is used.
+ * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() dataReady() -> boolean
+ */
+import { createLocalEngine } from '../engine/local-engine.js';
+import { createCloudEngine } from '../engine/cloud-engine.js';
+import { createRtdbAdapter } from '../engine/rtdb-adapter.js';
+import { createJobQueue } from '../engine/job-queue.js';
+import { loadFirebase } from './firebase-loader.js';
+import { log } from './logger.js';
+
+let engine = null, queue = null, scope = null;
+
+export async function initData(session) {
+  const wanted = session.mode === 'guest' ? 'guest' : session.mode === 'account' ? session.user.uid : null;
+  if (!wanted || wanted === scope) return;
+  await teardownData();
+  try {
+    if (session.mode === 'guest') engine = await createLocalEngine();
+    else { const firebase = await loadFirebase(); engine = await createCloudEngine({ uid: session.user.uid, adapter: createRtdbAdapter({ firebase }) }); }
+    queue = createJobQueue({ db: engine.db, now: () => engine.now() });
+    await queue.start();
+    scope = wanted;
+    if (typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__linkivo = { engine, queue }; // development only
+  } catch (e) { log.error('data', 'data layer failed to start', e); engine = null; queue = null; scope = null; throw e; }
+}
+
+export async function teardownData() {
+  if (engine) { try { engine.dispose(); engine.db.close(); } catch { /* ignore */ } }
+  engine = null; queue = null; scope = null;
+}
+
+export const getEngine = () => engine;
+export const getQueue = () => queue;
+export const dataReady = () => !!engine;

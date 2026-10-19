@@ -48,3 +48,12 @@ Where: Cloudflare > Workers & Pages > `linkivo` > Settings > Variables and Secre
 - Blank page after deploying: open the browser console (F12), copy the first red error and tell the AI. Check that `index.html` is the new one and hard-reload (Ctrl+Shift+R).
 - "Permission denied" from the database: the rules deployed may not match the version; run `firebase deploy --only database` again and re-check.
 - Worker CORS error: the page origin is not in the allow-list; tell the AI your exact URL.
+
+## F. First deploy of v2.1.0 (do in this order)
+
+1. **Database rules first.** Realtime Database > Data: delete the old data (nothing from v1 is used). Then `firebase deploy --only database`. If the CLI rejects the path `@ Creator/rules/database.rules.json`, tell the AI (fallback: ARCHITECTURE section 12, item 8). Then run the five Playground checks at the end of `@ Creator/tests/rules-matrix.md`.
+2. **Worker.** Paste `@ Creator/worker/worker.js` (whole file) into Workers & Pages > `linkivo` > Edit code > Deploy. Open `https://linkivo.programs-turzo.workers.dev/health`: expect `{"ok":true,"version":"2.1.0",...}`. No secrets are needed yet.
+3. **Authentication.** Authorized domains must include `linkivo.web.app`, `linkivo.firebaseapp.com`, `localhost`.
+4. **Hosting.** `firebase deploy --only hosting`, then hard-reload (Ctrl+Shift+R). The old v1 or v2.0 service worker is replaced by the new one; the page reloads once by itself.
+5. **First sign-in check.** If the app shows "Sign-in could not load", open the browser console (F12): the first red line tells whether the Firebase SDK URL (`https://www.gstatic.com/firebasejs/12.19.0/...`) failed. Send that line to the AI.
+6. **Metadata check.** Settings > Advanced > Metadata tester > Load 25 sample URLs > Run test. Send the AI the summary line and any URL that failed unexpectedly (the last two sample URLs, localhost and 169.254.169.254, MUST fail with "blocked target").

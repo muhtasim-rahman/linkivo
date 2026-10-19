@@ -1,0 +1,13 @@
+/* Linkivo v2.1.0 - placeholder pages, menu and profile */
+.stub { display: grid; align-content: start; }
+.menu-list { display: grid; gap: var(--s3); }
+.menu-hero { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); color: inherit; }
+.menu-hero:hover { text-decoration: none; background: var(--surface-2); }
+.menu-hero .pf-name { font: 650 var(--fs-md) / 1.2 var(--font-brand); }
+.about { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
+.about img { width: 44px; }
+.about strong { font: 700 var(--fs-md) / 1.2 var(--font-brand); display: block; }
+.profile-head { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s6); }
+.profile-head .pf-name { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
+.tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 650; }
+.stack { display: grid; gap: var(--s4); }

@@ -43,6 +43,32 @@ Owner actions (for v2.0.0): extract the zip into the project root, commit, and s
 Revision before commit: the AI folder was renamed from `.creator` to `@ Creator`; `@ GitLogs` moved into `@ Extra files`; hosting URL confirmed; the Export system (native format + formatted exports) was added to the spec; `.gitattributes` and `.editorconfig` added.
 Next: `Start v2.1.0`.
 
+## v2.1.0 Foundation and shell (2026-10-18) Status: COMPLETE (not yet run in a real browser or against live Firebase/Cloudflare: see Known issues)
+Summary: the app boots, signs in (Google, email/password, guest), navigates (mobile bar, PC sidebar, URL per page, parent-chain Back), updates itself, stores data through two engines, has complete database rules and the complete metadata Worker.
+Base fix: the v2.0.0 zip had `PLAN-v2.0_to_v2.5.md` and `MASTER-PROMPT-v2.0_to_v2.5.md`; the gate and `pack.sh` expect `PLAN.md` and `MASTER-PROMPT.md`. Renamed (content unchanged). `STRUCTURE.md` was missing from the zip and was added from the project knowledge copy.
+Files added/changed:
+- Infrastructure: `index.html` (shell + splash), `sw.js` (real worker), `manifest.webmanifest`, `app.json`, `js/main.js`, `js/boot.js`, `js/core/*` (logger, local-prefs, flags, events, utils, format, mask, url-tools, dom, css-loader, appearance, session, sensitive, update, install, firebase-loader, rate-limiter, worker-client, app-data, app-info).
+- Design system: `css/core/*`, `css/components/*`, `css/pages/*`; `js/ui/*` (icons: 94, toast, sheet, confirm, popover, skeleton, empty-state, scroll-fade, task-chip).
+- Router: `js/core/router.js`, `nav-stack.js`, `back-logic.js`; shell: `js/features/shell/*` (routes, shell, install banner, stub/menu/profile/reactivate pages); splash: `js/features/splash/splash.js`.
+- Auth: `js/features/auth/*` (auth-service, account-status, login-page).
+- Engines: `js/engine/*` (schema, idb, chunker, job-queue, engine, local-engine, cloud-engine, rtdb-adapter).
+- Settings: `js/features/settings/*` (registry, controls, custom rows, advanced tools, metadata tester, page).
+- Rules: `@ Creator/tools/gen-rules.mjs` -> `rules/database.rules.json` (+ `history/database.rules-v2.1.0.json`), `tests/rules-matrix.md`.
+- Worker: `@ Creator/worker/worker.js` (+ `history/worker-v2.1.0.js`).
+- Tools: `gen-precache.mjs`; `check.mjs` extended (generated files current, app-info version, import and asset paths exist).
+- Tests: 7 files, 77 tests (see `docs/TESTING.md` section 6). Docs: ARCHITECTURE section 13, TESTING section 6, SETUP-GUIDE section F, STRUCTURE.
+Decisions: D-033 to D-049 (below).
+Verified facts: see "Verified facts".
+Assumptions awaiting owner confirmation: A-009 to A-014 (below).
+Owner actions: pending (see `commits/v2.1.0-commit.txt` and SETUP-GUIDE section F).
+Known issues and limits:
+- Not run in a real browser or against live services (no browser, no network to Firebase/Cloudflare in the build environment): layout, animation, Google sign-in, real RTDB rules, the Worker on Cloudflare and the free fallback services are owner tests.
+- The `/meta` acceptance test (20 varied URLs) is the Metadata tester's "Load 25 sample URLs": the owner runs it after deploying the Worker.
+- Account sign-in needs the Firebase SDK (CDN). After the first successful load the service worker caches it; a first visit while offline can only offer guest mode.
+- Worker rate limits are per isolate (memory); page charset comes from the HTTP header only (no `<meta charset>` re-decode).
+- `js/ui/skeleton.js`, `scroll-fade.js`, `task-chip.js` and `engine.purgeExpired` are built and tested but not used by a page yet (first use in v2.2.0).
+Next: `Start v2.2.0`.
+
 ## Decision log (locked unless the owner changes them)
 
 | ID | Decision |
@@ -79,6 +105,23 @@ Next: `Start v2.1.0`.
 | D-030 | Settings registry (declarative); 30+ settings; Recycle Bin inside Settings |
 | D-031 | Owner folders: `@ Creator` (AI workspace, shipped and pushed), `@ Versions` (zips, pushed, private to the AI), `@ Extra files` (git-ignored, private); no `@` folder is deployed |
 | D-032 | Export system: one main native format (`.linkivo.json`, database-shaped, fast re-import path) plus formatted exports (JSON, CSV, Excel, TXT, Markdown, HTML bookmarks, printable HTML, OPML; PDF in v2.6.0); designed popup with live preview; spec in FEATURES 6b and ARCHITECTURE 6b |
+| D-033 | Database rules are GENERATED from `js/engine/schema.js` by `tools/gen-rules.mjs`; the committed JSON is the deployed artifact and the gate checks they match |
+| D-034 | `users/<uid>/profile/status` is written only by the Worker; missing means active (a client can never un-delete its account) |
+| D-035 | Cloud timestamps use the server clock (`.info/serverTimeOffset`) because rules reject values more than 60 s ahead |
+| D-036 | Page metadata is parsed by a tolerant tokenizer over streamed bytes (cut at `</head>` or 200 KB), not `HTMLRewriter` (testable in Node) |
+| D-037 | Fallback order: Dub.co, AllOrigins, JSONLink, Microlink (ARCHITECTURE listed Microlink before AllOrigins; its tiny free limit puts it last) |
+| D-038 | The Worker file has only `export default`; test hooks live under `default.__test` |
+| D-039 | Back follows the parent chain on mobile AND PC; in-app navigation uses `replaceState` with one sentinel entry; on wide screens `/settings` opens the first section and its parent is `/library` |
+| D-040 | `tags` is one comma-separated string (max 200); boolean flags are stored only when true; `history` and `activity` are indexed on `ts` |
+| D-041 | Firebase SDK pinned to 12.19.0 (2026-09-09) from gstatic; 13.0.0 (2026-10-07) was too new |
+| D-042 | `maskEmail`: names of 6+ characters keep 2+2, 3 to 5 keep 1+1, shorter keep 1, so the mask never shows the whole name |
+| D-043 | The service worker precache list is generated by `tools/gen-precache.mjs` and verified by the gate |
+| D-044 | v2.1.0 settings are device-level (local-prefs, not synced); the engine has `getSetting/setSetting` for synced ones later |
+| D-045 | Test command is `node --test "@ Creator/tests/*.test.mjs"` (Node 22 does not accept a folder); docs updated |
+| D-046 | Worker per-uid and per-IP limits live in isolate memory (no Cache API) to protect the 10 ms CPU budget |
+| D-047 | Guest data stays in the local database when a guest logs in (nothing is moved or lost) until the v2.5.0 sync |
+| D-048 | Worker subrequest budget is 45 of the free plan's 50 (redirects, handlers, fallbacks and the token-key fetch all count) |
+| D-049 | Guests may send 10 URLs per `/meta` call and 60 per minute per IP; accounts 25 and 400 per minute |
 
 ## Assumptions awaiting owner confirmation
 
@@ -92,15 +135,25 @@ Next: `Start v2.1.0`.
 | A-006 | The full export system with the native format arrives in v2.2.0; PDF export and optional passphrase encryption of the native backup in v2.6.0 |
 | A-007 | Metadata fallback order and screenshot service are verified at v2.1.0 build time |
 | A-008 | Firebase CLI accepts the rules path `@ Creator/rules/database.rules.json`; verify at the first rules deploy (fallback in ARCHITECTURE section 12) |
+| A-009 | The Firebase SDK files exist at `https://www.gstatic.com/firebasejs/12.19.0/` (same version as npm). [verify on first deploy; boot logs a clear error otherwise] |
+| A-010 | Dub.co metatags, AllOrigins, JSONLink and Microlink endpoints still work as coded and their free limits are acceptable. [verify with the Metadata tester] |
+| A-011 | The oEmbed endpoints for YouTube, Vimeo, X, Reddit, TikTok, Spotify and SoundCloud still answer without a key. [verify with the Metadata tester] |
+| A-012 | WordPress mShots (`s.wordpress.com/mshots/v1/`) is acceptable as the free screenshot service (used from v2.3.0). [verify then] |
+| A-013 | Google sign-in popup works with `authDomain` = `linkivo.firebaseapp.com`; the redirect fallback is only used where popups are blocked. [verify on a phone] |
+| A-014 | In RTDB rules `null > now` evaluates to false (deny) when no session exists. [verify with Playground row L11/L6 in v2.5.0 when locks exist] |
 
 ## Current state (update every version)
 
-- Code: none yet. Placeholder `index.html`, migration `sw.js`, `js/core/config.js` only.
-- Routes: none. Feature flags: none. Settings registered: none.
-- Database: rules are deny-all (placeholder). Data: empty (to be reset by the owner anyway).
-- Worker: not yet written (v2.1.0). Secrets: none set yet.
-- Owner actions pending: none for v2.0.0 beyond commit.
+- Code: v2.1.0 foundation (see the v2.1.0 entry and `STRUCTURE.md`). 75 JS/CSS files under `js/` and `css/`; Worker 454 lines.
+- Routes (all exist; stubs say which version delivers them): `/` (redirect), `/login`, `/reactivate` (stub), `/library`, `/folder/:fid`, `/import`, `/link/:lid`, `/search`, `/random`, `/profile/history` (stubs), `/menu`, `/profile`, `/settings`, `/settings/:section` (real), `/terms`, `/privacy`, `/docs`, `/docs/:topic` (stubs), `*` (not found).
+- Feature flags (`js/core/flags.js`): `randomFromFolder`, `shareTarget`, `appLock` all off.
+- Settings registered (device-level): theme, accent, fontSize, density, reduceMotion, hideBar, sidebarCollapsed (Appearance); account, install, updates, about, worker, storage, tester, debugLog, reset (custom rows).
+- Database: complete rules for the whole schema (generated, 40 automated cases + matrix). Data: empty; the owner resets the instance at first deploy.
+- Worker: `/health`, `/meta` (guest 10 / account 25 URLs). Secrets: none needed yet (`PIN_PEPPER`, `FIREBASE_SERVICE_ACCOUNT` arrive in v2.5.0).
+- Owner actions pending: extract zip, delete the two renamed files, reset database data, deploy rules, paste Worker, authorize domains, deploy hosting, run the Metadata tester (SETUP-GUIDE section F).
 
 ## Verified facts (add with source and date)
 
-(none yet)
+- Cloudflare Workers Free plan limits: 100,000 requests/day, 10 ms CPU per request, 50 external subrequests per request, 1,000 requests/minute burst. Source: developers.cloudflare.com/workers/platform/limits (and the 2026-02-11 subrequests changelog), checked 2026-10-18.
+- Firebase JS SDK versions from the npm registry on 2026-10-18: latest 13.0.0 (published 2026-10-07, 11 days old, not used), 12.19.0 (published 2026-09-09, pinned).
+- Build environment: Node 22.22.2. Not verified (no access): gstatic CDN path, Firebase CLI handling of the `@ Creator` rules path, Dub.co/JSONLink/Microlink/AllOrigins limits, oEmbed endpoints, real RTDB rule evaluation.

@@ -1,0 +1,26 @@
+feat(v2.1.0): foundation and shell (auth, router, engines, rules, metadata Worker)
+
+- Service worker: network-first app files, cache-first pinned libraries, old caches (including v1) deleted, auto-update with idle reload; manifest, install banner and install status
+- Design system: tokens, base, layout, components, 94 inline SVG icons, UI kit (toast, sheet, confirm, popover, skeleton, empty states, scroll fade, task chip)
+- Router with one mounted page at a time, route guards and parent-chain Back logic (overlay layers first, root exit rule); every route exists, later features show designed placeholders
+- Logo-only splash (full on first run, short fade later, still for reduced motion) ending when the first page is ready
+- Shell: mobile floating glass bottom bar with sliding ring marker, PC collapsible sidebar with theme toggle and profile badge, install banner
+- Auth: Google (popup with redirect fallback), email and password, password reset, email verification, guest mode with notice, masked emails, deleted-account status hook
+- Data engines: shared Engine with optimistic UI and chunked parallel writes, local engine (IndexedDB), cloud engine (RTDB cache, outbox, delta sync, purge epoch), persisted resumable job queue
+- Database rules for the whole schema, generated from js/engine/schema.js, plus the rules test matrix
+- Metadata Worker: /health and /meta (oEmbed handlers, direct fetch with SSRF-guarded redirects, ordered fallbacks, frameable, token verification, rate limits, subrequest budget); worker-client and Settings > Advanced > Metadata tester
+- Settings shell driven by a registry: Appearance, Account and sync, App (install status, update check), Advanced (worker status, storage, tester, debug log, reset)
+- Tools: gen-rules.mjs, gen-precache.mjs, gate extended; 77 automated tests (unit and jsdom)
+- Base fix: PLAN-v2.0_to_v2.5.md and MASTER-PROMPT-v2.0_to_v2.5.md renamed to PLAN.md and MASTER-PROMPT.md; STRUCTURE.md added
+
+Removed files:
+- @ Creator/PLAN-v2.0_to_v2.5.md (renamed to @ Creator/PLAN.md)
+- @ Creator/MASTER-PROMPT-v2.0_to_v2.5.md (renamed to @ Creator/MASTER-PROMPT.md)
+- Placeholder .gitkeep files in folders that now contain files (js/engine, js/features/auth, js/features/shell, js/features/settings, js/features/splash, css/*, js/core, js/ui, @ Creator/worker/history)
+
+Owner actions:
+- Extract the zip into the project root, delete the files listed above, commit with this message, save the zip in "@ Versions"
+- Realtime Database: delete old data, deploy rules (firebase deploy --only database), run the Playground checks in @ Creator/tests/rules-matrix.md
+- Cloudflare: paste @ Creator/worker/worker.js into the linkivo Worker and deploy; open /health
+- Firebase Authentication: authorized domains linkivo.web.app, linkivo.firebaseapp.com, localhost
+- firebase deploy --only hosting, hard reload, then Settings > Advanced > Metadata tester > Load 25 sample URLs

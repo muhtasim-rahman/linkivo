@@ -1,0 +1,26 @@
+/* Linkivo v2.1.0 - buttons. Secondary is the default; one filled primary per screen. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  min-height: 44px; padding: 0 var(--s4); border: 1px solid var(--line-strong); border-radius: var(--r-control);
+  background: var(--surface); color: var(--text); font-weight: 560; white-space: nowrap; position: relative;
+  transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease);
+}
+.btn:hover { background: var(--surface-2); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn[disabled], .btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+.btn-primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-fg); }
+.btn-primary:hover { background: var(--accent-strong); filter: brightness(1.08); }
+.btn-quiet { border-color: transparent; background: transparent; }
+.btn-quiet:hover { background: var(--accent-soft); }
+.btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.btn-danger:hover { background: var(--danger-soft); }
+.btn-danger.btn-primary { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-block { width: 100%; }
+.btn-sm { min-height: 36px; padding: 0 var(--s3); font-size: var(--fs-sm); }
+.btn-icon { width: 44px; min-width: 44px; padding: 0; border-color: transparent; background: transparent; border-radius: 50%; }
+.btn-icon:hover { background: var(--accent-soft); }
+.btn.is-loading { color: transparent; pointer-events: none; }
+.btn.is-loading::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-color: var(--text) transparent var(--text) transparent; animation: lk-spin 0.8s linear infinite; }
+.btn-primary.is-loading::after { border-color: var(--accent-fg) transparent var(--accent-fg) transparent; }
+.link-btn { color: var(--accent-text); font-weight: 560; padding: var(--s2) 0; min-height: 44px; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }

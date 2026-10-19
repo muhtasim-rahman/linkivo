@@ -6,7 +6,7 @@ Honesty rule: report exactly what was run and what was not. "Not run" is accepta
 
 ```
 node "@ Creator/tools/check.mjs"          # must end with: PASSED: 0 errors
-node --test "@ Creator/tests/"            # unit tests (node:test, no dependencies)
+node --test "@ Creator/tests/*.test.mjs"            # unit tests (node:test, no dependencies)
 bash "@ Creator/tools/pack.sh"            # runs the gate again and builds the zip
 ```
 `check.mjs` verifies: JS syntax of every module, JSON validity, forbidden patterns in shipped code (emoji, `eval`, unsafe `innerHTML`, direct `localStorage`, inline handlers), file size caps, secret scan, version consistency (`app.json`, `sw.js`, commit file, `CONTEXT.md`), deploy safety (`firebase.json`, `.gitignore`).
@@ -55,3 +55,27 @@ Run it with the Firebase emulator when available, otherwise the owner runs it in
 - First meaningful paint after the splash under 2 seconds on a mid-range phone with a warm cache.
 - 5,000 to 10,000 links: scrolling stays smooth, search results under 100 ms, random pick under 50 ms.
 - Import of 1,000 links saved to the database in a few seconds (excluding metadata enrichment) on a normal connection.
+
+## 6. How the v2.1.0 suite is organised (7 files, 77 tests) (read before adding tests)
+
+| File | What it covers |
+|---|---|
+| `mask-url-back.test.mjs` | mask util, URL keys, `resolveBack`, route matching, parent chain, guards, ids, formatting |
+| `chunker-jobs.test.mjs` | chunker, adaptive parallel runner (retry, backoff, stop), job queue (persist, pause, resume after restart, fail, stop) |
+| `engine.test.mjs` | schema sanitizers, local engine (CRUD, soft delete cascade, absolute `lc`, 1000-link bulk, restart), cloud engine with a fake RTDB (chunks, outbox, offline, live sync, last-write-wins, purge epoch, server clock) |
+| `rules.test.mjs` + `helpers/rules-eval.mjs` | the generated rules against the matrix in `rules-matrix.md` (own evaluator, see the note there) |
+| `worker.test.mjs` | Worker pure functions and routes with mocked `fetch`: SSRF guard, head parser, frameable, streaming cut, fallback chain and order, oEmbed, redirects, budget, token verification (generated RSA key), rate limits, CORS |
+| `boot-smoke.test.mjs` | jsdom: the boot sequence in guest mode, data layer start and teardown, session changes (guest, logout, deleted account) |
+| `ui-smoke.test.mjs` | jsdom: router and Back behavior, overlays, toast, popover, appearance, shell, every route module, login, settings, worker client and metadata tester |
+
+Commands (Node 22 needs a glob, not a folder):
+```
+node --test "@ Creator/tests/*.test.mjs"
+node "@ Creator/tools/gen-rules.mjs" --check
+node "@ Creator/tools/gen-precache.mjs" --check
+```
+`ui-smoke.test.mjs` needs jsdom OUTSIDE the project: `cd <any temp dir> && npm i jsdom`, then `JSDOM_PATH=<that dir>/node_modules node --test ...`
+(default `/home/claude/tools-node/node_modules`). Never install `node_modules` inside the project.
+
+What these tests can NOT prove: real browser layout and animation, real Firebase and Cloudflare network behavior, the real database rules engine, the free-service endpoints
+(Dub, JSONLink, Microlink, AllOrigins, oEmbed). Those are owner tests (see the version summary).

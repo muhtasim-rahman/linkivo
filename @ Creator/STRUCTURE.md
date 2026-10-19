@@ -1,0 +1,52 @@
+# Linkivo: project structure
+
+Snapshot of the real project folder after extracting **v2.1.0**. Read it to know where things live before creating files.
+The AI updates this file at the end of every version (add new files and folders, remove deleted ones, keep it short).
+The owner's private folders `@ Extra files` and `@ Versions` exist next to these but are never read, listed or touched by the AI.
+
+```
+Linkivo/
+├── @ Creator/                  AI workspace (shipped in every zip, pushed to GitHub: no secrets)
+│   ├── MASTER-PROMPT.md  PLAN.md  RULES.md  CONTEXT.md  STRUCTURE.md  README.md
+│   ├── docs/                   FEATURES, ARCHITECTURE (section 13 = as built), DESIGN, SETUP-GUIDE, TESTING, V1-AUDIT
+│   ├── commits/                one commit message per version (v2.0.0-commit.txt, v2.1.0-commit.txt, ...)
+│   ├── rules/                  database.rules.json (GENERATED) + history/ snapshots
+│   ├── worker/                 worker.js (v2.1.0: /health, /meta) + history/ snapshots
+│   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs
+│   ├── tests/                  *.test.mjs (7 files, 77 tests), rules-matrix.md, helpers/
+│   └── reference/              v1 splash animation, LinkIntel prototype (not deployed)
+│
+├── assets/  brand/ (logo, wordmarks)   icons/ (generated, white background)   fonts/ (empty)
+├── css/
+│   ├── core/                   tokens, base, layout, motion
+│   ├── components/             buttons, forms, sheet (overlays + popover), toast, feedback (skeleton, empty, ring, banner, rows), nav
+│   └── pages/                  splash, auth, pages (stubs, menu, profile), settings
+├── js/
+│   ├── main.js  boot.js        entry (splash first) and boot sequence
+│   ├── core/                   logger local-prefs flags events utils format mask url-tools dom css-loader appearance session sensitive
+│   │                           router nav-stack back-logic firebase-loader update install rate-limiter worker-client app-data app-info config
+│   ├── engine/                 schema idb chunker job-queue engine local-engine cloud-engine rtdb-adapter
+│   ├── ui/                     icons toast sheet confirm popover skeleton empty-state scroll-fade task-chip
+│   ├── workers/                (empty: parse.worker.js arrives in v2.2.0)
+│   └── features/
+│       auth/                   auth-service account-status login-page
+│       shell/                  routes shell shell-parts install-banner pages/(stub menu profile reactivate)
+│       splash/                 splash
+│       settings/               catalog controls custom-rows advanced-tools metadata-tester settings-page
+│       library import export recycle    v2.2.0      preview search    v2.3.0      random history profile    v2.4.0
+│       vault account    v2.5.0          backup activity stats legal menu    v2.6.0   (folders still empty)
+│
+├── index.html                  shell + splash markup (generated once from the logo paths)
+├── sw.js                       update-safe service worker (precache list is generated)
+├── manifest.webmanifest        PWA manifest
+├── app.json                    app info and version (must equal sw.js VERSION and js/core/app-info.js)
+├── firebase.json  .firebaserc  hosting (no @ folder deployed, no-cache) + database rules path
+├── README.md  .gitignore  .gitattributes  .editorconfig
+```
+
+## Notes
+
+- Files that appear in later versions: see `PLAN.md` (for example `js/workers/parse.worker.js` in v2.2.0).
+- `.gitkeep` only marks an empty folder so git and zips keep it. Delete it when the folder gets its first real file.
+- Folder names `@ Creator`, `@ Extra files`, `@ Versions` contain a space and a leading `@`: always quote them in shell commands.
+- Nothing starting with `@` is deployed to hosting; `@ Creator` and `@ Versions` are pushed to GitHub, `@ Extra files` is git-ignored.

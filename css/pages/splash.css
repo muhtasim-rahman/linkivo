@@ -1,0 +1,36 @@
+/* Linkivo v2.1.0 - splash (docs/DESIGN.md section 6): logo only, 1.2-1.8 s, ends when the app is ready.
+   data-mode: pending (hidden, waiting for fonts) | full (first run) | short (later runs, 0.6 s fade) | still (reduced motion) */
+.splash { position: fixed; inset: 0; z-index: var(--z-splash); display: grid; place-items: center; background: var(--bg); transition: opacity 320ms var(--ease); }
+.splash.out { opacity: 0; pointer-events: none; }
+.splash-stage { display: grid; justify-items: center; gap: 14px; transform: translateY(-3%); }
+.splash-mark { width: min(38vw, 200px); min-width: 120px; height: auto; overflow: visible; }
+.splash-word { display: flex; font: 800 clamp(34px, 9vw, 46px) / 1 var(--font-brand); letter-spacing: -0.02em; color: var(--text); min-height: 1em; }
+.splash-word span { display: inline-block; }
+.splash-word .g { background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.splash-dots { min-height: 14px; opacity: 0; transition: opacity 200ms; }
+.splash-dots.show { opacity: 1; }
+.splash-fail { max-width: 32ch; text-align: center; color: var(--sub); display: grid; gap: 12px; justify-items: center; }
+.splash-fail .btn { text-decoration: none; }
+
+/* base (not yet animated) state */
+.sp-ring { stroke-dasharray: 1; stroke-dashoffset: 1; fill-opacity: 0; }
+.sp-mask { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.splash[data-mode='pending'] .splash-stage { opacity: 0; }
+.splash[data-mode='still'] .sp-ring, .splash[data-mode='short'] .sp-ring { stroke-dashoffset: 0; fill-opacity: 1; }
+.splash[data-mode='still'] .sp-mask, .splash[data-mode='short'] .sp-mask { stroke-dashoffset: 0; }
+.splash[data-mode='short'] .splash-stage { animation: lk-fade 600ms var(--ease) both; }
+
+@keyframes sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes sp-fill { to { fill-opacity: 1; } }
+@keyframes sp-pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes sp-letter { from { opacity: 0; transform: translateY(8px); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes sp-settle { 0% { transform: translateY(0); } 40% { transform: translateY(3px); } 100% { transform: translateY(0); } }
+
+.splash[data-mode='full'].run .sp-ringl-g { transform-origin: 353px 648px; animation: sp-pop 480ms var(--ease) both; }
+.splash[data-mode='full'].run .sp-ringl { animation: sp-draw 520ms var(--ease) both, sp-fill 320ms 300ms linear both; }
+.splash[data-mode='full'].run .sp-shackle-mask { animation: sp-draw 560ms 260ms var(--ease) both; }
+.splash[data-mode='full'].run .sp-bar-mask { animation: sp-draw 420ms 620ms var(--ease) both; }
+.splash[data-mode='full'].run .sp-ringr { animation: sp-draw 520ms 760ms var(--ease) both, sp-fill 320ms 1040ms linear both; }
+.splash[data-mode='full'].run .splash-mark { animation: sp-settle 360ms 820ms ease-out both; }
+.splash[data-mode='full'] .splash-word span { opacity: 0; }
+.splash[data-mode='full'].run .splash-word span { animation: sp-letter 380ms var(--ease) both; animation-delay: calc(1000ms + var(--n) * 38ms); }

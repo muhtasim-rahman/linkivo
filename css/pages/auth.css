@@ -1,0 +1,25 @@
+/* Linkivo v2.1.0 - login page. Not a centred card: a ring-art field and a plain form column on one surface. */
+.auth { min-height: 100%; display: grid; grid-template-rows: auto 1fr; background: var(--bg); }
+.auth-art { position: relative; height: 26dvh; min-height: 168px; overflow: hidden; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.auth-art svg { position: absolute; width: 150%; max-width: none; right: -34%; top: -42%; color: var(--accent); }
+.auth-brand { position: absolute; left: var(--pad); top: calc(var(--safe-t) + var(--s5)); display: flex; align-items: center; gap: 10px; }
+.auth-brand img { width: 34px; }
+.auth-brand span { font: 800 24px / 1 var(--font-brand); letter-spacing: -0.02em; }
+.auth-brand i { font-style: normal; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.auth-panel { padding: var(--s6) var(--pad) calc(var(--s8) + var(--safe-b)); max-width: 440px; width: 100%; margin: 0 auto; display: grid; gap: var(--s4); align-content: start; }
+.auth-title { font: 650 var(--fs-xl) / 1.15 var(--font-brand); letter-spacing: -0.01em; }
+.auth-sub { color: var(--sub); margin-top: 4px; }
+.auth-or { display: flex; align-items: center; gap: var(--s3); color: var(--sub); font-size: var(--fs-sm); }
+.auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.auth-form { display: grid; gap: var(--s4); }
+.auth-guest { display: grid; gap: var(--s2); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.auth-guest .help { max-width: 44ch; }
+.auth-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--s2); }
+@media (min-width: 900px) {
+  .auth { grid-template-rows: 1fr; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+  .auth-art { height: 100%; min-height: 0; border-bottom: 0; border-right: 1px solid var(--line); }
+  .auth-art svg { width: 130%; right: -42%; top: auto; bottom: -34%; }
+  .auth-brand { left: var(--s8); top: var(--s8); } .auth-brand img { width: 40px; } .auth-brand span { font-size: 28px; }
+  .auth-panel { margin: 0; padding: var(--s8) 8vw; align-content: center; max-width: 560px; }
+  .auth-title { font-size: var(--fs-2xl); }
+}

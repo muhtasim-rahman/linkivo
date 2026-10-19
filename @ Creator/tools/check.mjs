@@ -95,6 +95,30 @@ if (app.version) {
   if (!fs.existsSync(ctx) || !read(ctx).includes(`v${app.version}`)) err(`@ Creator/CONTEXT.md has no entry for v${app.version}`);
 }
 
+// ---- 5b. Generated files must be current (v2.1.0): sw.js precache list, database rules, app-info version --------------
+for (const tool of ['gen-precache.mjs', 'gen-rules.mjs']) {
+  const f = path.join(root, '@ Creator/tools', tool);
+  if (!fs.existsSync(f)) continue;
+  const r = spawnSync(process.execPath, [f, '--check'], { encoding: 'utf8' });
+  if (r.status !== 0) err(`GENERATED ${tool} --check failed: ${(r.stdout + r.stderr).trim().split('\n')[0]}`);
+}
+const infoFile = path.join(root, 'js/core/app-info.js');
+if (fs.existsSync(infoFile)) {
+  const m = read(infoFile).match(/version:\s*'([^']+)'/);
+  if (!m || m[1] !== app.version) err(`VERSION mismatch: js/core/app-info.js=${m ? m[1] : '?'} app.json=${app.version}`);
+}
+// every import("...") / import ... from "./x.js" inside js/ must point at a file that exists (a typo would only show up at runtime)
+for (const f of files.filter((f) => rel(f).startsWith('js/') && ext(f) === '.js')) {
+  const text = read(f);
+  for (const m of text.matchAll(/(?:from\s+|import\()\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const target = path.resolve(path.dirname(f), m[1]);
+    if (!fs.existsSync(target)) err(`IMPORT ${rel(f)}: "${m[1]}" does not exist`);
+  }
+  for (const m of text.matchAll(/(?:loadCss|href:|src:)\s*\(?\s*['"](\/(?:css|js|assets)\/[^'"?#]+)['"]/g)) {
+    if (!fs.existsSync(path.join(root, m[1]))) err(`ASSET ${rel(f)}: "${m[1]}" does not exist`);
+  }
+}
+
 // ---- 6. Deploy safety ---------------------------------------------------------------------------------
 try {
   const fb = JSON.parse(read(path.join(root, 'firebase.json')));

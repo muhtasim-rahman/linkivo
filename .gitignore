@@ -1,5 +1,6 @@
 # Owner's private folder (also holds the GitLogs): never pushed
 @ Extra files
+@ Test
 
 # NOTE: "@ Creator" (AI workspace: plan, rules, docs, tools) and "@ Versions" (release zips) ARE pushed on purpose.
 # So nothing sensitive may ever be placed in either of them.

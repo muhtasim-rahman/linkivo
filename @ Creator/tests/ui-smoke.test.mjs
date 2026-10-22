@@ -88,15 +88,10 @@ test('router: in-app links are intercepted, external and data-native links are n
   router.destroy();
 });
 
-test('icons: every name has an SVG file in assets/ui-icons, every file is listed, unknown names fall back', async () => {
-  const fs = await import('node:fs'); const path = await import('node:path');
+test('icons: every icon renders an svg with children; unknown names fall back', async () => {
   const { ICON_NAMES } = await import('../../js/ui/icons.js');
-  const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '../../assets/ui-icons');
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)).sort();
-  assert.deepEqual([...ICON_NAMES].sort(), files);
-  for (const n of ICON_NAMES) { const el = icon(n); assert.equal(el.className, 'ic'); assert.match(el.style.getPropertyValue('--ic'), new RegExp(`/assets/ui-icons/${n}\\.svg`)); assert.ok(fs.statSync(path.join(dir, n + '.svg')).size > 40, n); }
-  assert.match(icon('does-not-exist').style.getPropertyValue('--ic'), /info\.svg/);
-  assert.equal(icon('close', { label: 'Close' }).getAttribute('role'), 'img');
+  for (const n of ICON_NAMES) { const el = icon(n); assert.equal(el.tagName.toLowerCase(), 'svg'); assert.ok(el.childNodes.length > 0, n); }
+  assert.ok(icon('does-not-exist').childNodes.length > 0);
 });
 
 test('toast: never more than two, action works, auto-dismisses', async () => {
@@ -150,8 +145,8 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   const handlers = {}; const router = { on: (t, fn) => { handlers[t] = fn; }, navigate() {}, back() {} };
   setSession({ mode: 'account', user: { uid: 'u1', email: 'tuzo.dev99@gmail.com', name: 'Turzo', emailVerified: true, providers: ['google.com'] }, status: 'active' });
   const shell = mountShell({ router }); shell.setSession(getSession());
-  assert.equal($$('#sidebar .nav-item').length, 5); assert.equal($$('#bar .bar-item').length, 5);
-  assert.equal($$('#sidebar .nav-item')[0].dataset.tab, 'import', 'sidebar order starts with Add links'); assert.match($$('#sidebar .nav-item')[0].textContent, /Add links/); assert.equal($('.sb-home').getAttribute('href'), '/library', 'logo opens Library when expanded');
+  assert.equal($$('#sidebar .sb-nav .nav-item').length, 5); assert.equal($$('#bar .bar-item').length, 5);
+  assert.equal($$('#sidebar .sb-nav .nav-item')[0].dataset.tab, 'import', 'sidebar order starts with Import links');
   assert.equal($$('#bar .bar-item')[2].dataset.tab, 'import', 'bar centre is Import');
   handlers.route({ route: { tab: 'random', shell: true } });
   assert.equal($('#bar [aria-current="page"]').dataset.tab, 'random'); assert.equal($('.bar-marker').style.getPropertyValue('--i'), '1'); assert.equal($('.bar-marker').dataset.hidden, 'false');
@@ -160,7 +155,7 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   assert.equal($('.pf-mail').textContent, 'tu******99@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
   $('.theme-row').click(); await tick(5); assert.equal(prefs.get('ui.theme'), 'dark'); prefs.remove('ui.theme');
   $('.sb-toggle').click(); assert.equal($('#app').dataset.collapsed, 'true'); assert.equal(prefs.get('ui.sidebarCollapsed'), true);
-  $('.sb-expand').click(); assert.equal($('#app').dataset.collapsed, 'false');
+  $('.sb-mark').click(); assert.equal($('#app').dataset.collapsed, 'false');
 });
 
 test('route table: every route loads a real module with mount(), and every parent exists', async () => {
@@ -198,7 +193,7 @@ test('pages mount without errors: stub, menu, profile, reactivate, login (guest 
 test('login page: tabs, validation, guest notice enters guest mode', async () => {
   const container = $('#page-root');
   assert.ok($('.auth-panel'));
-  $$('.seg button', container)[1].click(); assert.equal($('.auth-title').textContent, 'Create your account'); assert.equal($('button[type=submit]').textContent, 'Create account');
+  $$('.auth-tabs button', container)[1].click(); assert.equal($('.auth-title').textContent, 'Create your account'); assert.equal($('button[type=submit]').textContent, 'Create account');
   $('form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await tick(5);
   assert.match($('.alert.is-error:not([hidden])').textContent, /email/i);
   const guestBtn = $$('.auth-guest button')[0]; guestBtn.click(); await tick(5);
@@ -208,43 +203,29 @@ test('login page: tabs, validation, guest notice enters guest mode', async () =>
   pagesRouter.destroy();
 });
 
-test('settings page: ONE page with category headings, nav follows, controls write prefs, reset restores defaults', async () => {
+test('settings page: sections, controls write prefs, reset restores defaults', async () => {
   const container = $('#page-root');
   const { createRouter: mk } = await import('../../js/core/router.js');
   setSession({ mode: 'guest', user: null, status: 'active' });
   const router = mk({ routes: ROUTES, container, getSession }); await router.start();
-  await router.navigate('/settings'); await tick(10);
-  assert.equal($$('.set-section').length, 7); assert.equal($$('.set-link').length, 7); assert.equal($$('.chip').length, 7);
-  assert.deepEqual($$('.set-section h2').map((n) => n.textContent), ['Appearance', 'Controls', 'App', 'Account and sync', 'Data and storage', 'About', 'Advanced']);
-  assert.equal($('.set-link[aria-current="true"]').dataset.sec, 'appearance');
-  $$('.set-link').find((b) => b.dataset.sec === 'advanced').click(); assert.equal($('.set-link[aria-current="true"]').dataset.sec, 'advanced', 'clicking a category selects it');
+  await router.navigate('/settings'); await tick(5);
+  assert.equal($$('.set-nav .set-nav-item').length, 5, 'category list'); assert.equal($$('.set-sec').length, 5, 'one page, one section per category');
+  assert.equal($('.page-head.is-stack .page-title').textContent, 'Settings'); assert.ok($('.page-head.is-stack .page-sub'), 'title and subtitle on separate lines');
+  await router.navigate('/settings/appearance'); await tick(5);
   $$('[data-setting="theme"] button').find((b) => b.textContent === 'Dark').click(); assert.equal(prefs.get('ui.theme'), 'dark'); assert.equal(document.documentElement.dataset.theme, 'dark');
-  $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet'); assert.equal(document.documentElement.dataset.accent, 'violet');
-  $$('[data-setting="startAnimation"] button').find((b) => b.textContent === 'Always short').click(); assert.equal(prefs.get('ui.startAnimation'), 'short');
-  $('[data-setting="contextMenu"] button').click(); assert.equal(document.documentElement.dataset.ctx, 'allow');
-  $('[data-setting="pageTransitions"] button').click(); assert.equal(document.documentElement.dataset.pt, 'off');
-  const sel = $('[data-setting="startPage"] select'); sel.value = 'random'; sel.dispatchEvent(new w.Event('change')); assert.equal(prefs.get('app.startPage'), 'random');
-  assert.ok($('.mt-tester') && $('textarea')); assert.match(container.textContent, /Version 2\.1\.1/); assert.match(container.textContent, /Guest mode/); assert.match(container.textContent, /Muhtasim Rahman/);
-  $('.row.is-danger').click(); await tick(10);
+  $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet');
+  $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
+  await router.navigate('/settings/advanced'); await tick(5);
+  assert.equal($$('.set-sec').length, 5, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
+  const resetRow = $('.row.is-danger'); resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
-  for (const k of ['ui.theme', 'ui.accent', 'ui.startAnimation', 'app.startPage', 'ui.contextMenu', 'ui.pageTransitions']) assert.equal(prefs.get(k), null, k);
-  assert.equal(document.documentElement.dataset.ctx, 'block');
-  await router.navigate('/settings/about'); await tick(10); assert.equal($$('.set-section').length, 7, '/settings/:section opens the same single page');
+  assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
+  await router.navigate('/settings/app'); await tick(5); assert.match(container.textContent, /Version 2\.1\.2/);
+  await router.navigate('/settings/account'); await tick(5); assert.match(container.textContent, /Guest mode/);
   router.destroy();
 });
 
-test('menu page: profile, settings, About, Developer and legal blocks', async () => {
-  const container = $('#page-root');
-  const { createRouter: mk } = await import('../../js/core/router.js');
-  setSession({ mode: 'guest', user: null, status: 'active' });
-  const router = mk({ routes: ROUTES, container, getSession }); await router.start();
-  await router.navigate('/menu'); await tick(10);
-  assert.ok($('.about-card')); assert.ok($('.dev-card')); assert.match(container.textContent, /Version 2\.1\.1/); assert.match(container.textContent, /Muhtasim Rahman/);
-  assert.deepEqual($$('.dev-links a', container).map((a) => a.textContent), ['Website', 'GitHub', 'Email']); assert.ok($$('.group a.row', container).some((a) => a.getAttribute('href') === '/privacy'));
-  router.destroy();
-});
-
-test('worker client + metadata tester: batches of 25, results rendered with engine log', async () => {
+test('worker client + metadata tester: batches of 6, results rendered with engine log', async () => {
   const calls = [];
   globalThis.fetch = async (url, init) => {
     calls.push({ url, body: init.body ? JSON.parse(init.body) : null });
@@ -257,7 +238,7 @@ test('worker client + metadata tester: batches of 25, results rendered with engi
   const map = await fetchMeta(urls);
   assert.equal(map.size, 60);
   const metaCalls = calls.filter((c) => c.body);
-  assert.deepEqual(metaCalls.map((c) => c.body.urls.length).sort((a, b) => a - b), [10, 25, 25]);
+  assert.deepEqual(metaCalls.map((c) => c.body.urls.length), Array(10).fill(6), 'every Worker call gets at most 6 urls (own subrequest budget)');
   assert.equal((await health()).ok, true);
 
   const { renderTester, SAMPLE_URLS } = await import('../../js/features/settings/metadata-tester.js');

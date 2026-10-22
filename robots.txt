@@ -1,15 +1,16 @@
-# Linkivo - public pages may be indexed; private app pages are noindex and not crawled.
+# Linkivo: the sign-in page is public; every page that shows a person's own data is private and marked noindex inside the app too.
 User-agent: *
 Allow: /
 Disallow: /library
 Disallow: /folder/
-Disallow: /import
 Disallow: /link/
+Disallow: /import
 Disallow: /search
 Disallow: /random
-Disallow: /menu
 Disallow: /profile
 Disallow: /settings
+Disallow: /menu
+Disallow: /share
 Disallow: /reactivate
 
 Sitemap: https://linkivo.web.app/sitemap.xml

@@ -50,7 +50,7 @@ Actors: **owner** = signed in as the uid in the path, **other** = a different si
 | V17 | `history/u1/h1` | `{lid, url, src, ts}` | allow; without `lid`: deny |
 | V18 | `activity/u1/a1` | `{type, ts, info}` | allow |
 | V19 | `users/u1/profile/name` | string <= 60 / 61 chars | allow / deny |
-| V20 | `users/u1/profile/createdAt`, `lastLogin`, `termsAt` (when the user agreed to the Terms, v2.1.1) | number / value > now + 60 s | allow / deny |
+| V20 | `users/u1/profile/createdAt`, `lastLogin` | number / `lastLogin` > now + 60 s | allow / deny |
 | V21 | `users/u1/profile/status` | `"active"` or `"deleted"` | deny (Worker only) |
 | V22 | `users/u1/profile/role` | any | deny (`$other`) |
 | V23 | `users/u1/settings/theme` | string, number, boolean | allow |

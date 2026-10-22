@@ -1,24 +1,38 @@
-/* Linkivo v2.1.1 - splash: the owner's original logo animation (shackle, rings, sparkles, expanding background, typed name), without
-   the URL badges. Driven by js/features/splash/splash.js. data-mode: pending | full | short | still */
-.splash { position: fixed; inset: 0; z-index: var(--z-splash); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); overflow: hidden; }
-.splash.out { animation: sp-out 0.6s var(--ease) forwards; pointer-events: none; }
-@keyframes sp-out { to { opacity: 0; filter: blur(14px); transform: scale(1.04); } }
-.splash[data-mode='pending'] > * { opacity: 0; }
-.sp-bg { position: absolute; inset: 0; z-index: 0; background: color-mix(in srgb, var(--brand-a) 13%, var(--bg)); clip-path: circle(0 at 50% 50%); pointer-events: none; }
-.sp-grid { position: absolute; inset: 0; z-index: 1; opacity: 0.6; background-image: linear-gradient(to right, var(--line) 1.5px, transparent 1.5px), linear-gradient(to bottom, var(--line) 1.5px, transparent 1.5px); background-size: 40px 40px;
+/* Linkivo v2.1.2 - splash (docs/DESIGN.md section 6). The v1 logo-creation animation (ripple, ring pop, shackle lock with sparkles,
+   background reveal, bar, second ring, typed wordmark) WITHOUT the url badges. js/features/splash/splash.js runs the timeline.
+   data-mode: pending (stage hidden for a few ms) | full (first run) | short (later runs: finished logo fades in) | still (reduced motion) */
+.splash { position: fixed; inset: 0; z-index: var(--z-splash); display: grid; place-items: center; overflow: hidden; background: var(--bg); }
+.splash.out { animation: sp-out 520ms var(--ease) forwards; pointer-events: none; }
+@keyframes sp-out { to { opacity: 0; filter: blur(10px); transform: scale(1.04); } }
+
+/* background: tinted disc that grows from the left ring, a soft grid, a slow glow */
+.sp-expand { position: absolute; inset: 0; background: var(--bg-tint); clip-path: circle(0 at 50% 50%); }
+.sp-grid { position: absolute; inset: 0; opacity: 0.6; background-image: linear-gradient(to right, var(--line) 1.5px, transparent 1.5px), linear-gradient(to bottom, var(--line) 1.5px, transparent 1.5px); background-size: 40px 40px;
   -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, #000 80%); mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, #000 80%); }
-.sp-orb { position: absolute; z-index: 2; top: 50%; left: 50%; width: min(800px, 150vw); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 16%, transparent) 0%, transparent 65%); animation: sp-orb 6s ease-in-out infinite; }
+.sp-orb { position: absolute; left: 50%; top: 50%; width: min(120vw, 800px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 16%, transparent) 0%, transparent 65%); animation: sp-orb 6s ease-in-out infinite; }
 @keyframes sp-orb { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
-.sp-logo { position: relative; z-index: 3; width: min(54vw, 320px); will-change: transform; }
-.sp-logo svg { width: 100%; height: auto; overflow: visible; }
-.sp-brand { position: relative; z-index: 3; display: grid; justify-items: center; gap: 8px; margin-top: 8px; }
-.sp-name { display: flex; align-items: baseline; font: 700 clamp(2.5rem, 9vw, 4.2rem) / 1 var(--font-brand); letter-spacing: -0.03em; color: var(--text); }
-.sp-char { display: inline-block; opacity: 0; filter: blur(12px); transform: translateX(-15px); will-change: opacity, filter, transform; }
-.sp-char.g { background: var(--brand-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.sp-tag { display: flex; align-items: center; gap: 8px; color: var(--sub); font: 400 clamp(0.85rem, 1.7vw, 1rem) var(--font-brand); opacity: 0; filter: blur(10px); transform: translateY(10px); }
-.sp-badge { padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); font: 600 0.75rem var(--font-mono); }
-.sp-dots { position: relative; z-index: 3; margin-top: 18px; min-height: 14px; opacity: 0; transition: opacity 200ms; }
-.sp-dots.show { opacity: 1; }
-.sp-fail { position: relative; z-index: 3; max-width: 32ch; margin-top: 16px; text-align: center; color: var(--sub); display: grid; gap: 12px; justify-items: center; }
-.sp-fail .btn { text-decoration: none; }
-.sp-still { opacity: 1 !important; filter: none !important; transform: none !important; }
+
+.splash-stage { position: relative; z-index: 2; display: grid; justify-items: center; gap: 10px; transform: translateY(-2%); }
+.splash-mark { width: min(46vw, 300px); min-width: 150px; height: auto; overflow: visible; }
+.splash-word { display: flex; align-items: baseline; font-size: clamp(38px, 10vw, 60px); color: var(--text); min-height: 1em; letter-spacing: -0.03em; }
+.t-char { position: relative; display: inline-block; }
+.idot-wrap .idot { position: absolute; top: 0.16em; left: 50%; width: 0.16em; height: 0.16em; border-radius: 50%; transform: translateX(-50%) scale(1); background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
+.splash-tag { font: 400 clamp(0.85rem, 3.4vw, 1rem) var(--font-brand); color: var(--sub); min-height: 1.4em; }
+.splash-dots { min-height: 14px; opacity: 0; transition: opacity 200ms; }
+.splash-dots.show { opacity: 1; }
+.splash-fail { max-width: 32ch; text-align: center; color: var(--sub); display: grid; gap: 12px; justify-items: center; }
+.splash-fail .btn { text-decoration: none; }
+
+/* base state: drawn parts hidden until the timeline (or the finished state) shows them */
+.sp-ring { stroke-dasharray: 1; stroke-dashoffset: 1; fill-opacity: 0; }
+.sp-mask { stroke-dasharray: 1; stroke-dashoffset: 1; }
+#sp-lring-g { transform-origin: 353px 648px; transform: scale(0); }
+.splash[data-mode='full'] .t-char, .splash[data-mode='full'] .idot, .splash[data-mode='full'] .splash-tag { opacity: 0; }
+.splash[data-mode='pending'] .splash-stage { opacity: 0; }
+
+/* finished state (short and still): everything drawn, wordmark visible, background revealed */
+.splash[data-mode='short'] .sp-ring, .splash[data-mode='still'] .sp-ring { stroke-dashoffset: 0; fill-opacity: 1; }
+.splash[data-mode='short'] .sp-mask, .splash[data-mode='still'] .sp-mask { stroke-dashoffset: 0; }
+.splash[data-mode='short'] #sp-lring-g, .splash[data-mode='still'] #sp-lring-g { transform: scale(1); }
+.splash[data-mode='short'] .sp-expand, .splash[data-mode='still'] .sp-expand { clip-path: circle(150vmax at 50% 50%); }
+.splash[data-mode='short'] .splash-stage { animation: lk-fade 520ms var(--ease) both; }

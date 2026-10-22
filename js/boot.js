@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/boot.js  (v2.1.1)
+ * Linkivo — js/boot.js  (v2.1.2)
  * Purpose: the boot sequence (PLAN slice 4): install + update systems -> auth state -> account status -> data layer -> router and
  *          shell -> first page mounted -> splash ends. After that it keeps data, chrome and route guards in step with the session
  *          (login, logout, guest entry, deleted account).
@@ -18,12 +18,14 @@ import { mountShell } from './features/shell/shell.js';
 import { endSplash } from './features/splash/splash.js';
 import { initTaskChip } from './ui/task-chip.js';
 import { initPullRefresh } from './ui/pull-refresh.js';
-import { showUpdatePrompt } from './features/shell/update-prompt.js';
+import { checkForUpdates } from './core/update.js';
 import { prefs } from './core/local-prefs.js';
+import { KEYS } from './core/appearance.js';
+import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
 
 export async function boot() {
-  initUpdates({ isBusy: () => !!(getQueue() && getQueue().isBusy()), onPrompt: showUpdatePrompt });
+  initUpdates({ isBusy: () => !!(getQueue() && getQueue().isBusy()), onAvailable: (v) => import('./features/shell/update-prompt.js').then((m) => m.showUpdatePrompt(v)) });
   await initAuth();
 
   let router = null, shell = null, checkedUid = null, destroyChip = null, lastKey = '';
@@ -58,7 +60,10 @@ export async function boot() {
     chain = chain.then(async () => { await applySession(getSession()); await router.reevaluate(); }).catch((e) => log.error('boot', 'session change failed', e));
   });
 
-  if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) initPullRefresh({ root: container, enabled: () => prefs.get('ui.pullRefresh', true) !== false, canRefresh: () => !(getQueue() && getQueue().isBusy()) });
+  // pull down at the top of a page: re-open the page (fresh data) and look for a new app version
+  initPullRefresh({ scroller: container, enabled: () => prefs.get(KEYS.pullRefresh, true) && getSession().mode !== 'none',
+    onRefresh: async () => { await Promise.all([checkForUpdates(), router.reevaluate(), sleep(500)]); } });
+
   router.on('mounted', () => { document.documentElement.dataset.boot = 'ok'; endSplash(); });
   window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));
   window.addEventListener('online', () => toast('Back online.'));

@@ -1,7 +1,7 @@
 /**
- * Linkivo — js/core/worker-client.js  (v2.1.1)
+ * Linkivo — js/core/worker-client.js  (v2.1.2)
  * Purpose: the only code that talks to the Cloudflare Worker. Adds the Firebase ID token for account users (guests send none and
- *          get stricter server limits), applies timeouts, splits big lists into batches of 25 and retries with backoff.
+ *          get stricter server limits), applies timeouts, splits big lists into small batches (6) and retries with backoff.
  * API: setTokenProvider(fn)   health() -> { ok, version, ms }   fetchMeta(urls, { onBatch }) -> Map<url, result>   META_BATCH
  *   A meta result: { url, ok, title, desc, kw, lang, author, site, canonical, favicon, image, video, type, frameable,
  *                    engine, log:[{engine, ok, ms, error?}], ms, error? }
@@ -12,7 +12,8 @@ import { chunk, runParallel } from '../engine/chunker.js';
 import { sleep } from './utils.js';
 import { log } from './logger.js';
 
-export const META_BATCH = 25;
+// 6 per call (v2.1.2): every Worker call has its own budget of 50 subrequests; 25 URLs in one call starved each other and many came back empty.
+export const META_BATCH = 6;
 let tokenProvider = async () => null;
 const limiter = createRateLimiter({ capacity: 40, perMs: 60000 });
 export const setTokenProvider = (fn) => { tokenProvider = fn || (async () => null); };
@@ -44,13 +45,13 @@ export async function health() {
   catch (e) { return { ok: false, error: e.message, status: e.status }; }
 }
 
-export async function fetchMeta(urls, { onBatch, fresh = false } = {}) {
+export async function fetchMeta(urls, { onBatch } = {}) {
   const out = new Map();
   const unique = [...new Set(urls)];
   const batches = chunk(unique, META_BATCH);
   await runParallel(batches, async (batch) => {
     try {
-      const { data } = await call('/meta', { body: fresh ? { urls: batch, fresh: true } : { urls: batch } });
+      const { data } = await call('/meta', { body: { urls: batch } });
       for (const r of data.results || []) out.set(r.url, r);
       for (const u of batch) if (!out.has(u)) out.set(u, { url: u, ok: false, error: 'no result', log: [] });
     } catch (e) {
@@ -59,7 +60,7 @@ export async function fetchMeta(urls, { onBatch, fresh = false } = {}) {
       throw e; // transient: runParallel retries with backoff
     }
     onBatch?.(batch.map((u) => out.get(u)));
-  }, { concurrency: 2, min: 1, max: 3, retries: 2, backoffMs: 800 }).then((res) => {
+  }, { concurrency: 3, min: 1, max: 4, retries: 2, backoffMs: 800 }).then((res) => {
     for (const f of res.failed) for (const u of f.item) out.set(u, { url: u, ok: false, error: f.error?.message || 'failed', log: [] });
   });
   return out;

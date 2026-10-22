@@ -1,49 +1,48 @@
 /**
- * Linkivo — js/ui/pull-refresh.js  (v2.1.1)
- * Purpose: pull-to-refresh for phones. The page area is its own scroller with overscroll disabled (so the browser's own pull does not
- *          work in an installed app); this restores it. Pull down from the very top, a ring fills, release past the threshold to reload.
- *          Off with Settings > Controls > Pull to refresh. Never starts while an overlay is open or while background jobs run.
- * API: initPullRefresh({ root, enabled(), canRefresh(), onRefresh() }) -> destroy()     pullProgress(dy, threshold) -> 0..1 (pure, tested)
+ * Linkivo — js/ui/pull-refresh.js  (v2.1.2)
+ * Purpose: pull down at the top of a page to refresh it (phones). The browser's own pull-to-refresh is disabled app-wide
+ *          (overscroll-behavior: none on body, needed so the bottom bar and sheets behave), so the app provides its own.
+ *          A small round indicator follows the finger; past the threshold, releasing runs onRefresh().
+ * API: initPullRefresh({ scroller, onRefresh, enabled }) -> destroy()     pullDistance(dy) -> number (pure, tested)
  */
 import { h } from '../core/dom.js';
+import { icon } from './icons.js';
+import { layerCount } from '../core/nav-stack.js';
 
-export const THRESHOLD = 72;
-export function pullProgress(dy, threshold = THRESHOLD) { return Math.max(0, Math.min(1, dy / threshold)); }
+const THRESHOLD = 68, MAX = 96;
+/** Rubber-band: the indicator moves at half the finger speed and stops at MAX. */
+export const pullDistance = (dy) => Math.max(0, Math.min(MAX, dy * 0.5));
 
-export function initPullRefresh({ root, enabled = () => true, canRefresh = () => true, onRefresh = () => location.reload() }) {
-  const ring = h('span', { class: 'ring' });
-  const box = h('div', { class: 'ptr', 'aria-hidden': 'true' }, ring);
-  document.body.appendChild(box);
-  let startY = 0, dy = 0, active = false;
+export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
+  const chip = h('div', { class: 'ptr', 'aria-hidden': 'true' }, icon('refresh', { size: 20 }));
+  document.body.appendChild(chip);
+  let startY = 0, startX = 0, pull = 0, tracking = false, busy = false;
 
-  const place = (y, show) => { box.style.transform = `translate(-50%, ${y}px)`; box.style.opacity = show ? '1' : '0'; };
-  const reset = () => { box.classList.remove('is-pulling'); place(-56, false); ring.classList.remove('is-spin'); };
+  const show = (d, anim) => { chip.style.transition = anim ? '' : 'none'; chip.style.opacity = d > 4 ? '1' : '0'; chip.style.transform = `translateY(${d - 52}px) rotate(${d * 4}deg)`; };
+  const hide = () => { chip.classList.remove('is-loading'); show(0, true); };
 
   function onStart(e) {
-    if (e.touches.length !== 1 || !enabled() || root.scrollTop > 0 || document.querySelector('.overlay, .pop')) return;
-    startY = e.touches[0].clientY; dy = 0; active = true;
+    if (busy || !enabled() || layerCount() > 0 || e.touches.length !== 1 || scroller.scrollTop > 0) return;
+    if (e.target.closest && e.target.closest('.sheet, .pop, input, textarea')) return;
+    tracking = true; pull = 0; startY = e.touches[0].clientY; startX = e.touches[0].clientX;
   }
   function onMove(e) {
-    if (!active) return;
-    const d = e.touches[0].clientY - startY;
-    if (d <= 0 || root.scrollTop > 0) { if (dy) { dy = 0; reset(); } active = d > 0 ? active : false; return; }
-    dy = d * 0.55;
-    if (e.cancelable) e.preventDefault(); // stop the page from rubber-banding while we show our own indicator
-    box.classList.add('is-pulling');
-    ring.style.setProperty('--p', String(Math.round(pullProgress(dy) * 100)));
-    place(Math.min(dy, 96) - 44, true);
+    if (!tracking) return;
+    const dy = e.touches[0].clientY - startY, dx = Math.abs(e.touches[0].clientX - startX);
+    if (dy <= 0 || dx > dy || scroller.scrollTop > 0) { tracking = false; hide(); return; }
+    pull = pullDistance(dy);
+    show(pull, false);
   }
-  function onEnd() {
-    if (!active) return;
-    active = false;
-    if (dy >= THRESHOLD && canRefresh()) { ring.classList.add('is-spin'); place(24, true); setTimeout(onRefresh, 260); }
-    else reset();
-    dy = 0;
+  async function onEnd() {
+    if (!tracking) return;
+    tracking = false;
+    if (pull < THRESHOLD * 0.5) { hide(); return; } // pull is half the finger distance: 68 px of pull = about 136 px of finger travel
+    busy = true; chip.classList.add('is-loading'); show(THRESHOLD * 0.6, true);
+    try { await onRefresh(); } finally { busy = false; hide(); }
   }
-  root.addEventListener('touchstart', onStart, { passive: true });
-  root.addEventListener('touchmove', onMove, { passive: false });
-  root.addEventListener('touchend', onEnd, { passive: true });
-  root.addEventListener('touchcancel', onEnd, { passive: true });
-  reset();
-  return () => { root.removeEventListener('touchstart', onStart); root.removeEventListener('touchmove', onMove); root.removeEventListener('touchend', onEnd); root.removeEventListener('touchcancel', onEnd); box.remove(); };
+  scroller.addEventListener('touchstart', onStart, { passive: true });
+  scroller.addEventListener('touchmove', onMove, { passive: true });
+  scroller.addEventListener('touchend', onEnd, { passive: true });
+  scroller.addEventListener('touchcancel', () => { tracking = false; hide(); }, { passive: true });
+  return () => { chip.remove(); };
 }

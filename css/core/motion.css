@@ -6,4 +6,8 @@
 @keyframes lk-slide-up { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes lk-shimmer { to { transform: translateX(100%); } }
 @keyframes lk-dot { 0%, 80%, 100% { transform: scale(0.55); opacity: 0.45; } 40% { transform: scale(1); opacity: 1; } }
-@keyframes lk-page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes lk-page { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* A page fades and rises in when the router mounts it (no exit animation: it would delay every navigation). */
+.page-enter { animation: lk-page 240ms var(--ease) both; }
+/* Setting "Page transitions" off: pages appear without the rise (the Motion setting already covers reduced motion). */
+:root[data-transitions='off'] .page-enter { animation: none; }

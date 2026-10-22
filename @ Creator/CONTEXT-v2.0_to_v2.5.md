@@ -1,43 +1,69 @@
-# Linkivo v2: Context (compact, covers v2.0 to v2.5)
+# Linkivo v2: context (v2.0 to v2.5 line)
 
-Purpose: a short memory for the next chat. It holds the project summary, the current state, and the important things the owner and the AI agreed or changed in conversation.
-Keep it short: append only what a future chat needs; delete what no longer matters. (Rewritten compact in v2.1.1 on the owner's request; the long v2.0 to v2.1.0 history is gone on purpose. Specs live in PLAN, FEATURES, ARCHITECTURE, DESIGN.)
-File naming: this file, `PLAN-v2.0_to_v2.5.md` and `MASTER-PROMPT-v2.0_to_v2.5.md` carry the suffix of the version range they cover; planning v2.6 and later creates new files with a new suffix (see RULES section 9). Public repo: no secrets here, ever.
+Compact on purpose (owner request, v2.1.2): project summary, current state, owner agreements, decisions, open verifications. Read the plan and rules first; this file only holds what they do not. Each version appends ONE short entry at the bottom and refreshes "Current state"; remove what stopped mattering.
 
-## Project in one paragraph
-Linkivo: a fast, private, free link manager PWA (plain JavaScript ES modules, no build step; Firebase Auth + Realtime Database; one Cloudflare Worker). Guest mode is fully local (IndexedDB); accounts sync through a local cache with delta sync. Owner: Muhtasim Rahman (Turzo), student developer, Bangladesh; talks Banglish, wants replies in Bangla with English technical terms; code, comments, docs and commits in English. Hosting https://linkivo.web.app, Worker https://linkivo.programs-turzo.workers.dev, repo github.com/muhtasim-rahman/linkivo. Built one version per chat: v2.1.0 foundation (done), v2.2.0 library and import, v2.3.0 preview and search, v2.4.0 random and history, v2.5.0 security and account, v2.6.0 settings and final (own plan then).
+## Project
+Linkivo v2 is a fast, private, public-use link manager: PWA in plain JavaScript (ES modules, no build step), Firebase Auth + Realtime Database (Spark plan), one Cloudflare Worker (free plan), all free. Owner: Muhtasim Rahman (Turzo). Contact shown in the app: mdturzo.dev@gmail.com. Developer site mdturzo.web.app, repo github.com/muhtasim-rahman/linkivo, hosting https://linkivo.web.app, Worker https://linkivo.programs-turzo.workers.dev, Firebase project `linkivo`.
+Files that name a version range carry a suffix (`PLAN-v2.0_to_v2.5.md`, `MASTER-PROMPT-v2.0_to_v2.5.md`, `CONTEXT-v2.0_to_v2.5.md`); from v2.6.0 new planning files get a new suffix and these stay (RULES section 9).
 
 ## Owner workflow
-Zip extracted into the project root (next to `.git`); old files are deleted by the owner from "Removed files". `@ Extra files` and `@ Versions` are private: never touched. `@ Creator` is public. Quote paths with `@` and spaces. Commit text comes from `commits/vX.Y.Z-commit.txt`. Chat starts: `Start vX.Y.Z`, `Continue`, `Fix: ...`, `Review`.
+Chat per version, inside the Linkivo v2 project, with the latest zip attached ("Start vX.Y.Z"). The owner extracts the zip into the project folder (next to `.git`), deletes the files listed under "Removed files", tests, commits with `@ Creator/commits/vX.Y.Z-commit.txt`, deploys (SETUP-GUIDE section F) and keeps the zip in `@ Versions`. Never touch `@ Extra files` or `@ Versions`.
 
-## Agreed with the owner (important, keep)
-- Splash: the owner's original logo animation is kept (shackle, ring drop with ripple, sparkles, expanding background, typed name); only the floating URL badges were removed. First launch full, later launches short, Settings > Appearance > Start animation (Auto / Always full / Always short). Never replace it with something simpler.
-- Icons and custom artwork are SVG FILES under `assets/` (`ui-icons`, `art`, `brand`), not inline in code. The logo and wordmark follow the accent color. Logo on dark backgrounds sits on a white rounded tile; favicon and PWA icons have a white background.
-- Design: not an AI-template look; emojis never; English UI. Pages are centred (max 1040px) next to a left sidebar. Sidebar has no filled background: expanded = whole active row highlighted, collapsed = active icon in a rounded square; collapsed logo shows an expand icon on hover; expanded logo opens Library. "Add links" uses a plus icon.
-- Settings is ONE page with category headings; PC keeps a category list fixed and synced with scroll; phones get a sticky chip bar. Labels and descriptions are on separate lines.
-- No right-click menu on PC and no long-press menu on phones (text fields keep theirs); setting to allow. Pull-to-refresh on phones (setting).
-- A new page always starts at the top; pages fade in softly; light/dark switch fades.
-- Updates: automatic (service worker reload) plus a version check against `/app.json`; an "Update now" popup appears when the app cannot switch by itself or automatic updates are off.
-- SEO-friendly always (owner does real SEO work from v2.6): one h1 per page, semantic HTML, per-route title/description/robots/canonical/Open Graph, private pages noindex, robots.txt, sitemap.xml, JSON-LD, noscript text.
-- Metadata for ANY pasted link matters (public app, any kind of site): richer fields and a rescue chain were added from the owner's tester results. Free third-party services Dub.co, AllOrigins, JSONLink were dead from Cloudflare and were removed; Microlink is last.
-- Signup requires agreeing to the Terms and Privacy policy (time stored as `profile/termsAt`).
-- Older rules still in force: free plans only; no admin panel, no profile picture upload, no incognito open; vault/PIN design in PLAN v2.5.0; points rules fixed in FEATURES section 8 (formula frozen with the owner at v2.4.0 kickoff).
+## Current state (v2.1.2)
+- Code: foundation and shell, about 85 JS files; Worker about 650 lines (one file, pasted into the Cloudflare dashboard). Tests: 90 (`node --test "@ Creator/tests/*.test.mjs"`, needs `jsdom` installed outside the project).
+- Routes: `/` (redirect), `/login`, `/reactivate`, `/library`, `/folder/:fid`, `/import`, `/link/:lid`, `/search`, `/random`, `/profile`, `/profile/history`, `/menu`, `/settings`, `/settings/:section` (scrolls to a category), `/terms`, `/privacy`, `/docs`, `/docs/:topic`, `*`. Only login, menu, profile, settings are real pages; the others are designed stubs that say which version delivers them.
+- Settings (device-level prefs, registry in `js/features/settings/catalog.js`): Appearance (theme, accent, text size, density, motion, page transitions, start animation, hide bar, collapse sidebar), Behavior (pull to refresh, block right-click and long-press), Account and sync (account rows, reset-password email, data and sync with Sync now), App (install, update automatically, updates, about), Advanced (metadata service, tester, clear app cache, debug log, reset). 19 entries; v2.6.0 raises the catalog to 30+.
+- Flags (`js/core/flags.js`): `randomFromFolder`, `shareTarget`, `appLock` off.
+- Database: complete generated rules for the whole schema (40 automated cases + `tests/rules-matrix.md`). Data empty until the owner resets the instance.
+- Worker: `/health`, `/meta` (guests 10, accounts 25 URLs per call; the app sends 6). No secrets yet (`PIN_PEPPER`, `FIREBASE_SERVICE_ACCOUNT` arrive in v2.5.0).
+- Assets: `assets/brand` (logo, logo-mark for masks, logo-tile on white), `assets/icons` (PNG/ICO/SVG on white, generated by `tools/make-icons.mjs`), `assets/art` (empty-state and login artwork as SVG).
 
-## Current state (v2.1.1)
-- Routes: `/` (start page setting), `/login`, `/reactivate` (stub), `/library`, `/folder/:fid`, `/import`, `/link/:lid`, `/search`, `/random`, `/profile/history` (stubs), `/menu`, `/profile`, `/settings` (+ `/settings/:section` scrolls), `/terms`, `/privacy`, `/docs`, `/docs/:topic` (stubs).
-- Settings registry: 7 sections, 21 entries (`js/features/settings/catalog.js`). Flags in `js/core/flags.js` all off.
-- Data: engines (local, cloud), job queue, chunker exist and are tested; no feature uses them yet. Rules generated from `js/engine/schema.js` by `tools/gen-rules.mjs` (includes `profile/termsAt`).
-- Worker v2.1.1: `/health`, `/meta` (guest 10 / account 25 URLs), two passes (primary, then rescue: crawler, jina, wayback, microlink), JSON-LD and body fallbacks, subrequest budget 36. No secrets needed until v2.5.0 (`PIN_PEPPER`, `FIREBASE_SERVICE_ACCOUNT`).
-- Tests: `node --test "@ Creator/tests/*.test.mjs"` (8 files). jsdom lives outside the project.
-- Unused but ready for v2.2.0: skeleton, scroll-fade, task-chip, `engine.purgeExpired`.
+## Owner agreements (carry forward)
+- Reply in Bangla with English technical terms; code, comments, docs, commits in English. Tables and structured notes, no vague answers, no unnecessary deletion of working code, point out unused code instead.
+- No emojis anywhere. Splash: the owner's v1 logo-creation animation WITHOUT the url badges; full on first start, short afterwards, switchable in Settings (D-051).
+- Smooth experience: pages fade in, every new page starts at its top, the theme switch glides. Context menu and long-press are blocked app-wide except in text fields (setting, default on). Pull-to-refresh on phones.
+- Sidebar: collapsed = rounded-square icons and an expand icon on logo hover; expanded = full rows, logo and name open the Library; Import links uses the plus icon; no sidebar background; profile badge with name, masked email and a three-dot menu that toggles.
+- Wide screens: sidebar fixed left, page content centred. Settings is one page with category headings; title and subtitle on separate lines. The accent color also colors the logo and wordmark.
+- Metadata must work for any link a public user may store; blocked sites still get a usable partial result.
+- SEO-friendly always (per-route meta, noindex for private pages); real SEO work from v2.6.0.
+- The app updates itself: automatically when it opens, with an "Update now" popup if a newer version appears while it is in use.
 
-## Decisions worth remembering (v2.1.x)
-Rules generated from schema; `profile/status` Worker-only; server clock for timestamps; Back follows the parent chain on all devices; settings device-level (not synced); precache list generated (`gen-precache.mjs`, includes icon SVGs); Worker file has only `export default`; test command uses a glob; Firebase SDK pinned 12.19.0; guest 10 / account 25 URLs per `/meta`.
+## Decisions (locked unless the owner changes them)
+D-001 versions v2.1.0 to v2.6.0, one per chat, patches v2.X.Y. D-002 plain JS, no build step. D-003 free plans only; Worker for server logic. D-005 guest mode fully local; later login keeps guest data until the v2.5.0 sync (D-047). D-006 Google and email/password. D-007 bulk work in chunks of 100, parallel, resumable. D-009 Worker-first metadata, fetched title wins unless user-edited. D-011 background work by Worker cron (v2.5.0). D-012 to D-016 app lock off by default; per-user PIN verified on the Worker; vault memory-only; forgot PIN keeps data; sensitive actions need the PIN (5-minute window). D-017 account deletion: 15-day recovery then purge. D-018 Recycle Bin 15 days, in Settings. D-019 History in Profile. D-020/D-021 mobile floating bottom bar (Library, Random, Import, Search, Menu), PC sidebar; URL per page; back follows the parent chain. D-022 preview tabs. D-023 points rules (picker frozen at v2.4.0 kickoff). D-025 icons on white. D-026 no-cache headers, network-first service worker. D-027/D-042 emails masked. D-028 no incognito, no profile picture upload (a Google account photo is shown read-only), no admin panel. D-030 declarative settings registry. D-031 `@ Creator`, `@ Versions`, `@ Extra files`; no `@` folder is deployed. D-032 export system (v2.2.0). D-033 rules generated from `js/engine/schema.js`. D-034 profile status written only by the Worker. D-035 server clock for timestamps. D-038 Worker has only `export default`, test hooks under `default.__test`. D-040 tags are one comma-separated string. D-041 Firebase SDK 12.19.0. D-043 precache list generated by `tools/gen-precache.mjs`. D-044 settings are device-level for now. D-045 test command uses `*.test.mjs`. D-046 Worker limits in isolate memory.
+- D-050 (v2.1.2) v2.1.2 is built from the v2.1.0 zip: the owner's v2.1.1 was broken and is skipped.
+- D-051 Splash restored (supersedes D-024): full v1 animation about 3.2 s without url badges; Automatic = full once, then short.
+- D-052 Settings is one page with a sticky, scroll-synced category list on wide screens; `/settings/:section` only scrolls.
+- D-053 Metadata chain: oEmbed, direct (browser UA), preview-crawler retries (Facebook, X), Jina Reader, Dub, JSONLink, Microlink, Wayback, AllOrigins; weak titles are completed from later engines; nothing readable gives `ok:true, partial:true` with a URL-derived title; only 404/410/unknown domain are `ok:false`; services failing 3 times are skipped for 5 minutes. Supersedes D-037 order.
+- D-054 Worker budget 30 subrequests per call, a fair slice per URL (3 to 6); the app sends 6 URLs per call (supersedes D-048). Reason: v2.1.0 field test hit the runtime cap with 25 URLs in one call.
+- D-055 Update system: `/app.json` version beacon (no-store) beside the service worker; applied automatically at launch (once per version per 10 minutes), popup while in use; setting "Update automatically".
+- D-056 Right-click and long-press are blocked by default (setting).
+- D-057 Artwork is SVG under `assets/art` and painted through CSS masks; the brand gradient variables follow the accent.
+- D-058 Terms, Privacy and Docs stay noindex and out of the sitemap until v2.6.0 gives them content.
+- D-059 Install prompt is captured from the first line of `main.js` (v2.1.0 attached the listener too late and missed it).
 
-## Open verifications (owner tests, not run by the AI)
-gstatic SDK path; Firebase CLI path with `@ Creator`; real RTDB rules in the Playground (matrix); Google sign-in popup on phones; Jina and Wayback rescue behavior from Cloudflare; why the platform cut subrequests below 45 (budget lowered to 36); desktop install prompt after the early-listener fix; full-screen OS launch splash on Android is controlled by the system (manifest colors and 512 icon only).
+## Open verifications and assumptions
+- A-002 email sign-up sends a verification email, app stays usable. A-003 points floor 1, cap 1000. A-004 fonts Outfit, Figtree, JetBrains Mono from Google Fonts. A-005 Recycle Bin purge on app open. A-008 Firebase CLI accepts the rules path `@ Creator/rules/database.rules.json` (fallback in ARCHITECTURE section 12). A-009 Firebase SDK files exist at gstatic 12.19.0. A-012 WordPress mShots as screenshot service (v2.3.0). A-013 Google sign-in popup works with the `firebaseapp.com` auth domain. A-014 rules: `null > now` denies.
+- [verify, owner] Metadata Worker against the real network: run Settings > Advanced > Metadata tester > Load 25 sample URLs after pasting the new Worker; report the summary line. This sandbox has no access to those sites, so Jina, Dub, JSONLink, Microlink, Wayback and the preview-crawler retry were tested with mocked `fetch` only.
+- [verify, owner] Worker CPU: parsing is about 1 ms per page in Node; the free plan allows 10 ms per call. If Cloudflare reports error 1102, lower `META_BATCH` in `js/core/worker-client.js` from 6 to 4.
+- [verify, owner] Install button on PC (Chrome/Edge) and Android install splash after the new icons; update popup after the next deploy (v2.1.2 is the first version that has it, so test it when v2.1.3 or later exists).
+- [verify, owner] The developer photo hosted at i.ibb.co.com loads in the About card (initials show if it does not).
 
-## Version log
-- v2.0.0 setup (structure, docs, tools, icons).
-- v2.1.0 foundation: auth, router, shell, engines, rules, Worker, settings shell, tests.
-- v2.1.1 (2026-10-20) fix release after the owner's review: original splash restored with modes, login rebuilt, sidebar and menu redesigned, single-page settings with more options, icons and art moved to assets, accent-colored logo, update popup, pull-to-refresh, SEO files, richer metadata Worker. Next: `Start v2.2.0`.
+## Verified facts
+- Cloudflare Workers Free: 100,000 requests/day, 10 ms CPU per request, 50 subrequests per request (developers.cloudflare.com/workers/platform/limits, 2026-10-22).
+- Jina Reader: free without a key, `Accept: application/json` returns title and description, 20 requests per minute per IP (jina.ai/reader, 2026-10-22).
+- Dub.co `GET https://api.dub.co/metatags?url=` needs no key (dub.co/docs, 2026-10-22); it answered HTML in the v2.1.0 field test, hence the circuit breaker.
+- Firebase JS SDK 12.19.0 (2026-09-09) from gstatic; 13.0.0 (2026-10-07) was too new for the 2-week rule.
+- Rendering icons from the vector at each size avoids the dark edge column that the v2.1.0 `icon-192.png` had.
+
+## Version history (one line each; full detail in the commit files)
+- v2.0.0 Setup (2026-10-18): structure, plan, rules, tools, icons, migration service worker.
+- v2.1.0 Foundation and shell (2026-10-18): auth, guest mode, router, shell, engines, rules, metadata Worker, settings shell, update flow.
+- v2.1.1: skipped (owner's attempt was broken and never delivered by the AI).
+
+## v2.1.2 Foundation fixes (2026-10-22) Status: COMPLETE (tested in jsdom, mocked-network Worker tests and headless Chromium against a local server; not tested on a phone, against live Firebase or the real network)
+Summary: everything from the owner's v2.1.0 feedback list plus the metadata rebuild.
+Files added/changed: `index.html` (splash, SEO head), `css/core/*`, `css/components/nav.css`, `feedback.css`, `css/pages/auth.css`, `settings.css`, `splash.css`; `js/core/{router,page-meta,update,install,input-guards,appearance,worker-client,app-info}.js`; `js/ui/{pull-refresh,popover,empty-state,icons}.js`; `js/features/{splash,shell,auth,settings}`; `assets/art/*`, `assets/brand/logo-mark.svg`, `logo-tile.svg`; `robots.txt`, `sitemap.xml`; Worker; tests (`v212.test.mjs`, worker, ui-smoke); renamed planning files.
+Decisions: D-050 to D-059. Verified facts: see above.
+Owner actions: pending (see commit file).
+Known issues: the OS-level splash of an installed app (white background and icon) appears before our splash and cannot be removed by a web page. Metadata results for protected sites depend on the live services (see open verifications). Terms, Privacy and Docs are still stubs.
+Next: v2.2.0 Library and import.

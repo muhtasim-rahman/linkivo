@@ -5,7 +5,7 @@ A fast, private link manager (PWA). Plain JavaScript, Firebase and a Cloudflare 
 - App: https://linkivo.web.app
 - Developer: Muhtasim Rahman, https://mdturzo.web.app
 
-**Status:** v2.1.0 (foundation and shell): sign-in and guest mode, navigation, settings, data engines, database rules and the metadata Worker are in place. Library, import and the rest arrive in v2.2.0 to v2.6.0; the full README arrives with v2.6.0.
+**Status:** v2.1.2 (foundation and shell): sign-in and guest mode, navigation, one-page settings, self-updating app, data engines, database rules and the metadata Worker are in place. Library, import and the rest arrive in v2.2.0 to v2.6.0; the full README arrives with v2.6.0.
 
 ## Repository layout
 

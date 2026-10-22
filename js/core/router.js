@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/core/router.js  (v2.1.0)
+ * Linkivo — js/core/router.js  (v2.1.2)
  * Purpose: path-based SPA router. ONE page is mounted at a time: the previous page is unmounted and its container is
  *          cleared before the next one mounts (the v1.4.x "pages overlap" bug can not happen).
  *          Back button = overlay layers first, then the route's parent chain, then the root exit rule (ARCHITECTURE s.7).
@@ -7,40 +7,14 @@
  *            guard: 'auth'|'public'|'open', redirect?: fn(session), tab?: string, shell?: boolean, load: () => import() }
  * Page module contract: export async function mount(container, ctx) -> unmount() | void
  *            ctx = { params, query, path, from, router }
- * SEO:     route.description (string) and route.robots override the defaults; see applyPageMeta().
- * API:     compileRoutes(table) resolveGuard(route, session) applyPageMeta(doc, route, path) createRouter(options) -> router
+ * API:     compileRoutes(table) resolveGuard(route, session) createRouter(options) -> router
  *   router: start() navigate(path, {from}) back() reevaluate() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers } from './nav-stack.js';
 import { createEmitter } from './events.js';
+import { pageMeta, applyPageMeta } from './page-meta.js';
 import { log } from './logger.js';
-import app from './app-info.js';
-
-const DEFAULT_TITLE = 'Linkivo - A fast, private link manager';
-const DEFAULT_DESC = 'Linkivo is a fast, private link manager. Keep thousands of links in folders, import them from text and files, and rediscover them. Free, works offline, installable.';
-
-/** SEO (v2.1.1): every route sets its own title, description, robots, canonical and Open Graph tags. Private app pages are noindex. */
-export function applyPageMeta(doc, route, path, base = app.hosting) {
-  const title = typeof route.title === 'function' ? route.title({}) : route.title;
-  const full = title ? `${title} - Linkivo` : DEFAULT_TITLE;
-  const isPrivate = route.guard === 'auth';
-  const desc = route.description || DEFAULT_DESC;
-  const set = (sel, attr, value, make) => {
-    let el = doc.head.querySelector(sel);
-    if (!el && make) { el = doc.createElement(make.tag); for (const [k, v] of Object.entries(make.attrs)) el.setAttribute(k, v); doc.head.appendChild(el); }
-    if (el) el.setAttribute(attr, value);
-  };
-  doc.title = full;
-  set('meta[name="description"]', 'content', desc, { tag: 'meta', attrs: { name: 'description' } });
-  set('meta[name="robots"]', 'content', route.robots || (isPrivate ? 'noindex, nofollow' : 'index, follow'), { tag: 'meta', attrs: { name: 'robots' } });
-  set('link[rel="canonical"]', 'href', isPrivate ? base + '/' : base + (path === '/' ? '/' : path), { tag: 'link', attrs: { rel: 'canonical' } });
-  set('meta[property="og:title"]', 'content', full, { tag: 'meta', attrs: { property: 'og:title' } });
-  set('meta[property="og:description"]', 'content', desc, { tag: 'meta', attrs: { property: 'og:description' } });
-  set('meta[property="og:url"]', 'content', isPrivate ? base + '/' : base + path, { tag: 'meta', attrs: { property: 'og:url' } });
-  set('meta[name="twitter:title"]', 'content', full, { tag: 'meta', attrs: { name: 'twitter:title' } });
-  set('meta[name="twitter:description"]', 'content', desc, { tag: 'meta', attrs: { name: 'twitter:description' } });
-}
 
 const safeDecode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 
@@ -96,6 +70,13 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     history.pushState({ lk: 'top', from: current?.from || null }, '', fullPath());
   }
 
+  /** A new page always starts at its top. #page-root has scroll-behavior: smooth (for in-page anchors), so switch it off for the jump. */
+  function resetScroll() {
+    container.style.scrollBehavior = 'auto';
+    container.scrollTop = 0; container.scrollLeft = 0;
+    requestAnimationFrame(() => { container.style.scrollBehavior = ''; });
+  }
+
   function unmountCurrent() {
     const c = current;
     if (c && c.unmount) { try { const r = c.unmount(); if (r && r.catch) r.catch((e) => log.warn('router', 'unmount failed', e)); } catch (e) { log.warn('router', 'unmount failed', e); } }
@@ -116,22 +97,27 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     if (!force && current && current.path === path && current.search === url.search) return;
 
     const mySeq = ++seq;
+    // Load the page module FIRST and keep the old page on screen meanwhile: no blank flash between pages (v2.1.2).
+    let mod = null, loadError = null;
+    try { mod = await route.load(); } catch (e) { loadError = e; }
+    if (mySeq !== seq) return;
+
     unmountCurrent();
     resetLayers(); // overlays belong to the page that is leaving
     container.replaceChildren();
-    container.scrollTop = 0;
-    applyPageMeta(document, { ...route, title: typeof route.title === 'function' ? route.title(params) : route.title }, path);
+    resetScroll();
+    applyPageMeta(pageMeta(route, params));
     current = { route, params, path, search: url.search, from, unmount: null };
     history.replaceState({ lk: 'top', from }, '', path + url.search + url.hash);
     const query = Object.fromEntries(url.searchParams);
     bus.emit('route', { route, params, path, query });
 
     try {
-      const mod = await route.load();
-      if (mySeq !== seq) return;
+      if (loadError) throw loadError;
       const unmount = await mod.mount(container, { params, query, path, from, router });
       if (mySeq !== seq) { try { if (typeof unmount === 'function') unmount(); } catch { /* ignore */ } return; }
       current.unmount = typeof unmount === 'function' ? unmount : null;
+      container.firstElementChild?.classList.add('page-enter');
       bus.emit('mounted', { route, params, path });
     } catch (e) {
       log.error('router', 'page failed to load', { path, error: e });

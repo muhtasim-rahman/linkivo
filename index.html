@@ -3,26 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Linkivo - A fast, private link manager</title>
-  <meta name="description" content="Linkivo is a fast, private link manager. Keep thousands of links in folders, import them from text and files, and rediscover them. Free, works offline, installable.">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://linkivo.web.app/">
-  <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
-  <meta name="color-scheme" content="light dark">
+  <title>Linkivo: manage your links</title>
+  <meta name="description" content="Linkivo is a fast, private link manager. Save, organise and rediscover thousands of links and bookmarks, in a browser or as an installed app.">
+  <meta name="robots" content="index,follow">
+  <meta name="author" content="Muhtasim Rahman">
   <meta name="application-name" content="Linkivo">
   <meta name="apple-mobile-web-app-title" content="Linkivo">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <link rel="canonical" href="https://linkivo.web.app/login">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Linkivo">
-  <meta property="og:title" content="Linkivo - A fast, private link manager">
-  <meta property="og:description" content="Keep thousands of links in folders, import them from text and files, and rediscover them. Free and private.">
-  <meta property="og:url" content="https://linkivo.web.app/">
+  <meta property="og:title" content="Linkivo: manage your links">
+  <meta property="og:description" content="A fast, private link manager for people with hundreds or thousands of links.">
+  <meta property="og:url" content="https://linkivo.web.app/login">
   <meta property="og:image" content="https://linkivo.web.app/assets/icons/og-image.png">
-  <meta property="og:locale" content="en_US">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Linkivo logo: a padlock shackle over two linked rings">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Linkivo - A fast, private link manager">
-  <meta name="twitter:description" content="Keep thousands of links in folders, import them from text and files, and rediscover them.">
+  <meta name="twitter:title" content="Linkivo: manage your links">
+  <meta name="twitter:description" content="A fast, private link manager for people with hundreds or thousands of links.">
   <meta name="twitter:image" content="https://linkivo.web.app/assets/icons/og-image.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
@@ -30,7 +35,7 @@
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@600;700;800&display=swap">
   <link rel="stylesheet" href="/css/core/tokens.css">
   <link rel="stylesheet" href="/css/core/base.css">
   <link rel="stylesheet" href="/css/core/layout.css">
@@ -42,17 +47,14 @@
   <link rel="stylesheet" href="/css/components/feedback.css">
   <link rel="stylesheet" href="/css/components/nav.css">
   <link rel="stylesheet" href="/css/pages/splash.css">
-  <link rel="preload" href="/assets/ui-icons/library.svg" as="image" type="image/svg+xml">
-  <link rel="preload" href="/assets/ui-icons/random.svg" as="image" type="image/svg+xml">
-  <link rel="preload" href="/assets/ui-icons/plus.svg" as="image" type="image/svg+xml">
-  <link rel="preload" href="/assets/ui-icons/search.svg" as="image" type="image/svg+xml">
-  <link rel="preload" href="/assets/ui-icons/menu.svg" as="image" type="image/svg+xml">
   <link rel="modulepreload" href="/js/main.js">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Linkivo","url":"https://linkivo.web.app/","description":"Linkivo is a fast, private link manager: keep thousands of links in folders, import them from text and files, and rediscover them.","applicationCategory":"ProductivityApplication","operatingSystem":"Any (web, installable)","browserRequirements":"Requires a modern browser with JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Muhtasim Rahman","url":"https://mdturzo.web.app"},"inLanguage":"en"}</script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"Linkivo","url":"https://linkivo.web.app/","description":"A fast, private link manager for people with hundreds or thousands of links.","applicationCategory":"ProductivityApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Muhtasim Rahman","url":"https://mdturzo.web.app"}}
+  </script>
 </head>
 <body>
   <div id="app" data-chrome="none">
-    <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
     <div class="app-main">
       <main id="page-root" tabindex="-1"></main>
     </div>
@@ -60,44 +62,44 @@
   </div>
   <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="false"></div>
 
+  <!-- Splash (v2.1.2): the v1 logo-creation animation without the url badges. Driven by js/features/splash/splash.js; this markup is
+       inline on purpose (animated SVG that script drives, RULES section 9). data-mode: pending | full | short | still -->
   <div class="splash" id="splash" data-mode="pending" role="status" aria-label="Loading Linkivo">
-    <div class="sp-bg" id="sp-bg"></div>
+    <div class="sp-expand" id="sp-expand"></div>
     <div class="sp-grid"></div>
     <div class="sp-orb"></div>
-    <div class="sp-logo" id="sp-logo">
-      <svg id="sp-svg" viewBox="180 210 680 630" aria-hidden="true" focusable="false">
+    <div class="splash-stage">
+      <svg class="splash-mark" id="sp-svg" viewBox="180 210 680 630" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:var(--brand-a)"/><stop offset="100%" style="stop-color:var(--brand-b)"/></linearGradient>
-          <mask id="sm-shackle"><path id="sp-u" pathLength="1" d="M 259 520 L 259 340 A 94.35 94.35 0 0 1 447.7 340 L 447.7 520" fill="none" stroke="#fff" stroke-width="44" stroke-linecap="round"/></mask>
-          <mask id="sm-bar"><path id="sp-b" pathLength="1" d="M 310 648 L 725 648" fill="none" stroke="#fff" stroke-width="100" stroke-linecap="round"/></mask>
+          <mask id="sm-shackle"><path id="sp-shackle-mask" class="sp-mask" pathLength="1" d="M 259 520 L 259 340 A 94.35 94.35 0 0 1 447.7 340 L 447.7 520" fill="none" stroke="#fff" stroke-width="44" stroke-linecap="round"/></mask>
+          <mask id="sm-bar"><path id="sp-bar-mask" class="sp-mask" pathLength="1" d="M 310 648 L 725 648" fill="none" stroke="#fff" stroke-width="100" stroke-linecap="round"/></mask>
         </defs>
         <circle id="sp-pulse" cx="353" cy="648" r="0" fill="none" stroke="url(#sg)" stroke-width="6" opacity="0"/>
-        <g id="sp-sparkles"></g>
+        <g id="sp-sparks"></g>
         <g id="sp-la">
           <path mask="url(#sm-shackle)" fill="url(#sg)" d="M278.406189,320.430054 C276.850037,330.461884 277.226227,340.133789 277.224182,349.786865 C277.214233,396.775665 277.172058,443.764618 277.328613,490.752930 C277.343842,495.330170 276.050354,498.045868 271.834076,500.140533 C262.560791,504.747498 254.153976,510.776245 246.116409,517.307251 C244.866058,518.323181 243.763046,519.710449 241.832214,519.727234 C240.090759,518.355713 240.739273,516.377258 240.738708,514.666992 C240.718811,455.014587 240.540039,395.361053 240.873856,335.710388 C240.990280,314.905243 244.620911,294.608673 254.789886,276.031921 C266.652985,254.360306 285.134308,240.826324 308.570251,234.309402 C337.018555,226.398651 365.810089,226.206589 394.452454,233.431793 C432.030457,242.911041 454.000671,267.532928 462.208496,304.922150 C464.276123,314.340820 465.389038,323.911011 465.375793,333.620972 C465.315826,377.610260 465.350067,421.599854 465.444672,465.589111 C465.479401,481.746490 465.791595,497.903137 465.927765,514.060547 C465.943970,515.984924 466.441162,518.084412 464.754425,519.714478 C462.542999,519.509216 461.262726,517.835632 459.743774,516.606689 C452.210266,510.511169 444.347504,504.814514 435.627106,500.635193 C430.754944,498.300171 429.520386,495.229034 429.537933,490.148804 C429.710419,440.161255 429.698792,390.172882 429.621063,340.184906 C429.603943,329.171936 428.383301,318.245392 425.240784,307.637787 C418.497772,284.876740 403.458710,270.699249 380.424622,265.239563 C362.497589,260.990417 344.435181,260.885193 326.490723,265.174561 C299.734497,271.570190 284.748810,289.145111 279.345612,315.594421 C279.046082,317.060638 278.747040,318.527008 278.406189,320.430054z"/>
-          <g id="sp-lrg" style="transform-origin:353px 648px"><path id="sp-lr" pathLength="1" fill="url(#sg)" fill-opacity="0" stroke="url(#sg)" stroke-width="3" d="M510.904144,685.617310 C494.182220,748.066223 455.364685,789.378540 393.227173,805.461731 C303.379089,828.717468 215.301636,773.236328 195.343140,682.937073 C175.955170,595.218994 233.806610,507.442719 322.149933,490.536896 C409.527008,473.815979 494.307587,529.849304 511.626404,615.633972 C512.450928,619.718079 511.606873,621.188110 507.489105,621.156433 C496.658905,621.073120 485.823425,620.971741 474.998596,621.232544 C470.577667,621.339050 469.959045,618.518738 468.966461,615.418213 C455.137726,572.220947 426.485016,543.875305 382.653412,532.389832 C316.032104,514.932739 248.667633,557.974609 235.263611,625.615417 C222.336761,690.848267 264.723663,754.333252 329.923279,767.391846 C390.564850,779.537598 451.578705,742.579224 468.754608,682.997803 C470.358734,677.433350 472.720337,675.520142 478.405762,675.815125 C487.379700,676.280640 496.395508,675.915771 505.393433,675.947815 C512.702148,675.973877 512.779846,676.100220 511.364075,683.247681 C511.234772,683.900574 511.139404,684.560181 510.904144,685.617310z"/></g>
+          <g id="sp-lring-g"><path id="sp-ringl" class="sp-ring" pathLength="1" fill="url(#sg)" stroke="url(#sg)" stroke-width="3" d="M510.904144,685.617310 C494.182220,748.066223 455.364685,789.378540 393.227173,805.461731 C303.379089,828.717468 215.301636,773.236328 195.343140,682.937073 C175.955170,595.218994 233.806610,507.442719 322.149933,490.536896 C409.527008,473.815979 494.307587,529.849304 511.626404,615.633972 C512.450928,619.718079 511.606873,621.188110 507.489105,621.156433 C496.658905,621.073120 485.823425,620.971741 474.998596,621.232544 C470.577667,621.339050 469.959045,618.518738 468.966461,615.418213 C455.137726,572.220947 426.485016,543.875305 382.653412,532.389832 C316.032104,514.932739 248.667633,557.974609 235.263611,625.615417 C222.336761,690.848267 264.723663,754.333252 329.923279,767.391846 C390.564850,779.537598 451.578705,742.579224 468.754608,682.997803 C470.358734,677.433350 472.720337,675.520142 478.405762,675.815125 C487.379700,676.280640 496.395508,675.915771 505.393433,675.947815 C512.702148,675.973877 512.779846,676.100220 511.364075,683.247681 C511.234772,683.900574 511.139404,684.560181 510.904144,685.617310z"/></g>
         </g>
         <path mask="url(#sm-bar)" fill="url(#sg)" d="M620.000000,669.191040 C544.185852,669.188049 468.871643,669.213989 393.557617,669.111023 C388.940857,669.104736 385.678619,670.075806 382.492279,673.951782 C371.579254,687.226929 352.962189,691.189575 337.615997,684.180359 C322.284424,677.177979 312.766602,660.486267 315.176239,644.827332 C318.026794,626.303345 331.084717,612.772095 348.673065,610.891418 C362.312256,609.433044 374.003143,613.926697 382.931152,624.528992 C384.991699,626.976013 387.090637,627.890076 390.167572,627.887634 C474.979248,627.820557 559.790955,627.802734 644.602600,627.853638 C648.027649,627.855713 650.383667,626.928284 652.701721,624.177979 C663.584900,611.265320 681.905701,607.156799 697.193970,613.843872 C713.421570,620.941833 722.184082,636.314148 720.217102,654.234009 C718.448364,670.348206 705.640381,684.158447 688.870117,686.877380 C674.164062,689.261719 661.459900,684.814941 651.980774,672.959412 C649.748047,670.166931 647.476196,669.053284 643.992615,669.141235 C636.166260,669.338867 628.331421,669.195435 620.000000,669.191040z"/>
-        <path id="sp-rr" pathLength="1" fill="url(#sg)" fill-opacity="0" stroke="url(#sg)" stroke-width="3" d="M591.546875,728.458496 C615.914734,755.309570 645.946106,769.322571 681.835327,769.573853 C737.822998,769.965820 786.918457,730.646973 799.602173,675.958496 C815.286926,608.330322 769.652405,540.832397 701.065979,530.213745 C640.305725,520.806763 582.917114,557.315857 566.346130,616.080139 C565.226990,620.048645 563.459534,621.344543 559.398865,621.230225 C549.240662,620.944214 539.069153,621.145752 528.903076,621.118591 C523.135559,621.103210 522.637268,620.604614 523.857605,615.147583 C530.557861,585.185059 544.253113,558.900391 565.675354,536.828308 C593.866333,507.782196 628.339905,491.206390 668.543213,487.997711 C752.197815,481.321167 824.222900,537.032959 840.018127,615.682129 C851.814636,674.420288 835.524414,725.592651 792.203796,767.257446 C767.219116,791.287170 736.892578,805.041443 702.411377,809.413208 C618.439392,820.059814 542.622742,765.033386 524.226624,684.413391 C524.152527,684.088989 524.025940,683.776245 523.955994,683.451111 C522.356018,676.016418 522.426697,675.932983 530.061523,675.933350 C539.727661,675.933838 549.396729,676.067871 559.058411,675.860413 C563.012024,675.775513 565.008911,677.024597 566.068787,681.047363 C570.728699,698.734497 579.326904,714.389038 591.546875,728.458496z"/>
-        <circle id="sp-pulse2" cx="686" cy="648" r="0" fill="none" style="stroke:var(--brand-b)" stroke-width="5" opacity="0"/>
+        <path id="sp-ringr" class="sp-ring" pathLength="1" fill="url(#sg)" stroke="url(#sg)" stroke-width="3" d="M591.546875,728.458496 C615.914734,755.309570 645.946106,769.322571 681.835327,769.573853 C737.822998,769.965820 786.918457,730.646973 799.602173,675.958496 C815.286926,608.330322 769.652405,540.832397 701.065979,530.213745 C640.305725,520.806763 582.917114,557.315857 566.346130,616.080139 C565.226990,620.048645 563.459534,621.344543 559.398865,621.230225 C549.240662,620.944214 539.069153,621.145752 528.903076,621.118591 C523.135559,621.103210 522.637268,620.604614 523.857605,615.147583 C530.557861,585.185059 544.253113,558.900391 565.675354,536.828308 C593.866333,507.782196 628.339905,491.206390 668.543213,487.997711 C752.197815,481.321167 824.222900,537.032959 840.018127,615.682129 C851.814636,674.420288 835.524414,725.592651 792.203796,767.257446 C767.219116,791.287170 736.892578,805.041443 702.411377,809.413208 C618.439392,820.059814 542.622742,765.033386 524.226624,684.413391 C524.152527,684.088989 524.025940,683.776245 523.955994,683.451111 C522.356018,676.016418 522.426697,675.932983 530.061523,675.933350 C539.727661,675.933838 549.396729,676.067871 559.058411,675.860413 C563.012024,675.775513 565.008911,677.024597 566.068787,681.047363 C570.728699,698.734497 579.326904,714.389038 591.546875,728.458496z"/>
+        <circle id="sp-pulse2" cx="686" cy="648" r="0" fill="none" stroke="var(--brand-b)" stroke-width="5" opacity="0"/>
       </svg>
-    </div>
-    <div class="sp-brand">
-      <div class="sp-name" id="sp-name" aria-hidden="true"></div>
-      <div class="sp-tag" id="sp-tag">Manage your links <span class="sp-badge" id="sp-badge"></span></div>
-    </div>
-    <div class="dots sp-dots" id="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="sp-fail" id="splash-fail" hidden>
-      <p>Linkivo could not start. Check your connection and try again.</p>
-      <a class="btn btn-primary" href="/" data-native>Reload</a>
+      <div class="splash-word wordmark" id="sp-word" aria-hidden="true"><span class="t-char">l</span><span class="t-char idot-wrap">ı<i class="idot"></i></span><span class="t-char">n</span><span class="t-char">k</span><span class="t-char idot-wrap">ı<i class="idot"></i></span><span class="t-char">v</span><span class="t-char">o</span></div>
+      <div class="splash-tag" id="sp-tag" aria-hidden="true">Manage your links</div>
+      <div class="dots splash-dots" id="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="splash-fail" id="splash-fail" hidden>
+        <p>Linkivo could not start. Check your connection and try again.</p>
+        <a class="btn btn-primary" href="/" data-native>Reload</a>
+      </div>
     </div>
   </div>
 
   <noscript>
-    <div style="position:fixed;inset:0;z-index:2000;overflow:auto;padding:32px 24px;background:#fff;color:#0c1629;font:16px/1.6 system-ui,sans-serif">
-      <h1 style="margin:0 0 8px;font-size:28px">Linkivo</h1>
-      <p style="max-width:60ch">Linkivo is a fast, private link manager. Keep thousands of links in folders, import them from text and files, and rediscover them with Random Discover. It is free, works offline and can be installed like an app.</p>
-      <p style="max-width:60ch">Linkivo needs JavaScript to run. Please enable JavaScript in your browser and reload this page.</p>
+    <div style="position:fixed;inset:0;z-index:2000;margin:0;padding:24px;background:#fff;color:#0c1629;font:16px/1.5 system-ui">
+      <h1 style="font-size:22px;margin:0 0 8px">Linkivo</h1>
+      <p style="margin:0 0 8px">Linkivo is a fast, private link manager. It needs JavaScript to run, so please turn it on and reload this page.</p>
+      <p style="margin:0"><a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="https://github.com/muhtasim-rahman/linkivo">Source code</a></p>
     </div>
   </noscript>
   <script>
@@ -105,7 +107,7 @@
     // show a visible way out instead of a blank screen. main.js sets data-boot="ok" when the first page is ready.
     (function () {
       var root = document.documentElement;
-      function fail() { if (root.dataset.boot === 'ok') return; var f = document.getElementById('splash-fail'); var s = document.getElementById('splash'); if (s) s.dataset.mode = 'still'; if (f) f.hidden = false; }
+      function fail() { if (root.dataset.boot === 'ok') return; var f = document.getElementById('splash-fail'); if (f) f.hidden = false; }
       window.addEventListener('error', function (e) { if (e.target && e.target.tagName === 'SCRIPT') fail(); }, true);
       setTimeout(fail, 15000);
     })();

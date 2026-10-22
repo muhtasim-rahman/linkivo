@@ -1,18 +1,18 @@
 /**
- * Linkivo — js/ui/empty-state.js  (v2.1.0)
- * Purpose: designed empty and error states (every list has one: RULES section 5). The small ring drawings are SVG files in assets/art/;
- *          each variant is arranged differently so empty pages do not look copy-pasted.
+ * Linkivo — js/ui/empty-state.js  (v2.1.2)
+ * Purpose: designed empty and error states (every list has one: RULES section 5). The small ring drawings are SVG files
+ *          under assets/art, each arranged differently so empty pages do not look copy-pasted.
  * API: emptyState({ art, title, text, actions:[{label, href, onClick, primary}] }) -> Element
  *      renderLoadError(container, retry)      ART_VARIANTS
  */
 import { h } from '../core/dom.js';
 
-export const ART_VARIANTS = ['library', 'random', 'import', 'search', 'menu', 'profile', 'settings', 'lost', 'error'];
+// Artwork lives as SVG files in assets/art (RULES section 9) and is painted with the brand gradient through a CSS mask.
+export const ART_VARIANTS = ['library', 'import', 'random', 'search', 'menu', 'profile', 'settings', 'lost', 'error'];
 
-/** The drawings are files in /assets/art/empty-<name>.svg, used as a mask so they take the accent color. */
 function art(variant) {
   const v = ART_VARIANTS.includes(variant) ? variant : 'library';
-  return h('span', { class: 'empty-art', style: { '--art': `url("/assets/art/empty-${v}.svg")` }, 'aria-hidden': 'true' });
+  return h('span', { class: 'empty-art', 'aria-hidden': 'true', style: { '--art': `url(/assets/art/${v}.svg)` } });
 }
 
 export function emptyState({ art: variant = 'library', title, text = '', actions = [] }) {

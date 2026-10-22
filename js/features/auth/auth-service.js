@@ -4,7 +4,7 @@
  *          Google sign-in uses a popup and falls back to a redirect where popups are blocked (mobile PWA, in-app browsers).
  * API: initAuth() -> Promise<void>   (resolves when the first session state is known)
  *      signInWithGoogle() signInWithEmail(email, password) registerWithEmail(email, password) sendReset(email)
- *      updateDisplayName(name) resendVerification() signOutUser() enterGuest() leaveGuest() getIdToken() reauthenticate(password?)
+ *      resendVerification() signOutUser() enterGuest() leaveGuest() getIdToken() reauthenticate(password?)
  *      friendlyAuthError(error) -> string|null (null = user cancelled, show nothing)
  */
 import { loadFirebase } from '../../core/firebase-loader.js';
@@ -18,7 +18,7 @@ let fb = null;
 const userInfo = (u) => ({
   uid: u.uid, email: u.email || '', name: u.displayName || (u.email ? u.email.split('@')[0] : 'Account'),
   emailVerified: !!u.emailVerified, providers: (u.providerData || []).map((p) => p.providerId),
-  created: u.metadata && u.metadata.creationTime ? Date.parse(u.metadata.creationTime) : 0, lastSignIn: u.metadata && u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) : 0
+  photo: /^https:\/\//.test(u.photoURL || '') ? u.photoURL : '' // Google profile picture, shown read-only (uploading one stays out of scope, D-028)
 });
 
 export async function initAuth() {
@@ -59,14 +59,6 @@ export async function registerWithEmail(email, password) {
 }
 export async function sendReset(email) { const { auth, mods } = await sdk(); await mods.auth.sendPasswordResetEmail(auth, email.trim()); }
 export async function resendVerification() { const { auth, mods } = await sdk(); if (auth.currentUser) await mods.auth.sendEmailVerification(auth.currentUser); }
-export async function updateDisplayName(name) {
-  const { auth, mods, db } = await sdk();
-  const clean = String(name).trim().slice(0, 60);
-  if (!clean || !auth.currentUser) throw new Error('Enter a name');
-  await mods.auth.updateProfile(auth.currentUser, { displayName: clean });
-  try { await mods.database.update(mods.database.ref(db), { [`users/${auth.currentUser.uid}/profile/name`]: clean }); } catch (e) { log.warn('auth', 'profile name not synced', e); }
-  setSession({ user: { ...getSession().user, name: clean } });
-}
 export async function getIdToken() { return fb && fb.auth.currentUser ? fb.auth.currentUser.getIdToken() : null; }
 
 /** Fresh sign-in proof for sensitive server actions (v2.5.0). Password users pass their password; Google users get a popup. */

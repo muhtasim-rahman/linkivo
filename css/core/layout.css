@@ -1,18 +1,14 @@
-/* Linkivo v2.1.1 - application frame. One scroll container per page (#page-root), chrome stays outside it.
-   Pages are centred in the space next to the sidebar and never grow wider than 1040px (owner request). */
+/* Linkivo v2.1.2 - application frame. One scroll container per page (#page-root), chrome stays outside it. */
 #app { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; }
 #app[data-chrome='none'] .sidebar, #app[data-chrome='none'] .bar { display: none; }
 .app-main { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-/* no scroll-behavior: smooth here: a new page must start at the top at once, never glide there from the old position */
-#page-root { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+#page-root { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
 #app:not([data-chrome='none']) #page-root { padding-bottom: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b)); }
 .sidebar { display: none; }
-/* soft page entrance (opacity + 10px rise); off with Settings > Appearance > Page transitions or reduced motion */
-#page-root > * { animation: lk-page-in 260ms var(--ease) both; }
-:root[data-pt='off'] #page-root > * { animation: none; }
 
-.page { min-height: 100%; padding: calc(var(--safe-t) + var(--s4)) var(--pad) var(--s6); max-width: 1040px; margin: 0 auto; }
+.page { min-height: 100%; padding: calc(var(--safe-t) + var(--s4)) var(--pad) var(--s6); max-width: var(--content-max); margin: 0 auto; }
 .page-head { display: flex; align-items: center; gap: var(--s3); min-height: 48px; margin-bottom: var(--s4); }
+.page-head.is-stack { display: grid; gap: var(--s1); align-items: start; min-height: 0; }
 .page-title { font: 650 var(--fs-xl) / 1.15 var(--font-brand); letter-spacing: -0.01em; flex: 1; min-width: 0; }
 .page-sub { color: var(--sub); margin-top: var(--s1); max-width: 60ch; }
 .page-actions { display: flex; gap: var(--s2); align-items: center; }
@@ -23,6 +19,8 @@
   #app:not([data-chrome='none']) #page-root { padding-bottom: 0; }
   .sidebar { display: flex; }
   .bar { display: none !important; }
-  .page { padding-top: var(--s8); padding-inline: var(--s8); }
+  /* wide screens: the sidebar stays on the left, the page content is centred in the space that remains (never stuck to the left edge) */
+  .page { padding-top: var(--s8); padding-inline: var(--s8); margin-inline: auto; }
+  .page.is-wide { --content-max: 1080px; }
   .page-title { font-size: var(--fs-2xl); }
 }

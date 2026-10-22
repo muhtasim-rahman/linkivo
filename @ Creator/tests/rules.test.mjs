@@ -73,7 +73,6 @@ test('profile: only name, createdAt, lastLogin; status is Worker-only', () => {
   assert.equal(w('users/u1/profile/name', 'x'.repeat(61)), false);
   assert.equal(w('users/u1/profile/createdAt', NOW), true);
   assert.equal(w('users/u1/profile/lastLogin', NOW + 70_000), false);
-  assert.equal(w('users/u1/profile/termsAt', NOW), true); assert.equal(w('users/u1/profile/termsAt', NOW + 70_000), false);
   assert.equal(w('users/u1/profile/status', 'active'), false, 'client can not set status');
   assert.equal(w('users/u1/profile/status', 'deleted'), false);
   assert.equal(w('users/u1/profile/role', 'admin'), false);

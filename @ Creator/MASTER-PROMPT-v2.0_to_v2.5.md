@@ -45,7 +45,7 @@ Before delivery all of these must pass; fix problems instead of explaining them 
 Put all outputs in `/mnt/user-data/outputs` and present them:
 1. **`linkivo-vX.Y.Z.zip`**, created with `bash "@ Creator/tools/pack.sh"` (runs the gate, zips the project root contents without a wrapper folder, INCLUDES `@ Creator`, excludes the owner's private `@ Extra files` and `@ Versions`, and excludes `.git`, `node_modules`).
 2. **`@ Creator/commits/vX.Y.Z-commit.txt`**: the commit message (template below), also shown inside the zip.
-3. **Updated `@ Creator/CONTEXT-v2.0_to_v2.5.md`**: compact update as described in the template below (state, version log line, owner agreements); no long entries.
+3. **Updated `@ Creator/CONTEXT-v2.0_to_v2.5.md`**: append a new version entry, update the "Current state" sections (schema, routes, files, flags, settings registry, Worker routes, owner actions done/pending), never edit earlier version entries.
 4. Updated docs/rules/Worker when changed: `@ Creator/rules/database.rules.json` (+ snapshot `history/database.rules-vX.Y.Z.json`), `@ Creator/worker/worker.js` (+ snapshot `history/worker-vX.Y.Z.js`). The owner pastes the Worker into the Cloudflare dashboard, so give it as one complete file.
 5. The **chat summary** in Bangla (template below).
 
@@ -83,8 +83,18 @@ Owner actions:
 "Start vX.Y+1.0" দিয়ে নতুন chat শুরু করো।
 ```
 
-### CONTEXT-v2.0_to_v2.5.md update (keep it COMPACT)
-Update "Current state", add a short "Version log" line (date, what changed in one or two lines, next step), add to "Agreed with the owner" only things the owner said or changed in chat that a future chat must know, and remove anything outdated. Do not append long per-version entries.
+### CONTEXT-v2.0_to_v2.5.md version entry (append)
+```
+## vX.Y.Z <name> (YYYY-MM-DD) Status: COMPLETE | PARTIAL
+Summary: ...
+Files added/changed: (grouped)
+Decisions: D-nnn ... (reason)
+Verified facts: ... (source, date)
+Assumptions awaiting owner confirmation: ...
+Owner actions: done / pending
+Known issues: ...
+Next: ...
+```
 
 ## 6. Capacity and partial delivery
 

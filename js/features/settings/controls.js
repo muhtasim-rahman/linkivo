@@ -1,6 +1,6 @@
 /**
  * Linkivo — js/features/settings/controls.js  (v2.1.0)
- * Purpose: renders one registry entry (seg, switch, swatch, select) as a row and stores the value through local-prefs.
+ * Purpose: renders one registry entry (seg, switch, swatch) as a row and stores the value through local-prefs.
  * API: renderControl(entry) -> Element
  */
 import { h } from '../../core/dom.js';
@@ -31,11 +31,6 @@ export function renderControl(entry) {
     const sync = () => wrap.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === get())));
     sync();
     return shell(entry, wrap, true);
-  }
-  if (entry.type === 'select') {
-    const sel = h('select', { class: 'select', 'aria-label': entry.label, on: { change: () => prefs.set(entry.key, sel.value) } }, entry.options.map((o) => h('option', { value: o.value, text: o.label })));
-    sel.value = get();
-    return shell(entry, sel);
   }
   return h('div');
 }

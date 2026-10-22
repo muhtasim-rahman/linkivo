@@ -79,96 +79,111 @@ test('chain: direct fetch succeeds, result fields, frameable, favicon fallback, 
   assert.equal(again.cached, true); assert.equal(again.title, 'Hello & welcome');
 });
 
-test('rescue: a 403 on the direct fetch is retried as a link-preview crawler; every attempt is logged', async () => {
-  T.resetCaches();
-  const uas = [];
-  const ctx = ctxWith(async (url, init) => {
-    uas.push(init.headers['User-Agent']);
-    return /facebookexternalhit/.test(init.headers['User-Agent']) ? htmlRes(GOOD) : new Response('no', { status: 403 });
-  });
-  const r = await T.metaForUrl('https://blocked.test/page', ctx);
-  assert.equal(r.ok, true); assert.equal(r.engine, 'crawler'); assert.equal(r.title, 'Hello & welcome');
-  assert.deepEqual(r.log.map((l) => [l.engine, l.ok]), [['direct', false], ['crawler', true]]); assert.match(r.log[0].error, /HTTP 403/);
-  assert.equal(uas.length, 2);
-});
-
-test('rescue: after the crawler, Jina answers; at most 2 rescue engines per URL, so Wayback and Microlink stay unused', async () => {
-  T.resetCaches();
-  const hosts = [];
-  const ctx = ctxWith(async (url) => {
-    hosts.push(new URL(url).hostname);
-    if (url.startsWith('https://r.jina.ai/')) return new Response(JSON.stringify({ code: 200, data: { title: 'From Jina', description: 'Reader description', url: 'https://hard.test/' } }), { status: 200 });
-    return new Response('no', { status: 403 });
-  });
-  const r = await T.metaForUrl('https://hard.test/', ctx);
-  assert.equal(r.engine, 'jina'); assert.equal(r.title, 'From Jina'); assert.equal(r.frameable, null);
-  assert.deepEqual(r.log.map((l) => l.engine), ['direct', 'crawler', 'jina']); assert.ok(!hosts.includes('web.archive.org') && !hosts.includes('api.microlink.io'));
-  T.resetCaches();
-  const all = await T.metaForUrl('https://hard2.test/', ctxWith(async () => new Response('no', { status: 403 })), { rescueAttempts: 4 });
-  assert.deepEqual(all.log.map((l) => l.engine), ['direct', 'crawler', 'jina', 'wayback', 'microlink']); assert.equal(all.ok, false);
-});
-
-test('rescue: Wayback reads the archived head and keeps the original address; DNS and 404 failures are not rescued', async () => {
-  T.resetCaches();
-  const r = await T.metaForUrl('https://old.test/page', ctxWith(async (url) => {
-    if (url === 'https://web.archive.org/web/2id_/https://old.test/page') return new Response(null, { status: 302, headers: { location: 'https://web.archive.org/web/20240101000000id_/https://old.test/page' } });
-    if (url.startsWith('https://web.archive.org/web/20240101')) return htmlRes(html('<title>Archived title</title><link rel="icon" href="/f.ico">'));
-    return new Response('no', { status: 403 });
-  }), { rescueAttempts: 3 });
-  assert.equal(r.engine, 'wayback'); assert.equal(r.title, 'Archived title'); assert.equal(r.archived, true); assert.equal(r.finalUrl, 'https://old.test/page'); assert.equal(r.favicon, 'https://old.test/f.ico');
-  T.resetCaches();
-  for (const [status, text] of [[404, /HTTP 404/], [530, /site not found/]]) {
-    let n = 0;
-    const g = await T.metaForUrl(`https://gone${status}.test/`, ctxWith(async () => { n++; return new Response('x', { status }); }));
-    assert.equal(n, 1, `status ${status} costs one request only`); assert.match(g.log[0].error, text); assert.equal(g.ok, false);
-  }
-});
-
-test('DIRECT_SKIP sites go straight to the rescue engines; the log shows only those', async () => {
+test('chain: blocked direct fetch retries as preview crawlers, then Jina, then the services, and logs every attempt', async () => {
   T.resetCaches();
   const seen = [];
-  const r = await T.metaForUrl('https://www.linkedin.com/company/x', ctxWith(async (url) => { seen.push(new URL(url).hostname); throw new Error('down'); }));
-  assert.equal(r.ok, false); assert.equal(r.error, 'every engine failed'); assert.deepEqual(r.log.map((l) => l.engine), ['crawler', 'jina']);
+  const ctx = ctxWith(async (url, init) => {
+    const host = new URL(url).hostname; seen.push([host, (init.headers && init.headers['User-Agent'] || '').split('/')[0]]);
+    if (host === 'blocked.test') return new Response('no', { status: 403 });
+    if (host === 'r.jina.ai') return new Response('{"code":200,"data":{"title":"Real page title","description":"A real description","url":"https://blocked.test/page","content":"..."}}', { status: 200 });
+    if (host === 'api.dub.co') return new Response('{}', { status: 500 });
+    throw new Error('unexpected ' + url);
+  });
+  const r = await T.metaForUrl('https://blocked.test/page', ctx);
+  assert.equal(r.ok, true); assert.equal(r.partial, false); assert.equal(r.engine, 'jina'); assert.equal(r.title, 'Real page title'); assert.equal(r.desc, 'A real description');
+  assert.deepEqual(r.log.map((l) => [l.engine, l.ok]), [['direct', false], ['direct:facebook', false], ['direct:twitterbot', false], ['jina', true]]);
+  assert.deepEqual(seen.map((x) => x[1]), ['Mozilla', 'facebookexternalhit', 'Twitterbot', 'Mozilla']);
+  assert.match(r.log[0].error, /HTTP 403/); assert.equal(r.frameable, null, 'unknown when no headers were seen');
 });
 
-test('two passes: every URL gets its first attempt before any URL gets a rescue attempt', async () => {
+test('chain: the preview-crawler retry rescues a site that blocks the browser User-Agent', async () => {
   T.resetCaches();
-  const order = [];
-  const ctx = ctxWith(async (url, init) => { order.push(/facebookexternalhit/.test(init.headers['User-Agent']) ? 'rescue' : 'first'); return new Response('no', { status: 403 }); }, 12);
-  const states = [];
-  for (const u of Array.from({ length: 8 }, (_, i) => `https://fair${i}.test/`)) states.push(await T.primaryPhase(u, ctx));
-  for (const st of states.filter((x) => T.worthRescue(x))) await T.rescuePhase(st, ctx);
-  assert.deepEqual(order.slice(0, 8), Array(8).fill('first'));
-  assert.equal(order.length, 12, 'the budget of 12 was used and not exceeded');
+  const ctx = ctxWith(async (url, init) => (/facebookexternalhit/.test(init.headers['User-Agent']) ? htmlRes(GOOD) : new Response('no', { status: 403 })));
+  const r = await T.metaForUrl('https://news.test/story', ctx);
+  assert.equal(r.engine, 'direct:facebook'); assert.equal(r.title, 'Hello & welcome'); assert.equal(r.partial, false);
 });
 
-test('metadata richness: JSON-LD, first paragraph, derived keywords, dates, feeds, theme color, large icon', () => {
-  const p = T.parseHead(html(`<title>Page</title><meta name="theme-color" content="#112233"><meta property="og:locale" content="en_GB">
-    <link rel="alternate" type="application/rss+xml" href="/feed.xml"><link rel="apple-touch-icon" href="/touch.png">
-    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Acme News","logo":"https://x.test/logo.png"},{"@type":"NewsArticle","headline":"Big discovery in deep sea biology","description":"Researchers found a new species of glowing fish near hydrothermal vents.","image":["https://x.test/a.jpg"],"keywords":["ocean","fish"],"datePublished":"2026-10-01T10:00:00Z","author":{"@type":"Person","name":"Ann Writer"}}]}</script>`,
-    '<h1>Fallback heading</h1><p>short</p><p>This paragraph is long enough to be used as a description when nothing else exists on the page at all.</p>'), 'https://x.test/post', '');
-  assert.equal(p.title, 'Page'); assert.match(p.desc, /new species of glowing fish/); assert.equal(p.image, 'https://x.test/a.jpg'); assert.equal(p.kw, 'ocean, fish'); assert.equal(p.kwAuto, false);
-  assert.equal(p.author, 'Ann Writer'); assert.equal(p.site, 'Acme News'); assert.equal(p.published, '2026-10-01T10:00:00Z'); assert.equal(p.themeColor, '#112233'); assert.equal(p.locale, 'en_GB');
-  assert.deepEqual(p.feeds, ['https://x.test/feed.xml']); assert.equal(p.iconLarge, 'https://x.test/touch.png');
-  const body = '<main><h1>Wiki style heading</h1><p class="x">Hyperlinks connect documents across the web and let readers move between pages with a single click or tap.</p></main>';
-  const q = T.parseHead(html('<meta charset="utf-8">'), 'https://w.test/a', body);
-  assert.equal(q.title, 'Wiki style heading'); assert.match(q.desc, /^Hyperlinks connect documents/); assert.equal(q.kwAuto, true); assert.match(q.kw, /hyperlinks/);
-  assert.equal(T.autoKeywords('The quick brown fox and the lazy dog and the quick fox'), 'quick, brown, lazy');
-});
-
-test('readPage returns the head and a bounded piece of the body; fresh bypasses the cache', async () => {
-  const text = '<html><head><title>T</title></head><body>' + '<p>x</p>'.repeat(20000);
-  const r = await T.readPage(new Response(text, { headers: { 'content-type': 'text/html' } }), 160000, 5000);
-  assert.match(r.head, /<\/head>$/); assert.ok(r.body.length >= 5000 && r.body.length <= 200000);
+test('chain: social sites skip the browser attempt; when nothing can be read the answer is a PARTIAL result built from the URL', async () => {
   T.resetCaches();
-  let n = 0; const f = async () => { n++; return htmlRes(GOOD); };
-  await T.metaForUrl('https://cache.test/', ctxWith(f)); await T.metaForUrl('https://cache.test/', ctxWith(f)); assert.equal(n, 1);
-  const again = await T.metaForUrl('https://cache.test/', ctxWith(f), { fresh: true }); assert.equal(n, 2); assert.ok(!again.cached);
+  const seen = [];
+  const r = await T.metaForUrl('https://www.instagram.com/instagram/', ctxWith(async (url) => { seen.push(new URL(url).hostname); throw new Error('down'); }));
+  assert.equal(r.ok, true); assert.equal(r.partial, true); assert.equal(r.engine, 'derived'); assert.equal(r.title, '@instagram on Instagram'); assert.equal(r.site, 'Instagram');
+  assert.match(r.favicon, /google\.com\/s2\/favicons\?domain=instagram\.com/);
+  assert.ok(!r.log.some((l) => l.engine === 'direct'), 'no browser-UA attempt on a login-wall site');
+  assert.deepEqual(r.log.slice(0, 2).map((l) => l.engine), ['direct:facebook', 'direct:twitterbot']);
+});
+
+test('chain: a weak title ("Reddit") is replaced by the one built from the URL, and a dead page or unknown domain is ok:false', async () => {
+  T.resetCaches();
+  const weak = await T.metaForUrl('https://www.reddit.com/r/programming/', ctxWith(async (url) => (url.includes('oembed') ? new Response('{}', { status: 400 }) : htmlRes('<html><head><title>Reddit</title><meta name="description" content="x"></head></html>'))));
+  assert.equal(weak.ok, true); assert.equal(weak.partial, true); assert.equal(weak.title, 'r/programming');
+  const gone = await T.metaForUrl('https://example.org/missing-page', ctxWith(async () => new Response('nope', { status: 404 })));
+  assert.equal(gone.ok, false); assert.equal(gone.error, 'page not found'); assert.equal(gone.status, 404); assert.equal(gone.log.length, 1, 'a 404 is final: no other engine is tried');
+  const dns = await T.metaForUrl('https://nope.invalid/', ctxWith(async () => new Response('x', { status: 530 })));
+  assert.equal(dns.ok, false); assert.equal(dns.error, 'site not found');
+});
+
+test('chain: a weak first answer is completed from later engines (image from one, title from another)', async () => {
+  T.resetCaches();
+  const ctx = ctxWith(async (url) => {
+    const host = new URL(url).hostname;
+    if (host === 'shop.test') return htmlRes('<html><head><meta property="og:image" content="/p.png"><title>Shop</title></head></html>');
+    if (host === 'r.jina.ai') return new Response('{"data":{"title":"Blue Mug - Shop","description":"A mug"}}');
+    throw new Error('unexpected');
+  });
+  const r = await T.metaForUrl('https://shop.test/items/blue-mug', ctx);
+  assert.equal(r.title, 'Blue Mug - Shop'); assert.equal(r.image, 'https://shop.test/p.png'); assert.equal(r.desc, 'A mug'); assert.equal(r.partial, false);
+});
+
+test('circuit breaker: a service that fails 3 times in a row is skipped for a while, "no data" answers do not count', async () => {
+  T.resetCaches();
+  let jinaCalls = 0;
+  const ctx = () => ctxWith(async (url) => { if (url.includes('r.jina.ai')) { jinaCalls++; return new Response('x', { status: 500 }); } return new Response('no', { status: 403 }); });
+  for (let i = 0; i < 4; i++) await T.metaForUrl(`https://breaker${i}.test/`, ctx());
+  assert.equal(jinaCalls, 3, 'the fourth URL did not call the cooling service');
+  const r = await T.metaForUrl('https://breaker9.test/', ctx());
+  assert.ok(r.log.some((l) => l.engine === 'jina' && /cooling down/.test(l.error)));
+});
+
+test('derive and weak titles: names built from URLs', () => {
+  const d = (s) => T.deriveFromUrl(new URL(s)).title;
+  assert.equal(d('https://x.com/NASA'), '@NASA on X'); assert.equal(d('https://github.com/cloudflare/workers-sdk'), 'cloudflare/workers-sdk: GitHub');
+  assert.equal(d('https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster'), 'Why is processing a sorted array faster - Stackoverflow');
+  assert.equal(d('https://www.tiktok.com/@tiktok'), '@tiktok on TikTok'); assert.equal(d('https://www.nytimes.com/'), 'Nytimes'); assert.equal(d('https://www.bbc.co.uk/'), 'Bbc');
+  assert.equal(T.prettyHost('developer.mozilla.org'), 'Mozilla');
+  const u = new URL('https://www.reddit.com/r/x/'); assert.equal(T.weakTitle('Reddit', u), true); assert.equal(T.weakTitle('Just a moment...', u), true); assert.equal(T.weakTitle('A real thread title', u), false);
+  assert.equal(T.weakTitle('Reddit', new URL('https://www.reddit.com/')), true, 'generic list');
+});
+
+test('parseHead v2.1.2: JSON-LD, article tags, published date, rss, theme color, og:url and locale fill what meta tags lack', () => {
+  const html = `<html><head><title>Story</title><meta property="og:url" content="/canon"><meta property="og:locale" content="en_GB"><meta name="theme-color" content="#112233">
+    <meta property="article:tag" content="alpha"><meta property="article:tag" content="beta"><meta property="article:author" content="https://site.test/people/ann">
+    <link rel="alternate" type="application/rss+xml" href="/feed.xml">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"NewsArticle","headline":"x","description":"From JSON-LD","image":{"url":"/hero.jpg"},"author":[{"name":"Ann Writer"}],"datePublished":"2026-10-01T10:00:00Z","publisher":{"name":"The Daily"}}]}</script></head></html>`;
+  const p = T.parseHead(html, 'https://site.test/a/b');
+  assert.equal(p.kw, 'alpha, beta'); assert.equal(p.desc, 'From JSON-LD'); assert.equal(p.image, 'https://site.test/hero.jpg'); assert.equal(p.author, 'Ann Writer');
+  assert.equal(p.published, '2026-10-01T10:00:00Z'); assert.equal(p.site, 'The Daily'); assert.equal(p.canonical, 'https://site.test/canon'); assert.equal(p.rss, 'https://site.test/feed.xml');
+  assert.equal(p.themeColor, '#112233'); assert.equal(p.lang, 'en-gb'); assert.equal(p.title, 'Story');
+  assert.equal(T.parseHead('<title>t</title><meta name="author" content="http://x.test/u">', 'https://a.test/').author, '', 'a URL is not an author name');
+});
+
+test('wayback engine: finds the closest snapshot and reads its raw head', async () => {
+  T.resetCaches();
+  const urls = [];
+  const ctx = ctxWith(async (url) => {
+    urls.push(url);
+    if (url.includes('archive.org/wayback/available')) return new Response(JSON.stringify({ archived_snapshots: { closest: { available: true, url: 'http://web.archive.org/web/20260101000000/https://old.test/page' } } }));
+    if (url.startsWith('https://web.archive.org/web/20260101000000id_/')) return htmlRes('<html><head><title>Archived title</title><meta name="description" content="from the archive"></head></html>');
+    return new Response('no', { status: 403 });
+  });
+  const r = await T.metaForUrl('https://old.test/page', { ...ctx, perUrl: 12 });
+  assert.equal(r.engine, 'wayback'); assert.equal(r.title, 'Archived title'); assert.equal(r.archived, true);
+  assert.ok(urls.some((u) => u.includes('id_/https://old.test/page')));
 });
 
 test('chain: site handlers (oEmbed) answer first for YouTube and fall back to direct when they fail', async () => {
   T.resetCaches();
-  const r = await T.metaForUrl('https://youtu.be/jNQXAC9IVRw', ctxWith(async (url) => { assert.match(url, /youtube\.com\/oembed/); return new Response(JSON.stringify({ title: 'Me at the zoo', author_name: 'jawed', thumbnail_url: 'https://i.ytimg.com/vi/x/hq.jpg' }), { status: 200, headers: { 'content-type': 'application/json' } }); }));
+  const r = await T.metaForUrl('https://youtu.be/jNQXAC9IVRw', ctxWith(async (url) => { assert.match(url, /youtube\.com\/oembed/); return new Response(JSON.stringify({ title: 'Me at the zoo', author_name: 'jawed', thumbnail_url: 'https://i.ytimg.com/vi/x/hq.jpg' }), { status: 200 }); }));
   assert.equal(r.engine, 'oembed:youtube'); assert.equal(r.title, 'Me at the zoo'); assert.equal(r.type, 'video'); assert.equal(r.video, 'https://www.youtube.com/embed/jNQXAC9IVRw'); assert.equal(r.frameable, false);
   assert.equal(T.youtubeId(new URL('https://www.youtube.com/watch?v=abc123XYZ_-&t=3')), 'abc123XYZ_-'); assert.equal(T.youtubeId(new URL('https://www.youtube.com/shorts/SHORT12345')), 'SHORT12345');
   T.resetCaches();
@@ -209,10 +224,10 @@ test('invalid and blocked inputs never reach the network', async () => {
 test('subrequest budget: engines stop before the free-plan cap and say so in the log', async () => {
   T.resetCaches();
   let calls = 0;
-  const ctx = ctxWith(async () => { calls++; throw new Error('fail'); }, 2);
+  const ctx = ctxWith(async () => { calls++; throw new Error('fail'); }, 3);
   const r = await T.metaForUrl('https://budget.test/', ctx);
-  assert.equal(calls, 2); assert.equal(r.ok, false); assert.ok(r.log.some((l) => /budget/.test(l.error || '')));
-  assert.equal(ctx.budget.used, 2);
+  assert.equal(calls, 3); assert.equal(r.ok, true); assert.equal(r.partial, true, 'nothing readable: a partial result, not a failure'); assert.ok(r.log.some((l) => /budget/.test(l.error || '')));
+  assert.equal(ctx.budget.used, 3);
 });
 
 async function makeToken({ aud = 'linkivo', iss = 'https://securetoken.google.com/linkivo', exp, iat, sub = 'user123', kid = 'k1', key }) {
@@ -257,7 +272,7 @@ const call = (r, fetchImpl = async () => htmlRes(GOOD)) => T.route(r, {}, { fetc
 
 test('routes: health, CORS allow-list, preflight, unknown path and method', async () => {
   T.resetCaches();
-  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.1');
+  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.2');
   assert.equal(h.headers.get('access-control-allow-origin'), 'https://linkivo.web.app'); assert.equal(h.headers.get('cache-control'), 'no-store');
   assert.equal((await call(req('/health', { origin: 'http://localhost:5000' }))).headers.get('access-control-allow-origin'), 'http://localhost:5000');
   const evil = await call(req('/health', { origin: 'https://evil.example' })); assert.equal(evil.status, 403); assert.equal(evil.headers.get('access-control-allow-origin'), null);
@@ -296,7 +311,7 @@ test('POST /meta with an account token allows 25 URLs; a bad token is refused', 
   assert.equal(typeof handler.fetch, 'function'); assert.equal(handler.scheduled, undefined);
 });
 
-test('25 URLs that all need rescue stay inside the shared subrequest budget', async () => {
+test('25 URLs that all need fallbacks stay inside the budget (30 per call, a fair slice per URL)', async () => {
   T.resetCaches();
   let n = 0;
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -305,6 +320,7 @@ test('25 URLs that all need rescue stay inside the shared subrequest budget', as
   const token = await makeToken({ key: privateKey });
   const res = await call(req('/meta', { method: 'POST', body: { urls: Array.from({ length: 25 }, (_, i) => `https://worst${i}.test/`) }, headers: { authorization: `Bearer ${token}`, 'cf-connecting-ip': '8.8.4.4' } }), fetchImpl);
   const b = await res.json();
-  assert.equal(res.status, 200); assert.ok(n <= 36, `made ${n} subrequests`); assert.ok(b.budget.used <= 36);
-  assert.ok(b.results.every((r) => r.ok === false)); assert.ok(b.results.some((r) => r.log.some((l) => /budget/.test(l.error || ''))), 'later URLs report the budget');
+  assert.equal(res.status, 200); assert.ok(n <= 30, `made ${n} subrequests`); assert.ok(b.budget.used <= 30); assert.equal(b.budget.max, 30);
+  assert.ok(b.results.every((r) => r.ok === true && r.partial === true), 'every URL still gets a usable partial answer'); assert.ok(b.results.every((r) => r.log.filter((l) => !/budget/.test(l.error || '')).length <= 3), 'each URL stays inside its own slice');
+  assert.ok(b.results.some((r) => r.log.some((l) => /budget/.test(l.error || ''))), 'URLs report the budget');
 });

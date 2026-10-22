@@ -1,19 +1,16 @@
 /**
- * Linkivo — js/ui/popover.js  (v2.1.0)
+ * Linkivo — js/ui/popover.js  (v2.1.2)
  * Purpose: anchored menu (three-dot menus). Keyboard: arrows, Home/End, Enter, Escape. Closes on outside click, scroll, resize
  *          and Back (registers a back layer).
- * API: openMenu(anchor, items, { align:'end'|'start' }) -> { close() } | null
- *   Opening a menu for an anchor whose menu is already open CLOSES it (toggle) and returns null (v2.1.1 fix: the second click used to reopen it).
+ * API: openMenu(anchor, items, { align:'end'|'start' }) -> { close(), isOpen() }
+ *      Pressing the anchor again is NOT an outside click: the caller toggles with isOpen() (v2.1.2).
  *   items: [{ label, icon?, danger?, onSelect() }] or { separator: true }
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
 import { icon } from './icons.js';
 
-let current = null;
-
 export function openMenu(anchor, items, { align = 'end' } = {}) {
-  if (current && current.anchor === anchor) { current.close(); return null; }
   const returnTo = document.activeElement;
   let layer;
   const menu = h('div', { class: 'pop', role: 'menu' }, items.map((it) => it.separator ? h('div', { class: 'pop-sep', role: 'separator' }) :
@@ -28,7 +25,6 @@ export function openMenu(anchor, items, { align = 'end' } = {}) {
     if (top + mh > vh - 8) { top = Math.max(8, r.top - mh - 6); origin = align === 'end' ? 'bottom right' : 'bottom left'; }
     menu.style.left = left + 'px'; menu.style.top = top + 'px'; menu.style.setProperty('--ox', origin);
   }
-  // a press on the anchor itself is left to its click handler, which toggles (otherwise pointerdown closes and click reopens)
   function onDown(e) { if (!menu.contains(e.target) && !anchor.contains(e.target)) close(); }
   function onKey(e) {
     const btns = [...menu.querySelectorAll('.pop-item')];
@@ -43,7 +39,6 @@ export function openMenu(anchor, items, { align = 'end' } = {}) {
   function close() {
     if (!menu.isConnected) return;
     layer?.remove();
-    if (current && current.menu === menu) current = null;
     menu.remove();
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
@@ -59,6 +54,5 @@ export function openMenu(anchor, items, { align = 'end' } = {}) {
   document.addEventListener('scroll', close, true);
   layer = pushLayer(() => { layer = null; close(); });
   menu.querySelector('.pop-item')?.focus({ preventScroll: true });
-  current = { anchor, menu, close };
-  return { close };
+  return { close, isOpen: () => menu.isConnected };
 }

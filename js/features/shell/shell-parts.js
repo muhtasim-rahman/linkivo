@@ -1,7 +1,7 @@
 /**
- * Linkivo — js/features/shell/shell-parts.js  (v2.1.0)
+ * Linkivo — js/features/shell/shell-parts.js  (v2.1.2)
  * Purpose: small pieces shared by the shell and the pages: the ringed avatar, the log-out flow, the theme toggle.
- * API: avatar(name, large) -> Element     logOut(router, { guest }) -> Promise<void>     toggleTheme()
+ * API: avatar(name, large, photo?) -> Element (a round photo when the account has one, else the initial)     logOut(router, { guest }) -> Promise<void>     toggleTheme()
  */
 import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
@@ -12,9 +12,15 @@ import { toast } from '../../ui/toast.js';
 import { signOutUser, leaveGuest } from '../auth/auth-service.js';
 import { log } from '../../core/logger.js';
 
-export function avatar(name, large = false) {
+export function avatar(name, large = false, photo = '') {
   const initial = ([...String(name || '?').trim()][0] || '?').toUpperCase();
-  return h('span', { class: ['avatar', large && 'is-lg'], 'aria-hidden': 'true' }, h('span', { text: initial }));
+  const inner = h('span', { text: initial });
+  if (photo) {
+    const img = h('img', { src: photo, alt: '', referrerpolicy: 'no-referrer', width: 40, height: 40 });
+    img.addEventListener('error', () => img.remove()); // a blocked photo falls back to the initial underneath
+    inner.appendChild(img);
+  }
+  return h('span', { class: ['avatar', large && 'is-lg'], 'aria-hidden': 'true' }, inner);
 }
 
 export function toggleTheme() { prefs.set(KEYS.theme, resolvedTheme() === 'dark' ? 'light' : 'dark'); }

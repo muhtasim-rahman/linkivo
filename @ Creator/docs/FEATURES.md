@@ -253,3 +253,15 @@ A final advanced `README.md` for GitHub is delivered in v2.6.0.
 ## 19. Explicitly out of scope (for now)
 
 Admin panel (the data model stays admin-ready), profile picture upload, push notifications, weekly refresh-all, anything that needs a paid plan.
+
+
+## v2.1.2 additions (foundation fixes)
+
+- **Start animation**: the owner's v1 logo animation (no url badges) on the first start, a short version afterwards; Settings > Appearance > Start animation: Automatic, Always full, Short.
+- **Navigation chrome**: sidebar redesign (collapsed rounded-square icons, expand icon on logo hover, full rows when expanded, profile badge with a toggling three-dot menu), centred page content on wide screens, page fade-in, every page starts at its top, theme switch transition, accent color also colors the logo and wordmark.
+- **Login**: redesigned (art-and-overview column on wide screens, compact form, theme switch, Terms and Privacy agreement for new accounts, white logo tile).
+- **Settings**: one page with category headings and, on wide screens, a sticky scroll-synced category list; new settings: page transitions, start animation, pull to refresh, block right-click and long-press, update automatically; Account and sync gained reset-password email, Sync now and guest backup note; Advanced gained Clear app cache.
+- **About / Menu**: new layout with app header, highlights, developer card (photo, website, GitHub, email) and links.
+- **Updates**: automatic update when the app opens; popup while it is in use; pull down on a phone to refresh the page and check for a new version.
+- **Metadata**: works for blocked sites through preview-crawler retries, Jina Reader and Wayback; always returns a usable partial result for live sites; more fields (author, published date, keywords, language, canonical, theme color, feed).
+- **SEO**: per-route title, description, robots and canonical; private pages noindex; `robots.txt`, `sitemap.xml`, Open Graph and JSON-LD in `index.html`.

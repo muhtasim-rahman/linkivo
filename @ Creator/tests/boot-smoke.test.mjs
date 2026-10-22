@@ -17,7 +17,7 @@ test('boot as guest: first page mounted, chrome visible, data layer running, boo
   await boot();
   assert.equal(document.documentElement.dataset.boot, 'ok');
   assert.equal(location.pathname, '/library');
-  assert.equal($('#app').dataset.chrome, ''); assert.equal(document.querySelectorAll('#sidebar .nav-item').length, 5);
+  assert.equal($('#app').dataset.chrome, ''); assert.equal(document.querySelectorAll('#sidebar .sb-nav .nav-item').length, 5);
   assert.match($('#page-root').textContent, /Library/);
   const e = getEngine(); assert.ok(e && e.ready); assert.ok(getQueue());
   const f = await e.createFolder({ name: 'Boot test' }); assert.equal(e.listFolders().length, 1); assert.ok(f.id);

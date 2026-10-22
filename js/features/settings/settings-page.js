@@ -1,82 +1,82 @@
 /**
- * Linkivo — js/features/settings/settings-page.js  (v2.1.1, rebuilt)
- * Purpose: Settings as ONE page with category headings (no separate tabs). PC: a category list stays fixed beside the content and follows the
- *          scroll; clicking a category scrolls to it. Phones: a sticky chip bar does the same. Driven by the registry (catalog.js).
- * Routes: /settings  and  /settings/:section (opens scrolled to that category)
+ * Linkivo — js/features/settings/settings-page.js  (v2.1.2)
+ * Purpose: Settings as ONE page driven by the registry (catalog.js): a heading per category, every setting below it. On wide screens
+ *          a fixed category list sits on the left and follows the scroll (scroll-spy); clicking an entry scrolls to its heading.
+ *          /settings/:section opens the page scrolled to that category (deep link).
+ * Routes: /settings  and  /settings/:section
  * Page module: mount(container, ctx)
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
-import { attachScrollFade } from '../../ui/scroll-fade.js';
 import { loadCss } from '../../core/css-loader.js';
-import { SECTIONS, entriesFor } from './catalog.js';
+import { SECTIONS, findSection, entriesFor } from './catalog.js';
 import { renderControl } from './controls.js';
 import { renderCustom } from './custom-rows.js';
 import { renderAdvanced } from './advanced-tools.js';
 
-const ADVANCED = new Set(['debug', 'reset', 'tester']);
-const CARDS = new Set(['about', 'developer', 'legal']); // blocks that bring their own card, not rows in a group
+const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache']);
+
+/** Pure: which section is "current" given each section's distance from the top of the scroller (negative = already passed). */
+export function activeSection(tops, atBottom, offset = 120) {
+  if (!tops.length) return null;
+  if (atBottom) return tops[tops.length - 1].id;
+  let cur = tops[0].id;
+  for (const t of tops) if (t.top <= offset) cur = t.id;
+  return cur;
+}
 
 export async function mount(container, ctx) {
   await loadCss('/css/pages/settings.css');
-  const sections = new Map();
-  let active = null, frame = 0;
-
-  const links = SECTIONS.map((s) => h('button', { type: 'button', class: 'set-link', 'data-sec': s.id, 'aria-current': 'false', on: { click: () => goTo(s.id) } }, icon(s.icon, { size: 20 }), h('span', { text: s.label })));
-  const chips = SECTIONS.map((s) => h('button', { type: 'button', class: 'chip', 'data-sec': s.id, 'aria-current': 'false', text: s.label, on: { click: () => goTo(s.id) } }));
-  const chipsIn = h('div', { class: 'set-chips-in fade-x' }, chips);
-
-  function renderSection(s) {
-    const entries = entriesFor(s.id);
-    const group = h('div', { class: 'group' });
-    const cards = [];
-    for (const e of entries) {
-      const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: refreshAll }) : renderCustom(e.custom, { router: ctx.router })) : renderControl(e);
-      const list = Array.isArray(node) ? node : [node];
-      if (e.type === 'custom' && CARDS.has(e.custom)) cards.push(...list); else group.append(...list);
-    }
-    const el = h('section', { class: 'set-section', id: 'set-' + s.id, 'data-sec': s.id, 'aria-labelledby': 'set-h-' + s.id },
-      h('div', { class: 'set-head' }, h('h2', { id: 'set-h-' + s.id, text: s.label }), h('p', { text: s.desc })),
-      group.childNodes.length ? group : null, ...cards);
-    sections.set(s.id, el);
-    return el;
-  }
+  const target = findSection(ctx.params.section);
 
   const body = h('div', { class: 'set-body' });
-  const build = () => { sections.clear(); body.replaceChildren(...SECTIONS.map(renderSection)); };
-  function refreshAll() { const y = container.scrollTop; build(); container.scrollTop = y; }
-  build();
+  const navLinks = new Map();
+  const nav = h('nav', { class: 'set-nav', 'aria-label': 'Settings categories' }, SECTIONS.map((s) => {
+    const b = h('button', { type: 'button', class: 'set-nav-item', on: { click: () => scrollTo(s.id, true) } }, icon(s.icon, { size: 20 }), h('span', { text: s.label }));
+    navLinks.set(s.id, b);
+    return b;
+  }));
 
-  function setActive(id) {
-    if (active === id) return;
-    active = id;
-    for (const n of [...links, ...chips]) n.setAttribute('aria-current', String(n.dataset.sec === id));
-    const chip = chips.find((c) => c.dataset.sec === id);
-    if (chip && chip.scrollIntoView) { const box = chipsIn.getBoundingClientRect(), r = chip.getBoundingClientRect(); chipsIn.scrollLeft += r.left - box.left - 24; }
+  function renderSections() {
+    body.replaceChildren(...SECTIONS.map((s) => {
+      const group = h('div', { class: 'group' });
+      for (const e of entriesFor(s.id)) {
+        const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: renderSections }) : renderCustom(e.custom, { router: ctx.router })) : renderControl(e);
+        if (Array.isArray(node)) group.append(...node); else group.appendChild(node);
+      }
+      return h('section', { class: 'set-sec', id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },
+        h('header', { class: 'set-sec-head' }, h('h2', { class: 'set-h', id: 'h-' + s.id }, h('span', { class: 'set-h-ic' }, icon(s.icon, { size: 20 })), s.label), h('p', { class: 'set-sub', text: s.desc })), group);
+    }));
   }
-  /** The last section whose top has passed the reading line (a third from the top) is the current one. */
+  renderSections();
+
+  function scrollTo(id, smooth) {
+    const el = document.getElementById('sec-' + id);
+    if (!el) return;
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+    if (typeof container.scrollTo === 'function') container.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' }); else container.scrollTop = Math.max(0, top);
+  }
+
+  // scroll-spy: the category list marks the section that is at the top of the page
+  let frame = 0, current = null;
   function spy() {
     frame = 0;
-    const line = container.getBoundingClientRect().top + Math.max(96, container.clientHeight * 0.3);
-    let cur = SECTIONS[0].id;
-    for (const s of SECTIONS) if (sections.get(s.id).getBoundingClientRect().top <= line) cur = s.id;
-    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 4) cur = SECTIONS[SECTIONS.length - 1].id; // bottom of the page = last category
-    setActive(cur);
+    const base = container.getBoundingClientRect().top;
+    const tops = SECTIONS.map((s) => { const el = document.getElementById('sec-' + s.id); return { id: s.id, top: el ? el.getBoundingClientRect().top - base : Infinity }; });
+    const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 4 && container.scrollTop > 0;
+    const id = activeSection(tops, atBottom);
+    if (id === current) return;
+    current = id;
+    for (const [k, b] of navLinks) { if (k === id) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); }
   }
   const onScroll = () => { if (!frame) frame = requestAnimationFrame(spy); };
-  function goTo(id, instant = false) {
-    const el = sections.get(id);
-    if (!el) return;
-    setActive(id);
-    if (el.scrollIntoView) el.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'start' });
-  }
-
   container.addEventListener('scroll', onScroll, { passive: true });
-  container.appendChild(h('div', { class: 'page' },
-    h('header', { class: 'page-head' }, h('div', { style: { flex: 1, minWidth: 0 } }, h('h1', { class: 'page-title', text: 'Settings' }), h('p', { class: 'page-sub', text: 'How Linkivo looks, behaves and stores your data.' }))),
-    h('div', { class: 'settings' }, h('nav', { class: 'set-nav', 'aria-label': 'Settings categories' }, links), h('div', { style: { minWidth: 0 } }, h('div', { class: 'set-chips' }, chipsIn), body))));
-  const detach = attachScrollFade(chipsIn);
-  setActive(SECTIONS[0].id);
-  if (ctx.params.section && sections.has(ctx.params.section)) setTimeout(() => goTo(ctx.params.section, true), 0);
-  return () => { container.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); detach(); };
+
+  container.appendChild(h('div', { class: 'page is-wide' },
+    h('header', { class: 'page-head is-stack' }, h('h1', { class: 'page-title', text: 'Settings' }), h('p', { class: 'page-sub', text: 'Make Linkivo look and behave the way you like.' })),
+    h('div', { class: 'settings' }, nav, body)));
+
+  spy();
+  if (target) requestAnimationFrame(() => { scrollTo(target.id, false); spy(); });
+  return () => { container.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame); };
 }

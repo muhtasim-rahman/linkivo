@@ -1,0 +1,29 @@
+feat(v2.1.2): foundation fixes, splash restored, redesigned chrome and login, one-page settings, self-updating app, rebuilt metadata
+
+(v2.1.1 was never delivered by the AI: this release is built from v2.1.0.)
+
+- Planning files carry the version-range suffix (PLAN-v2.0_to_v2.5.md, MASTER-PROMPT-v2.0_to_v2.5.md, CONTEXT-v2.0_to_v2.5.md); tools, docs and RULES section 9 updated; CONTEXT rewritten compact.
+- Splash: the v1 logo-creation animation without the url badges (full on first start, short afterwards, setting "Start animation").
+- Smooth navigation: page fade-in, no blank flash (module loaded before the swap), every page starts at its top, theme switch transition, pull-to-refresh on phones, right-click and long-press blocked (setting).
+- Sidebar redesign (hover expand icon, rounded-square active item, full rows, profile badge with toggling menu), centred content on wide screens, plus icon for Import links.
+- Brand gradient follows the accent color (logo mark via CSS mask, wordmark, splash).
+- Login redesigned: art-and-overview column, compact form, theme switch, Terms and Privacy agreement for sign-up, white logo tile.
+- Settings is one page with category headings and a sticky scroll-synced category list; row title and description on separate lines (v2.1.0 bug); new settings; About and Menu redesigned with a developer card.
+- Updates: /app.json version beacon, automatic update at launch, "Update now" popup in use, Clear app cache; install prompt captured early so the install button and banner appear on PC.
+- Icons regenerated from vector (icon-192 dark edge column fixed), icon-384 added, white-tile favicon and logo-tile.svg; artwork moved to assets/art (Library and Import art redrawn).
+- Metadata Worker: preview-crawler retries, Jina Reader, Wayback, circuit breaker, partial results, URL-derived titles, JSON-LD and more fields, fair per-URL subrequest budget (30 per call), app sends 6 URLs per call.
+- SEO: per-route meta, noindex for private pages, robots.txt, sitemap.xml, Open Graph and JSON-LD.
+- Tests: 90 (new v212.test.mjs, Worker chain tests, updated UI smoke tests).
+
+Removed files:
+- @ Creator/PLAN.md (renamed to PLAN-v2.0_to_v2.5.md)
+- @ Creator/MASTER-PROMPT.md (renamed to MASTER-PROMPT-v2.0_to_v2.5.md)
+- @ Creator/CONTEXT.md (replaced by CONTEXT-v2.0_to_v2.5.md)
+- If you committed an unfinished v2.1.1: delete any file of it that is not in this zip (compare with the zip's file list).
+
+Owner actions:
+- Extract the zip into the project folder, delete the files listed above.
+- Paste @ Creator/worker/worker.js (whole file) into Cloudflare Workers & Pages > linkivo > Edit code > Deploy; check /health shows version 2.1.2. No new secrets.
+- firebase deploy --only hosting (rules did not change), then hard reload.
+- Run Settings > Advanced > Metadata tester > Load 25 sample URLs > Run test and send the summary line.
+- Test the install button on PC and the new login, sidebar, settings and splash on a phone.

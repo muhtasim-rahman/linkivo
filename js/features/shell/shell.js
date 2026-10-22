@@ -1,8 +1,9 @@
 /**
  * Linkivo — js/features/shell/shell.js  (v2.1.0)
- * Purpose: the persistent chrome around the page area: mobile floating glass bottom bar (Library, Random, Import, Search, Menu),
- *          PC collapsible sidebar (Import, Library, Random, Search, Settings) with theme toggle and profile badge, install banner.
- *          Built once; the router only swaps what is inside #page-root.
+ * Purpose: the persistent chrome around the page area: mobile floating glass bottom bar (Library, Random, Add, Search, Menu),
+ *          PC collapsible sidebar (Add links, Library, Random, Search, Settings) with theme toggle and profile badge, install banner.
+ *          Sidebar logo (v2.1.1): expanded = click the logo or name to open Library, collapse with the arrow; collapsed = hovering the logo
+ *          shows an expand icon and a click expands. Built once; the router only swaps what is inside #page-root.
  * API: mountShell({ router }) -> { setSession(session), isWide() }
  */
 import { h } from '../../core/dom.js';
@@ -11,11 +12,12 @@ import { openMenu } from '../../ui/popover.js';
 import { prefs } from '../../core/local-prefs.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { maskEmail } from '../../core/mask.js';
+import { brandMark, brandWord } from '../../ui/brand.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
 import { mountInstallBanner } from './install-banner.js';
 
 const SIDE = [
-  { tab: 'import', label: 'Import links', href: '/import', icon: 'import', primary: true },
+  { tab: 'import', label: 'Add links', href: '/import', icon: 'plus', primary: true },
   { tab: 'library', label: 'Library', href: '/library', icon: 'library' },
   { tab: 'random', label: 'Random Discover', href: '/random', icon: 'random' },
   { tab: 'search', label: 'Search', href: '/search', icon: 'search' },
@@ -24,7 +26,7 @@ const SIDE = [
 const BAR = [
   { tab: 'library', label: 'Library', href: '/library', icon: 'library' },
   { tab: 'random', label: 'Random Discover', href: '/random', icon: 'random' },
-  { tab: 'import', label: 'Import links', href: '/import', icon: 'import', primary: true },
+  { tab: 'import', label: 'Add links', href: '/import', icon: 'plus', primary: true },
   { tab: 'search', label: 'Search', href: '/search', icon: 'search' },
   { tab: 'menu', label: 'Menu', href: '/menu', icon: 'menu' }
 ];
@@ -40,22 +42,22 @@ export function mountShell({ router }) {
   mountInstallBanner(bannerHost);
 
   // ---- sidebar -------------------------------------------------------------------------------------------------------
-  const setCollapsed = (v) => { app.dataset.collapsed = String(v); prefs.set('ui.sidebarCollapsed', v); mark.setAttribute('aria-label', v ? 'Expand sidebar' : 'Linkivo'); toggle.setAttribute('aria-expanded', String(!v)); };
-  const mark = h('button', { type: 'button', class: 'sb-mark', 'data-tip': 'Expand sidebar', on: { click: () => { if (app.dataset.collapsed === 'true') setCollapsed(false); } } }, h('img', { src: '/assets/brand/logo.svg', alt: '', width: 34, height: 34 }));
-  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', on: { click: () => setCollapsed(true) } }, icon('chevron-left'));
-  const word = h('span', { class: 'sb-word', 'aria-hidden': 'true' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo');
-  const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip': it.label }, h('span', { class: 'nav-ic' }, icon(it.icon)), h('span', { class: 'nav-label', text: it.label }));
+  const home = h('a', { class: 'sb-home', href: '/library', 'data-tip': 'Library' }, brandMark(34), brandWord());
+  const expand = h('button', { type: 'button', class: 'sb-expand', 'aria-label': 'Expand sidebar', 'data-tip': 'Expand sidebar', on: { click: () => setCollapsed(false) } }, brandMark(34), icon('panel-open', { size: 26 }));
+  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'aria-expanded': 'true', on: { click: () => setCollapsed(true) } }, icon('panel-close', { size: 22 }));
+  const setCollapsed = (v) => { app.dataset.collapsed = String(v); prefs.set('ui.sidebarCollapsed', v); toggle.setAttribute('aria-expanded', String(!v)); };
+  const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip': it.label }, h('span', { class: 'nav-ic' }, icon(it.icon, { size: 24 })), h('span', { class: 'nav-label', text: it.label }));
   const themeSwitch = h('span', { class: 'switch', 'aria-hidden': 'true' });
   const themeIcon = h('span', { class: 'nav-ic' });
   const themeRow = h('button', { type: 'button', class: 'theme-row', role: 'switch', 'data-tip': 'Dark mode', on: { click: toggleTheme } }, themeIcon, h('span', { class: 'theme-label', text: 'Dark mode' }), themeSwitch);
   const pfAvatar = h('span'); const pfName = h('span', { class: 'pf-name' }); const pfMail = h('span', { class: 'pf-mail' });
   const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
-  const more = h('button', { type: 'button', class: 'btn btn-icon pf-more', 'aria-label': 'Account menu', 'aria-haspopup': 'menu', on: { click: () => openMenu(more, [{ label: 'Profile', icon: 'user', onSelect: () => router.navigate('/profile') }, { separator: true }, { label: 'Log out', icon: 'logout', danger: true, onSelect: () => logOut(router) }], { align: 'start' }) } }, icon('more'));
-  sidebar.replaceChildren(h('div', { class: 'sb-head' }, mark, word, h('span', { style: { marginLeft: 'auto' } }), toggle), ...SIDE.map(navLink), h('div', { class: 'sb-spacer' }), themeRow, h('div', { class: 'pf' }, pfLink, more));
+  const more = h('button', { type: 'button', class: 'btn btn-icon pf-more', 'aria-label': 'Account menu', 'aria-haspopup': 'menu', on: { click: () => openMenu(more, [{ label: 'Profile', icon: 'user', onSelect: () => router.navigate('/profile') }, { separator: true }, { label: 'Log out', icon: 'logout', danger: true, onSelect: () => logOut(router) }], { align: 'start' }) } }, icon('more', { size: 20 }));
+  sidebar.replaceChildren(h('div', { class: 'sb-head' }, home, expand, toggle), ...SIDE.map(navLink), h('div', { class: 'sb-spacer' }), themeRow, h('div', { class: 'pf' }, pfLink, more));
 
   // ---- bottom bar ----------------------------------------------------------------------------------------------------
   const marker = h('span', { class: 'bar-marker', 'data-hidden': 'true', 'aria-hidden': 'true' });
-  bar.replaceChildren(marker, ...BAR.map((it) => h('a', { class: ['bar-item', it.primary && 'bar-import'], href: it.href, 'data-tab': it.tab, 'aria-label': it.label }, it.primary ? h('span', null, icon(it.icon, { size: 22 })) : icon(it.icon, { size: 24 }))));
+  bar.replaceChildren(marker, ...BAR.map((it) => h('a', { class: ['bar-item', it.primary && 'bar-import'], href: it.href, 'data-tab': it.tab, 'aria-label': it.label }, it.primary ? h('span', null, icon(it.icon, { size: 26 })) : icon(it.icon, { size: 24 }))));
 
   // hide the bar while scrolling down, bring it back on the way up (transform + opacity only: no layout shift)
   let last = 0;
@@ -66,7 +68,7 @@ export function mountShell({ router }) {
     last = y;
   }, { passive: true });
 
-  function renderTheme() { const dark = resolvedTheme() === 'dark'; themeIcon.replaceChildren(icon(dark ? 'moon' : 'sun')); themeRow.setAttribute('aria-checked', String(dark)); themeSwitch.setAttribute('aria-checked', String(dark)); }
+  function renderTheme() { const dark = resolvedTheme() === 'dark'; themeIcon.replaceChildren(icon(dark ? 'moon' : 'sun', { size: 24 })); themeRow.setAttribute('aria-checked', String(dark)); themeSwitch.setAttribute('aria-checked', String(dark)); }
   new MutationObserver(renderTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   renderTheme();
 

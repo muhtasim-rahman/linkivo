@@ -4,7 +4,7 @@
   --bg: #eef2f8; --surface: #ffffff; --surface-2: #f4f7fb; --line: #d6dfed; --line-strong: #b9c7dc;
   --text: #0c1629; --sub: #566d8a; --scrim: rgba(8, 16, 32, 0.46);
   --success: #0e9f6e; --warning: #b45309; --danger: #d92d20; --danger-soft: rgba(217, 45, 32, 0.1);
-  --brand-a: #3b82f6; --brand-b: #22d3ee;
+  --brand-a: #3b82f6; --brand-b: #22d3ee; --brand-grad: linear-gradient(135deg, var(--brand-a), var(--brand-b));
   --accent: #3b82f6; --accent-strong: #2563eb; --accent-fg: #ffffff; --accent-text: #1d4fc4;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
 
@@ -18,7 +18,7 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
   --r-control: 10px; --r-group: 14px; --r-sheet: 22px;
   --row-h: 44px; --pad: var(--s4);
-  --bar-h: 64px; --bar-gap: 12px; --sidebar-w: 264px;
+  --bar-h: 64px; --bar-gap: 12px; --sidebar-w: 272px; --sidebar-w-collapsed: 80px;
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
 
   --shadow-float: 0 10px 30px rgba(12, 22, 41, 0.16), 0 2px 6px rgba(12, 22, 41, 0.08);
@@ -57,3 +57,20 @@
 :root[data-font='small'] { --fs: 13px; }
 :root[data-font='large'] { --fs: 16px; }
 :root[data-density='comfortable'] { --row-h: 52px; --pad: var(--s5); }
+
+/* The logo and wordmark follow the accent (v2.1.1): every accent has a second gradient color. */
+:root[data-accent='blue']    { --brand-a: #3b82f6; --brand-b: #22d3ee; }
+:root[data-accent='emerald'] { --brand-a: #10b981; --brand-b: #84cc16; }
+:root[data-accent='violet']  { --brand-a: #8b5cf6; --brand-b: #d946ef; }
+:root[data-accent='rose']    { --brand-a: #f43f5e; --brand-b: #fb923c; }
+:root[data-accent='amber']   { --brand-a: #f59e0b; --brand-b: #facc15; }
+:root[data-accent='slate']   { --brand-a: #64748b; --brand-b: #94a3b8; }
+
+/* High contrast: stronger lines and secondary text */
+:root[data-contrast='high'] { --line: #8296b4; --line-strong: #4d6485; --sub: #364b68; }
+:root[data-theme='dark'][data-contrast='high'] { --line: #4f6c9c; --line-strong: #7a99c8; --sub: #bcd0e6; }
+
+/* Smooth light/dark switch: the class is set for 350 ms around a theme change only */
+:root.theme-fade, :root.theme-fade *, :root.theme-fade *::before, :root.theme-fade *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, fill 0.3s ease, stroke 0.3s ease, box-shadow 0.3s ease !important;
+}

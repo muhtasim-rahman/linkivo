@@ -37,6 +37,10 @@ function card(r) {
       h('dt', { text: 'Time' }), h('dd', { text: r.ms != null ? `${r.ms} ms` : 'n/a' }),
       h('dt', { text: 'Embedding' }), h('dd', { text: frame }),
       r.type && [h('dt', { text: 'Type' }), h('dd', { text: r.type })],
+      r.kw && [h('dt', { text: r.kwAuto ? 'Keywords (derived)' : 'Keywords' }), h('dd', { text: r.kw })],
+      r.author && [h('dt', { text: 'Author' }), h('dd', { text: r.author })], r.site && [h('dt', { text: 'Site' }), h('dd', { text: r.site })],
+      r.published && [h('dt', { text: 'Published' }), h('dd', { text: r.published })], r.lang && [h('dt', { text: 'Language' }), h('dd', { text: r.lang })],
+      r.archived && [h('dt', { text: 'Source' }), h('dd', { text: 'Internet Archive copy' })],
       r.video && [h('dt', { text: 'Video' }), h('dd', { class: 'mono', text: r.video })]),
     r.log && r.log.length > 0 && h('div', { class: 'mt-log', 'aria-label': 'Engine log' }, r.log.map((l) => h('div', { class: l.ok ? 'mt-ok' : 'mt-bad', text: `${l.ok ? 'ok  ' : 'fail'} ${l.engine} ${l.ms != null ? l.ms + ' ms' : ''}${l.error ? ' - ' + l.error : ''}` }))));
 }
@@ -55,7 +59,7 @@ export function renderTester() {
     if (!urls.length) { toast('Add at least one URL.', { type: 'error' }); return; }
     run.classList.add('is-loading'); run.disabled = true; results.replaceChildren(); summary.textContent = `Testing ${plural(urls.length, 'URL')}...`;
     const t0 = performance.now();
-    const map = await fetchMeta(urls);
+    const map = await fetchMeta(urls, { fresh: true });
     last = urls.map((u) => map.get(u));
     results.replaceChildren(...last.map(card));
     const good = last.filter((r) => r.ok && (r.title || r.image)).length;

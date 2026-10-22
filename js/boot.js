@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/boot.js  (v2.1.0)
+ * Linkivo — js/boot.js  (v2.1.1)
  * Purpose: the boot sequence (PLAN slice 4): install + update systems -> auth state -> account status -> data layer -> router and
  *          shell -> first page mounted -> splash ends. After that it keeps data, chrome and route guards in step with the session
  *          (login, logout, guest entry, deleted account).
@@ -9,7 +9,6 @@ import { log } from './core/logger.js';
 import { getSession, setSession, subscribeSession } from './core/session.js';
 import { createRouter } from './core/router.js';
 import { initUpdates } from './core/update.js';
-import { initInstall } from './core/install.js';
 import { initData, teardownData, getQueue } from './core/app-data.js';
 import { loadFirebase } from './core/firebase-loader.js';
 import { initAuth } from './features/auth/auth-service.js';
@@ -18,11 +17,13 @@ import { ROUTES } from './features/shell/routes.js';
 import { mountShell } from './features/shell/shell.js';
 import { endSplash } from './features/splash/splash.js';
 import { initTaskChip } from './ui/task-chip.js';
+import { initPullRefresh } from './ui/pull-refresh.js';
+import { showUpdatePrompt } from './features/shell/update-prompt.js';
+import { prefs } from './core/local-prefs.js';
 import { toast } from './ui/toast.js';
 
 export async function boot() {
-  initInstall();
-  initUpdates({ isBusy: () => !!(getQueue() && getQueue().isBusy()) });
+  initUpdates({ isBusy: () => !!(getQueue() && getQueue().isBusy()), onPrompt: showUpdatePrompt });
   await initAuth();
 
   let router = null, shell = null, checkedUid = null, destroyChip = null, lastKey = '';
@@ -57,6 +58,7 @@ export async function boot() {
     chain = chain.then(async () => { await applySession(getSession()); await router.reevaluate(); }).catch((e) => log.error('boot', 'session change failed', e));
   });
 
+  if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) initPullRefresh({ root: container, enabled: () => prefs.get('ui.pullRefresh', true) !== false, canRefresh: () => !(getQueue() && getQueue().isBusy()) });
   router.on('mounted', () => { document.documentElement.dataset.boot = 'ok'; endSplash(); });
   window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));
   window.addEventListener('online', () => toast('Back online.'));

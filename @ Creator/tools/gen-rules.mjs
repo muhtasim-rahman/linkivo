@@ -68,6 +68,7 @@ export function buildRules() {
             name: { '.write': `${OWN} && ${ACTIVE}`, '.validate': 'newData.isString() && newData.val().length <= 60' },
             createdAt: { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule({ t: 'ts' }) },
             lastLogin: { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule({ t: 'ts' }) },
+            termsAt: { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule({ t: 'ts' }) },   // when the user agreed to the Terms and Privacy policy (v2.1.1)
             status: { '.write': false, '.validate': "newData.val() === 'active' || newData.val() === 'deleted'" },
             $other: { '.validate': false }
           },

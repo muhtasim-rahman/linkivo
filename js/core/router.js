@@ -7,13 +7,40 @@
  *            guard: 'auth'|'public'|'open', redirect?: fn(session), tab?: string, shell?: boolean, load: () => import() }
  * Page module contract: export async function mount(container, ctx) -> unmount() | void
  *            ctx = { params, query, path, from, router }
- * API:     compileRoutes(table) resolveGuard(route, session) createRouter(options) -> router
+ * SEO:     route.description (string) and route.robots override the defaults; see applyPageMeta().
+ * API:     compileRoutes(table) resolveGuard(route, session) applyPageMeta(doc, route, path) createRouter(options) -> router
  *   router: start() navigate(path, {from}) back() reevaluate() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers } from './nav-stack.js';
 import { createEmitter } from './events.js';
 import { log } from './logger.js';
+import app from './app-info.js';
+
+const DEFAULT_TITLE = 'Linkivo - A fast, private link manager';
+const DEFAULT_DESC = 'Linkivo is a fast, private link manager. Keep thousands of links in folders, import them from text and files, and rediscover them. Free, works offline, installable.';
+
+/** SEO (v2.1.1): every route sets its own title, description, robots, canonical and Open Graph tags. Private app pages are noindex. */
+export function applyPageMeta(doc, route, path, base = app.hosting) {
+  const title = typeof route.title === 'function' ? route.title({}) : route.title;
+  const full = title ? `${title} - Linkivo` : DEFAULT_TITLE;
+  const isPrivate = route.guard === 'auth';
+  const desc = route.description || DEFAULT_DESC;
+  const set = (sel, attr, value, make) => {
+    let el = doc.head.querySelector(sel);
+    if (!el && make) { el = doc.createElement(make.tag); for (const [k, v] of Object.entries(make.attrs)) el.setAttribute(k, v); doc.head.appendChild(el); }
+    if (el) el.setAttribute(attr, value);
+  };
+  doc.title = full;
+  set('meta[name="description"]', 'content', desc, { tag: 'meta', attrs: { name: 'description' } });
+  set('meta[name="robots"]', 'content', route.robots || (isPrivate ? 'noindex, nofollow' : 'index, follow'), { tag: 'meta', attrs: { name: 'robots' } });
+  set('link[rel="canonical"]', 'href', isPrivate ? base + '/' : base + (path === '/' ? '/' : path), { tag: 'link', attrs: { rel: 'canonical' } });
+  set('meta[property="og:title"]', 'content', full, { tag: 'meta', attrs: { property: 'og:title' } });
+  set('meta[property="og:description"]', 'content', desc, { tag: 'meta', attrs: { property: 'og:description' } });
+  set('meta[property="og:url"]', 'content', isPrivate ? base + '/' : base + path, { tag: 'meta', attrs: { property: 'og:url' } });
+  set('meta[name="twitter:title"]', 'content', full, { tag: 'meta', attrs: { name: 'twitter:title' } });
+  set('meta[name="twitter:description"]', 'content', desc, { tag: 'meta', attrs: { name: 'twitter:description' } });
+}
 
 const safeDecode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 
@@ -93,8 +120,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     resetLayers(); // overlays belong to the page that is leaving
     container.replaceChildren();
     container.scrollTop = 0;
-    const title = typeof route.title === 'function' ? route.title(params) : route.title;
-    document.title = title ? `${title} - Linkivo` : 'Linkivo';
+    applyPageMeta(document, { ...route, title: typeof route.title === 'function' ? route.title(params) : route.title }, path);
     current = { route, params, path, search: url.search, from, unmount: null };
     history.replaceState({ lk: 'top', from }, '', path + url.search + url.hash);
     const query = Object.fromEntries(url.searchParams);

@@ -18,6 +18,10 @@
             ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
           },
+          "termsAt": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
           "status": {
             ".write": false,
             ".validate": "newData.val() === 'active' || newData.val() === 'deleted'"

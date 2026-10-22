@@ -1,0 +1,28 @@
+fix(v2.1.1): owner review fixes - splash, login, sidebar, settings, icons, updates, SEO, richer metadata
+
+- Splash: the original logo animation is back (ring drop, shackle lock with sparkles, expanding background, typed name, version badge) without the URL badges; first launch full, later launches short, reduced motion still; Settings > Appearance > Start animation (Auto / Always full / Always short)
+- Pages: smooth page entrance, no more gliding scroll (a new page always starts at the top), smooth light/dark fade, pages centred (max 1040px) beside the sidebar
+- Login rebuilt: side panel with a chain pattern that matches the logo, white logo tile, short overview of the app; one compact form column; theme switch; Terms and Privacy agreement when creating an account (stored as profile/termsAt)
+- Sidebar redesigned: no filled background, larger items, whole-row highlight when expanded and rounded-square icon when collapsed, logo expands the sidebar on hover when collapsed and opens Library when expanded, new profile badge, menu now toggles on the second click
+- Add links uses a plus icon (sidebar and bottom bar); Library icon redrawn; every icon and drawing is now an SVG file under assets/ (ui-icons, art, brand) used as a mask; the logo and wordmark follow the accent color
+- Settings is one page with category headings, a fixed category list on PC that follows the scroll, a sticky chip bar on phones; label and description on separate lines; 21 settings (contrast, underlined links, page transitions, pull to refresh, browser menu, open on start, automatic updates, space used, keep data, clear cache, display name, change password, account details)
+- Menu and About rebuilt: About card, Developer card with links, documentation and legal rows
+- No right-click menu on PC and no long-press menu on phones (text fields keep theirs; setting to allow); pull-to-refresh on phones (setting)
+- Updates: version check against /app.json on launch, focus and every 30 minutes; automatic reload, or an Update now popup when the app cannot switch by itself or automatic updates are off
+- Install: the install event is captured before the app loads (it was missed on PC); install help steps per browser; PWA icons from 48 to 1024 px, larger mark, white favicon, manifest start page and colors
+- SEO: per-route title, description, robots, canonical and Open Graph; robots.txt, sitemap.xml, JSON-LD, noscript text; private pages noindex
+- Metadata Worker: Dub.co, AllOrigins and JSONLink removed (they failed every time from Cloudflare); two passes with a shared subrequest budget of 36; rescue engines crawler, Jina reader, Internet Archive, Microlink; reads JSON-LD, first paragraph, derived keywords, dates, feeds, theme color, large icon; clearer HTTP errors; tester sends fresh requests and shows more fields
+- Context file rewritten compact; PLAN, MASTER-PROMPT and CONTEXT files carry the -v2.0_to_v2.5 suffix (RULES section 9); tools: make-ui-icons.mjs, gen-precache includes SVG assets; tests: 8 files
+
+Removed files:
+- @ Creator/PLAN.md (renamed to @ Creator/PLAN-v2.0_to_v2.5.md)
+- @ Creator/MASTER-PROMPT.md (renamed to @ Creator/MASTER-PROMPT-v2.0_to_v2.5.md)
+- @ Creator/CONTEXT.md (replaced by @ Creator/CONTEXT-v2.0_to_v2.5.md)
+- assets/icons/icon-maskable-512.png is regenerated (same name); nothing else removed
+
+Owner actions:
+- Extract the zip into the project root, delete the three files above, commit with this message, save the zip in "@ Versions"
+- Realtime Database: deploy the rules again (firebase deploy --only database): profile now allows termsAt
+- Cloudflare: paste the new @ Creator/worker/worker.js and deploy; open /health (version 2.1.1)
+- firebase deploy --only hosting, hard reload; on phones remove and re-install the PWA to get the new icons
+- Settings > Advanced > Metadata tester > Load 25 sample URLs and send the summary

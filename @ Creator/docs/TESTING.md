@@ -9,7 +9,7 @@ node "@ Creator/tools/check.mjs"          # must end with: PASSED: 0 errors
 node --test "@ Creator/tests/*.test.mjs"            # unit tests (node:test, no dependencies)
 bash "@ Creator/tools/pack.sh"            # runs the gate again and builds the zip
 ```
-`check.mjs` verifies: JS syntax of every module, JSON validity, forbidden patterns in shipped code (emoji, `eval`, unsafe `innerHTML`, direct `localStorage`, inline handlers), file size caps, secret scan, version consistency (`app.json`, `sw.js`, commit file, `CONTEXT.md`), deploy safety (`firebase.json`, `.gitignore`).
+`check.mjs` verifies: JS syntax of every module, JSON validity, forbidden patterns in shipped code (emoji, `eval`, unsafe `innerHTML`, direct `localStorage`, inline handlers), file size caps, secret scan, version consistency (`app.json`, `sw.js`, commit file, `CONTEXT-v2.0_to_v2.5.md`), deploy safety (`firebase.json`, `.gitignore`).
 
 ## 2. Unit tests (write them in the version that introduces the logic)
 
@@ -56,7 +56,7 @@ Run it with the Firebase emulator when available, otherwise the owner runs it in
 - 5,000 to 10,000 links: scrolling stays smooth, search results under 100 ms, random pick under 50 ms.
 - Import of 1,000 links saved to the database in a few seconds (excluding metadata enrichment) on a normal connection.
 
-## 6. How the v2.1.0 suite is organised (7 files, 77 tests) (read before adding tests)
+## 6. How the v2.1.0 suite is organised (8 files) (read before adding tests)
 
 | File | What it covers |
 |---|---|
@@ -66,6 +66,7 @@ Run it with the Firebase emulator when available, otherwise the owner runs it in
 | `rules.test.mjs` + `helpers/rules-eval.mjs` | the generated rules against the matrix in `rules-matrix.md` (own evaluator, see the note there) |
 | `worker.test.mjs` | Worker pure functions and routes with mocked `fetch`: SSRF guard, head parser, frameable, streaming cut, fallback chain and order, oEmbed, redirects, budget, token verification (generated RSA key), rate limits, CORS |
 | `boot-smoke.test.mjs` | jsdom: the boot sequence in guest mode, data layer start and teardown, session changes (guest, logout, deleted account) |
+| `v211.test.mjs` | jsdom: start animation modes, pull-to-refresh math, input guard, version check, SEO meta and files, popover toggle, theme fade, asset files and manifest icons |
 | `ui-smoke.test.mjs` | jsdom: router and Back behavior, overlays, toast, popover, appearance, shell, every route module, login, settings, worker client and metadata tester |
 
 Commands (Node 22 needs a glob, not a folder):

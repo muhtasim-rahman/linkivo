@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/core/worker-client.js  (v2.1.0)
+ * Linkivo — js/core/worker-client.js  (v2.1.1)
  * Purpose: the only code that talks to the Cloudflare Worker. Adds the Firebase ID token for account users (guests send none and
  *          get stricter server limits), applies timeouts, splits big lists into batches of 25 and retries with backoff.
  * API: setTokenProvider(fn)   health() -> { ok, version, ms }   fetchMeta(urls, { onBatch }) -> Map<url, result>   META_BATCH
@@ -44,13 +44,13 @@ export async function health() {
   catch (e) { return { ok: false, error: e.message, status: e.status }; }
 }
 
-export async function fetchMeta(urls, { onBatch } = {}) {
+export async function fetchMeta(urls, { onBatch, fresh = false } = {}) {
   const out = new Map();
   const unique = [...new Set(urls)];
   const batches = chunk(unique, META_BATCH);
   await runParallel(batches, async (batch) => {
     try {
-      const { data } = await call('/meta', { body: { urls: batch } });
+      const { data } = await call('/meta', { body: fresh ? { urls: batch, fresh: true } : { urls: batch } });
       for (const r of data.results || []) out.set(r.url, r);
       for (const u of batch) if (!out.has(u)) out.set(u, { url: u, ok: false, error: 'no result', log: [] });
     } catch (e) {

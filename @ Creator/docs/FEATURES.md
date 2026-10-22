@@ -2,7 +2,7 @@
 
 Source of truth for WHAT the app does. Everything here comes from the product owner (Turzo) unless marked **[proposal]**.
 A proposal is the planner's suggestion: show it to the owner at the start of the version that builds it, then freeze it.
-Which version builds what: see `PLAN.md`. How it is built: see `ARCHITECTURE.md`. How it looks: see `DESIGN.md`.
+Which version builds what: see `PLAN-v2.0_to_v2.5.md`. How it is built: see `ARCHITECTURE.md`. How it looks: see `DESIGN.md`.
 
 Language of the UI: **English only**. No emojis anywhere (icons only). The app is for fully public use.
 

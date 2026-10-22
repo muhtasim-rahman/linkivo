@@ -73,3 +73,10 @@ New spec:
 - Is there exactly one memorable element per screen, and is the rest quiet?
 - Are empty, loading and error states designed?
 - Does it work with one thumb on a 360px wide phone, in dark and light, with reduced motion?
+
+## 9. Changes agreed in v2.1.1 (override the sections above where they differ)
+- Splash: the owner's original logo animation (not a 1.5 s logo-only version); modes full / short / still; URL badges removed; version badge shows the real version.
+- Sidebar: no filled background, 272px / 80px, 54px rows, 24px icons; expanded active row fully highlighted, collapsed active icon in a rounded square; profile badge = avatar + name + masked email + three dots (collapsed: avatar only); logo behavior as in CONTEXT.
+- Login: side panel with the chain pattern (thin rings with a small shackle, like the logo), white logo tile, four-point overview; one compact form column; theme switch; terms agreement on sign-up.
+- Pages are centred, max 1040px. Settings: one page with category headings. About / Developer / legal blocks replace the old app-details layout.
+- Add links uses the plus icon. Icons and art are SVG files in assets/.

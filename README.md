@@ -13,5 +13,5 @@ A fast, private link manager (PWA). Plain JavaScript, Firebase and a Cloudflare 
 |---|---|
 | `index.html`, `sw.js`, `app.json`, `firebase.json` | app shell, service worker, app info, hosting and database config |
 | `css/`, `js/`, `assets/` | the app (split by page and function) |
-| `@ Creator/` | project plan, rules, docs, tools and the AI build workflow (start with `PLAN.md`) |
+| `@ Creator/` | project plan, rules, docs, tools and the AI build workflow (start with `PLAN-v2.0_to_v2.5.md`) |
 | `@ Versions/` | one zip per released version |

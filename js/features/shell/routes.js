@@ -4,12 +4,17 @@
  *          placeholder page until their version arrives, so every URL that will exist already works.
  * Route fields: see core/router.js.  `tab` tells the shell which nav item is active.  `since` is the version that delivers the page.
  */
+import { prefs } from '../../core/local-prefs.js';
+
 const stub = () => import('./pages/stub-page.js');
+const START_PAGES = ['library', 'random', 'search'];
+/** Where `/` goes for a signed-in user: Settings > App > Open on start (default Library). */
+export const startPath = () => { const v = prefs.get('app.startPage', 'library'); return '/' + (START_PAGES.includes(v) ? v : 'library'); };
 const settings = () => import('../settings/settings-page.js');
 
 export const ROUTES = [
-  { id: 'root', pattern: '/', title: '', parent: null, guard: 'open', redirect: (s) => (s.mode === 'none' ? '/login' : '/library'), load: stub },
-  { id: 'login', pattern: '/login', title: 'Sign in', parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
+  { id: 'root', pattern: '/', title: '', parent: null, guard: 'open', redirect: (s) => (s.mode === 'none' ? '/login' : startPath()), load: stub },
+  { id: 'login', pattern: '/login', title: 'Sign in', description: 'Sign in to Linkivo, create a free account, or visit as a guest. Keep your links in folders, private and in one place.', parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
   { id: 'reactivate', pattern: '/reactivate', title: 'Account scheduled for deletion', parent: null, guard: 'auth', shell: false, load: () => import('./pages/reactivate-page.js') },
 
   { id: 'library', pattern: '/library', title: 'Library', parent: null, guard: 'auth', tab: 'library', stub: 'library', since: '2.2.0', load: stub },
@@ -25,9 +30,9 @@ export const ROUTES = [
   { id: 'settings', pattern: '/settings', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'settings', load: settings },
   { id: 'settings-section', pattern: '/settings/:section', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/settings'), guard: 'auth', tab: 'settings', load: settings },
 
-  { id: 'terms', pattern: '/terms', title: 'Terms', parent: '/library', guard: 'open', stub: 'terms', since: '2.6.0', load: stub },
-  { id: 'privacy', pattern: '/privacy', title: 'Privacy', parent: '/library', guard: 'open', stub: 'privacy', since: '2.6.0', load: stub },
-  { id: 'docs', pattern: '/docs', title: 'Documentation', parent: '/library', guard: 'open', stub: 'docs', since: '2.6.0', load: stub },
+  { id: 'terms', pattern: '/terms', title: 'Terms of use', description: 'The terms of use of Linkivo, a free and private link manager.', parent: '/library', guard: 'open', stub: 'terms', since: '2.6.0', load: stub },
+  { id: 'privacy', pattern: '/privacy', title: 'Privacy policy', description: 'How Linkivo handles your links and data: guest data stays on your device, account data is protected by database rules.', parent: '/library', guard: 'open', stub: 'privacy', since: '2.6.0', load: stub },
+  { id: 'docs', pattern: '/docs', title: 'Documentation', description: 'How to use Linkivo: import links, organize folders, search, Random Discover, security and backups.', parent: '/library', guard: 'open', stub: 'docs', since: '2.6.0', load: stub },
   { id: 'docs-topic', pattern: '/docs/:topic', title: 'Documentation', parent: '/docs', guard: 'open', stub: 'docs', since: '2.6.0', load: stub },
   { id: 'not-found', pattern: '*', title: 'Page not found', parent: '/library', guard: 'open', stub: 'lost', load: stub }
 ];

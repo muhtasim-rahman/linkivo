@@ -1,13 +1,28 @@
-/* Linkivo v2.1.0 - placeholder pages, menu and profile */
+/* Linkivo v2.1.1 - placeholder pages, menu, profile, About and Developer cards */
 .stub { display: grid; align-content: start; }
-.menu-list { display: grid; gap: var(--s3); }
-.menu-hero { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); color: inherit; }
+.menu-list { display: grid; gap: var(--s4); }
+.menu-hero { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; color: inherit; }
 .menu-hero:hover { text-decoration: none; background: var(--surface-2); }
 .menu-hero .pf-name { font: 650 var(--fs-md) / 1.2 var(--font-brand); }
-.about { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
-.about img { width: 44px; }
-.about strong { font: 700 var(--fs-md) / 1.2 var(--font-brand); display: block; }
 .profile-head { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s6); }
 .profile-head .pf-name { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
 .tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 650; }
 .stack { display: grid; gap: var(--s4); }
+
+/* About: a hero with the chain pattern, three highlights, actions */
+.about-card, .dev-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.about-hero { position: relative; isolation: isolate; display: flex; align-items: center; gap: var(--s4); padding: var(--s5); background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.about-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0.18; background: var(--brand-grad); -webkit-mask: url('/assets/art/chain-pattern.svg') 0 0 / 208px 150px; mask: url('/assets/art/chain-pattern.svg') 0 0 / 208px 150px; }
+.about-hero .brand-word { font-size: 30px; display: block; }
+.about-hero p { color: var(--sub); }
+.about-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.about-points { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px; background: var(--line); }
+.about-points li { display: flex; gap: 12px; align-items: flex-start; padding: var(--s4); background: var(--surface); }
+.about-points .pt-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 11px; background: var(--accent-soft); color: var(--accent-text); }
+.about-points strong { display: block; font-weight: 650; } .about-points span { color: var(--sub); font-size: var(--fs-sm); }
+.about-actions { display: flex; gap: var(--s2); flex-wrap: wrap; padding: var(--s4); border-top: 1px solid var(--line); }
+.dev-card { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); flex-wrap: wrap; }
+.dev-info { flex: 1; min-width: 180px; }
+.dev-info strong { font: 650 var(--fs-md) / 1.2 var(--font-brand); display: block; }
+.dev-info span { color: var(--sub); font-size: var(--fs-sm); }
+.dev-links { display: flex; gap: var(--s2); flex-wrap: wrap; }

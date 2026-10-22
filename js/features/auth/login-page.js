@@ -1,35 +1,37 @@
 /**
- * Linkivo — js/features/auth/login-page.js  (v2.1.0)
- * Purpose: the sign-in page: Google, email and password (sign in / create account), reset password, and "Visit as guest" with its
- *          notice. Layout: a ring-art field and a plain form column (no centred card).
+ * Linkivo — js/features/auth/login-page.js  (v2.1.1, rebuilt)
+ * Purpose: the sign-in page. Desktop: a side panel (chain pattern that matches the logo, white logo tile, short overview of what you get) and one
+ *          compact form column. Phones: a short brand band, then the same form. Google, email and password (sign in / create account),
+ *          password reset, "Visit as guest" with its notice, a light/dark switch, and an agreement to the Terms and Privacy policy when creating
+ *          an account (the time of agreement is stored on the profile as `termsAt`).
  * Page module: mount(container, ctx)
  */
 import { h } from '../../core/dom.js';
 import { icon, googleMark } from '../../ui/icons.js';
+import { brandWord, logoTile } from '../../ui/brand.js';
 import { openSheet } from '../../ui/sheet.js';
 import { toast } from '../../ui/toast.js';
 import { loadCss } from '../../core/css-loader.js';
 import { getSession } from '../../core/session.js';
+import { sessionPrefs } from '../../core/local-prefs.js';
+import { resolvedTheme } from '../../core/appearance.js';
 import { signInWithGoogle, signInWithEmail, registerWithEmail, sendReset, enterGuest, friendlyAuthError } from './auth-service.js';
+import { toggleTheme } from '../shell/shell-parts.js';
+import app from '../../core/app-info.js';
 import { log } from '../../core/logger.js';
 
-/** Interlocking rings echo the logo (two rings joined by a bar); drawn large and cropped by the frame. */
-function ringArt() {
-  const rings = [];
-  const radii = [60, 100, 140, 180, 220];
-  radii.forEach((r, i) => {
-    rings.push(h('circle', { cx: 230, cy: 300, r, 'stroke-opacity': 0.14 + i * 0.1 }));
-    rings.push(h('circle', { cx: 400, cy: 300, r, 'stroke-opacity': 0.1 + i * 0.08 }));
-  });
-  rings.push(h('line', { x1: 230, y1: 300, x2: 400, y2: 300, 'stroke-width': 6, 'stroke-opacity': 0.7 }));
-  return h('svg', { viewBox: '0 0 640 600', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'aria-hidden': 'true', focusable: 'false' }, rings);
-}
+const POINTS = [
+  ['folder', 'Folders for everything', 'Group thousands of links and find any of them in an instant.'],
+  ['plus', 'Add links in seconds', 'Paste text or drop files and every link is picked out for you.'],
+  ['random', 'Random Discover', 'Reopen links you forgot, weighted by what you like.'],
+  ['lock', 'Private by design', 'Guest data never leaves your device. Lock folders behind a PIN.']
+];
 
 export async function mount(container) {
   await loadCss('/css/pages/auth.css');
-  let tab = 'signin';
-  let busy = false;
+  let tab = 'signin', busy = false, agree = false;
   const session = getSession();
+  const offline = session.error === 'offline';
 
   const title = h('h1', { class: 'auth-title' });
   const sub = h('p', { class: 'auth-sub' });
@@ -37,29 +39,42 @@ export async function mount(container) {
   const email = h('input', { class: 'input', id: 'auth-email', type: 'email', name: 'email', autocomplete: 'email', inputmode: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: 'you@example.com', required: true });
   const pass = h('input', { class: 'input', id: 'auth-pass', type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'Password', required: true });
   const eye = h('button', { type: 'button', class: 'btn btn-icon', 'aria-label': 'Show password', on: { click: () => { const show = pass.type === 'password'; pass.type = show ? 'text' : 'password'; eye.replaceChildren(icon(show ? 'eye-off' : 'eye')); eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); } } }, icon('eye'));
-  const passHelp = h('p', { class: 'help', hidden: true, text: 'At least 6 characters. A verification email is sent after you sign up.' });
-  const submit = h('button', { type: 'submit', class: 'btn btn-primary btn-block' });
-  const google = h('button', { type: 'button', class: 'btn btn-block', on: { click: () => run(() => signInWithGoogle(), 'google') } }, googleMark(18), h('span', { text: 'Continue with Google' }));
   const forgot = h('button', { type: 'button', class: 'link-btn', text: 'Forgot password?', on: { click: openReset } });
-  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Sign in or create account' },
+  const submit = h('button', { type: 'submit', class: 'btn btn-primary btn-block' });
+  const google = h('button', { type: 'button', class: 'btn btn-block', on: { click: () => { if (!requireAgreement()) return; run(() => signInWithGoogle(), 'google'); } } }, googleMark(18), h('span', { text: 'Continue with Google' }));
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Sign in or create account', style: { width: '100%' } },
     h('button', { type: 'button', 'aria-pressed': 'true', text: 'Sign in', on: { click: () => setTab('signin') } }),
     h('button', { type: 'button', 'aria-pressed': 'false', text: 'Create account', on: { click: () => setTab('register') } }));
 
+  const box = h('span', { class: 'check-box' }, icon('check', { size: 14 }));
+  const checkBtn = h('button', { type: 'button', class: 'check-hit', role: 'checkbox', 'aria-checked': 'false', 'aria-label': 'I agree to the Terms of use and the Privacy policy', style: { display: 'contents' } }, box);
+  const check = h('div', { class: 'check', role: 'group', 'aria-checked': 'false', hidden: true, on: { click: (e) => { if (!e.target.closest('a')) toggleAgree(); } } }, checkBtn,
+    h('span', null, 'I agree to the ', h('a', { href: '/terms', target: '_blank', rel: 'noopener', text: 'Terms of use' }), ' and the ', h('a', { href: '/privacy', target: '_blank', rel: 'noopener', text: 'Privacy policy' }), '.'));
+  const legal = h('p', { class: 'auth-legal' }, 'By continuing you accept the ', h('a', { href: '/terms', target: '_blank', rel: 'noopener', text: 'Terms' }), ' and ', h('a', { href: '/privacy', target: '_blank', rel: 'noopener', text: 'Privacy policy' }), '.');
+
+  function toggleAgree() { agree = !agree; check.setAttribute('aria-checked', String(agree)); checkBtn.setAttribute('aria-checked', String(agree)); if (agree) showError(''); }
+  function requireAgreement() {
+    if (tab !== 'register' || agree) return true;
+    showError('Agree to the Terms of use and the Privacy policy to create an account.');
+    return false;
+  }
   function showError(msg) { alertBox.hidden = !msg; alertBox.replaceChildren(...(msg ? [icon('alert', { size: 18 }), h('span', { text: msg })] : [])); }
   function setBusy(b, which) { busy = b; for (const el of [submit, google]) el.disabled = b; (which === 'google' ? google : submit).classList.toggle('is-loading', b); }
   function setTab(t) {
     tab = t; showError('');
     [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String((i === 0) === (t === 'signin'))));
-    title.textContent = t === 'signin' ? 'Sign in' : 'Create your account';
-    sub.textContent = t === 'signin' ? 'Your links, private and in one place.' : 'Free, and it works on every device you use.';
+    title.textContent = t === 'signin' ? 'Welcome back' : 'Create your account';
+    sub.textContent = t === 'signin' ? 'Sign in to open your links.' : 'Free, and it works on every device you use.';
     submit.textContent = t === 'signin' ? 'Sign in' : 'Create account';
     pass.autocomplete = t === 'signin' ? 'current-password' : 'new-password';
-    passHelp.hidden = t === 'signin'; forgot.hidden = t !== 'signin';
+    pass.placeholder = t === 'signin' ? 'Password' : 'At least 6 characters';
+    forgot.hidden = t !== 'signin'; check.hidden = t !== 'register'; legal.hidden = t === 'register';
   }
 
   async function run(fn, which) {
     if (busy) return;
     showError(''); setBusy(true, which);
+    if (tab === 'register') sessionPrefs.set('terms.pending', Date.now()); // read by account-status.js when the profile is created
     try { await fn(); /* the session listener in boot.js moves us on; keep the busy state until the page unmounts */ }
     catch (e) {
       setBusy(false, which);
@@ -73,6 +88,7 @@ export async function mount(container) {
     e.preventDefault();
     if (!email.value.trim()) { showError('Enter your email address.'); email.focus(); return; }
     if (!pass.value) { showError('Enter your password.'); pass.focus(); return; }
+    if (!requireAgreement()) return;
     run(() => (tab === 'signin' ? signInWithEmail(email.value, pass.value) : registerWithEmail(email.value, pass.value)), 'email');
   }
 
@@ -100,20 +116,30 @@ export async function mount(container) {
     });
   }
 
-  const offline = session.error === 'offline';
+  const themeBtn = h('button', { type: 'button', class: 'btn btn-icon auth-theme', on: { click: toggleTheme } });
+  const renderTheme = () => { const dark = resolvedTheme() === 'dark'; themeBtn.replaceChildren(icon(dark ? 'sun' : 'moon', { size: 22 })); themeBtn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme'); };
+  const observer = new MutationObserver(renderTheme); observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  renderTheme();
+
   const form = h('form', { class: 'auth-form', novalidate: true, on: { submit: onSubmit } },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'auth-email', text: 'Email' }), email),
-    h('div', { class: 'field' }, h('label', { class: 'label', for: 'auth-pass', text: 'Password' }), h('div', { class: 'input-wrap' }, pass, eye), passHelp),
-    alertBox, submit, h('div', { class: 'auth-links' }, forgot));
+    h('div', { class: 'field' }, h('div', { class: 'auth-field-row' }, h('label', { class: 'label', for: 'auth-pass', text: 'Password' }), forgot), h('div', { class: 'input-wrap' }, pass, eye)),
+    check, alertBox, submit);
 
-  container.appendChild(h('div', { class: 'auth' },
-    h('div', { class: 'auth-art', 'aria-hidden': 'true' }, ringArt(), h('div', { class: 'auth-brand' }, h('img', { src: '/assets/brand/logo.svg', alt: '' }), h('span', null, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'))),
-    h('section', { class: 'auth-panel' },
+  container.appendChild(h('div', { class: 'auth' }, themeBtn,
+    h('aside', { class: 'auth-side' },
+      h('div', { class: 'auth-brand' }, logoTile(48), brandWord()),
+      h('div', { class: 'auth-pitch' },
+        h('div', null, h('h2', { text: 'Every link you keep, in order.' }), h('p', { text: 'Linkivo is a fast, private home for the links you want to find again.' })),
+        h('ul', { class: 'auth-points' }, POINTS.map(([ic, t, d]) => h('li', null, h('span', { class: 'pt-ic' }, icon(ic, { size: 22 })), h('div', null, h('strong', { text: t }), h('span', { text: d })))))),
+      h('p', { class: 'auth-credit' }, `Made by `, h('a', { href: app.site, target: '_blank', rel: 'noopener', text: app.developer }))),
+    h('main', { class: 'auth-main' }, h('div', { class: 'auth-panel' },
       h('div', null, title, sub),
       offline && h('div', { class: 'alert is-error', role: 'alert' }, icon('wifi-off', { size: 18 }), h('span', { text: 'Sign-in could not load. Check your connection and reload. Guest mode still works.' })),
-      seg, google, h('div', { class: 'auth-or', text: 'or use email' }), form,
-      h('div', { class: 'auth-guest' }, h('button', { type: 'button', class: 'btn btn-block', on: { click: openGuestNotice } }, icon('user', { size: 18 }), h('span', { text: 'Visit as guest' })), h('p', { class: 'help', text: 'Try Linkivo without an account. Your data stays on this device.' })))));
+      seg, google, h('div', { class: 'auth-or', text: 'or with email' }), form, legal,
+      h('div', { class: 'auth-guest' }, h('button', { type: 'button', class: 'btn', on: { click: openGuestNotice } }, icon('user', { size: 18 }), h('span', { text: 'Visit as guest' })), h('p', { class: 'help', text: 'No account needed. Your data stays on this device.' }))))));
   setTab('signin');
   if (session.redirectError) showError(friendlyAuthError({ code: session.redirectError }));
   if (offline) for (const el of [google, submit]) el.disabled = true;
+  return () => observer.disconnect();
 }

@@ -13,7 +13,7 @@ export function setupDom(url = 'http://localhost/library') {
   define('matchMedia', (q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
   define('addEventListener', w.addEventListener.bind(w)); define('removeEventListener', w.removeEventListener.bind(w));
   define('innerWidth', 390); define('innerHeight', 800);
-  define('requestAnimationFrame', (fn) => setTimeout(fn, 0));
+  define('requestAnimationFrame', (fn) => setTimeout(fn, 0)); define('cancelAnimationFrame', (id) => clearTimeout(id));
   // jsdom does not load stylesheets: fire "load" so loadCss() resolves immediately
   const append = w.document.head.appendChild.bind(w.document.head);
   w.document.head.appendChild = (el) => { const r = append(el); if (el.tagName === 'LINK') setTimeout(() => el.dispatchEvent(new w.Event('load')), 0); return r; };

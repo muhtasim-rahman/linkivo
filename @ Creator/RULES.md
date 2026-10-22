@@ -3,14 +3,14 @@
 These rules are strict. They apply to every version. If a rule conflicts with a user request, say so and ask; do not silently break the rule. Rules marked (gate) are checked by `node "@ Creator/tools/check.mjs"`.
 
 ## 0. Authority and reading order
-1. `MASTER-PROMPT.md` (how to work), 2. this file, 3. `PLAN.md` (what each version contains), 4. `CONTEXT.md` (current state and decisions), 5. `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/SETUP-GUIDE.md`, `docs/TESTING.md`.
-The newest owner instruction in the chat wins over the documents; when it changes a decision, record it in `CONTEXT.md`.
+1. `MASTER-PROMPT-v2.0_to_v2.5.md` (how to work), 2. this file, 3. `PLAN-v2.0_to_v2.5.md` (what each version contains), 4. `CONTEXT-v2.0_to_v2.5.md` (current state and decisions), 5. `docs/FEATURES.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/SETUP-GUIDE.md`, `docs/TESTING.md`.
+The newest owner instruction in the chat wins over the documents; when it changes a decision, record it in `CONTEXT-v2.0_to_v2.5.md`.
 
 ## 1. Scope and completeness
 - Build only the version asked for. Do not start features of later versions (use feature flags if something must exist early).
-- A version is delivered only when every slice in `PLAN.md` for that version works and the quality gate passes with zero errors. Never ship a broken or half-wired state. If something cannot be finished, cut it from this version, say exactly what was cut, and move it to the next version in `CONTEXT.md`.
+- A version is delivered only when every slice in `PLAN-v2.0_to_v2.5.md` for that version works and the quality gate passes with zero errors. Never ship a broken or half-wired state. If something cannot be finished, cut it from this version, say exactly what was cut, and move it to the next version in `CONTEXT-v2.0_to_v2.5.md`.
 - Never remove or weaken an existing feature or security property without the owner's explicit approval.
-- Never modify the history of earlier versions: older `commits/*.txt` files and older entries in `CONTEXT.md` are append-only.
+- Never modify the history of earlier versions: older `commits/*.txt` files and older entries in `CONTEXT-v2.0_to_v2.5.md` are append-only.
 - Never touch, request, or mention the owner's private folders `@ Extra files` (personal files and the git logs) and `@ Versions` (release zips). `@ Creator` is YOUR workspace: you read it and update it every version, and it ships inside the zip.
 - Folder names contain a space and a leading `@`: quote every path in shell commands (`"@ Creator/tools/check.mjs"`), and never pass `@` paths to `zip -x` (zip treats a leading `@` as a list file; `pack.sh` handles this).
 - Do not invent facts (keys, IDs, limits, endpoints, console menus). Verify against official docs when you can search; otherwise label it **[verify]** and tell the owner. Never claim a test passed unless you ran it.
@@ -52,20 +52,27 @@ The newest owner instruction in the chat wins over the documents; when it change
 
 ## 6. Updates and caching
 - Never use `immutable` or long cache lifetimes for app files (gate). `sw.js` is never cached. The service worker is network-first for the shell and removes all old caches.
-- `app.json` `version`, `sw.js` `VERSION`, the commit file and the `CONTEXT.md` entry always agree (gate).
+- `app.json` `version`, `sw.js` `VERSION`, the commit file and the `CONTEXT-v2.0_to_v2.5.md` entry always agree (gate).
 - Bumping the version is part of every delivery.
 
 ## 7. Workflow and deliverables
 - One version per chat. The chat starts when the owner says "Start vX.Y.Z" and gives the current project zip.
 - Run `node "@ Creator/tools/check.mjs"` after every slice and before delivery; fix every error. Add tests for logic-heavy modules (points, extraction, chunker, router back logic, rules matrix) under `@ Creator/tests/` and run them.
-- Deliverables for every version: (1) project zip built by `bash "@ Creator/tools/pack.sh"` (no wrapper folder; it INCLUDES `@ Creator` and EXCLUDES `@ Extra files` and `@ Versions`), (2) `@ Creator/commits/vX.Y.Z-commit.txt` (title + bullet description, one file per commit), (3) updated `CONTEXT.md` (append a new version entry; update current-state sections), (4) updated docs, rules (`@ Creator/rules/database.rules.json` + snapshot in `history/`) and Worker (`@ Creator/worker/worker.js` + snapshot in `history/`) when changed, (5) the chat summary described in `MASTER-PROMPT.md`.
+- Deliverables for every version: (1) project zip built by `bash "@ Creator/tools/pack.sh"` (no wrapper folder; it INCLUDES `@ Creator` and EXCLUDES `@ Extra files` and `@ Versions`), (2) `@ Creator/commits/vX.Y.Z-commit.txt` (title + bullet description, one file per commit), (3) updated `CONTEXT-v2.0_to_v2.5.md` (append a new version entry; update current-state sections), (4) updated docs, rules (`@ Creator/rules/database.rules.json` + snapshot in `history/`) and Worker (`@ Creator/worker/worker.js` + snapshot in `history/`) when changed, (5) the chat summary described in `MASTER-PROMPT-v2.0_to_v2.5.md`.
 - List every file removed or renamed under "Removed files" in the commit file and in the summary, because extracting a zip does not delete old files.
 - The zip root IS the project root. The owner extracts it directly into the project folder next to `.git`.
 - `@ Creator/` is public (pushed to GitHub): never put anything sensitive in it.
 
 ## 8. Communication
 - Talk to the owner in Bangla (Bengali script) with technical terms in English; he writes Banglish. Keep explanations simple, structured and practical; no vague answers. Code, comments, docs and commit messages are in English.
-- Ask only blocking questions (at most 5, grouped), otherwise decide, record the decision in `CONTEXT.md`, and continue.
+- Ask only blocking questions (at most 5, grouped), otherwise decide, record the decision in `CONTEXT-v2.0_to_v2.5.md`, and continue.
 - When the owner must do something (deploy, paste, add a secret), give numbered steps with exact names.
 - When a request is risky or contradicts earlier decisions or the free-tier limits, say so briefly and propose the alternative.
 - Bugs reported later: reproduce from the report, fix, release a patch `vX.Y.Z+1` with the same deliverables.
+
+## 9. File naming, assets, SEO, context (added v2.1.1)
+- Planning files carry the version range they cover: `PLAN-v2.0_to_v2.5.md`, `MASTER-PROMPT-v2.0_to_v2.5.md`, `CONTEXT-v2.0_to_v2.5.md`. When v2.6 or later is planned, new files get a new suffix (for example `-v2.6_to_v2.9`) and the old ones stay. Any file that may be re-planned later gets such a suffix. Code that names these files (check.mjs, pack.sh, docs) must be updated together with the names.
+- Custom artwork (icons, drawings, patterns, logo masks) lives as SVG files under `assets/` and is loaded from there, never pasted into JavaScript. Only animated markup that must be driven by script (the splash) may be inline.
+- The logo and wordmark follow the accent color (CSS mask + brand gradient variables).
+- SEO-friendly by default: one h1 per page, semantic landmarks, per-route title, description, robots and canonical (router `applyPageMeta`), private pages noindex, public pages indexable, `robots.txt` and `sitemap.xml` kept current, no content hidden from crawlers that a user can see. Real SEO work starts at v2.6.0.
+- Context file: keep it compact (project summary, current state, important owner agreements, open verifications). Remove what no longer matters; never let it grow into a diary.

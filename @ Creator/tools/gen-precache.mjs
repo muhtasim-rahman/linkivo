@@ -18,10 +18,10 @@ export function listAppFiles() {
     for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const rel = `${dir}/${e.name}`;
       if (e.isDirectory()) walk(rel);
-      else if (/\.(js|css)$/.test(e.name)) out.push('/' + rel);
+      else if (/\.(js|css|svg)$/.test(e.name)) out.push('/' + rel);
     }
   };
-  for (const d of ['js', 'css']) if (fs.existsSync(path.join(root, d))) walk(d);
+  for (const d of ['js', 'css', 'assets/ui-icons', 'assets/art', 'assets/brand']) if (fs.existsSync(path.join(root, d))) walk(d);
   return out.sort();
 }
 

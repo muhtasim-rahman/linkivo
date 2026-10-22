@@ -32,15 +32,16 @@ async function icon(size, fill, { radius = 0, bg = '#ffffff' } = {}) {
   return img.png().toBuffer();
 }
 
+// v2.1.1: more sizes and a larger mark so the system launch screen (which scales one of these up) stays sharp.
+// "any" icons: mark at 74% of the width. Maskable icons: 56% (safe zone). Sizes cover Android launchers, Chrome and Windows.
 const files = {
-  'icon-192.png': await icon(192, 0.66),
-  'icon-512.png': await icon(512, 0.66),
-  // Maskable: mark kept inside the central safe zone (80% circle) so launchers can crop freely.
+  'icon-maskable-192.png': await icon(192, 0.56),
   'icon-maskable-512.png': await icon(512, 0.56),
-  'apple-touch-icon.png': await icon(180, 0.66),
-  'favicon-32.png': await icon(32, 0.80, { radius: 7 }),
-  'favicon-48.png': await icon(48, 0.80, { radius: 10 }),
+  'apple-touch-icon.png': await icon(180, 0.7),
+  'favicon-32.png': await icon(32, 0.82, { radius: 7 }),
+  'favicon-48.png': await icon(48, 0.82, { radius: 10 }),
 };
+for (const size of [48, 72, 96, 128, 144, 152, 192, 256, 384, 512, 1024]) files[`icon-${size}.png`] = await icon(size, 0.74);
 for (const [name, buf] of Object.entries(files)) await fs.writeFile(path.join(out, name), buf);
 
 // 3) favicon.ico (PNG-in-ICO container with 32 + 48 px images)
@@ -66,5 +67,5 @@ await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#fff
   .png().toFile(path.join(out, 'og-image.png'));
 
 // 5) Vector favicon for modern browsers (transparent background).
-await fs.copyFile(path.join(root, 'assets/brand/logo.svg'), path.join(out, 'favicon.svg'));
+// favicon.svg is hand-made (white rounded background) since v2.1.1; not overwritten here.
 console.log('Icons written to', out, '| mark aspect (h/w):', aspect.toFixed(3));

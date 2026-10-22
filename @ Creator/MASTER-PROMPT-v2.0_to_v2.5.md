@@ -13,22 +13,22 @@ The owner starts a version with a short message such as:
 
 0. Folder names contain a space and a leading `@` (`@ Creator`): quote every path in shell commands.
 1. Find the project zip the owner provides (look in `/mnt/user-data/uploads` and `/mnt/project` for `linkivo-v*.zip`; the newest version wins). Unzip it into a working folder (for example `/home/claude/linkivo`). The zip root is the project root.
-2. Read, in order: `@ Creator/RULES.md`, `@ Creator/PLAN.md`, `@ Creator/CONTEXT.md`, `@ Creator/docs/FEATURES.md`, `ARCHITECTURE.md`, `DESIGN.md`, `SETUP-GUIDE.md`, `TESTING.md`. If the version touches code that exists, read that code too.
-3. Verify: `app.json` version and the last "complete" entry in `CONTEXT.md` equal the version BEFORE the one requested (for `Start v2.3.0` the project must be `v2.2.x` and complete). If not, STOP and tell the owner what is missing or wrong. Do not build on a broken or partial base.
+2. Read, in order: `@ Creator/RULES.md`, `@ Creator/PLAN-v2.0_to_v2.5.md`, `@ Creator/CONTEXT-v2.0_to_v2.5.md`, `@ Creator/docs/FEATURES.md`, `ARCHITECTURE.md`, `DESIGN.md`, `SETUP-GUIDE.md`, `TESTING.md`. If the version touches code that exists, read that code too.
+3. Verify: `app.json` version and the last "complete" entry in `CONTEXT-v2.0_to_v2.5.md` equal the version BEFORE the one requested (for `Start v2.3.0` the project must be `v2.2.x` and complete). If not, STOP and tell the owner what is missing or wrong. Do not build on a broken or partial base.
 4. Run `node "@ Creator/tools/check.mjs"` on the unzipped project. If it already fails, report it first.
-5. Post a short **kickoff brief** in Bangla: version name, the slices from `PLAN.md`, assumptions you will make, anything the owner must provide (at most 5 blocking questions), and any **[verify]** items you will check. Then start building. Do not wait for approval unless a question truly blocks you.
+5. Post a short **kickoff brief** in Bangla: version name, the slices from `PLAN-v2.0_to_v2.5.md`, assumptions you will make, anything the owner must provide (at most 5 blocking questions), and any **[verify]** items you will check. Then start building. Do not wait for approval unless a question truly blocks you.
 
 If you have no way to run code in this chat, say so immediately; deliver the files with the exact checks the owner must run and never claim anything was tested.
 
 ## 2. How to build
 
-- Work **slice by slice** in the order given in `PLAN.md`. After each slice: write the files to disk, run `node "@ Creator/tools/check.mjs"`, run the relevant tests (`node --test "@ Creator/tests/*.test.mjs"`), fix everything, then continue. Keep a scratch worklog outside the project (for example `/home/claude/worklog.md`) listing slices done, decisions and open issues; it is not shipped.
+- Work **slice by slice** in the order given in `PLAN-v2.0_to_v2.5.md`. After each slice: write the files to disk, run `node "@ Creator/tools/check.mjs"`, run the relevant tests (`node --test "@ Creator/tests/*.test.mjs"`), fix everything, then continue. Keep a scratch worklog outside the project (for example `/home/claude/worklog.md`) listing slices done, decisions and open issues; it is not shipped.
 - Write every file from scratch with care. Follow `RULES.md` strictly (security, data, UX, structure). Follow `docs/DESIGN.md` for every screen; run its anti-template checklist before delivery.
 - Build shared pieces once (`js/core`, `js/engine`, `js/ui`) and reuse them; do not copy-paste logic between features.
 - Keep the code understandable: clear module boundaries, header comment on each file, comments that explain why, no clever tricks. If you spot unused or risky code from earlier versions, point it out in the summary instead of deleting working code silently.
 - Prefer finishing fewer things completely over many things partially. Features of later versions stay behind flags or absent.
-- Verify uncertain external facts (free-tier limits, library versions, API endpoints, console menu names) with a search when you can; record the result in `CONTEXT.md` under "Verified facts". Otherwise mark **[verify]** and tell the owner.
-- Decisions that the documents do not cover: decide sensibly, keep them small, record them in `CONTEXT.md` under "Decisions" with a short reason, and mention important ones in the summary. Ask first only if the choice is expensive to reverse.
+- Verify uncertain external facts (free-tier limits, library versions, API endpoints, console menu names) with a search when you can; record the result in `CONTEXT-v2.0_to_v2.5.md` under "Verified facts". Otherwise mark **[verify]** and tell the owner.
+- Decisions that the documents do not cover: decide sensibly, keep them small, record them in `CONTEXT-v2.0_to_v2.5.md` under "Decisions" with a short reason, and mention important ones in the summary. Ask first only if the choice is expensive to reverse.
 
 ## 3. Testing and quality gate
 
@@ -45,7 +45,7 @@ Before delivery all of these must pass; fix problems instead of explaining them 
 Put all outputs in `/mnt/user-data/outputs` and present them:
 1. **`linkivo-vX.Y.Z.zip`**, created with `bash "@ Creator/tools/pack.sh"` (runs the gate, zips the project root contents without a wrapper folder, INCLUDES `@ Creator`, excludes the owner's private `@ Extra files` and `@ Versions`, and excludes `.git`, `node_modules`).
 2. **`@ Creator/commits/vX.Y.Z-commit.txt`**: the commit message (template below), also shown inside the zip.
-3. **Updated `@ Creator/CONTEXT.md`**: append a new version entry, update the "Current state" sections (schema, routes, files, flags, settings registry, Worker routes, owner actions done/pending), never edit earlier version entries.
+3. **Updated `@ Creator/CONTEXT-v2.0_to_v2.5.md`**: compact update as described in the template below (state, version log line, owner agreements); no long entries.
 4. Updated docs/rules/Worker when changed: `@ Creator/rules/database.rules.json` (+ snapshot `history/database.rules-vX.Y.Z.json`), `@ Creator/worker/worker.js` (+ snapshot `history/worker-vX.Y.Z.js`). The owner pastes the Worker into the Cloudflare dashboard, so give it as one complete file.
 5. The **chat summary** in Bangla (template below).
 
@@ -83,23 +83,13 @@ Owner actions:
 "Start vX.Y+1.0" দিয়ে নতুন chat শুরু করো।
 ```
 
-### CONTEXT.md version entry (append)
-```
-## vX.Y.Z <name> (YYYY-MM-DD) Status: COMPLETE | PARTIAL
-Summary: ...
-Files added/changed: (grouped)
-Decisions: D-nnn ... (reason)
-Verified facts: ... (source, date)
-Assumptions awaiting owner confirmation: ...
-Owner actions: done / pending
-Known issues: ...
-Next: ...
-```
+### CONTEXT-v2.0_to_v2.5.md update (keep it COMPACT)
+Update "Current state", add a short "Version log" line (date, what changed in one or two lines, next step), add to "Agreed with the owner" only things the owner said or changed in chat that a future chat must know, and remove anything outdated. Do not append long per-version entries.
 
 ## 6. Capacity and partial delivery
 
 Large versions can exceed one chat. Plan to fit: write compact, reusable code, avoid re-printing files, keep the worklog.
-- If you realize mid-way that the version will not fit, tell the owner at once (Bangla), and stop at the end of the last slice that is **fully working and tested**. Deliver that state with `Status: PARTIAL` in `CONTEXT.md`, the list of remaining slices, and a zip that still deploys cleanly (unfinished features absent or behind flags, never half-wired).
+- If you realize mid-way that the version will not fit, tell the owner at once (Bangla), and stop at the end of the last slice that is **fully working and tested**. Deliver that state with `Status: PARTIAL` in `CONTEXT-v2.0_to_v2.5.md`, the list of remaining slices, and a zip that still deploys cleanly (unfinished features absent or behind flags, never half-wired).
 - The owner then starts a new chat with `Continue vX.Y.0`; the next delivery is `vX.Y.1` and completes the version.
 - Never use partial delivery as an excuse to skip slices you could have finished.
 
@@ -125,4 +115,4 @@ Make it concrete and short: 8 to 15 steps per version, each "do this, expect tha
 - Never include secrets, emojis or sensitive data anywhere in `@ Creator` (it is pushed to GitHub), and never put `@ Extra files` or `@ Versions` in the zip. Never touch those two folders.
 - Never edit or delete history entries of earlier versions.
 - Never claim something works, was tested or was verified when it was not.
-- Never silently change a locked decision from `PLAN.md` or `FEATURES.md`; propose the change, get the owner's answer, then record it.
+- Never silently change a locked decision from `PLAN-v2.0_to_v2.5.md` or `FEATURES.md`; propose the change, get the owner's answer, then record it.

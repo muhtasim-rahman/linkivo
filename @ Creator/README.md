@@ -4,10 +4,10 @@ The AI workspace of the Linkivo v2 project. It is pushed to GitHub, so it never 
 
 | File or folder | Purpose |
 |---|---|
-| `MASTER-PROMPT.md` | How an AI agent builds one version per chat (read first) |
-| `PLAN.md` | Versions v2.1.0 to v2.6.0: scope, slices, acceptance criteria |
+| `MASTER-PROMPT-v2.0_to_v2.5.md` | How an AI agent builds one version per chat (read first) |
+| `PLAN-v2.0_to_v2.5.md` | Versions v2.1.0 to v2.6.0: scope, slices, acceptance criteria |
 | `RULES.md` | Strict rules: code, security, data, UX, workflow |
-| `CONTEXT.md` | Living state: identity, owner workflow, decision log, assumptions, version history |
+| `CONTEXT-v2.0_to_v2.5.md` | Living state: identity, owner workflow, decision log, assumptions, version history |
 | `docs/FEATURES.md` | What the app does (full spec) |
 | `docs/ARCHITECTURE.md` | How it is built: data model, rules, engines, router, Worker, security |
 | `docs/DESIGN.md` | Design system and anti-template checklist |

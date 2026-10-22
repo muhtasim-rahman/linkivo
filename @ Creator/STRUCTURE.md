@@ -7,16 +7,16 @@ The owner's private folders `@ Extra files` and `@ Versions` exist next to these
 ```
 Linkivo/
 ├── @ Creator/                  AI workspace (shipped in every zip, pushed to GitHub: no secrets)
-│   ├── MASTER-PROMPT.md  PLAN.md  RULES.md  CONTEXT.md  STRUCTURE.md  README.md
+│   ├── MASTER-PROMPT-v2.0_to_v2.5.md  PLAN-v2.0_to_v2.5.md  CONTEXT-v2.0_to_v2.5.md  RULES.md  STRUCTURE.md  README.md
 │   ├── docs/                   FEATURES, ARCHITECTURE (section 13 = as built), DESIGN, SETUP-GUIDE, TESTING, V1-AUDIT
 │   ├── commits/                one commit message per version (v2.0.0-commit.txt, v2.1.0-commit.txt, ...)
 │   ├── rules/                  database.rules.json (GENERATED) + history/ snapshots
 │   ├── worker/                 worker.js (v2.1.0: /health, /meta) + history/ snapshots
-│   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs
-│   ├── tests/                  *.test.mjs (7 files, 77 tests), rules-matrix.md, helpers/
+│   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, make-ui-icons.mjs, gen-rules.mjs, gen-precache.mjs
+│   ├── tests/                  *.test.mjs (8 files), rules-matrix.md, helpers/
 │   └── reference/              v1 splash animation, LinkIntel prototype (not deployed)
 │
-├── assets/  brand/ (logo, wordmarks)   icons/ (generated, white background)   fonts/ (empty)
+├── assets/  brand/ (logo, logo-mask, google-g)   icons/ (PWA icons 48 to 1024, white background)   ui-icons/ (101 SVG icons)   art/ (empty-state drawings, chain pattern)   fonts/ (empty)
 ├── css/
 │   ├── core/                   tokens, base, layout, motion
 │   ├── components/             buttons, forms, sheet (overlays + popover), toast, feedback (skeleton, empty, ring, banner, rows), nav
@@ -36,7 +36,7 @@ Linkivo/
 │       library import export recycle    v2.2.0      preview search    v2.3.0      random history profile    v2.4.0
 │       vault account    v2.5.0          backup activity stats legal menu    v2.6.0   (folders still empty)
 │
-├── index.html                  shell + splash markup (generated once from the logo paths)
+├── index.html  robots.txt  sitemap.xml   shell + splash markup + SEO tags; crawler files
 ├── sw.js                       update-safe service worker (precache list is generated)
 ├── manifest.webmanifest        PWA manifest
 ├── app.json                    app info and version (must equal sw.js VERSION and js/core/app-info.js)
@@ -46,7 +46,7 @@ Linkivo/
 
 ## Notes
 
-- Files that appear in later versions: see `PLAN.md` (for example `js/workers/parse.worker.js` in v2.2.0).
+- Files that appear in later versions: see `PLAN-v2.0_to_v2.5.md` (for example `js/workers/parse.worker.js` in v2.2.0).
 - `.gitkeep` only marks an empty folder so git and zips keep it. Delete it when the folder gets its first real file.
 - Folder names `@ Creator`, `@ Extra files`, `@ Versions` contain a space and a leading `@`: always quote them in shell commands.
 - Nothing starting with `@` is deployed to hosting; `@ Creator` and `@ Versions` are pushed to GitHub, `@ Extra files` is git-ignored.

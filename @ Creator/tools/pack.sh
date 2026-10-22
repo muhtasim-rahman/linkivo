@@ -23,5 +23,5 @@ echo "Files in zip: $(printf '%s\n' "$LIST" | wc -l)"
 # Sanity checks
 if printf '%s\n' "$LIST" | grep -qE '^@ (Extra files|Versions|GitLogs)/'; then echo "ERROR: zip contains a private @ folder"; exit 1; fi
 if ! printf '%s\n' "$LIST" | grep -qx 'app.json'; then echo "ERROR: app.json is not at the zip root (wrapper folder?)"; exit 1; fi
-if ! printf '%s\n' "$LIST" | grep -qx '@ Creator/PLAN.md'; then echo "ERROR: @ Creator/PLAN.md missing from zip"; exit 1; fi
+if ! printf '%s\n' "$LIST" | grep -qx '@ Creator/PLAN-v2.0_to_v2.5.md'; then echo "ERROR: @ Creator/PLAN-v2.0_to_v2.5.md missing from zip"; exit 1; fi
 echo "Zip OK"

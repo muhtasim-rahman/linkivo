@@ -91,8 +91,8 @@ if (fs.existsSync(swPath)) {
 } else err('sw.js missing');
 if (app.version) {
   if (!fs.existsSync(path.join(root, `@ Creator/commits/v${app.version}-commit.txt`))) err(`Missing @ Creator/commits/v${app.version}-commit.txt`);
-  const ctx = path.join(root, '@ Creator/CONTEXT.md');
-  if (!fs.existsSync(ctx) || !read(ctx).includes(`v${app.version}`)) err(`@ Creator/CONTEXT.md has no entry for v${app.version}`);
+  const ctx = path.join(root, '@ Creator/CONTEXT-v2.0_to_v2.5.md');
+  if (!fs.existsSync(ctx) || !read(ctx).includes(`v${app.version}`)) err(`@ Creator/CONTEXT-v2.0_to_v2.5.md has no entry for v${app.version}`);
 }
 
 // ---- 5b. Generated files must be current (v2.1.0): sw.js precache list, database rules, app-info version --------------
@@ -131,7 +131,7 @@ const gi = fs.existsSync(path.join(root, '.gitignore')) ? read(path.join(root, '
 for (const need of ['@ Extra files', 'serviceAccount*.json', '.dev.vars']) if (!gi.includes(need)) err(`.gitignore must contain "${need}"`);
 for (const bad of ['@ Creator', '@ Versions']) if (gi.split('\n').some((l) => l.trim().replace(/\/$/, '') === bad)) err(`.gitignore must NOT ignore "${bad}" (it is pushed to GitHub)`);
 if (fs.existsSync(path.join(root, '.creator'))) err('Old folder ".creator" still exists: the folder is now named "@ Creator"');
-for (const need of ['PLAN.md', 'MASTER-PROMPT.md', 'RULES.md', 'CONTEXT.md']) if (!fs.existsSync(path.join(root, '@ Creator', need))) err(`Missing @ Creator/${need}`);
+for (const need of ['PLAN-v2.0_to_v2.5.md', 'MASTER-PROMPT-v2.0_to_v2.5.md', 'RULES.md', 'CONTEXT-v2.0_to_v2.5.md']) if (!fs.existsSync(path.join(root, '@ Creator', need))) err(`Missing @ Creator/${need}`);
 
 // ---- report -------------------------------------------------------------------------------------------
 fs.rmSync(tmp, { recursive: true, force: true });

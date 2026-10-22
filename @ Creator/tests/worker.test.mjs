@@ -79,36 +79,96 @@ test('chain: direct fetch succeeds, result fields, frameable, favicon fallback, 
   assert.equal(again.cached, true); assert.equal(again.title, 'Hello & welcome');
 });
 
-test('chain: blocked direct fetch falls through to the fallbacks in order and logs every attempt', async () => {
+test('rescue: a 403 on the direct fetch is retried as a link-preview crawler; every attempt is logged', async () => {
   T.resetCaches();
-  const order = [];
-  const ctx = ctxWith(async (url) => {
-    order.push(new URL(url).hostname);
-    if (url.startsWith('https://blocked.test')) return new Response('no', { status: 403 });
-    if (url.includes('api.dub.co')) return new Response('{}', { status: 500 });
-    if (url.includes('allorigins')) return new Response('<html><head><title>Just a moment...</title></head>', { status: 200, headers: { 'content-type': 'text/html' } });
-    if (url.includes('jsonlink')) return new Response(JSON.stringify({ title: 'From JSONLink', description: 'd', images: ['https://i.test/x.png'], favicon: 'https://blocked.test/f.ico' }), { status: 200 });
-    throw new Error('unexpected ' + url);
+  const uas = [];
+  const ctx = ctxWith(async (url, init) => {
+    uas.push(init.headers['User-Agent']);
+    return /facebookexternalhit/.test(init.headers['User-Agent']) ? htmlRes(GOOD) : new Response('no', { status: 403 });
   });
   const r = await T.metaForUrl('https://blocked.test/page', ctx);
-  assert.equal(r.ok, true); assert.equal(r.engine, 'jsonlink'); assert.equal(r.title, 'From JSONLink');
-  assert.deepEqual(r.log.map((l) => [l.engine, l.ok]), [['direct', false], ['dub', false], ['allorigins', false], ['jsonlink', true]]);
-  assert.match(r.log[0].error, /HTTP 403/); assert.match(r.log[2].error, /no usable metadata/);
-  assert.deepEqual(order, ['blocked.test', 'api.dub.co', 'api.allorigins.win', 'jsonlink.io']);
-  assert.equal(r.frameable, null, 'unknown when no headers were seen');
+  assert.equal(r.ok, true); assert.equal(r.engine, 'crawler'); assert.equal(r.title, 'Hello & welcome');
+  assert.deepEqual(r.log.map((l) => [l.engine, l.ok]), [['direct', false], ['crawler', true]]); assert.match(r.log[0].error, /HTTP 403/);
+  assert.equal(uas.length, 2);
 });
 
-test('chain: when every engine fails the error and the full log come back; DIRECT_SKIP sites go straight to fallbacks', async () => {
+test('rescue: after the crawler, Jina answers; at most 2 rescue engines per URL, so Wayback and Microlink stay unused', async () => {
+  T.resetCaches();
+  const hosts = [];
+  const ctx = ctxWith(async (url) => {
+    hosts.push(new URL(url).hostname);
+    if (url.startsWith('https://r.jina.ai/')) return new Response(JSON.stringify({ code: 200, data: { title: 'From Jina', description: 'Reader description', url: 'https://hard.test/' } }), { status: 200 });
+    return new Response('no', { status: 403 });
+  });
+  const r = await T.metaForUrl('https://hard.test/', ctx);
+  assert.equal(r.engine, 'jina'); assert.equal(r.title, 'From Jina'); assert.equal(r.frameable, null);
+  assert.deepEqual(r.log.map((l) => l.engine), ['direct', 'crawler', 'jina']); assert.ok(!hosts.includes('web.archive.org') && !hosts.includes('api.microlink.io'));
+  T.resetCaches();
+  const all = await T.metaForUrl('https://hard2.test/', ctxWith(async () => new Response('no', { status: 403 })), { rescueAttempts: 4 });
+  assert.deepEqual(all.log.map((l) => l.engine), ['direct', 'crawler', 'jina', 'wayback', 'microlink']); assert.equal(all.ok, false);
+});
+
+test('rescue: Wayback reads the archived head and keeps the original address; DNS and 404 failures are not rescued', async () => {
+  T.resetCaches();
+  const r = await T.metaForUrl('https://old.test/page', ctxWith(async (url) => {
+    if (url === 'https://web.archive.org/web/2id_/https://old.test/page') return new Response(null, { status: 302, headers: { location: 'https://web.archive.org/web/20240101000000id_/https://old.test/page' } });
+    if (url.startsWith('https://web.archive.org/web/20240101')) return htmlRes(html('<title>Archived title</title><link rel="icon" href="/f.ico">'));
+    return new Response('no', { status: 403 });
+  }), { rescueAttempts: 3 });
+  assert.equal(r.engine, 'wayback'); assert.equal(r.title, 'Archived title'); assert.equal(r.archived, true); assert.equal(r.finalUrl, 'https://old.test/page'); assert.equal(r.favicon, 'https://old.test/f.ico');
+  T.resetCaches();
+  for (const [status, text] of [[404, /HTTP 404/], [530, /site not found/]]) {
+    let n = 0;
+    const g = await T.metaForUrl(`https://gone${status}.test/`, ctxWith(async () => { n++; return new Response('x', { status }); }));
+    assert.equal(n, 1, `status ${status} costs one request only`); assert.match(g.log[0].error, text); assert.equal(g.ok, false);
+  }
+});
+
+test('DIRECT_SKIP sites go straight to the rescue engines; the log shows only those', async () => {
   T.resetCaches();
   const seen = [];
   const r = await T.metaForUrl('https://www.linkedin.com/company/x', ctxWith(async (url) => { seen.push(new URL(url).hostname); throw new Error('down'); }));
-  assert.equal(r.ok, false); assert.equal(r.error, 'every engine failed'); assert.deepEqual(r.log.map((l) => l.engine), ['dub', 'allorigins', 'jsonlink', 'microlink']);
-  assert.ok(!seen.includes('www.linkedin.com'));
+  assert.equal(r.ok, false); assert.equal(r.error, 'every engine failed'); assert.deepEqual(r.log.map((l) => l.engine), ['crawler', 'jina']);
+});
+
+test('two passes: every URL gets its first attempt before any URL gets a rescue attempt', async () => {
+  T.resetCaches();
+  const order = [];
+  const ctx = ctxWith(async (url, init) => { order.push(/facebookexternalhit/.test(init.headers['User-Agent']) ? 'rescue' : 'first'); return new Response('no', { status: 403 }); }, 12);
+  const states = [];
+  for (const u of Array.from({ length: 8 }, (_, i) => `https://fair${i}.test/`)) states.push(await T.primaryPhase(u, ctx));
+  for (const st of states.filter((x) => T.worthRescue(x))) await T.rescuePhase(st, ctx);
+  assert.deepEqual(order.slice(0, 8), Array(8).fill('first'));
+  assert.equal(order.length, 12, 'the budget of 12 was used and not exceeded');
+});
+
+test('metadata richness: JSON-LD, first paragraph, derived keywords, dates, feeds, theme color, large icon', () => {
+  const p = T.parseHead(html(`<title>Page</title><meta name="theme-color" content="#112233"><meta property="og:locale" content="en_GB">
+    <link rel="alternate" type="application/rss+xml" href="/feed.xml"><link rel="apple-touch-icon" href="/touch.png">
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Acme News","logo":"https://x.test/logo.png"},{"@type":"NewsArticle","headline":"Big discovery in deep sea biology","description":"Researchers found a new species of glowing fish near hydrothermal vents.","image":["https://x.test/a.jpg"],"keywords":["ocean","fish"],"datePublished":"2026-10-01T10:00:00Z","author":{"@type":"Person","name":"Ann Writer"}}]}</script>`,
+    '<h1>Fallback heading</h1><p>short</p><p>This paragraph is long enough to be used as a description when nothing else exists on the page at all.</p>'), 'https://x.test/post', '');
+  assert.equal(p.title, 'Page'); assert.match(p.desc, /new species of glowing fish/); assert.equal(p.image, 'https://x.test/a.jpg'); assert.equal(p.kw, 'ocean, fish'); assert.equal(p.kwAuto, false);
+  assert.equal(p.author, 'Ann Writer'); assert.equal(p.site, 'Acme News'); assert.equal(p.published, '2026-10-01T10:00:00Z'); assert.equal(p.themeColor, '#112233'); assert.equal(p.locale, 'en_GB');
+  assert.deepEqual(p.feeds, ['https://x.test/feed.xml']); assert.equal(p.iconLarge, 'https://x.test/touch.png');
+  const body = '<main><h1>Wiki style heading</h1><p class="x">Hyperlinks connect documents across the web and let readers move between pages with a single click or tap.</p></main>';
+  const q = T.parseHead(html('<meta charset="utf-8">'), 'https://w.test/a', body);
+  assert.equal(q.title, 'Wiki style heading'); assert.match(q.desc, /^Hyperlinks connect documents/); assert.equal(q.kwAuto, true); assert.match(q.kw, /hyperlinks/);
+  assert.equal(T.autoKeywords('The quick brown fox and the lazy dog and the quick fox'), 'quick, brown, lazy');
+});
+
+test('readPage returns the head and a bounded piece of the body; fresh bypasses the cache', async () => {
+  const text = '<html><head><title>T</title></head><body>' + '<p>x</p>'.repeat(20000);
+  const r = await T.readPage(new Response(text, { headers: { 'content-type': 'text/html' } }), 160000, 5000);
+  assert.match(r.head, /<\/head>$/); assert.ok(r.body.length >= 5000 && r.body.length <= 200000);
+  T.resetCaches();
+  let n = 0; const f = async () => { n++; return htmlRes(GOOD); };
+  await T.metaForUrl('https://cache.test/', ctxWith(f)); await T.metaForUrl('https://cache.test/', ctxWith(f)); assert.equal(n, 1);
+  const again = await T.metaForUrl('https://cache.test/', ctxWith(f), { fresh: true }); assert.equal(n, 2); assert.ok(!again.cached);
 });
 
 test('chain: site handlers (oEmbed) answer first for YouTube and fall back to direct when they fail', async () => {
   T.resetCaches();
-  const r = await T.metaForUrl('https://youtu.be/jNQXAC9IVRw', ctxWith(async (url) => { assert.match(url, /youtube\.com\/oembed/); return new Response(JSON.stringify({ title: 'Me at the zoo', author_name: 'jawed', thumbnail_url: 'https://i.ytimg.com/vi/x/hq.jpg' }), { status: 200 }); }));
+  const r = await T.metaForUrl('https://youtu.be/jNQXAC9IVRw', ctxWith(async (url) => { assert.match(url, /youtube\.com\/oembed/); return new Response(JSON.stringify({ title: 'Me at the zoo', author_name: 'jawed', thumbnail_url: 'https://i.ytimg.com/vi/x/hq.jpg' }), { status: 200, headers: { 'content-type': 'application/json' } }); }));
   assert.equal(r.engine, 'oembed:youtube'); assert.equal(r.title, 'Me at the zoo'); assert.equal(r.type, 'video'); assert.equal(r.video, 'https://www.youtube.com/embed/jNQXAC9IVRw'); assert.equal(r.frameable, false);
   assert.equal(T.youtubeId(new URL('https://www.youtube.com/watch?v=abc123XYZ_-&t=3')), 'abc123XYZ_-'); assert.equal(T.youtubeId(new URL('https://www.youtube.com/shorts/SHORT12345')), 'SHORT12345');
   T.resetCaches();
@@ -149,10 +209,10 @@ test('invalid and blocked inputs never reach the network', async () => {
 test('subrequest budget: engines stop before the free-plan cap and say so in the log', async () => {
   T.resetCaches();
   let calls = 0;
-  const ctx = ctxWith(async () => { calls++; throw new Error('fail'); }, 3);
+  const ctx = ctxWith(async () => { calls++; throw new Error('fail'); }, 2);
   const r = await T.metaForUrl('https://budget.test/', ctx);
-  assert.equal(calls, 3); assert.equal(r.ok, false); assert.ok(r.log.some((l) => /budget/.test(l.error || '')));
-  assert.equal(ctx.budget.used, 3);
+  assert.equal(calls, 2); assert.equal(r.ok, false); assert.ok(r.log.some((l) => /budget/.test(l.error || '')));
+  assert.equal(ctx.budget.used, 2);
 });
 
 async function makeToken({ aud = 'linkivo', iss = 'https://securetoken.google.com/linkivo', exp, iat, sub = 'user123', kid = 'k1', key }) {
@@ -197,7 +257,7 @@ const call = (r, fetchImpl = async () => htmlRes(GOOD)) => T.route(r, {}, { fetc
 
 test('routes: health, CORS allow-list, preflight, unknown path and method', async () => {
   T.resetCaches();
-  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.0');
+  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.1');
   assert.equal(h.headers.get('access-control-allow-origin'), 'https://linkivo.web.app'); assert.equal(h.headers.get('cache-control'), 'no-store');
   assert.equal((await call(req('/health', { origin: 'http://localhost:5000' }))).headers.get('access-control-allow-origin'), 'http://localhost:5000');
   const evil = await call(req('/health', { origin: 'https://evil.example' })); assert.equal(evil.status, 403); assert.equal(evil.headers.get('access-control-allow-origin'), null);
@@ -236,7 +296,7 @@ test('POST /meta with an account token allows 25 URLs; a bad token is refused', 
   assert.equal(typeof handler.fetch, 'function'); assert.equal(handler.scheduled, undefined);
 });
 
-test('25 URLs that all need fallbacks stay inside the 50-subrequest cap', async () => {
+test('25 URLs that all need rescue stay inside the shared subrequest budget', async () => {
   T.resetCaches();
   let n = 0;
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -245,6 +305,6 @@ test('25 URLs that all need fallbacks stay inside the 50-subrequest cap', async 
   const token = await makeToken({ key: privateKey });
   const res = await call(req('/meta', { method: 'POST', body: { urls: Array.from({ length: 25 }, (_, i) => `https://worst${i}.test/`) }, headers: { authorization: `Bearer ${token}`, 'cf-connecting-ip': '8.8.4.4' } }), fetchImpl);
   const b = await res.json();
-  assert.equal(res.status, 200); assert.ok(n <= 45, `made ${n} subrequests`); assert.ok(b.budget.used <= 45);
+  assert.equal(res.status, 200); assert.ok(n <= 36, `made ${n} subrequests`); assert.ok(b.budget.used <= 36);
   assert.ok(b.results.every((r) => r.ok === false)); assert.ok(b.results.some((r) => r.log.some((l) => /budget/.test(l.error || ''))), 'later URLs report the budget');
 });

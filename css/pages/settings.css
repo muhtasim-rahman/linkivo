@@ -1,18 +1,14 @@
-/* Linkivo v2.1.0 - Settings: index + section on wide screens, one at a time on phones */
-.settings { display: grid; gap: var(--s6); }
-.set-nav { display: grid; gap: var(--s1); align-content: start; }
-.set-nav .row { border-radius: var(--r-control); border: 0; padding: var(--s2) var(--s3); }
-.set-nav .row[aria-current='page'] { background: var(--accent-soft); }
-.set-nav .row[aria-current='page'] .row-ic { color: var(--accent-text); }
-.set-pane { min-width: 0; display: grid; gap: var(--s4); align-content: start; }
-.settings[data-view='detail'] .set-nav { display: none; }
-.settings[data-view='index'] .set-pane { display: none; }
-.set-back { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
-@media (min-width: 900px) {
-  .settings { grid-template-columns: 240px minmax(0, 1fr); gap: var(--s8); }
-  .settings[data-view] .set-nav, .settings[data-view] .set-pane { display: grid; }
-  .set-back { display: none; }
-}
+/* Linkivo v2.1.1 - Settings: ONE page, category headings. PC: a fixed category list that follows the scroll. Phones: a sticky chip bar. */
+.settings { display: grid; gap: var(--s4); }
+.set-nav { display: none; }
+.set-chips { position: sticky; top: 0; z-index: 5; margin: 0 calc(var(--pad) * -1); padding: 8px var(--pad); background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.set-chips-in { display: flex; gap: var(--s2); }
+.chip { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line-strong); background: var(--surface); font-weight: 560; color: var(--sub); white-space: nowrap; }
+.chip[aria-current='true'] { background: var(--accent-soft); border-color: transparent; color: var(--accent-text); }
+.set-body { min-width: 0; display: grid; gap: var(--s6); }
+.set-section { scroll-margin-top: 64px; display: grid; gap: var(--s3); align-content: start; }
+.set-head h2 { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
+.set-head p { color: var(--sub); margin-top: 2px; }
 .ctl-end { display: flex; align-items: center; gap: var(--s2); }
 .row.is-stack { flex-wrap: wrap; }
 .row.is-stack .row-end { width: 100%; justify-content: flex-start; }
@@ -28,5 +24,13 @@
 .mt-log { font-family: var(--font-mono); font-size: var(--fs-xs); display: grid; gap: 2px; }
 .debug-log { font-family: var(--font-mono); font-size: var(--fs-xs); max-height: 52dvh; overflow: auto; padding: var(--s3); display: grid; gap: 4px; }
 .debug-log .l-error { color: var(--danger); } .debug-log .l-warn { color: var(--warning); }
-.set-head { display: grid; gap: 2px; }
-@media (max-width: 899px) { .set-head .page-title { display: none; } }
+
+@media (min-width: 900px) {
+  .settings { grid-template-columns: 224px minmax(0, 1fr); gap: var(--s8); align-items: start; }
+  .set-chips { display: none; }
+  .set-nav { display: grid; gap: 2px; position: sticky; top: var(--s8); align-self: start; }
+  .set-link { display: flex; align-items: center; gap: var(--s3); min-height: 44px; padding: 0 var(--s3); border-radius: 12px; text-align: left; color: var(--sub); font-weight: 560; transition: background var(--t-micro) var(--ease), color var(--t-micro) var(--ease); }
+  .set-link:hover { background: var(--surface-2); color: var(--text); }
+  .set-link[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
+  .set-section { scroll-margin-top: var(--s8); }
+}

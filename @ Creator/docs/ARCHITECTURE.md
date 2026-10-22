@@ -1,7 +1,7 @@
 # Linkivo v2: Architecture
 
 HOW the app is built. WHAT it does is in `FEATURES.md`. Rules for the AI are in `RULES.md`.
-Items marked **[verify]** depend on third-party limits or console behavior that may have changed: check official docs before relying on them and record the result in `CONTEXT.md`.
+Items marked **[verify]** depend on third-party limits or console behavior that may have changed: check official docs before relying on them and record the result in `CONTEXT-v2.0_to_v2.5.md`.
 
 ## 1. Stack and hard constraints
 
@@ -30,7 +30,7 @@ js/features/<feature>/     auth shell splash library import preview search rando
                            recycle settings export backup activity stats legal menu
                            (export/: export-modal, export-engine, formats/*.js ; import/: native-import.js)
 js/workers/                parse.worker.js (import parsing off the main thread)
-@ Creator/                  PLAN.md MASTER-PROMPT.md RULES.md CONTEXT.md  docs/  commits/  rules/  worker/  tools/  tests/  reference/
+@ Creator/                  PLAN-v2.0_to_v2.5.md MASTER-PROMPT-v2.0_to_v2.5.md RULES.md CONTEXT-v2.0_to_v2.5.md  docs/  commits/  rules/  worker/  tools/  tests/  reference/
 ```
 - `js/core/local-prefs.js` is the ONLY place that touches `localStorage`/`sessionStorage` (enforced by `check.mjs`).
 - `js/core/flags.js` holds feature flags so a later-version feature can ship disabled earlier (example: the random button in Folder view).
@@ -191,7 +191,7 @@ Abuse control: per-uid and per-IP counters kept small (in-memory plus the Cache 
 - `js/core/logger.js`: leveled logger with an in-memory ring buffer (last 300 entries) shown in Settings > Advanced > Debug log. No direct `console.log` in shipped code.
 - Every async boundary has try/catch; the user sees one minimal toast (what failed, what to do), the logger keeps detail. No unhandled promise rejections (global handler logs them).
 
-## 12. Items to verify when building (record results in CONTEXT.md)
+## 12. Items to verify when building (record results in CONTEXT-v2.0_to_v2.5.md)
 
 1. Spark plan RTDB limits and Worker free limits (above).
 2. Second RTDB instance not needed: the existing default database is reset and reused.
@@ -202,7 +202,7 @@ Abuse control: per-uid and per-IP counters kept small (in-memory plus the Cache 
 7. Google sign-in popup vs redirect behavior on mobile PWA, and the `authDomain` choice.
 8. Firebase CLI accepts `database.rules` = `@ Creator/rules/database.rules.json` (space and leading `@` in the path). If a deploy rejects it, copy the rules file to a root-level `database.rules.json`, point `firebase.json` there, keep the `@ Creator` copy as the source of truth and have `pack.sh`/`check.mjs` verify both are identical.
 
-## 13. As built in v2.1.0 (differences from the design above; decisions D-033 to D-049 in CONTEXT.md)
+## 13. As built in v2.1.0 (differences from the design above; decisions D-033 to D-049 in CONTEXT-v2.0_to_v2.5.md)
 
 - **Rules are generated.** `js/engine/schema.js` is the single description of every record. `@ Creator/tools/gen-rules.mjs` turns it into `rules/database.rules.json` (normal and vault trees share one validator). Edit the schema or the generator, never the JSON. `check.mjs` fails when they differ.
 - **`users/<uid>/profile/status` is written only by the Worker**; a missing value means active. The client may write `name`, `createdAt`, `lastLogin` only. This stops a client from un-deleting its own account.
@@ -213,3 +213,12 @@ Abuse control: per-uid and per-IP counters kept small (in-memory plus the Cache 
 - **Service worker.** Network-first for the app (3 s timeout, cache only as offline fallback), cache-first for the pinned Firebase SDK and Google Fonts. The precache list is generated (`gen-precache.mjs`) and checked by the gate so a new module can never be missing offline.
 - **Worker.** Page heads are parsed by a small tolerant tokenizer over the streamed bytes (cut at `</head>` or 200 KB) instead of `HTMLRewriter`, which keeps the parser testable in Node. Fallback order: Dub.co, AllOrigins, JSONLink, Microlink (smallest limit last). One shared subrequest budget (45 of the free plan's 50) is spent by redirects, site handlers, fallbacks and the token-key fetch. The file has only `export default`; test hooks sit under `default.__test`. Rate limits are per isolate (memory), which is cheap and stops casual abuse; a durable limiter can come with the cron work in v2.5.0.
 - **Settings in v2.1.0** are device-level (stored through `local-prefs`, not synced). The engine already has `getSetting/setSetting` for account-synced settings when a feature needs them.
+
+## 14. As built in v2.1.1 (additions to section 13)
+- **Assets as files.** `assets/ui-icons/*.svg` (101), `assets/art/*.svg`, `assets/brand/logo-mask.svg` are loaded as CSS masks (`js/ui/icons.js`, `js/ui/brand.js`); `tools/make-ui-icons.mjs` generated them once and the files are now the source. The precache list includes them.
+- **Update system.** `core/update.js`: service worker (auto reload when idle) plus `/app.json` version check; fallback popup (`features/shell/update-prompt.js`) and `hardUpdate()` (unregister workers, clear caches, reload; data untouched). Setting `app.autoUpdate`.
+- **Install.** `initInstall()` runs from `main.js` before the rest loads so the browser's install event is never missed.
+- **Input.** `core/input-guard.js` (context menu), `ui/pull-refresh.js` (phones), CSS disables text selection and callouts outside inputs.
+- **SEO.** `router.applyPageMeta`, `robots.txt`, `sitemap.xml`, JSON-LD and noscript text in `index.html`.
+- **Profile.** `users/<uid>/profile/termsAt` records the agreement time.
+- **Worker.** Two passes (primary for all URLs, then rescue), engines: oEmbed, direct, crawler (link-preview user agent), Jina reader, Internet Archive, Microlink; JSON-LD, first paragraph, derived keywords, dates, feeds, theme color, large icon; `fresh` flag; budget 36.

@@ -1,7 +1,7 @@
 # Linkivo v2: Master Plan
 
 Owner: Muhtasim Rahman (Turzo). Contact: mdturzo.dev@gmail.com. Repo: github.com/muhtasim-rahman/linkivo.
-This plan is the contract between the owner and every AI agent that builds a version. Read it together with `MASTER-PROMPT.md`, `RULES.md`, `CONTEXT.md` and `docs/`.
+This plan is the contract between the owner and every AI agent that builds a version. Read it together with `MASTER-PROMPT-v2.0_to_v2.5.md`, `RULES.md`, `CONTEXT-v2.0_to_v2.5.md` and `docs/`.
 
 ## 1. Vision
 
@@ -98,14 +98,14 @@ Settings are registered in the registry by the version that introduces the featu
 ## 6. Dependencies and risks
 
 - v2.5.0 needs the service account secret (owner action). Until then background enrichment works only while the app is open.
-- Worker free-plan CPU/subrequest limits can bite: keep batches small, measure, and record real numbers in `CONTEXT.md`.
+- Worker free-plan CPU/subrequest limits can bite: keep batches small, measure, and record real numbers in `CONTEXT-v2.0_to_v2.5.md`.
 - Third-party metadata/screenshot services can change or disappear: keep the fallback chain data-driven and logged.
 - Rules cannot be fully tested without the emulator: keep the rules matrix and ask the owner to run the playground cases.
-- Each stage is large. The agent must work in slices, run the quality gate after each, and never ship a half-working state (see `MASTER-PROMPT.md` section 6).
+- Each stage is large. The agent must work in slices, run the quality gate after each, and never ship a half-working state (see `MASTER-PROMPT-v2.0_to_v2.5.md` section 6).
 
 ## 7. Release process (every version)
 
 1. Owner says: "Start v2.X.0" in a new chat inside the Linkivo v2 project and provides the latest project zip.
-2. Agent follows `MASTER-PROMPT.md`: reads the docs, verifies the previous version is complete, builds slice by slice, runs `node "@ Creator/tools/check.mjs"`, packs with `bash "@ Creator/tools/pack.sh"`.
-3. Agent delivers: the zip, `@ Creator/commits/vX.Y.Z-commit.txt`, updated `CONTEXT.md`, changed docs/rules/Worker, and a chat summary (what was built, how to test, removed files, owner actions, next version).
+2. Agent follows `MASTER-PROMPT-v2.0_to_v2.5.md`: reads the docs, verifies the previous version is complete, builds slice by slice, runs `node "@ Creator/tools/check.mjs"`, packs with `bash "@ Creator/tools/pack.sh"`.
+3. Agent delivers: the zip, `@ Creator/commits/vX.Y.Z-commit.txt`, updated `CONTEXT-v2.0_to_v2.5.md`, changed docs/rules/Worker, and a chat summary (what was built, how to test, removed files, owner actions, next version).
 4. Owner extracts the zip into the project root, deletes files listed under "Removed files", tests, commits, deploys, saves the zip into `@ Versions`.

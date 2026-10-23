@@ -149,7 +149,7 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   assert.equal($$('#sidebar .sb-nav .nav-item')[0].dataset.tab, 'import', 'sidebar order starts with Import links');
   assert.equal($$('#bar .bar-item')[2].dataset.tab, 'import', 'bar centre is Import');
   handlers.route({ route: { tab: 'random', shell: true } });
-  assert.equal($('#bar [aria-current="page"]').dataset.tab, 'random'); assert.equal($('.bar-marker').style.getPropertyValue('--i'), '1'); assert.equal($('.bar-marker').dataset.hidden, 'false');
+  assert.equal($('#bar [aria-current="page"]').dataset.tab, 'random'); assert.equal($('.bar-marker').style.getPropertyValue('--l'), '1'); assert.equal($('.bar-marker').style.getPropertyValue('--r'), '1'); assert.equal($('.bar-marker').dataset.hidden, 'false');
   handlers.route({ route: { tab: 'import', shell: true } }); assert.equal($('.bar-marker').dataset.hidden, 'true', 'filled Import button needs no ring');
   handlers.route({ route: { tab: 'x', shell: false } }); assert.equal($('#app').dataset.chrome, 'none');
   assert.equal($('.pf-mail').textContent, 'tu******99@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
@@ -220,7 +220,8 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   const resetRow = $('.row.is-danger'); resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
-  await router.navigate('/settings/app'); await tick(5); assert.match(container.textContent, /Version 2\.1\.3/);
+  await router.navigate('/settings/app'); await tick(5); const { default: appInfo } = await import('../../js/core/app-info.js'); // not hard-coded: it broke on every version bump
+  assert.ok(container.textContent.includes('Version ' + appInfo.version), 'About shows the current version');
   // v2.1.3: the developer is its own section (not inside the About card); two settings are gone; the browser-fallback switch is new
   assert.ok($('.dev-section') && !$('.about-card .dev-section'), 'developer section is separate'); assert.ok(!/Pull down to refresh|Block right-click/.test(container.textContent));
   await router.navigate('/settings/account'); await tick(5); assert.match(container.textContent, /Guest mode/);

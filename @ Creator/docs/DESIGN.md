@@ -87,9 +87,11 @@ Spec:
 
 ## 6c. v2.1.3 chrome changes
 - **Sidebar** 244px expanded, 68px collapsed. Every row is a 44px icon slot plus a label; the slot never moves, labels fade (140 ms) and the narrowing column clips them. Active row = soft accent fill, no ring. Tooltips on collapsed rows (data-tip-c).
-- **Mobile bar**: the ring is a "liquid" shape: it slides with a spring (440 ms) and stretches by the distance (`--stretch`), the new icon hops once, press scales the icon down. Long-press on any tab shows its name.
+- **Mobile bar** (v2.1.4): the ring is a stretchy shape made of two edges: the edge facing the new tab moves first, the other follows a moment later, so it stretches while travelling and closes up on the new tab without ever passing it. The new icon hops once, press scales the icon down. The filled Import button gets a halo ring and glow when it is the current page. Long-press on any tab shows its name.
 - **Compact**: type scale one notch smaller; mouse screens use `--ctl-h: 36px`, `--row-h: 40px`; touch keeps 44px.
 - **Install banner**: ticket card, dashed tear line with two notches, app tile and text left, Install and "Not now" right.
 - **Developer section**: compact card, badge = photo in the brand gradient ring with a check seal, three small link buttons.
 - **Settings on phones**: sticky horizontal category bar with edge fades (`fade-x`), current chip kept centred.
 - **Tooltip**: dark chip, 450 ms hover delay, long-press 420 ms on touch, hides on scroll and Escape.
+- **Pull to refresh** (v2.1.4): the page follows the finger with resistance; a ring around a round indicator fills as you pull, the arrow turns up when you can let go; on release the page holds and the ring spins where it is; when done, page and ring leave together.
+- **Before the first paint** (v2.1.4): an inline script in index.html applies the stored theme, accent, text size, density and motion, so the splash is never in the device theme when the app is set to the other one.

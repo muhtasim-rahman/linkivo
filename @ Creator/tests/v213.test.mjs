@@ -289,7 +289,7 @@ test('shell: sidebar rows keep a fixed icon slot and the bar marker stretches wi
   const css = fs.readFileSync(new URL('css/components/nav.css', root), 'utf8');
   assert.match(css, /\.nav-ic \{[^}]*width: 44px/, 'fixed 44px icon slot'); assert.match(css, /--sidebar-w-collapsed|\.sidebar \{[^}]*padding: 14px 12px/);
   assert.doesNotMatch(css, /justify-content: center/, 'rows are never re-centered on collapse (this made the icons jump in v2.1.2)');
-  assert.match(css, /@keyframes bar-stretch/); assert.match(css, /--spring/);
+  assert.match(css, /--spring/); assert.match(css, /\.bar-ring/, 'v2.1.4: the ring is built from two edges (see v214.test.mjs); the v2.1.3 bar-stretch keyframes are gone');
   const base = fs.readFileSync(new URL('css/core/base.css', root), 'utf8');
   assert.doesNotMatch(base, /theme-anim \*/, 'no per-element theme transition'); assert.match(base, /view-transition-old/);
   const tokens = fs.readFileSync(new URL('css/core/tokens.css', root), 'utf8'); assert.match(tokens, /--sidebar-w: 244px/); assert.match(tokens, /--sidebar-w-collapsed: 68px/);

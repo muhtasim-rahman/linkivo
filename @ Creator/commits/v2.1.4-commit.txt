@@ -1,0 +1,14 @@
+fix(v2.1.4): splash theme, pull-to-refresh redesign, bottom-bar ring, collapsed sidebar logo
+
+- Splash: an inline script in index.html applies the stored theme, accent, text size, density and motion before the first paint, so a light-mode user on a dark phone no longer sees a dark splash with light text (the splash started before appearance.js ran, and tokens.css follows the device theme until data-theme exists)
+- Pull to refresh redesigned: the page follows the finger with resistance, a ring fills while pulling, the arrow turns up when ready; on release the ring spins in place while the page holds, then both leave together (v2.1.3 sent the indicator back up before spinning); a failing refresh is logged instead of an unhandled rejection
+- Bottom bar: the ring is built from two edges (leading edge fast, trailing edge a little later, no overshoot) so it can not spill onto the next icon (Library to Search used to cover Menu); the filled Import button now has its own active look (halo ring, glow, larger)
+- Collapsed sidebar: the hidden collapse toggle no longer takes row space, so the logo is visible again
+- Tests: 125 (11 new in v214.test.mjs; two older tests updated for the new pull curve and ring variables)
+
+Removed files:
+- none
+
+Owner actions:
+- Extract the zip over the project folder, commit, firebase deploy --only hosting, hard reload
+- If not done yet: paste @ Creator/worker/worker.js (2.1.3) into the Cloudflare Worker (unchanged in this release)

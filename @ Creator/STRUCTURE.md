@@ -13,7 +13,7 @@ Linkivo/
 │   ├── rules/                  database.rules.json (GENERATED) + history/ snapshots
 │   ├── worker/                 worker.js (2.1.3: /health, /meta) + history/ snapshots
 │   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs
-│   ├── tests/                  *.test.mjs (9 files, 114 tests), rules-matrix.md, helpers/
+│   ├── tests/                  *.test.mjs (10 files, 125 tests), rules-matrix.md, helpers/
 │   └── reference/              v1 splash animation, LinkIntel prototype (not deployed)
 │
 ├── assets/  art/ (empty-state and login SVG artwork, painted via CSS mask)   brand/ (logo, logo-mark, logo-tile, wordmarks)

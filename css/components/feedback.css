@@ -1,4 +1,4 @@
-/* Linkivo v2.1.3 - loading, empty and status pieces, grouped rows, scroll fades */
+/* Linkivo v2.1.4 - loading, empty and status pieces, grouped rows, scroll fades */
 .skel { position: relative; overflow: hidden; background: var(--surface-2); border-radius: 8px; }
 .skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 7%, transparent), transparent); animation: lk-shimmer 1.6s ease-in-out infinite; }
 .skel-list { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-group); overflow: hidden; }
@@ -57,6 +57,17 @@ a.row:hover, button.row:hover { background: var(--surface-2); text-decoration: n
 .banner-host:not(:empty) { padding: var(--s3) var(--pad) 0; flex: none; max-width: calc(var(--content-max) + var(--pad) * 2); width: 100%; margin-inline: auto; }
 .banner-host .ibanner { margin-bottom: 0; }
 
-/* pull-to-refresh indicator (js/ui/pull-refresh.js) */
-.ptr { position: fixed; left: 50%; top: calc(var(--safe-t) + 8px); width: 40px; height: 40px; margin-left: -20px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-float); color: var(--accent-text); opacity: 0; transform: translateY(-52px); transition: transform var(--t-std) var(--ease), opacity var(--t-std) var(--ease); pointer-events: none; }
-.ptr.is-loading svg { animation: lk-spin 700ms linear infinite; }
+/* Pull-to-refresh indicator (v2.1.4). Fixed under the status bar; the page itself moves down beneath it (js/ui/pull-refresh.js).
+   --p (0 to 1) = pull progress, --ty = the phone's top inset. The ring is a conic gradient, so it needs no SVG. */
+.ptr { --p: 0; --ty: 0px; position: fixed; left: 50%; top: calc(var(--ty) + 10px); width: 38px; height: 38px; margin-left: -19px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%;
+  background: var(--surface); box-shadow: var(--shadow-float), 0 0 0 1px var(--line); color: var(--accent-text); pointer-events: none;
+  opacity: 0; transform: scale(calc(0.55 + var(--p) * 0.45)); }
+.ptr.is-on { opacity: 1; }
+.ptr.is-leaving { opacity: 0; transform: scale(0.6); transition: opacity 200ms var(--ease), transform 220ms var(--ease); }
+.ptr-ring { position: absolute; inset: 3px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 360deg), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
+.ptr-arrow { position: relative; display: grid; place-items: center; transform: rotate(-90deg); transition: transform 180ms var(--spring), opacity 140ms var(--ease); }
+.ptr.is-ready .ptr-arrow { transform: rotate(90deg); }
+/* loading: the arrow goes, a 30% arc turns in place */
+.ptr.is-loading { opacity: 1; transform: none; }
+.ptr.is-loading .ptr-arrow { opacity: 0; }
+.ptr.is-loading .ptr-ring { --p: 0.3; animation: lk-spin 760ms linear infinite; }

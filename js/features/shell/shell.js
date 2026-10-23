@@ -1,12 +1,12 @@
 /**
- * Linkivo — js/features/shell/shell.js  (v2.1.3)
+ * Linkivo — js/features/shell/shell.js  (v2.1.4)
  * Purpose: the persistent chrome around the page area: mobile floating glass bottom bar (Library, Random, Import, Search, Menu),
  *          PC collapsible sidebar (Import, Library, Random, Search, Settings) with theme toggle and profile badge, install banner.
  *          Built once; the router only swaps what is inside #page-root.
  * Sidebar rules (owner, v2.1.2 / v2.1.3): collapsed = rounded-square icons, the logo turns into an "expand" icon on hover;
  *          expanded = full rows (icon + text), logo and name open the Library, hovering the logo does nothing.
  *          v2.1.3: every row keeps a fixed 44px icon slot, so collapsing only fades labels and nothing jumps (see css/components/nav.css).
- * Mobile bar: the active-tab ring slides with a spring and stretches by the distance travelled (--stretch).
+ * Mobile bar: the active-tab ring is defined by its two edges (--l, --r): the edge facing the new tab moves first, the other follows (css/components/nav.css).
  * API: mountShell({ router }) -> { setSession(session), isWide() }
  */
 import { h } from '../../core/dom.js';
@@ -88,20 +88,25 @@ export function mountShell({ router }) {
     h('div', { class: 'sb-spacer' }), themeRow, badge);
 
   // ---- bottom bar ----------------------------------------------------------------------------------------------------
-  const marker = h('span', { class: 'bar-marker', 'data-hidden': 'true', 'aria-hidden': 'true' });
+  const ring = h('span', { class: 'bar-ring' });
+  const marker = h('span', { class: 'bar-marker', 'data-hidden': 'true', 'aria-hidden': 'true' }, ring);
   bar.replaceChildren(marker, ...BAR.map((it) => h('a', { class: ['bar-item', it.primary && 'bar-import'], href: it.href, 'data-tab': it.tab, 'aria-label': it.label, 'data-tip': it.label }, it.primary ? h('span', null, icon(it.icon, { size: 22 })) : icon(it.icon, { size: 22 }))));
 
-  // The ring slides to the new tab (spring in CSS) and stretches in proportion to the distance it travels.
+  // The ring: both edges go to the new tab's column, the leading edge quickly and the trailing edge a little later (timings in CSS variables).
+  // If the ring was hidden (Import page) or not placed yet, it jumps to the new tab without animation and fades in.
   let markerAt = -1;
   function moveMarker(idx) {
     const shown = idx >= 0 && BAR[idx].primary !== true;
+    const wasHidden = marker.dataset.hidden === 'true';
     marker.dataset.hidden = String(!shown);
-    if (idx < 0) return;
-    const from = markerAt < 0 ? idx : markerAt;
-    marker.style.setProperty('--i', String(idx));
-    if (idx !== from && shown) {
-      marker.style.setProperty('--stretch', Math.min(96, Math.abs(idx - from) * 28) + 'px');
-      marker.classList.remove('is-moving'); void marker.offsetWidth; marker.classList.add('is-moving'); // restart the keyframes
+    if (!shown) return;
+    const place = () => { marker.style.setProperty('--l', String(idx)); marker.style.setProperty('--r', String(idx)); };
+    if (markerAt < 0 || wasHidden) {
+      marker.classList.remove('is-ready'); place(); void marker.offsetWidth; marker.classList.add('is-ready');
+    } else if (idx !== markerAt) {
+      const fwd = idx > markerAt;
+      const t = (lead, trail) => { marker.style.setProperty(fwd ? '--tr' : '--tl', lead + 'ms'); marker.style.setProperty(fwd ? '--dr' : '--dl', '0ms'); marker.style.setProperty(fwd ? '--tl' : '--tr', trail + 'ms'); marker.style.setProperty(fwd ? '--dl' : '--dr', '45ms'); };
+      t(230, 380); place();
     }
     markerAt = idx;
   }

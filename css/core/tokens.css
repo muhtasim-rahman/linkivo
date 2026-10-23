@@ -1,4 +1,4 @@
-/* Linkivo v2.1.2 - design tokens (docs/DESIGN.md section 2). Every color, size and timing used elsewhere comes from here. */
+/* Linkivo v2.1.3 - design tokens (docs/DESIGN.md section 2). Every color, size and timing used elsewhere comes from here. */
 :root {
   color-scheme: light;
   --bg: #eef2f8; --surface: #ffffff; --surface-2: #f4f7fb; --line: #d6dfed; --line-strong: #b9c7dc;
@@ -12,17 +12,17 @@
   --font-ui: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
-  --fs: 14px; --fs-xs: calc(var(--fs) - 3px); --fs-sm: calc(var(--fs) - 1px); --fs-md: calc(var(--fs) + 2px);
-  --fs-lg: calc(var(--fs) + 6px); --fs-xl: calc(var(--fs) + 12px); --fs-2xl: calc(var(--fs) + 20px);
+  --fs: 14px; --fs-xs: calc(var(--fs) - 3px); --fs-sm: calc(var(--fs) - 1px); --fs-md: calc(var(--fs) + 1px);
+  --fs-lg: calc(var(--fs) + 5px); --fs-xl: calc(var(--fs) + 9px); --fs-2xl: calc(var(--fs) + 14px); /* v2.1.3: a notch smaller than v2.1.2 (owner: too bulky) */
 
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
-  --r-control: 10px; --r-group: 14px; --r-sheet: 22px;
-  --row-h: 44px; --pad: var(--s4);
-  --bar-h: 64px; --bar-gap: 12px; --sidebar-w: 280px; --sidebar-w-collapsed: 88px; --content-max: 960px;
+  --r-control: 9px; --r-group: 12px; --r-sheet: 20px;
+  --ctl-h: 44px; --row-h: 44px; --pad: var(--s4); /* touch targets stay 44px on touch screens; mouse screens get the compact values below */
+  --bar-h: 58px; --bar-gap: 12px; --sidebar-w: 244px; --sidebar-w-collapsed: 68px; --content-max: 960px;
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
 
   --shadow-float: 0 10px 30px rgba(12, 22, 41, 0.16), 0 2px 6px rgba(12, 22, 41, 0.08);
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease: cubic-bezier(0.2, 0, 0, 1); --spring: cubic-bezier(0.34, 1.45, 0.5, 1);
   --t-micro: 120ms; --t-std: 200ms; --t-large: 320ms;
   --z-bar: 40; --z-overlay: 100; --z-pop: 120; --z-toast: 140; --z-splash: 1000;
 }
@@ -66,3 +66,8 @@
 :root[data-font='small'] { --fs: 13px; }
 :root[data-font='large'] { --fs: 16px; }
 :root[data-density='comfortable'] { --row-h: 52px; --pad: var(--s5); }
+/* Mouse and trackpad: smaller controls (nobody taps these with a thumb). Touch screens keep the 44px targets. */
+@media (pointer: fine) {
+  :root { --ctl-h: 36px; --row-h: 40px; }
+  :root[data-density='comfortable'] { --ctl-h: 40px; --row-h: 48px; }
+}

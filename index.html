@@ -35,18 +35,25 @@
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@600;700;800&display=swap">
+  <!-- Only what the splash needs blocks the first paint (v2.1.3): tokens, base, splash. The rest of the app CSS and the Google Fonts are added
+       by the script below at once; the splash covers the page until the app is ready, so nothing unstyled is ever seen. In v2.1.2 eleven
+       stylesheets plus Google Fonts blocked the first paint, so new visitors on a slow connection saw an empty background for a long time. -->
   <link rel="stylesheet" href="/css/core/tokens.css">
   <link rel="stylesheet" href="/css/core/base.css">
-  <link rel="stylesheet" href="/css/core/layout.css">
-  <link rel="stylesheet" href="/css/core/motion.css">
-  <link rel="stylesheet" href="/css/components/buttons.css">
-  <link rel="stylesheet" href="/css/components/forms.css">
-  <link rel="stylesheet" href="/css/components/sheet.css">
-  <link rel="stylesheet" href="/css/components/toast.css">
-  <link rel="stylesheet" href="/css/components/feedback.css">
-  <link rel="stylesheet" href="/css/components/nav.css">
   <link rel="stylesheet" href="/css/pages/splash.css">
+  <script>
+    (function () {
+      var h = document.head;
+      function css(href) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; h.appendChild(l); }
+      ['/css/core/layout.css', '/css/core/motion.css', '/css/components/buttons.css', '/css/components/forms.css', '/css/components/sheet.css', '/css/components/toast.css',
+        '/css/components/feedback.css', '/css/components/nav.css', '/css/components/tooltip.css',
+        'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@600;700;800&display=swap'].forEach(css);
+    })();
+  </script>
+  <link rel="modulepreload" href="/js/features/splash/splash-start.js">
+  <link rel="modulepreload" href="/js/features/splash/splash.js">
+  <link rel="modulepreload" href="/js/core/local-prefs.js">
+  <link rel="modulepreload" href="/js/core/utils.js">
   <link rel="modulepreload" href="/js/main.js">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"Linkivo","url":"https://linkivo.web.app/","description":"A fast, private link manager for people with hundreds or thousands of links.","applicationCategory":"ProductivityApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Muhtasim Rahman","url":"https://mdturzo.web.app"}}
@@ -62,12 +69,12 @@
   </div>
   <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="false"></div>
 
-  <!-- Splash (v2.1.2): the v1 logo-creation animation without the url badges. Driven by js/features/splash/splash.js; this markup is
+  <!-- Splash (v2.1.3): the v1 logo-creation animation without the url badges, no grid. Until splash.js runs, a CSS-only ring pulses (data-mode pending). Driven by js/features/splash/splash.js; this markup is
        inline on purpose (animated SVG that script drives, RULES section 9). data-mode: pending | full | short | still -->
   <div class="splash" id="splash" data-mode="pending" role="status" aria-label="Loading Linkivo">
     <div class="sp-expand" id="sp-expand"></div>
-    <div class="sp-grid"></div>
     <div class="sp-orb"></div>
+    <div class="sp-boot" aria-hidden="true"></div>
     <div class="splash-stage">
       <svg class="splash-mark" id="sp-svg" viewBox="180 210 680 630" aria-hidden="true" focusable="false">
         <defs>
@@ -112,6 +119,7 @@
       setTimeout(fail, 15000);
     })();
   </script>
+  <script type="module" src="/js/features/splash/splash-start.js"></script>
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import { getSession } from '../../core/session.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { toggleTheme } from '../shell/shell-parts.js';
 import { signInWithGoogle, signInWithEmail, registerWithEmail, sendReset, enterGuest, friendlyAuthError } from './auth-service.js';
+import { friendlyWait } from '../../core/send-limit.js';
 import { log } from '../../core/logger.js';
 import app from '../../core/app-info.js';
 
@@ -97,7 +98,7 @@ export async function mount(container) {
       actions: [{ label: 'Cancel' }, { label: 'Send link', variant: 'primary', closes: false, onClick: async (api) => {
         if (!input.value.trim()) { input.focus(); return false; }
         api.setBusy(true);
-        try { await sendReset(input.value); } catch (e) { if (e && e.code === 'auth/invalid-email') { api.setBusy(false); toast('Enter a valid email address.', { type: 'error' }); return false; } log.warn('auth', 'reset failed', { code: e && e.code }); }
+        try { await sendReset(input.value); } catch (e) { if (e && e.code === 'lk/cooldown') { api.setBusy(false); toast(`A link was sent to that address a moment ago. Check your inbox and spam folder, or try again in ${friendlyWait(e.waitMs)}.`, { duration: 5000 }); return false; } if (e && e.code === 'auth/invalid-email') { api.setBusy(false); toast('Enter a valid email address.', { type: 'error' }); return false; } log.warn('auth', 'reset failed', { code: e && e.code }); }
         api.close(); toast('If an account exists for that email, a reset link is on its way.', { duration: 4500 });
       } }]
     });

@@ -1,7 +1,7 @@
 /**
- * Linkivo — js/features/settings/custom-rows.js  (v2.1.2)
- * Purpose: the rows of the settings registry that are not plain controls: install status, updates, about, account, data and sync,
- *          metadata service status.
+ * Linkivo — js/features/settings/custom-rows.js  (v2.1.3)
+ * Purpose: the rows of the settings registry that are not plain controls: install status, updates, about, developer, account, data and sync,
+ *          metadata service status. v2.1.3: the password reset row asks for confirmation and is rate limited (it used to send an email per tap).
  * API: renderCustom(name, ctx) -> Element|Element[]     ctx = { router }
  */
 import { h } from '../../core/dom.js';
@@ -12,10 +12,13 @@ import { maskEmail } from '../../core/mask.js';
 import { relativeTime, plural } from '../../core/format.js';
 import { installState, installStatus, promptInstall } from '../../core/install.js';
 import { checkForUpdates, updateState } from '../../core/update.js';
-import { health } from '../../core/worker-client.js';
+import { health, EXPECTED_WORKER, isWorkerOutdated } from '../../core/worker-client.js';
 import { getEngine } from '../../core/app-data.js';
 import { resendVerification, sendReset } from '../auth/auth-service.js';
-import { aboutCard } from './about-card.js';
+import { sendAllowed, friendlyWait } from '../../core/send-limit.js';
+import { confirmDialog } from '../../ui/confirm.js';
+import { requireSensitive } from '../../core/sensitive.js';
+import { aboutCard, developerCard } from './about-card.js';
 import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
 
@@ -46,6 +49,7 @@ function update() {
 }
 
 function about() { return aboutCard(); }
+function developer() { return developerCard(); }
 
 function account({ router }) {
   const s = getSession();
@@ -57,15 +61,30 @@ function account({ router }) {
     ];
   }
   const u = s.user;
-  const verify = u.emailVerified ? h('span', { class: 'tag', text: 'Verified' }) : h('button', { type: 'button', class: 'btn btn-sm', text: 'Resend email', on: { click: async () => { try { await resendVerification(); toast('Verification email sent.'); } catch { toast('Could not send the email. Try again later.', { type: 'error' }); } } } });
+  const verify = u.emailVerified ? h('span', { class: 'tag', text: 'Verified' }) : h('button', { type: 'button', class: 'btn btn-sm', text: 'Resend email', on: { click: async () => { try { await resendVerification(); toast('Verification email sent. Check your inbox and spam folder.'); } catch (e) { toast(e && e.code === 'lk/cooldown' ? `An email was sent a moment ago. Try again in ${friendlyWait(e.waitMs)}.` : 'Could not send the email. Try again later.', { type: e && e.code === 'lk/cooldown' ? 'info' : 'error' }); } } } });
   return [
     row(u.name, maskEmail(u.email), null),
     row('Email verification', u.emailVerified ? 'Your email address is verified.' : 'Verify your email so you can recover your account.', verify),
     row('Sign-in method', u.providers.map((p) => (p === 'google.com' ? 'Google' : p === 'password' ? 'Email and password' : p)).join(', ') || 'Unknown', null),
-    // password accounts can ask for a reset link at any time (Google accounts manage their password with Google)
-    ...(u.providers.includes('password') ? [h('button', { type: 'button', class: 'row', on: { click: async () => { try { await sendReset(u.email); toast('A password reset link was sent to your email.'); } catch { toast('Could not send the email. Try again later.', { type: 'error' }); } } } }, h('span', { class: 'row-ic' }, icon('lock')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Send password reset email' }), h('span', { class: 'row-desc', text: 'Choose a new password through a link sent to your address.' })))] : []),
+    // Password accounts only (Google accounts manage their password with Google). One deliberate path: confirm first, then the email, and a
+    // cooldown so the row can not be used to send many emails (they land in spam).
+    ...(u.providers.includes('password') ? [passwordRow(u)] : []),
     h('button', { type: 'button', class: 'row is-danger', on: { click: () => logOut(router) } }, h('span', { class: 'row-ic' }, icon('logout')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Log out' })))
   ];
+}
+
+function passwordRow(u) {
+  const desc = () => { const g = sendAllowed('reset', u.email); return g.ok ? `We email a link to ${maskEmail(u.email)}. Only one email every few minutes.` : `A link was sent recently. You can ask again in ${friendlyWait(g.waitMs)}. Check your spam folder too.`; };
+  const sub = h('span', { class: 'row-desc', text: desc() });
+  return h('button', { type: 'button', class: 'row', on: { click: async () => {
+    const g = sendAllowed('reset', u.email);
+    if (!g.ok) { toast(`A reset link was sent recently. Check your inbox and spam folder, or try again in ${friendlyWait(g.waitMs)}.`); return; }
+    const ok = await confirmDialog({ title: 'Send a password reset email?', message: `A link to choose a new password will be sent to ${maskEmail(u.email)}. Your current password keeps working until you use the link.`, confirmLabel: 'Send email' });
+    if (!ok || !(await requireSensitive('password-reset'))) return;
+    try { await sendReset(u.email); toast('Reset link sent. Check your inbox and spam folder.'); }
+    catch (e) { toast(e && e.code === 'lk/cooldown' ? `A link was sent a moment ago. Try again in ${friendlyWait(e.waitMs)}.` : 'Could not send the email. Try again later.', { type: e && e.code === 'lk/cooldown' ? 'info' : 'error' }); }
+    sub.textContent = desc();
+  } } }, h('span', { class: 'row-ic' }, icon('lock')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Reset password' }), sub));
 }
 
 function sync() {
@@ -97,12 +116,13 @@ function worker() {
     btn.classList.add('is-loading');
     const r = await health();
     btn.classList.remove('is-loading');
-    out.textContent = r.ok ? `Online, version ${r.version}, ${r.ms} ms` : `Not reachable (${r.error || 'error'})`;
-    out.className = r.ok ? 'mt-ok' : 'mt-bad';
+    const old = r.ok && isWorkerOutdated(r.version);
+    out.textContent = r.ok ? `Online, version ${r.version}, ${r.ms} ms${old ? `. Outdated: this app expects ${EXPECTED_WORKER}. Paste the newest worker.js into Cloudflare.` : ''}` : `Not reachable (${r.error || 'error'})`;
+    out.className = r.ok && !old ? 'mt-ok' : 'mt-bad';
   });
   return row('Metadata service', 'The Cloudflare Worker that reads page titles and icons.', h('span', { class: 'ctl-end' }, out, btn));
 }
 
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, account, sync, worker })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, account, sync, worker })[name]?.(ctx) ?? h('div');
 }

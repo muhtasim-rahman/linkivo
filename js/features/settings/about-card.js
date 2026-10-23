@@ -1,8 +1,9 @@
 /**
- * Linkivo — js/features/settings/about-card.js  (v2.1.2)
- * Purpose: the "About" layout used by Settings > App and the mobile Menu page: app header with version, highlights, the developer
- *          card (photo, website, GitHub, email) and useful links. Redesigned in v2.1.2 (the v2.1.0 version was a plain key/value list).
- * API: aboutCard() -> Element
+ * Linkivo — js/features/settings/about-card.js  (v2.1.3)
+ * Purpose: the "About" layout used by Settings > App and the mobile Menu page: app header with version, highlights and useful links.
+ *          v2.1.3: the developer is NOT part of this card any more (owner request). developerCard() is its own compact section placed
+ *          after the About card: the badge (photo in a gradient ring), name, role and three small link buttons.
+ * API: aboutCard() -> Element     developerCard() -> Element
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -15,20 +16,30 @@ const HIGHLIGHTS = [
   ['install', 'Installs like an app on your phone and your computer']
 ];
 
-function developerPhoto() {
+/** The developer's badge: a gradient ring around the photo; initials show while the photo loads or if its host is unreachable. */
+function developerBadge() {
   const initials = app.developer.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-  const wrap = h('span', { class: 'dev-photo', 'aria-hidden': 'true' }, h('span', { text: initials }));
-  const img = h('img', { src: app.photo, alt: '', width: 64, height: 64, loading: 'lazy', referrerpolicy: 'no-referrer' });
-  img.addEventListener('error', () => img.remove()); // photo host unreachable or blocked: the initials stay
-  wrap.appendChild(img);
-  return wrap;
+  const photo = h('span', { class: 'dev-photo' }, h('span', { text: initials }));
+  const img = h('img', { src: app.photo, alt: '', width: 56, height: 56, loading: 'lazy', referrerpolicy: 'no-referrer' });
+  img.addEventListener('error', () => img.remove());
+  photo.appendChild(img);
+  return h('span', { class: 'dev-badge', 'aria-hidden': 'true' }, photo, h('span', { class: 'dev-check' }, icon('check', { size: 11 })));
 }
 
 const ext = (href, label, iconName) => h('a', { class: 'btn btn-sm', href, target: '_blank', rel: 'noopener', 'data-native': '' }, icon(iconName, { size: 16 }), h('span', { text: label }));
 const linkRow = (iconName, label, desc, props) => h('a', { class: 'row', ...props }, h('span', { class: 'row-ic' }, icon(iconName)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), h('span', { class: 'row-end' }, icon(props.target ? 'external' : 'chevron-right', { size: 18 })));
 
+const mailto = () => `mailto:${app.contact}?subject=${encodeURIComponent(`Linkivo ${app.version} feedback`)}`;
+
+export function developerCard() {
+  return h('section', { class: 'dev-section', 'aria-label': 'Developer' },
+    developerBadge(),
+    h('div', { class: 'dev-info' }, h('strong', { text: app.developer }), h('span', { class: 'muted', text: 'Developer of Linkivo' })),
+    h('div', { class: 'dev-links' }, ext(app.site, 'Website', 'globe'), ext(app.github, 'GitHub', 'code'), h('a', { class: 'btn btn-sm', href: mailto(), 'data-tip': app.contact }, icon('mail', { size: 16 }), h('span', { text: 'Email' }))));
+}
+
 export function aboutCard() {
-  const mail = `mailto:${app.contact}?subject=${encodeURIComponent(`Linkivo ${app.version} feedback`)}`;
+  const mail = mailto();
   return h('div', { class: 'about-card' },
     h('div', { class: 'about-hero' },
       h('img', { class: 'about-tile', src: '/assets/brand/logo-tile.svg', alt: '', width: 64, height: 64 }),
@@ -36,9 +47,6 @@ export function aboutCard() {
       h('span', { class: 'tag', text: `Version ${app.version}` })),
     h('p', { class: 'about-lead', text: 'A fast, private link manager for people with hundreds or thousands of links. Free, with no ads.' }),
     h('ul', { class: 'about-hl' }, HIGHLIGHTS.map(([ic, text]) => h('li', null, h('span', { class: 'hl-ic' }, icon(ic, { size: 18 })), h('span', { text })))),
-    h('div', { class: 'dev-card' }, developerPhoto(),
-      h('div', { class: 'dev-info' }, h('strong', { text: app.developer }), h('span', { class: 'muted', text: 'Developer of Linkivo' }),
-        h('div', { class: 'dev-links' }, ext(app.site, 'Website', 'globe'), ext(app.github, 'GitHub', 'code'), h('a', { class: 'btn btn-sm', href: mail }, icon('mail', { size: 16 }), h('span', { text: 'Email' }))))),
     h('div', { class: 'about-links' },
       linkRow('code', 'Source code', 'github.com/muhtasim-rahman/linkivo', { href: app.repo, target: '_blank', rel: 'noopener', 'data-native': '' }),
       linkRow('mail', 'Report a problem or suggest something', app.contact, { href: mail }),

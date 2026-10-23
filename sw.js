@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.1.2';
+const VERSION = '2.1.3';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -46,6 +46,7 @@ const PRECACHE = [
   '/css/components/nav.css',
   '/css/components/sheet.css',
   '/css/components/toast.css',
+  '/css/components/tooltip.css',
   '/css/core/base.css',
   '/css/core/layout.css',
   '/css/core/motion.css',
@@ -71,10 +72,12 @@ const PRECACHE = [
   '/js/core/local-prefs.js',
   '/js/core/logger.js',
   '/js/core/mask.js',
+  '/js/core/meta-fallback.js',
   '/js/core/nav-stack.js',
   '/js/core/page-meta.js',
   '/js/core/rate-limiter.js',
   '/js/core/router.js',
+  '/js/core/send-limit.js',
   '/js/core/sensitive.js',
   '/js/core/session.js',
   '/js/core/update.js',
@@ -108,11 +111,13 @@ const PRECACHE = [
   '/js/features/shell/shell-parts.js',
   '/js/features/shell/shell.js',
   '/js/features/shell/update-prompt.js',
+  '/js/features/splash/splash-start.js',
   '/js/features/splash/splash.js',
   '/js/main.js',
   '/js/ui/confirm.js',
   '/js/ui/empty-state.js',
   '/js/ui/icons.js',
+  '/js/ui/image-menu.js',
   '/js/ui/popover.js',
   '/js/ui/pull-refresh.js',
   '/js/ui/scroll-fade.js',
@@ -120,6 +125,7 @@ const PRECACHE = [
   '/js/ui/skeleton.js',
   '/js/ui/task-chip.js',
   '/js/ui/toast.js',
+  '/js/ui/tooltip.js',
   // END GENERATED
 ];
 

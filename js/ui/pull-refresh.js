@@ -1,7 +1,8 @@
 /**
- * Linkivo — js/ui/pull-refresh.js  (v2.1.2)
+ * Linkivo — js/ui/pull-refresh.js  (v2.1.3)
  * Purpose: pull down at the top of a page to refresh it (phones). The browser's own pull-to-refresh is disabled app-wide
- *          (overscroll-behavior: none on body, needed so the bottom bar and sheets behave), so the app provides its own.
+ *          (overscroll-behavior: none on html and body, contain on the page scroller; the browser's version reloads the whole app and replays the
+ *          splash), so the app provides its own in-app refresh. Since v2.1.3 it only runs on pages that ask for it (`enabled()`), has no setting.
  *          A small round indicator follows the finger; past the threshold, releasing runs onRefresh().
  * API: initPullRefresh({ scroller, onRefresh, enabled }) -> destroy()     pullDistance(dy) -> number (pure, tested)
  */

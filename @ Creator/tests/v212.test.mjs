@@ -11,9 +11,9 @@ test('compareVersions orders x.y.z numerically', async () => {
   assert.equal(compareVersions('x', '2.1.0'), 0, 'unreadable input never triggers an update');
 });
 
-test('splash resolveMode: auto is full once, then short; settings and reduced motion win', async () => {
+test('splash resolveMode (v2.1.3): full is the default, a stored auto counts as full, short stays short, reduced motion wins', async () => {
   const { resolveMode } = await import(new URL('js/features/splash/splash.js', root));
-  assert.equal(resolveMode({ setting: 'auto', seen: false }), 'full'); assert.equal(resolveMode({ setting: 'auto', seen: true }), 'short');
+  assert.equal(resolveMode({}), 'full'); assert.equal(resolveMode({ setting: 'auto', seen: true }), 'full', 'v2.1.2 value is treated as full');
   assert.equal(resolveMode({ setting: 'full', seen: true }), 'full'); assert.equal(resolveMode({ setting: 'short', seen: false }), 'short');
   assert.equal(resolveMode({ setting: 'full', seen: false, reduce: true }), 'still');
 });

@@ -1,7 +1,9 @@
 /**
- * Linkivo — js/features/settings/settings-page.js  (v2.1.2)
+ * Linkivo — js/features/settings/settings-page.js  (v2.1.3)
  * Purpose: Settings as ONE page driven by the registry (catalog.js): a heading per category, every setting below it. On wide screens
  *          a fixed category list sits on the left and follows the scroll (scroll-spy); clicking an entry scrolls to its heading.
+ *          Phones (v2.1.3): the same list is a sticky horizontal bar under the top edge: it scrolls left and right, fades at the edges and keeps
+ *          the current category centred.
  *          /settings/:section opens the page scrolled to that category (deep link).
  * Routes: /settings  and  /settings/:section
  * Page module: mount(container, ctx)
@@ -9,6 +11,7 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
+import { attachScrollFade } from '../../ui/scroll-fade.js';
 import { SECTIONS, findSection, entriesFor } from './catalog.js';
 import { renderControl } from './controls.js';
 import { renderCustom } from './custom-rows.js';
@@ -31,7 +34,7 @@ export async function mount(container, ctx) {
 
   const body = h('div', { class: 'set-body' });
   const navLinks = new Map();
-  const nav = h('nav', { class: 'set-nav', 'aria-label': 'Settings categories' }, SECTIONS.map((s) => {
+  const nav = h('nav', { class: 'set-nav fade-x', 'aria-label': 'Settings categories' }, SECTIONS.map((s) => {
     const b = h('button', { type: 'button', class: 'set-nav-item', on: { click: () => scrollTo(s.id, true) } }, icon(s.icon, { size: 20 }), h('span', { text: s.label }));
     navLinks.set(s.id, b);
     return b;
@@ -53,7 +56,9 @@ export async function mount(container, ctx) {
   function scrollTo(id, smooth) {
     const el = document.getElementById('sec-' + id);
     if (!el) return;
-    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
+    // keep the heading clear of the sticky category bar (phones): scroll-margin-top carries the bar height
+    const gap = (typeof getComputedStyle === 'function' && parseFloat(getComputedStyle(el).scrollMarginTop)) || 16;
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - gap;
     if (typeof container.scrollTo === 'function') container.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' }); else container.scrollTop = Math.max(0, top);
   }
 
@@ -68,6 +73,9 @@ export async function mount(container, ctx) {
     if (id === current) return;
     current = id;
     for (const [k, b] of navLinks) { if (k === id) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); }
+    // phones: slide the bar so the current chip is in view (horizontal only; scrollIntoView would also move the page)
+    const chip = navLinks.get(id);
+    if (chip && nav.scrollWidth > nav.clientWidth && typeof nav.scrollTo === 'function') nav.scrollTo({ left: chip.offsetLeft - (nav.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' });
   }
   const onScroll = () => { if (!frame) frame = requestAnimationFrame(spy); };
   container.addEventListener('scroll', onScroll, { passive: true });
@@ -76,7 +84,8 @@ export async function mount(container, ctx) {
     h('header', { class: 'page-head is-stack' }, h('h1', { class: 'page-title', text: 'Settings' }), h('p', { class: 'page-sub', text: 'Make Linkivo look and behave the way you like.' })),
     h('div', { class: 'settings' }, nav, body)));
 
+  const detachFade = attachScrollFade(nav);
   spy();
   if (target) requestAnimationFrame(() => { scrollTo(target.id, false); spy(); });
-  return () => { container.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame); };
+  return () => { container.removeEventListener('scroll', onScroll); detachFade(); if (frame) cancelAnimationFrame(frame); };
 }

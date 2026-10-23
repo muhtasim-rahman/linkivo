@@ -1,20 +1,29 @@
-/* Linkivo v2.1.2 - Settings: one page. A heading per category; on wide screens a sticky category list follows the scroll. */
-.settings { display: grid; gap: var(--s6); }
-.set-nav { display: none; }
-.set-body { min-width: 0; display: grid; gap: var(--s8); }
-.set-sec { display: grid; gap: var(--s3); align-content: start; scroll-margin-top: var(--s4); }
-.set-sec-head { display: grid; gap: 2px; }
-.set-h { display: flex; align-items: center; gap: var(--s2); font: 650 var(--fs-lg) / 1.2 var(--font-brand); letter-spacing: -0.01em; }
+/* Linkivo v2.1.3 - Settings: one page. A heading per category. Wide screens: sticky category list on the left. Phones: a sticky, left-right scrollable category bar with edge fades. */
+/* phones: a plain block, so the sticky category bar can stick for the whole height of the page (a sticky grid item can not leave its own row) */
+.settings { display: block; }
+.set-body { min-width: 0; display: grid; gap: var(--s6); margin-top: var(--s2); }
+.set-sec { display: grid; gap: var(--s2); align-content: start; scroll-margin-top: calc(var(--set-bar-h, 0px) + var(--s3)); }
+.set-sec-head { display: grid; gap: 1px; }
+.set-h { display: flex; align-items: center; gap: var(--s2); font: 650 var(--fs-md) / 1.2 var(--font-brand); letter-spacing: -0.005em; }
 .set-h-ic { color: var(--accent-text); display: grid; place-items: center; }
 .set-sub { color: var(--sub); font-size: var(--fs-sm); }
 .page-head.is-stack .page-sub { margin-top: 0; }
+
+/* Phones: the category list becomes a horizontal bar that stays under the top edge while the page scrolls. It scrolls left and right, and
+   the edges fade (class fade-x, js/ui/scroll-fade.js) where more categories are hidden. */
+.set-nav { --set-bar-h: 52px; position: sticky; top: 0; z-index: 5; display: flex; gap: var(--s2); align-items: center; height: var(--set-bar-h); margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.settings { --set-bar-h: 52px; }
+.set-nav.fade-x { -webkit-mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); }
+.set-nav-item { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 var(--s3); border-radius: 19px; border: 1px solid var(--line); background: var(--surface); color: var(--sub); font-weight: 560; font-size: var(--fs-sm); white-space: nowrap; transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
+.set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 @media (min-width: 900px) {
-  .settings { grid-template-columns: 232px minmax(0, 1fr); gap: var(--s8); align-items: start; }
-  .set-nav { display: grid; gap: var(--s1); position: sticky; top: var(--s8); align-content: start; }
-  .set-nav-item { display: flex; align-items: center; gap: var(--s3); min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-group); color: var(--sub); font-weight: 560; text-align: left; transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease); }
+  .settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: var(--s8); align-items: start; --set-bar-h: 0px; }
+  .set-body { margin-top: 0; }
+  .set-nav { display: grid; gap: 2px; position: sticky; top: var(--s6); align-content: start; height: auto; margin: 0; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
+  .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }
   .set-nav-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
   .set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
-  .set-sec { scroll-margin-top: var(--s8); }
+  .set-sec { scroll-margin-top: var(--s6); }
 }
 .ctl-end { display: flex; align-items: center; gap: var(--s2); }
 .row.is-stack { flex-wrap: wrap; }
@@ -34,20 +43,24 @@
 .debug-log .l-error { color: var(--danger); } .debug-log .l-warn { color: var(--warning); }
 
 /* About: app header, highlights, developer card, links */
-.about-card { display: grid; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
+.about-card { display: grid; gap: var(--s3); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
 .about-hero { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
-.about-tile { width: 64px; height: 64px; border-radius: 18px; flex: none; box-shadow: 0 0 0 1px var(--line); }
+.about-tile { width: 52px; height: 52px; border-radius: 15px; flex: none; box-shadow: 0 0 0 1px var(--line); }
 .about-id { display: grid; gap: 2px; min-width: 0; flex: 1; }
-.about-id .wordmark { font-size: 26px; }
+.about-id .wordmark { font-size: 24px; }
 .about-lead { color: var(--sub); max-width: 60ch; }
 .about-hl { display: grid; gap: var(--s2) var(--s4); grid-template-columns: 1fr; }
 .about-hl li { display: flex; gap: var(--s2); align-items: flex-start; font-size: var(--fs-sm); }
 .about-hl .hl-ic { color: var(--accent-text); flex: none; margin-top: 1px; }
 @media (min-width: 640px) { .about-hl { grid-template-columns: 1fr 1fr; } }
-.dev-card { display: flex; gap: var(--s4); align-items: center; flex-wrap: wrap; padding: var(--s4); border-radius: var(--r-group); background: var(--surface-2); border: 1px solid var(--line); }
-.dev-photo { position: relative; width: 64px; height: 64px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); color: var(--accent-fg); font: 700 24px / 1 var(--font-brand); }
+/* Developer: its own compact section (v2.1.3), not part of the About card. The badge is the photo inside the brand-gradient ring with a small check seal. */
+.dev-section { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--s2) var(--s3); padding: var(--s3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
+.dev-badge { position: relative; width: 56px; height: 56px; flex: none; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
+.dev-photo { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); color: var(--text); font: 700 20px / 1 var(--font-brand); border: 2px solid var(--surface); }
 .dev-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.dev-info { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.dev-check { position: absolute; right: -2px; bottom: -2px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-strong); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }
+.dev-info { display: grid; gap: 1px; min-width: 0; }
 .dev-info strong { font: 650 var(--fs-md) / 1.2 var(--font-brand); }
-.dev-links { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.dev-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s2); }
+@media (min-width: 640px) { .dev-section { grid-template-columns: auto 1fr auto; } .dev-links { grid-column: auto; } }
 .about-links { display: grid; }

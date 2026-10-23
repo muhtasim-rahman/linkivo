@@ -1,28 +1,28 @@
 /**
- * Linkivo — js/features/splash/splash.js  (v2.1.2)
+ * Linkivo — js/features/splash/splash.js  (v2.1.3)
  * Purpose: drives the splash defined in index.html + css/pages/splash.css (spec: DESIGN section 6). It is the v1 logo-creation
  *          animation the owner built (ripple, left ring pop, shackle lock with sparkles and background reveal, bar, second ring,
  *          typed wordmark) WITHOUT the url badges, the shrink and the spiral. Timeline is about 3.2 s.
- * Modes:   full  = the whole animation (first run, or when the setting says so)
+ * Modes:   full  = the whole animation (the DEFAULT, every start)
  *          short = the finished logo fades in (0.5 s)      still = finished logo at once (reduced motion)
- *          Setting "ui.splash": 'auto' (full on the first run, short afterwards) | 'full' | 'short'.
+ *          Setting "ui.splash": 'full' (default) | 'short'. v2.1.3: "Automatic" was removed; a stored 'auto' from v2.1.2 counts as 'full'.
+ * v2.1.3: no background grid, a slightly smaller logo, no blur filters (they stutter on phones; opacity and transform only), and the first
+ *          frame is never blank (index.html shows a CSS ring until startSplash() runs, which now happens from splash-start.js).
  * The splash ends when BOTH the animation and the app are ready. If loading outlasts it, three loading dots appear.
  * API: startSplash() -> void     endSplash() -> Promise<void> (call when the first page is mounted)     resolveMode(prefsLike, reduce) -> mode
  */
 import { prefs } from '../../core/local-prefs.js';
 import { sleep } from '../../core/utils.js';
 
-const MIN_MS = { full: 3300, short: 600, still: 300 };
+const MIN_MS = { full: 3200, short: 600, still: 300 };
 const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
-let el, mode = 'still', startedAt = 0, ended = false, timeline = Promise.resolve();
+let el, mode = 'still', startedAt = 0, started = false, ended = false, timeline = Promise.resolve();
 
 /** Pure: which mode to run. Exported for the unit tests. */
-export function resolveMode({ setting = 'auto', seen = false, reduce = false }) {
+export function resolveMode({ setting = 'full', reduce = false } = {}) {
   if (reduce) return 'still';
-  if (setting === 'full') return 'full';
-  if (setting === 'short') return 'short';
-  return seen ? 'short' : 'full';
+  return setting === 'short' ? 'short' : 'full';
 }
 
 const $ = (id) => document.getElementById(id);
@@ -67,7 +67,7 @@ function runFull() {
   const typed = () => Promise.all(chars.map((c, i) => at(i * 55, () => {
     const dot = c.querySelector('.idot');
     if (dot) at(150, () => play(dot, [{ transform: 'translateX(-50%) scale(0)', opacity: 0 }, { transform: 'translateX(-50%) scale(1)', opacity: 1 }], { duration: 400, easing: SPRING }));
-    return play(c, [{ opacity: 0, filter: 'blur(12px)', transform: 'translateX(-15px)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 400 });
+    return play(c, [{ opacity: 0, transform: 'translateX(-12px)' }, { opacity: 1, transform: 'none' }], { duration: 420 });
   })));
   return Promise.all([
     at(0, () => Promise.all([
@@ -85,15 +85,17 @@ function runFull() {
     at(1500, () => Promise.all([play($('sp-pulse2'), [{ r: 0, opacity: 1 }, { r: 150, opacity: 0 }], { duration: 800, easing: 'ease-out' }), draw(ringr, 600, { easing: 'ease-out' })])),
     at(1900, () => fillIn(ringr, 350)),
     at(2250, typed),
-    at(2750, () => play($('sp-tag'), [{ opacity: 0, filter: 'blur(10px)', transform: 'translateY(10px)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 500 }))
+    at(2750, () => play($('sp-tag'), [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 480 }))
   ]);
 }
 
 export function startSplash() {
+  if (started) return; // splash-start.js runs it first; main.js calls it again as a safety net
   el = $('splash');
   if (!el) return;
+  started = true;
   const reduce = (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) || prefs.get('ui.reduceMotion', 'system') === 'reduce';
-  mode = resolveMode({ setting: prefs.get('ui.splash', 'auto'), seen: prefs.get('splash.seen', false), reduce });
+  mode = resolveMode({ setting: prefs.get('ui.splash', 'full'), reduce });
   // a browser that can not run the Web Animations API still gets the finished logo
   if (mode === 'full' && typeof el.animate !== 'function') mode = 'short';
   el.dataset.mode = mode;
@@ -107,7 +109,6 @@ export async function endSplash() {
   const remaining = MIN_MS[mode] - (performance.now() - startedAt);
   await Promise.race([Promise.all([timeline, sleep(Math.max(0, remaining))]), sleep(MIN_MS[mode] + 900)]);
   ended = true;
-  prefs.set('splash.seen', true);
   el.classList.add('out');
   setTimeout(() => el.remove(), 560);
 }

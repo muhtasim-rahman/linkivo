@@ -1,0 +1,26 @@
+feat(v2.1.3): polish, compact UI, faster splash, metadata rescue
+
+- Sidebar redesigned: 244px / 68px, fixed 44px icon slot per row, labels fade and are clipped, so nothing re-centers or jumps when it collapses; smaller icons and rows; tooltips on collapsed rows
+- Mobile bottom bar: spring-animated "liquid" ring that stretches with the distance travelled, icon hop on the new tab, press feedback; long-press on a tab shows its name
+- Splash: Full by default on every start, "Automatic" option removed, background grid removed, logo smaller, no blur filters; starts from splash-start.js (tiny module graph + modulepreload) with a CSS boot ring, and only tokens/base/splash CSS block the first paint (other CSS and Google Fonts are added by a script)
+- Pull to refresh: in-app refresh only on pages flagged refresh:true (library, folder, history, profile), page.refresh(ctx) hook, layout only for now; no setting; no app reload, no update check, no splash; native pull-to-refresh disabled on html and the page scroller
+- Right-click and long-press stay blocked but the setting is removed; text is selectable again (controls are not), a text selection keeps Copy; right-click or long-press on an image opens an own menu: Open image in new tab, Copy image link, Download image (safe URLs only)
+- Tooltips: hover on PC (data-tip, aria-label fallback), long-press on touch
+- Install banner: new ticket-style design; hidden when installed
+- Developer: separate compact section with the badge (photo in gradient ring + check seal), after About in Settings > App and on the Menu page
+- Settings on phones: sticky horizontal category bar, scrolls left and right with edge fades; removed "Pull down to refresh" and "Block right-click" settings; "Hide bottom bar" moved to Behavior
+- Menu page: Quick settings (theme, accent, text size, hide bar)
+- Password reset: confirmation dialog, PIN gate when the lock is on, rate limit (core/send-limit.js: 5 min per address, 5 per hour; verification 2 min), same limit on the login page
+- Theme switch: View Transitions API cross-fade replaces the per-element color transition, so every color changes together
+- Compact UI: type scale one notch smaller, controls 36px on mouse screens and 44px on touch, tighter rows, page heads and empty states
+- Metadata: core/meta-fallback.js rescues weak Worker results on the device (Dub, Jina Reader, AllOrigins, JSONLink, Microlink, in order of free limit, with circuit breaker and local daily cap) and always leaves a title (from the URL) and a favicon; switch in Settings > Advanced; Settings > App warns when the deployed Worker is older than 2.1.3
+- Worker 2.1.3: version bump only (no behavior change)
+- Tests: 114 (24 new in v213.test.mjs), docs, CONTEXT (D-060 to D-067), STRUCTURE updated
+
+Removed files:
+- none
+
+Owner actions:
+- Extract the zip over the project folder, commit, firebase deploy --only hosting, hard reload
+- Cloudflare dashboard: Workers & Pages > linkivo > Edit code: paste @ Creator/worker/worker.js (2.1.3) and Deploy. The test run in the request showed an older Worker still running
+- No rules change, no secrets

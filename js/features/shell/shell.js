@@ -1,10 +1,12 @@
 /**
- * Linkivo — js/features/shell/shell.js  (v2.1.2)
+ * Linkivo — js/features/shell/shell.js  (v2.1.3)
  * Purpose: the persistent chrome around the page area: mobile floating glass bottom bar (Library, Random, Import, Search, Menu),
  *          PC collapsible sidebar (Import, Library, Random, Search, Settings) with theme toggle and profile badge, install banner.
  *          Built once; the router only swaps what is inside #page-root.
- * Sidebar rules (owner, v2.1.2): collapsed = rounded-square icons, the logo turns into an "expand" icon on hover;
+ * Sidebar rules (owner, v2.1.2 / v2.1.3): collapsed = rounded-square icons, the logo turns into an "expand" icon on hover;
  *          expanded = full rows (icon + text), logo and name open the Library, hovering the logo does nothing.
+ *          v2.1.3: every row keeps a fixed 44px icon slot, so collapsing only fades labels and nothing jumps (see css/components/nav.css).
+ * Mobile bar: the active-tab ring slides with a spring and stretches by the distance travelled (--stretch).
  * API: mountShell({ router }) -> { setSession(session), isWide() }
  */
 import { h } from '../../core/dom.js';
@@ -47,27 +49,28 @@ export function mountShell({ router }) {
     app.dataset.collapsed = String(v); prefs.set('ui.sidebarCollapsed', v);
     toggle.setAttribute('aria-expanded', String(!v));
     mark.tabIndex = v ? 0 : -1; brand.tabIndex = v ? -1 : 0;
+    // tooltips on rows only while collapsed (expanded rows already show their name); data-tip-c holds the text meanwhile
+    for (const el of sidebar.querySelectorAll('[data-tip-c]')) { if (v) el.setAttribute('data-tip', el.dataset.tipC); else el.removeAttribute('data-tip'); }
   };
-  // collapsed: the logo is a button; on hover (or keyboard focus) it swaps for the expand icon
-  const mark = h('button', { type: 'button', class: 'sb-mark', 'aria-label': 'Expand sidebar', 'data-tip': 'Expand sidebar', on: { click: () => setCollapsed(false) } },
-    h('span', { class: 'logo-mark', style: { '--w': '30px' } }), h('span', { class: 'sb-expand' }, icon('panel', { size: 22 })));
-  // expanded: logo and name are one link to the Library
+  // Collapsed: an invisible button covers the logo slot; on hover or keyboard focus the logo swaps for the expand icon (CSS).
+  // Expanded: logo and name are one link to the Library. The logo sits in the same 44px slot in both states, so it never moves.
+  const mark = h('button', { type: 'button', class: 'sb-expandbtn', 'aria-label': 'Expand sidebar', 'data-tip': 'Expand sidebar', on: { click: () => setCollapsed(false) } }, icon('panel', { size: 20 }));
   const brand = h('a', { class: 'sb-brand', href: '/library', 'aria-label': 'Linkivo, open Library' },
-    h('span', { class: 'logo-mark', style: { '--w': '32px' } }), h('span', { class: 'wordmark sb-word' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
-  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(true) } }, icon('panel', { size: 20 }));
+    h('span', { class: 'sb-slot' }, h('span', { class: 'logo-mark', style: { '--w': '28px' } })), h('span', { class: 'wordmark sb-word' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
+  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(true) } }, icon('panel', { size: 18 }));
 
-  const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip': it.label },
-    h('span', { class: 'nav-ic' }, icon(it.icon, { size: 22 })), h('span', { class: 'nav-label', text: it.label }));
+  const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip-c': it.label },
+    h('span', { class: 'nav-ic' }, icon(it.icon, { size: 20 })), h('span', { class: 'nav-label', text: it.label }));
 
   const themeSwitch = h('span', { class: 'switch', 'aria-hidden': 'true' });
   const themeIcon = h('span', { class: 'nav-ic' });
-  const themeRow = h('button', { type: 'button', class: 'nav-item theme-row', role: 'switch', 'data-tip': 'Dark mode', on: { click: toggleTheme } }, themeIcon, h('span', { class: 'nav-label', text: 'Dark mode' }), themeSwitch);
+  const themeRow = h('button', { type: 'button', class: 'nav-item theme-row', role: 'switch', 'data-tip-c': 'Dark mode', on: { click: toggleTheme } }, themeIcon, h('span', { class: 'nav-label', text: 'Dark mode' }), themeSwitch);
 
   // profile badge: avatar + name + masked email + three-dot menu (collapsed: only the round avatar)
   const pfAvatar = h('span', { class: 'pf-avatar' }); const pfName = h('span', { class: 'pf-name' }); const pfMail = h('span', { class: 'pf-mail' });
-  const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip': 'Profile', 'aria-label': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
+  const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip-c': 'Profile', 'aria-label': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
   let menuHandle = null;
-  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'aria-haspopup': 'menu', on: { click: () => {
+  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'data-tip': 'Account menu', 'aria-haspopup': 'menu', on: { click: () => {
     // second press closes the menu (it used to close and re-open at once)
     if (menuHandle && menuHandle.isOpen()) { menuHandle.close(); menuHandle = null; return; }
     menuHandle = openMenu(more, [
@@ -76,7 +79,7 @@ export function mountShell({ router }) {
       { separator: true },
       { label: 'Log out', icon: 'logout', danger: true, onSelect: () => logOut(router) }
     ], { align: 'start' });
-  } } }, icon('more', { size: 20 }));
+  } } }, icon('more', { size: 18 }));
   const badge = h('div', { class: 'pf-badge' }, pfLink, more);
 
   sidebar.replaceChildren(
@@ -86,7 +89,22 @@ export function mountShell({ router }) {
 
   // ---- bottom bar ----------------------------------------------------------------------------------------------------
   const marker = h('span', { class: 'bar-marker', 'data-hidden': 'true', 'aria-hidden': 'true' });
-  bar.replaceChildren(marker, ...BAR.map((it) => h('a', { class: ['bar-item', it.primary && 'bar-import'], href: it.href, 'data-tab': it.tab, 'aria-label': it.label }, it.primary ? h('span', null, icon(it.icon, { size: 24 })) : icon(it.icon, { size: 24 }))));
+  bar.replaceChildren(marker, ...BAR.map((it) => h('a', { class: ['bar-item', it.primary && 'bar-import'], href: it.href, 'data-tab': it.tab, 'aria-label': it.label, 'data-tip': it.label }, it.primary ? h('span', null, icon(it.icon, { size: 22 })) : icon(it.icon, { size: 22 }))));
+
+  // The ring slides to the new tab (spring in CSS) and stretches in proportion to the distance it travels.
+  let markerAt = -1;
+  function moveMarker(idx) {
+    const shown = idx >= 0 && BAR[idx].primary !== true;
+    marker.dataset.hidden = String(!shown);
+    if (idx < 0) return;
+    const from = markerAt < 0 ? idx : markerAt;
+    marker.style.setProperty('--i', String(idx));
+    if (idx !== from && shown) {
+      marker.style.setProperty('--stretch', Math.min(96, Math.abs(idx - from) * 28) + 'px');
+      marker.classList.remove('is-moving'); void marker.offsetWidth; marker.classList.add('is-moving'); // restart the keyframes
+    }
+    markerAt = idx;
+  }
 
   // hide the bar while scrolling down, bring it back on the way up (transform + opacity only: no layout shift)
   let last = 0;
@@ -97,7 +115,7 @@ export function mountShell({ router }) {
     last = y;
   }, { passive: true });
 
-  function renderTheme() { const dark = resolvedTheme() === 'dark'; themeIcon.replaceChildren(icon(dark ? 'moon' : 'sun', { size: 22 })); themeRow.setAttribute('aria-checked', String(dark)); themeSwitch.setAttribute('aria-checked', String(dark)); }
+  function renderTheme() { const dark = resolvedTheme() === 'dark'; themeIcon.replaceChildren(icon(dark ? 'moon' : 'sun', { size: 20 })); themeRow.setAttribute('aria-checked', String(dark)); themeSwitch.setAttribute('aria-checked', String(dark)); }
   new MutationObserver(renderTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   renderTheme();
 
@@ -112,8 +130,7 @@ export function mountShell({ router }) {
       if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     }
     const idx = BAR.findIndex((b) => b.tab === route.tab);
-    marker.style.setProperty('--i', String(Math.max(idx, 0)));
-    marker.dataset.hidden = String(idx < 0 || BAR[idx].primary === true);
+    moveMarker(idx);
     bar.classList.remove('is-hidden'); last = 0;
   });
 

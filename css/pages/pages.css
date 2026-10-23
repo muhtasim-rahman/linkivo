@@ -1,4 +1,4 @@
-/* Linkivo v2.1.0 - placeholder pages, menu and profile */
+/* Linkivo v2.1.3 - placeholder pages, menu and profile */
 .stub { display: grid; align-content: start; }
 .menu-list { display: grid; gap: var(--s3); }
 .menu-hero { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); color: inherit; }
@@ -11,3 +11,6 @@
 .profile-head .pf-name { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
 .tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--fs-xs); font-weight: 650; }
 .stack { display: grid; gap: var(--s4); }
+/* v2.1.3: quick settings on the Menu page */
+.menu-quick { display: grid; gap: var(--s2); }
+.menu-h { display: flex; align-items: center; gap: var(--s2); font: 650 var(--fs-md) / 1.2 var(--font-brand); padding-inline: var(--s1); }

@@ -1,17 +1,19 @@
 /**
- * Linkivo — js/features/auth/auth-service.js  (v2.1.0)
+ * Linkivo — js/features/auth/auth-service.js  (v2.1.3)
  * Purpose: sign-in, sign-out and guest entry on top of Firebase Auth. Keeps the session store (core/session.js) up to date.
  *          Google sign-in uses a popup and falls back to a redirect where popups are blocked (mobile PWA, in-app browsers).
  * API: initAuth() -> Promise<void>   (resolves when the first session state is known)
  *      signInWithGoogle() signInWithEmail(email, password) registerWithEmail(email, password) sendReset(email)
  *      resendVerification() signOutUser() enterGuest() leaveGuest() getIdToken() reauthenticate(password?)
  *      friendlyAuthError(error) -> string|null (null = user cancelled, show nothing)
+ *      v2.1.3: sendReset and resendVerification refuse to send again too soon (core/send-limit.js) and throw an error with code 'lk/cooldown' and waitMs.
  */
 import { loadFirebase } from '../../core/firebase-loader.js';
 import { prefs } from '../../core/local-prefs.js';
 import { setSession, getSession } from '../../core/session.js';
 import { setTokenProvider } from '../../core/worker-client.js';
 import { log } from '../../core/logger.js';
+import { sendAllowed, recordSend } from '../../core/send-limit.js';
 
 let fb = null;
 
@@ -57,8 +59,22 @@ export async function registerWithEmail(email, password) {
   const cred = await mods.auth.createUserWithEmailAndPassword(auth, email.trim(), password);
   try { await mods.auth.sendEmailVerification(cred.user); } catch (e) { log.warn('auth', 'verification email not sent', e); } // soft: the app stays usable (A-002)
 }
-export async function sendReset(email) { const { auth, mods } = await sdk(); await mods.auth.sendPasswordResetEmail(auth, email.trim()); }
-export async function resendVerification() { const { auth, mods } = await sdk(); if (auth.currentUser) await mods.auth.sendEmailVerification(auth.currentUser); }
+const cooldown = (gate) => Object.assign(new Error('cooldown'), { code: 'lk/cooldown', waitMs: gate.waitMs });
+export async function sendReset(email) {
+  const gate = sendAllowed('reset', email);
+  if (!gate.ok) throw cooldown(gate);
+  const { auth, mods } = await sdk();
+  await mods.auth.sendPasswordResetEmail(auth, email.trim());
+  recordSend('reset', email); // only after Firebase accepted it: a typo (invalid email) does not use up the allowance
+}
+export async function resendVerification() {
+  const { auth, mods } = await sdk();
+  if (!auth.currentUser) return;
+  const gate = sendAllowed('verify', auth.currentUser.uid);
+  if (!gate.ok) throw cooldown(gate);
+  await mods.auth.sendEmailVerification(auth.currentUser);
+  recordSend('verify', auth.currentUser.uid);
+}
 export async function getIdToken() { return fb && fb.auth.currentUser ? fb.auth.currentUser.getIdToken() : null; }
 
 /** Fresh sign-in proof for sensitive server actions (v2.5.0). Password users pass their password; Google users get a popup. */

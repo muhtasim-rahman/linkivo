@@ -1,8 +1,8 @@
 /**
- * Linkivo — js/ui/popover.js  (v2.1.2)
+ * Linkivo — js/ui/popover.js  (v2.1.3)
  * Purpose: anchored menu (three-dot menus). Keyboard: arrows, Home/End, Enter, Escape. Closes on outside click, scroll, resize
  *          and Back (registers a back layer).
- * API: openMenu(anchor, items, { align:'end'|'start' }) -> { close(), isOpen() }
+ * API: openMenu(anchor, items, { align:'end'|'start', onClose }) -> { close(), isOpen() }   (onClose runs once when the menu has closed, v2.1.3)
  *      Pressing the anchor again is NOT an outside click: the caller toggles with isOpen() (v2.1.2).
  *   items: [{ label, icon?, danger?, onSelect() }] or { separator: true }
  */
@@ -10,7 +10,7 @@ import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
 import { icon } from './icons.js';
 
-export function openMenu(anchor, items, { align = 'end' } = {}) {
+export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
   const returnTo = document.activeElement;
   let layer;
   const menu = h('div', { class: 'pop', role: 'menu' }, items.map((it) => it.separator ? h('div', { class: 'pop-sep', role: 'separator' }) :
@@ -45,6 +45,7 @@ export function openMenu(anchor, items, { align = 'end' } = {}) {
     removeEventListener('resize', close);
     document.removeEventListener('scroll', close, true);
     if (returnTo && returnTo.isConnected && returnTo.focus) returnTo.focus({ preventScroll: true });
+    if (onClose) onClose();
   }
   document.body.appendChild(menu);
   place();

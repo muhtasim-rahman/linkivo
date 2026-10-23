@@ -265,3 +265,17 @@ Admin panel (the data model stays admin-ready), profile picture upload, push not
 - **Updates**: automatic update when the app opens; popup while it is in use; pull down on a phone to refresh the page and check for a new version.
 - **Metadata**: works for blocked sites through preview-crawler retries, Jina Reader and Wayback; always returns a usable partial result for live sites; more fields (author, published date, keywords, language, canonical, theme color, feed).
 - **SEO**: per-route title, description, robots and canonical; private pages noindex; `robots.txt`, `sitemap.xml`, Open Graph and JSON-LD in `index.html`.
+
+
+## v2.1.3 additions (polish, metadata rescue)
+
+- **Start animation**: Full (default, every start) or Short. No grid, smaller logo, never a blank first paint.
+- **Pull to refresh** (phones): an in-app refresh on content pages only (library, folder, history, profile); layout now, each page adds its own refresh when it has data. No setting. Replaces the v2.1.2 behavior (which also checked for updates and re-opened the page).
+- **Right-click and long-press**: always blocked, no setting; text stays selectable, a text selection keeps Copy, an image opens a small menu (Open image in new tab, Copy image link, Download image).
+- **Tooltips**: hover on PC; long-press names on the mobile bar.
+- **Install banner**: own ticket design; never shown when installed; status only in Settings > App.
+- **Developer**: separate compact section after About (Settings > App and Menu).
+- **Settings on phones**: sticky, scrollable category bar. **Menu**: Quick settings (theme, accent, text size, hide bar).
+- **Password reset**: confirmation, PIN gate when the lock is on, one email per address every 5 minutes, 5 per hour per device; verification email: 2 minutes. Same limits on the login page.
+- **Metadata**: Worker first, then this device asks Dub, Jina Reader, AllOrigins, JSONLink and Microlink when the Worker result is weak; floor = title from the URL plus the favicon. Switch in Settings > Advanced. Settings > App warns when the deployed Worker is older than the app expects.
+- **Theme switch**: one cross-fade, all colors together.

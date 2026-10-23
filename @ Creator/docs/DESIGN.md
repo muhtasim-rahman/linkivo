@@ -56,7 +56,7 @@ Reference: `@ Creator/reference/splash-screen-v21.html` (the owner's v1 animatio
 Spec:
 - The v1 **logo-creation animation**: ripple, left ring pops and draws, shackle locks with sparkles and a shake while the tinted background grows from the ring, bar draws, second ring with its own ripple, wordmark types in (the two i-dots pop), tagline. NO url badges, no shrink, no spiral, no replay/theme buttons, no hard-coded version text.
 - Timeline about 3.2 s (v1 was about 10 s with the url badges). Colors come from the brand variables (`--brand-a`, `--brand-b`), so the splash follows the accent color.
-- Modes (`js/features/splash/splash.js`, setting "Start animation": Automatic | Always full | Short): **full** on the very first start (Automatic), **short** afterwards (finished logo fades in, about 0.6 s), **still** under reduced motion. Automatic = full once, then short.
+- Modes (`js/features/splash/splash.js`, setting "Start animation": Full | Short, default Full, v2.1.3): **full** every start, **short** (finished logo fades in, about 0.6 s), **still** under reduced motion. v2.1.3: no background grid, logo `min(38vw, 232px)`, no blur filters (opacity and transform only), one static glow. Loading: `splash-start.js` runs the animation from a tiny module graph before `main.js`; until then a CSS-only ring pulses (data-mode pending), so the first paint is never an empty background.
 - It ends when BOTH the animation and the app are ready (auth resolved, first route mounted). If loading outlasts it, separate **loading dots** appear; the animation itself is never extended.
 - Markup is inline in `index.html` (animated SVG driven by script, allowed by RULES section 9); styles in `css/pages/splash.css`.
 - Installed app: the operating system shows its own splash first (background color + icon from the manifest). A web page cannot remove it; `icon-384.png`/`icon-512.png` keep it sharp and `background_color` is white to match the icon tile. Our splash takes over as soon as the page paints.
@@ -65,7 +65,7 @@ Spec:
 
 - **Sidebar** (no background, no divider). Collapsed: rounded-square icon buttons, the logo turns into an expand icon on hover; the active item is a rounded square. Expanded: full rows (icon and text), logo and name open the Library, hovering the logo does nothing. Import links uses the plus icon and is the filled accent item. Profile: collapsed = round avatar; expanded = outlined badge with avatar, name, masked email and a three-dot menu that opens and closes with the same button.
 - **Wide screens**: the sidebar is fixed on the left; page content is centred (`max-width` 960, settings 1080) in the space that remains.
-- **Pages** fade and rise in (240 ms, `.page-enter`), no exit animation; every new page starts at its top. A theme change glides for 320 ms (`theme-anim`).
+- **Pages** fade and rise in (240 ms, `.page-enter`), no exit animation; every new page starts at its top. A theme change cross-fades the whole page in 260 ms through the View Transitions API (one snapshot, every color at once).
 - **Brand follows the accent**: logo mark (CSS mask of `assets/brand/logo-mark.svg`) and wordmark use `--brand-a`/`--brand-b`.
 - **Login**: wide screens = art-and-overview column (rings that repeat the logo, thin and light; highlights) + compact form column; phones = one compact column that fits without scrolling. White rounded logo tile, theme switch always visible, Terms and Privacy agreement required to create an account.
 - **Settings**: one page, a heading per category; wide screens get a sticky category list that follows the scroll. Row title and description are always on separate lines.
@@ -83,3 +83,13 @@ Spec:
 - Is there exactly one memorable element per screen, and is the rest quiet?
 - Are empty, loading and error states designed?
 - Does it work with one thumb on a 360px wide phone, in dark and light, with reduced motion?
+
+
+## 6c. v2.1.3 chrome changes
+- **Sidebar** 244px expanded, 68px collapsed. Every row is a 44px icon slot plus a label; the slot never moves, labels fade (140 ms) and the narrowing column clips them. Active row = soft accent fill, no ring. Tooltips on collapsed rows (data-tip-c).
+- **Mobile bar**: the ring is a "liquid" shape: it slides with a spring (440 ms) and stretches by the distance (`--stretch`), the new icon hops once, press scales the icon down. Long-press on any tab shows its name.
+- **Compact**: type scale one notch smaller; mouse screens use `--ctl-h: 36px`, `--row-h: 40px`; touch keeps 44px.
+- **Install banner**: ticket card, dashed tear line with two notches, app tile and text left, Install and "Not now" right.
+- **Developer section**: compact card, badge = photo in the brand gradient ring with a check seal, three small link buttons.
+- **Settings on phones**: sticky horizontal category bar with edge fades (`fade-x`), current chip kept centred.
+- **Tooltip**: dark chip, 450 ms hover delay, long-press 420 ms on touch, hides on scroll and Escape.

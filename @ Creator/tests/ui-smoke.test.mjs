@@ -155,7 +155,7 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   assert.equal($('.pf-mail').textContent, 'tu******99@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
   $('.theme-row').click(); await tick(5); assert.equal(prefs.get('ui.theme'), 'dark'); prefs.remove('ui.theme');
   $('.sb-toggle').click(); assert.equal($('#app').dataset.collapsed, 'true'); assert.equal(prefs.get('ui.sidebarCollapsed'), true);
-  $('.sb-mark').click(); assert.equal($('#app').dataset.collapsed, 'false');
+  $('.sb-expandbtn').click(); assert.equal($('#app').dataset.collapsed, 'false');
 });
 
 test('route table: every route loads a real module with mount(), and every parent exists', async () => {
@@ -220,12 +220,15 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   const resetRow = $('.row.is-danger'); resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
-  await router.navigate('/settings/app'); await tick(5); assert.match(container.textContent, /Version 2\.1\.2/);
+  await router.navigate('/settings/app'); await tick(5); assert.match(container.textContent, /Version 2\.1\.3/);
+  // v2.1.3: the developer is its own section (not inside the About card); two settings are gone; the browser-fallback switch is new
+  assert.ok($('.dev-section') && !$('.about-card .dev-section'), 'developer section is separate'); assert.ok(!/Pull down to refresh|Block right-click/.test(container.textContent));
   await router.navigate('/settings/account'); await tick(5); assert.match(container.textContent, /Guest mode/);
   router.destroy();
 });
 
 test('worker client + metadata tester: batches of 6, results rendered with engine log', async () => {
+  prefs.set('meta.browserFallback', false); // v2.1.3: this test counts Worker calls only; the device-side fallback has its own tests (v213.test.mjs)
   const calls = [];
   globalThis.fetch = async (url, init) => {
     calls.push({ url, body: init.body ? JSON.parse(init.body) : null });

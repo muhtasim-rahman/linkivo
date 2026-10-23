@@ -9,10 +9,10 @@ Files that name a version range carry a suffix (`PLAN-v2.0_to_v2.5.md`, `MASTER-
 ## Owner workflow
 Chat per version, inside the Linkivo v2 project, with the latest zip attached ("Start vX.Y.Z"). The owner extracts the zip into the project folder (next to `.git`), deletes the files listed under "Removed files", tests, commits with `@ Creator/commits/vX.Y.Z-commit.txt`, deploys (SETUP-GUIDE section F) and keeps the zip in `@ Versions`. Never touch `@ Extra files` or `@ Versions`.
 
-## Current state (v2.1.2)
-- Code: foundation and shell, about 85 JS files; Worker about 650 lines (one file, pasted into the Cloudflare dashboard). Tests: 90 (`node --test "@ Creator/tests/*.test.mjs"`, needs `jsdom` installed outside the project).
+## Current state (v2.1.3)
+- Code: foundation and shell, about 92 JS files; Worker about 650 lines (one file, pasted into the Cloudflare dashboard). Tests: 114 (`node --test "@ Creator/tests/*.test.mjs"`, needs `jsdom` installed outside the project).
 - Routes: `/` (redirect), `/login`, `/reactivate`, `/library`, `/folder/:fid`, `/import`, `/link/:lid`, `/search`, `/random`, `/profile`, `/profile/history`, `/menu`, `/settings`, `/settings/:section` (scrolls to a category), `/terms`, `/privacy`, `/docs`, `/docs/:topic`, `*`. Only login, menu, profile, settings are real pages; the others are designed stubs that say which version delivers them.
-- Settings (device-level prefs, registry in `js/features/settings/catalog.js`): Appearance (theme, accent, text size, density, motion, page transitions, start animation, hide bar, collapse sidebar), Behavior (pull to refresh, block right-click and long-press), Account and sync (account rows, reset-password email, data and sync with Sync now), App (install, update automatically, updates, about), Advanced (metadata service, tester, clear app cache, debug log, reset). 19 entries; v2.6.0 raises the catalog to 30+.
+- Settings (device-level prefs, registry in `js/features/settings/catalog.js`): Appearance (theme, accent, text size, density, motion, page transitions, start animation, hide bar, collapse sidebar), Behavior (hide bottom bar on scroll), Account and sync (account rows, confirmed and rate-limited reset-password row, data and sync with Sync now), App (install, update automatically, updates, about, developer), Advanced (metadata service with outdated-Worker warning, extra metadata services switch, tester, clear app cache, debug log, reset). 18 entries; v2.6.0 raises the catalog to 30+. Removed in v2.1.3: pull-to-refresh switch and right-click switch (both fixed behavior now).
 - Flags (`js/core/flags.js`): `randomFromFolder`, `shareTarget`, `appLock` off.
 - Database: complete generated rules for the whole schema (40 automated cases + `tests/rules-matrix.md`). Data empty until the owner resets the instance.
 - Worker: `/health`, `/meta` (guests 10, accounts 25 URLs per call; the app sends 6). No secrets yet (`PIN_PEPPER`, `FIREBASE_SERVICE_ACCOUNT` arrive in v2.5.0).
@@ -20,11 +20,11 @@ Chat per version, inside the Linkivo v2 project, with the latest zip attached ("
 
 ## Owner agreements (carry forward)
 - Reply in Bangla with English technical terms; code, comments, docs, commits in English. Tables and structured notes, no vague answers, no unnecessary deletion of working code, point out unused code instead.
-- No emojis anywhere. Splash: the owner's v1 logo-creation animation WITHOUT the url badges; full on first start, short afterwards, switchable in Settings (D-051).
-- Smooth experience: pages fade in, every new page starts at its top, the theme switch glides. Context menu and long-press are blocked app-wide except in text fields (setting, default on). Pull-to-refresh on phones.
-- Sidebar: collapsed = rounded-square icons and an expand icon on logo hover; expanded = full rows, logo and name open the Library; Import links uses the plus icon; no sidebar background; profile badge with name, masked email and a three-dot menu that toggles.
+- No emojis anywhere. Splash: the owner's v1 logo-creation animation WITHOUT the url badges, no grid; FULL every start by default, Short is the only other choice (D-051, D-060).
+- Smooth experience: pages fade in, every new page starts at its top, the theme switch cross-fades the whole page at once (View Transitions API). Context menu and long-press are blocked app-wide, always (no setting), but text stays selectable and a text selection keeps Copy; right-click on an image opens an own menu (open, copy link, download). Pull-to-refresh is an in-app refresh on content pages only (library, folder, history, profile), no setting, never reloads the app (D-061).
+- Sidebar: collapsed = rounded-square icons and an expand icon on logo hover; expanded = full rows, logo and name open the Library; Import links uses the plus icon; no sidebar background; profile badge with name, masked email and a three-dot menu that toggles. Since v2.1.3 every row keeps a fixed 44px icon slot, so collapsing never moves an icon (D-062). Mobile bar: the active ring slides with a spring and stretches (D-063). Controls are compact on mouse screens, 44px targets stay on touch (D-064).
 - Wide screens: sidebar fixed left, page content centred. Settings is one page with category headings; title and subtitle on separate lines. The accent color also colors the logo and wordmark.
-- Metadata must work for any link a public user may store; blocked sites still get a usable partial result.
+- Metadata must work for any link a public user may store; blocked sites still get a usable partial result; at least title and favicon at add time (D-065). Tooltips on hover (PC) and long-press names on the mobile bar (D-066). Install banner has its own ticket design and never shows once installed; the developer has a compact separate section (D-067). Progress messages at about 20/40/60/80% on large tasks (kept in project preferences).
 - SEO-friendly always (per-route meta, noindex for private pages); real SEO work from v2.6.0.
 - The app updates itself: automatically when it opens, with an "Update now" popup if a newer version appears while it is in use.
 
@@ -36,13 +36,23 @@ D-001 versions v2.1.0 to v2.6.0, one per chat, patches v2.X.Y. D-002 plain JS, n
 - D-053 Metadata chain: oEmbed, direct (browser UA), preview-crawler retries (Facebook, X), Jina Reader, Dub, JSONLink, Microlink, Wayback, AllOrigins; weak titles are completed from later engines; nothing readable gives `ok:true, partial:true` with a URL-derived title; only 404/410/unknown domain are `ok:false`; services failing 3 times are skipped for 5 minutes. Supersedes D-037 order.
 - D-054 Worker budget 30 subrequests per call, a fair slice per URL (3 to 6); the app sends 6 URLs per call (supersedes D-048). Reason: v2.1.0 field test hit the runtime cap with 25 URLs in one call.
 - D-055 Update system: `/app.json` version beacon (no-store) beside the service worker; applied automatically at launch (once per version per 10 minutes), popup while in use; setting "Update automatically".
-- D-056 Right-click and long-press are blocked by default (setting).
+- D-056 Right-click and long-press are blocked by default (setting). Superseded by D-061: no setting, always on.
 - D-057 Artwork is SVG under `assets/art` and painted through CSS masks; the brand gradient variables follow the accent.
 - D-058 Terms, Privacy and Docs stay noindex and out of the sitemap until v2.6.0 gives them content.
 - D-059 Install prompt is captured from the first line of `main.js` (v2.1.0 attached the listener too late and missed it).
+- D-060 (v2.1.3) Splash: default Full every start, option Automatic removed (a stored 'auto' counts as full); no background grid; logo 38vw max 232px; no blur filters; the splash starts from `splash-start.js` (tiny module graph, modulepreload) and a CSS boot ring shows until then; only tokens, base and splash CSS block the first paint, the rest and the fonts are added by an inline script (the splash covers the page meanwhile).
+- D-061 (v2.1.3) Pull-to-refresh = in-app refresh on routes flagged `refresh: true`, via the page's optional `refresh(ctx)`; layout only until pages have data; no setting; no update check, no reload, no splash. Native browser pull-to-refresh is disabled on html and the page scroller. Context-menu block is always on; text stays selectable (controls are user-select none); a non-empty selection keeps the native menu; images get an own 3-item menu (safe URLs only).
+- D-062 (v2.1.3) Sidebar redesign: 244px / 68px, fixed 44px icon slot per row, labels fade and are clipped, nothing re-centers; tooltips for collapsed rows.
+- D-063 (v2.1.3) Mobile bar: spring ring, stretch by distance (--stretch), icon hop. Theme switch: View Transitions API (the per-element color transition caused areas to change at different times); browsers without it switch instantly.
+- D-064 (v2.1.3) Compact UI: type scale one notch smaller, controls 36px on mouse screens (--ctl-h), 44px on touch.
+- D-065 (v2.1.3) Metadata rescue on the device (`core/meta-fallback.js`): when the Worker result is weak, the browser asks Dub, Jina, AllOrigins, JSONLink, Microlink in order of free limit, then a floor (title from URL, Google favicon service). Switch "meta.browserFallback" (default on) because the services see the link. Reason: protected sites refuse the Worker's shared address but answer the user's own.
+- D-066 (v2.1.3) One tooltip module: hover (mouse), long-press (touch), aria-label fallback for icon buttons.
+- D-067 (v2.1.3) Install banner is a ticket-style card; developer is a separate compact section (badge = photo in gradient ring with check seal); Menu has Quick settings (theme, accent, text size, hide bar); password reset and verification emails are confirmed and rate limited on the device (`core/send-limit.js`).
 
 ## Open verifications and assumptions
 - A-002 email sign-up sends a verification email, app stays usable. A-003 points floor 1, cap 1000. A-004 fonts Outfit, Figtree, JetBrains Mono from Google Fonts. A-005 Recycle Bin purge on app open. A-008 Firebase CLI accepts the rules path `@ Creator/rules/database.rules.json` (fallback in ARCHITECTURE section 12). A-009 Firebase SDK files exist at gstatic 12.19.0. A-012 WordPress mShots as screenshot service (v2.3.0). A-013 Google sign-in popup works with the `firebaseapp.com` auth domain. A-014 rules: `null > now` denies.
+- [verify, owner] The test run pasted in the v2.1.3 request listed the OLD engine chain (direct, dub, allorigins, jsonlink, microlink) and no `partial` field, so Cloudflare still runs a pre-2.1.2 worker.js. Paste `@ Creator/worker/worker.js` (2.1.3); Settings > App > Metadata service now warns when the deployed version is older.
+- [verify, owner] Device-side metadata services (CORS and limits of AllOrigins, JSONLink, Jina from a browser) and the Google favicon service have no published limit in our sources; check with Settings > Advanced > Metadata tester after deploying.
 - [verify, owner] Metadata Worker against the real network: run Settings > Advanced > Metadata tester > Load 25 sample URLs after pasting the new Worker; report the summary line. This sandbox has no access to those sites, so Jina, Dub, JSONLink, Microlink, Wayback and the preview-crawler retry were tested with mocked `fetch` only.
 - [verify, owner] Worker CPU: parsing is about 1 ms per page in Node; the free plan allows 10 ms per call. If Cloudflare reports error 1102, lower `META_BATCH` in `js/core/worker-client.js` from 6 to 4.
 - [verify, owner] Install button on PC (Chrome/Edge) and Android install splash after the new icons; update popup after the next deploy (v2.1.2 is the first version that has it, so test it when v2.1.3 or later exists).
@@ -52,6 +62,7 @@ D-001 versions v2.1.0 to v2.6.0, one per chat, patches v2.X.Y. D-002 plain JS, n
 - Cloudflare Workers Free: 100,000 requests/day, 10 ms CPU per request, 50 subrequests per request (developers.cloudflare.com/workers/platform/limits, 2026-10-22).
 - Jina Reader: free without a key, `Accept: application/json` returns title and description, 20 requests per minute per IP (jina.ai/reader, 2026-10-22).
 - Dub.co `GET https://api.dub.co/metatags?url=` needs no key (dub.co/docs, 2026-10-22); it answered HTML in the v2.1.0 field test, hence the circuit breaker.
+- Microlink free API: 25 requests per day (microlink.io pages, 2026-10-23), so it is last in the chain and counted locally (max 20 per day). Dub: free, metatags needs no key; its documented general API limit is 60 per minute per key (dub.co/docs, 2026-10-23). Jina Reader: 20 per minute per IP without a key (github.com/jina-ai/reader issues, 2026-10-23).
 - Firebase JS SDK 12.19.0 (2026-09-09) from gstatic; 13.0.0 (2026-10-07) was too new for the 2-week rule.
 - Rendering icons from the vector at each size avoids the dark edge column that the v2.1.0 `icon-192.png` had.
 
@@ -66,4 +77,13 @@ Files added/changed: `index.html` (splash, SEO head), `css/core/*`, `css/compone
 Decisions: D-050 to D-059. Verified facts: see above.
 Owner actions: pending (see commit file).
 Known issues: the OS-level splash of an installed app (white background and icon) appears before our splash and cannot be removed by a web page. Metadata results for protected sites depend on the live services (see open verifications). Terms, Privacy and Docs are still stubs.
+Next: v2.2.0 Library and import.
+
+## v2.1.3 Polish and metadata rescue (2026-10-23) Status: COMPLETE (tested in jsdom with fake network: 114 tests; NOT opened in a real browser, on a phone, against live Firebase or the live Worker)
+Summary: sidebar redesign and compact UI, bottom-bar animation, splash (full by default, no grid, faster first paint), in-app pull-to-refresh layout, ticket install banner, separate developer section, mobile settings category bar, Menu quick settings, tooltips and long-press names, image right-click menu with selectable text, rate-limited password reset, uniform theme switch, device-side metadata rescue with a title-and-favicon floor, outdated-Worker warning.
+Files added: `js/ui/tooltip.js`, `js/ui/image-menu.js`, `js/core/meta-fallback.js`, `js/core/send-limit.js`, `js/features/splash/splash-start.js`, `css/components/tooltip.css`, `@ Creator/tests/v213.test.mjs`, `@ Creator/worker/history/worker-v2.1.3.js`.
+Files changed: index.html, css (tokens, base, layout, buttons, forms, feedback, nav, settings, pages, splash), router, boot, main, appearance, input-guards, worker-client, auth-service, login-page, shell, shell-parts, routes, install-banner, menu-page, settings (catalog, controls, custom-rows, about-card, settings-page), popover, pull-refresh, Worker (version only), docs.
+Decisions: D-060 to D-067. Verified facts: Microlink 25 per day, Dub, Jina (see above).
+Owner actions: pending (see commit file): paste the new worker.js, deploy, hard reload, run the checklist.
+Known issues: native pull-to-refresh suppression, Android long-press text selection with the menu block, the View Transition cross-fade and the real appearance of the sidebar, bar and banner could only be checked in jsdom and by reading CSS. iOS Safari does not send the contextmenu event, so image long-press shows no menu there.
 Next: v2.2.0 Library and import.

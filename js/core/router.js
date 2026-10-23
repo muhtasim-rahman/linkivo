@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/core/router.js  (v2.1.2)
+ * Linkivo — js/core/router.js  (v2.1.3)
  * Purpose: path-based SPA router. ONE page is mounted at a time: the previous page is unmounted and its container is
  *          cleared before the next one mounts (the v1.4.x "pages overlap" bug can not happen).
  *          Back button = overlay layers first, then the route's parent chain, then the root exit rule (ARCHITECTURE s.7).
@@ -7,8 +7,10 @@
  *            guard: 'auth'|'public'|'open', redirect?: fn(session), tab?: string, shell?: boolean, load: () => import() }
  * Page module contract: export async function mount(container, ctx) -> unmount() | void
  *            ctx = { params, query, path, from, router }
+ *            optional: export async function refresh(ctx) -> reload the page's data in place (pull-to-refresh, v2.1.3). Only routes with
+ *            `refresh: true` take part; the page is NOT re-mounted, no splash, no reload.
  * API:     compileRoutes(table) resolveGuard(route, session) createRouter(options) -> router
- *   router: start() navigate(path, {from}) back() reevaluate() current() destroy() on(event, fn)   events: 'route' 'mounted'
+ *   router: start() navigate(path, {from}) back() reevaluate() refreshCurrent() canRefresh() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers } from './nav-stack.js';
@@ -107,7 +109,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     container.replaceChildren();
     resetScroll();
     applyPageMeta(pageMeta(route, params));
-    current = { route, params, path, search: url.search, from, unmount: null };
+    current = { route, params, path, search: url.search, from, unmount: null, mod: null };
     history.replaceState({ lk: 'top', from }, '', path + url.search + url.hash);
     const query = Object.fromEntries(url.searchParams);
     bus.emit('route', { route, params, path, query });
@@ -117,6 +119,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
       const unmount = await mod.mount(container, { params, query, path, from, router });
       if (mySeq !== seq) { try { if (typeof unmount === 'function') unmount(); } catch { /* ignore */ } return; }
       current.unmount = typeof unmount === 'function' ? unmount : null;
+      current.mod = mod;
       container.firstElementChild?.classList.add('page-enter');
       bus.emit('mounted', { route, params, path });
     } catch (e) {
@@ -162,6 +165,16 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     navigate(path, opts = {}) { return go(path, { from: current ? current.path : null, ...opts }); },
     back() { history.back(); },
     reevaluate() { return go(current ? fullPath() : location.pathname, { force: true }); },
+    /** Does the page on screen take part in pull-to-refresh? (route flag `refresh: true`) */
+    canRefresh() { return !!(current && current.route.refresh === true); },
+    /** In-app refresh for pull-to-refresh: asks the page module to reload its own data. Resolves 'unsupported' | 'nothing' | 'refreshed' | 'error'. */
+    async refreshCurrent() {
+      const c = current;
+      if (!c || c.route.refresh !== true) return 'unsupported';
+      if (!c.mod || typeof c.mod.refresh !== 'function') return 'nothing'; // layout only for now: pages add refresh() with their data
+      try { await c.mod.refresh({ params: c.params, query: Object.fromEntries(new URLSearchParams(c.search)), path: c.path, from: c.from, router }); return 'refreshed'; }
+      catch (e) { log.warn('router', 'refresh failed', e); return 'error'; }
+    },
     current: () => current,
     parentPath,
     /** Removes the listeners (tests and hot restarts); the app itself creates exactly one router. */

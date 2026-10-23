@@ -1,23 +1,26 @@
-/* Linkivo v2.1.2 - splash (docs/DESIGN.md section 6). The v1 logo-creation animation (ripple, ring pop, shackle lock with sparkles,
+/* Linkivo v2.1.3 - splash (docs/DESIGN.md section 6). The v1 logo-creation animation (ripple, ring pop, shackle lock with sparkles,
    background reveal, bar, second ring, typed wordmark) WITHOUT the url badges. js/features/splash/splash.js runs the timeline.
-   data-mode: pending (stage hidden for a few ms) | full (first run) | short (later runs: finished logo fades in) | still (reduced motion) */
+   v2.1.3: no grid, a smaller logo, no blur filters, and a CSS-only boot ring so the very first paint is never an empty background.
+   data-mode: pending (before splash.js runs: only the boot ring) | full (default) | short (finished logo fades in) | still (reduced motion) */
 .splash { position: fixed; inset: 0; z-index: var(--z-splash); display: grid; place-items: center; overflow: hidden; background: var(--bg); }
-.splash.out { animation: sp-out 520ms var(--ease) forwards; pointer-events: none; }
-@keyframes sp-out { to { opacity: 0; filter: blur(10px); transform: scale(1.04); } }
+.splash.out { animation: sp-out 480ms var(--ease) forwards; pointer-events: none; }
+@keyframes sp-out { to { opacity: 0; transform: scale(1.03); } }
 
-/* background: tinted disc that grows from the left ring, a soft grid, a slow glow */
-.sp-expand { position: absolute; inset: 0; background: var(--bg-tint); clip-path: circle(0 at 50% 50%); }
-.sp-grid { position: absolute; inset: 0; opacity: 0.6; background-image: linear-gradient(to right, var(--line) 1.5px, transparent 1.5px), linear-gradient(to bottom, var(--line) 1.5px, transparent 1.5px); background-size: 40px 40px;
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, #000 80%); mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, #000 80%); }
-.sp-orb { position: absolute; left: 50%; top: 50%; width: min(120vw, 800px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 16%, transparent) 0%, transparent 65%); animation: sp-orb 6s ease-in-out infinite; }
-@keyframes sp-orb { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
+/* background: a tinted disc grows from the left ring, plus one soft static glow (no animation: a big moving gradient costs frames) */
+.sp-expand { position: absolute; inset: 0; background: var(--bg-tint); clip-path: circle(0 at 50% 50%); will-change: clip-path; }
+.sp-orb { position: absolute; left: 50%; top: 50%; width: min(110vw, 720px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 13%, transparent) 0%, transparent 66%); }
 
-.splash-stage { position: relative; z-index: 2; display: grid; justify-items: center; gap: 10px; transform: translateY(-2%); }
-.splash-mark { width: min(46vw, 300px); min-width: 150px; height: auto; overflow: visible; }
-.splash-word { display: flex; align-items: baseline; font-size: clamp(38px, 10vw, 60px); color: var(--text); min-height: 1em; letter-spacing: -0.03em; }
+/* boot ring: shown only until the script starts the real animation. It is the same ring-and-ripple idea, so the hand-over is not a jump. */
+.sp-boot { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 3px solid var(--brand-a); opacity: 0; animation: sp-boot 1.1s ease-out infinite; }
+.splash:not([data-mode='pending']) .sp-boot { display: none; }
+@keyframes sp-boot { 0% { transform: scale(0.35); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+
+.splash-stage { position: relative; z-index: 2; display: grid; justify-items: center; gap: 8px; transform: translateY(-2%); }
+.splash-mark { width: min(38vw, 232px); min-width: 126px; height: auto; overflow: visible; }
+.splash-word { display: flex; align-items: baseline; font-size: clamp(32px, 8.6vw, 48px); color: var(--text); min-height: 1em; letter-spacing: -0.03em; }
 .t-char { position: relative; display: inline-block; }
 .idot-wrap .idot { position: absolute; top: 0.16em; left: 50%; width: 0.16em; height: 0.16em; border-radius: 50%; transform: translateX(-50%) scale(1); background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
-.splash-tag { font: 400 clamp(0.85rem, 3.4vw, 1rem) var(--font-brand); color: var(--sub); min-height: 1.4em; }
+.splash-tag { font: 400 clamp(0.8rem, 3.2vw, 0.95rem) var(--font-brand); color: var(--sub); min-height: 1.4em; }
 .splash-dots { min-height: 14px; opacity: 0; transition: opacity 200ms; }
 .splash-dots.show { opacity: 1; }
 .splash-fail { max-width: 32ch; text-align: center; color: var(--sub); display: grid; gap: 12px; justify-items: center; }

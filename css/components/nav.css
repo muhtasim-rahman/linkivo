@@ -1,76 +1,87 @@
-/* Linkivo v2.1.2 - navigation: mobile floating glass bar and PC collapsible sidebar. The ring marks where you are. */
+/* Linkivo v2.1.3 - navigation: mobile floating glass bar and PC collapsible sidebar. */
+
+/* ---- Mobile bottom bar --------------------------------------------------------------------------------------------------
+   The ring that marks the current tab is a small "liquid" object: it slides to the new tab with a spring and stretches while it
+   travels (js sets --stretch from the distance), then settles back into a circle. The new icon hops once. */
 .bar {
-  position: fixed; z-index: var(--z-bar); left: 50%; bottom: calc(var(--bar-gap) + var(--safe-b)); width: min(calc(100% - 24px), 420px); height: var(--bar-h);
-  transform: translateX(-50%); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; padding: 0 6px; border-radius: 32px;
-  background: color-mix(in srgb, var(--surface) 76%, transparent); border: 1px solid var(--line);
+  position: fixed; z-index: var(--z-bar); left: 50%; bottom: calc(var(--bar-gap) + var(--safe-b)); width: min(calc(100% - 24px), 400px); height: var(--bar-h);
+  transform: translateX(-50%); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; padding: 0 6px; border-radius: 30px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent); border: 1px solid var(--line);
   -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); box-shadow: var(--shadow-float);
   transition: transform var(--t-std) var(--ease), opacity var(--t-std) var(--ease);
 }
 .bar.is-hidden { transform: translate(-50%, calc(100% + 28px)); opacity: 0; pointer-events: none; }
-.bar-item { position: relative; z-index: 1; display: grid; place-items: center; height: 100%; color: var(--sub); border-radius: 28px; transition: color var(--t-std) var(--ease); }
+.bar-item { position: relative; z-index: 1; display: grid; place-items: center; height: 100%; color: var(--sub); border-radius: 26px; transition: color var(--t-std) var(--ease); -webkit-touch-callout: none; touch-action: manipulation; }
+.bar-item > svg { transition: transform 200ms var(--spring); }
+.bar-item:active > svg { transform: scale(0.84); }
 .bar-item:hover { text-decoration: none; color: var(--text); }
-.bar-item[aria-current='page'] { color: var(--text); }
-.bar-import span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-strong); color: var(--accent-fg); transition: transform var(--t-micro) var(--ease); }
-.bar-import:active span { transform: scale(0.94); }
-/* the sliding ring */
-.bar-marker { position: absolute; z-index: 0; top: 0; bottom: 0; left: 6px; width: calc((100% - 12px) / 5); display: grid; place-items: center; pointer-events: none; transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 280ms var(--ease), opacity var(--t-std) var(--ease); }
-.bar-marker::after { content: ''; width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--accent); }
+.bar-item[aria-current='page'] { color: var(--accent-text); }
+.bar-item[aria-current='page'] > svg { animation: bar-hop 460ms var(--spring); }
+@keyframes bar-hop { 0% { transform: translateY(5px) scale(0.78); } 55% { transform: translateY(-2px) scale(1.14); } 100% { transform: none; } }
+.bar-import span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-strong); color: var(--accent-fg); transition: transform 200ms var(--spring); }
+.bar-import:active span { transform: scale(0.88); }
+.bar-import[aria-current='page'] span { animation: bar-hop 460ms var(--spring); }
+.bar-marker { position: absolute; z-index: 0; top: 0; bottom: 0; left: 6px; width: calc((100% - 12px) / 5); display: grid; place-items: center; pointer-events: none;
+  transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 440ms var(--spring), opacity var(--t-std) var(--ease); }
+.bar-marker::after { content: ''; width: 42px; height: 42px; border-radius: 21px; border: 2px solid var(--accent); background: var(--accent-soft); }
+.bar-marker.is-moving::after { animation: bar-stretch 440ms var(--ease); }
+@keyframes bar-stretch { 0% { width: 42px; } 38% { width: calc(42px + var(--stretch, 0px)); } 100% { width: 42px; } }
 .bar-marker[data-hidden='true'] { opacity: 0; }
 
-/* ---- PC sidebar (v2.1.2) -------------------------------------------------------------------------------------------------
-   No background and no divider: the sidebar sits on the page color. Collapsed = rounded-square icons; expanded = full rows. */
-.sidebar { height: 100%; flex-direction: column; gap: 6px; padding: 16px 16px 20px; background: transparent; overflow: hidden; min-width: 0; }
-.sb-head { display: flex; align-items: center; min-height: 56px; margin-bottom: 10px; }
-.sb-brand { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: 56px; padding: 0 10px; border-radius: 16px; color: var(--text); }
+/* ---- PC sidebar ---------------------------------------------------------------------------------------------------------
+   Built so that NOTHING MOVES when the sidebar collapses: the sidebar is 68px wide collapsed, 244px expanded, and every row keeps a
+   fixed 44px icon slot at its left edge (the icon centre is always 34px from the sidebar edge). Only the labels fade and get clipped
+   by the narrowing column. In v2.1.2 collapsing switched rows to "centered" at once while the width was still animating, so the
+   icons jumped and drifted. No background and no divider: the sidebar sits on the page color. */
+.sidebar { height: 100%; flex-direction: column; gap: 4px; padding: 14px 12px 14px; background: transparent; overflow: hidden; min-width: 0; }
+.sb-head { position: relative; display: flex; align-items: center; height: 44px; margin-bottom: 10px; }
+.sb-brand { display: flex; align-items: center; flex: 1; min-width: 0; height: 44px; border-radius: 12px; color: var(--text); overflow: hidden; }
 .sb-brand:hover { text-decoration: none; }
-.sb-word { font-size: 26px; }
-.sb-toggle { flex: none; color: var(--sub); }
+.sb-slot { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
+.sb-word { font-size: 23px; padding-left: 2px; transition: opacity 140ms var(--ease); }
+.sb-toggle { flex: none; width: 36px; min-width: 36px; height: 36px; color: var(--sub); transition: opacity 140ms var(--ease); }
 .sb-toggle:hover { color: var(--text); }
-/* collapsed logo: shows the mark, turns into an expand icon on hover or keyboard focus */
-.sb-mark { display: none; position: relative; width: 56px; height: 56px; margin-inline: auto; place-items: center; border-radius: 16px; transition: background var(--t-std) var(--ease); }
-.sb-mark .logo-mark, .sb-expand { transition: opacity var(--t-std) var(--ease), transform var(--t-std) var(--ease); }
-.sb-expand { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(0.8); color: var(--accent-text); }
-.sb-mark:hover, .sb-mark:focus-visible { background: var(--accent-soft); }
-.sb-mark:hover .logo-mark, .sb-mark:focus-visible .logo-mark { opacity: 0; transform: scale(0.8); }
-.sb-mark:hover .sb-expand, .sb-mark:focus-visible .sb-expand { opacity: 1; transform: none; }
-.sb-nav { display: grid; gap: 6px; }
+/* collapsed: an invisible button sits over the logo slot; on hover or keyboard focus the logo swaps for the expand icon */
+.sb-expandbtn { position: absolute; left: 0; top: 0; width: 44px; height: 44px; display: none; place-items: center; border-radius: 12px; color: var(--accent-text); }
+.sb-expandbtn svg { opacity: 0; transform: scale(0.8); transition: opacity var(--t-std) var(--ease), transform var(--t-std) var(--ease); }
+.sb-expandbtn:hover, .sb-expandbtn:focus-visible { background: var(--accent-soft); }
+.sb-expandbtn:hover svg, .sb-expandbtn:focus-visible svg { opacity: 1; transform: none; }
+.sb-expandbtn:hover ~ .sb-brand .logo-mark, .sb-expandbtn:focus-visible ~ .sb-brand .logo-mark { opacity: 0; }
+.sb-brand .logo-mark { transition: opacity var(--t-std) var(--ease); }
+.sb-nav { display: grid; gap: 4px; }
 
-.nav-item { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; height: 52px; padding: 0 14px; border-radius: 16px; color: var(--sub); font-size: var(--fs-md); font-weight: 560; text-align: left; overflow: hidden; white-space: nowrap;
-  transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease); }
+.nav-item { position: relative; display: flex; align-items: center; width: 100%; height: 44px; padding: 0; border-radius: 12px; color: var(--sub); font-size: var(--fs); font-weight: 560; text-align: left; overflow: hidden; white-space: nowrap;
+  transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease); }
 .nav-item:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); text-decoration: none; }
-.nav-ic { width: 24px; height: 24px; display: grid; place-items: center; flex: none; }
-.nav-item[aria-current='page'] { color: var(--accent-text); background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent); }
+.nav-ic { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
+.nav-item[aria-current='page'] { color: var(--accent-text); background: var(--accent-soft); }
+.nav-item[aria-current='page'] .nav-ic svg { stroke-width: 2.05; }
 .nav-item.is-primary { background: var(--accent-strong); color: var(--accent-fg); }
 .nav-item.is-primary:hover { background: var(--accent-strong); filter: brightness(1.08); }
 .nav-item.is-primary[aria-current='page'] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
-.nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; transition: opacity 140ms var(--ease); }
 .sb-spacer { flex: 1; }
-.theme-row .switch { margin-left: auto; flex: none; }
+.theme-row .switch { margin-right: 12px; flex: none; transition: opacity 140ms var(--ease); }
 
-/* profile badge: name, masked email and the three-dot menu live inside one outlined badge */
-.pf-badge { display: flex; align-items: center; gap: 4px; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 20px; }
-.pf-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; border-radius: 14px; color: inherit; }
+/* profile badge: avatar + name + masked email + three-dot menu in one outlined badge. The avatar is 36px with a 4px inset, so its centre
+   is on the same vertical line (34px) as every icon above it, expanded or collapsed. */
+.pf-badge { display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--line); border-radius: 14px; height: 46px; overflow: hidden; transition: border-color var(--t-std) var(--ease); }
+.pf-link { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border-radius: 11px; color: inherit; }
 .pf-link:hover { text-decoration: none; }
 .pf-avatar { display: block; flex: none; }
-.pf-more { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%; color: var(--sub); transition: background var(--t-micro) var(--ease), color var(--t-micro) var(--ease); }
+.pf-more { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; color: var(--sub); transition: background var(--t-micro) var(--ease), color var(--t-micro) var(--ease), opacity 140ms var(--ease); }
 .pf-more:hover, .pf-more[aria-expanded='true'] { background: var(--accent-soft); color: var(--text); }
-.avatar { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
-.avatar span { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); font: 700 15px / 1 var(--font-brand); color: var(--text); }
+.avatar { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
+.avatar span { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); font: 700 14px / 1 var(--font-brand); color: var(--text); }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.avatar.is-lg { width: 64px; height: 64px; padding: 3px; } .avatar.is-lg span { font-size: 24px; }
-.pf-text { min-width: 0; display: grid; line-height: 1.25; }
+.avatar.is-lg { width: 60px; height: 60px; padding: 3px; } .avatar.is-lg span { font-size: 22px; }
+.pf-text { min-width: 0; display: grid; line-height: 1.25; transition: opacity 140ms var(--ease); }
 .pf-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-mail { color: var(--sub); font-size: var(--fs-xs); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* collapsed: square rounded icons, only the round avatar at the bottom */
-#app[data-collapsed='true'] .sidebar { padding-inline: 16px; }
-#app[data-collapsed='true'] .sb-brand, #app[data-collapsed='true'] .sb-toggle { display: none; }
-#app[data-collapsed='true'] .sb-mark { display: grid; }
-#app[data-collapsed='true'] .nav-item { width: 56px; height: 56px; padding: 0; justify-content: center; margin-inline: auto; }
-#app[data-collapsed='true'] .nav-label, #app[data-collapsed='true'] .theme-row .switch, #app[data-collapsed='true'] .pf-text, #app[data-collapsed='true'] .pf-more { display: none; }
-#app[data-collapsed='true'] .pf-badge { border-color: transparent; padding: 0; justify-content: center; }
-#app[data-collapsed='true'] .pf-link { flex: none; }
-/* tooltips while collapsed */
-#app[data-collapsed='true'] [data-tip]:hover::after, #app[data-collapsed='true'] [data-tip]:focus-visible::after {
-  content: attr(data-tip); position: fixed; left: calc(var(--sidebar-w-collapsed) - 6px); padding: 6px 10px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: var(--fs-sm); font-weight: 560; white-space: nowrap; z-index: var(--z-pop); pointer-events: none;
-}
+/* collapsed: same rows, labels gone (they fade first, then the column clips them) */
+#app[data-collapsed='true'] .sb-word, #app[data-collapsed='true'] .sb-toggle, #app[data-collapsed='true'] .nav-label, #app[data-collapsed='true'] .theme-row .switch,
+#app[data-collapsed='true'] .pf-text, #app[data-collapsed='true'] .pf-more { opacity: 0; pointer-events: none; }
+#app[data-collapsed='true'] .sb-expandbtn { display: grid; }
+#app[data-collapsed='true'] .sb-brand { pointer-events: none; }
+#app[data-collapsed='true'] .pf-badge { border-color: transparent; }

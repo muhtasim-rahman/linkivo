@@ -1,5 +1,5 @@
 /**
- * Linkivo Worker  (v2.1.2)  -  one Cloudflare Worker, free plan, paste this whole file into Workers & Pages > linkivo > Edit code.
+ * Linkivo Worker  (v2.1.3)  -  one Cloudflare Worker, free plan, paste this whole file into Workers & Pages > linkivo > Edit code.
  *
  * Routes in this version
  *   GET  /health   status and version
@@ -22,7 +22,9 @@
  * Secrets: none are needed in v2.1.2. PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT arrive with v2.5.0 and live only in Cloudflare.
  * Nothing in this file is secret; the Firebase project id below is public.
  */
-const VERSION = '2.1.2';
+// 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
+// deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
+const VERSION = '2.1.3';
 
 const CONFIG = {
   firebaseProject: 'linkivo',

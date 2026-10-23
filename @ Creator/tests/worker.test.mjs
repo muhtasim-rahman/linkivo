@@ -272,7 +272,7 @@ const call = (r, fetchImpl = async () => htmlRes(GOOD)) => T.route(r, {}, { fetc
 
 test('routes: health, CORS allow-list, preflight, unknown path and method', async () => {
   T.resetCaches();
-  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.2');
+  const h = await call(req('/health')); assert.equal(h.status, 200); const hb = await h.json(); assert.equal(hb.ok, true); assert.equal(hb.version, '2.1.3');
   assert.equal(h.headers.get('access-control-allow-origin'), 'https://linkivo.web.app'); assert.equal(h.headers.get('cache-control'), 'no-store');
   assert.equal((await call(req('/health', { origin: 'http://localhost:5000' }))).headers.get('access-control-allow-origin'), 'http://localhost:5000');
   const evil = await call(req('/health', { origin: 'https://evil.example' })); assert.equal(evil.status, 403); assert.equal(evil.headers.get('access-control-allow-origin'), null);

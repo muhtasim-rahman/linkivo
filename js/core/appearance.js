@@ -1,13 +1,16 @@
 /**
- * Linkivo — js/core/appearance.js  (v2.1.2)
- * Purpose: applies the user's look settings to <html> (theme, accent, font size, density, reduced motion,
- *          block-context-menu). A theme change glides (class theme-anim for 400 ms) instead of snapping.
+ * Linkivo — js/core/appearance.js  (v2.1.3)
+ * Purpose: applies the user's look settings to <html> (theme, accent, font size, density, reduced motion; the right-click and long-press
+ *          block is always on). A theme change cross-fades through the View Transitions API: the browser takes a picture of the old
+ *          screen and fades to the new one, so EVERY color changes at the same moment. v2.1.2 transitioned each element's colors on its
+ *          own and some areas changed before others (owner report). Browsers without the API switch instantly, which is uniform too.
  *          Stored per device through local-prefs (they also apply to guests and to the login page).
  * API: applyAppearance() -> void   resolvedTheme() -> 'light'|'dark'   ACCENTS   KEYS
  */
 import { prefs } from './local-prefs.js';
 
-export const KEYS = Object.freeze({ theme: 'ui.theme', accent: 'ui.accent', fontSize: 'ui.fontSize', density: 'ui.density', motion: 'ui.reduceMotion', blockMenu: 'ui.blockContextMenu', splash: 'ui.splash', pullRefresh: 'ui.pullRefresh', transitions: 'ui.pageTransitions' });
+// v2.1.3: the keys blockMenu (ui.blockContextMenu) and pullRefresh (ui.pullRefresh) are gone: both behaviors are fixed now, no setting.
+export const KEYS = Object.freeze({ theme: 'ui.theme', accent: 'ui.accent', fontSize: 'ui.fontSize', density: 'ui.density', motion: 'ui.reduceMotion', splash: 'ui.splash', transitions: 'ui.pageTransitions' });
 export const ACCENTS = Object.freeze({ blue: '#3b82f6', emerald: '#10b981', violet: '#8b5cf6', rose: '#f43f5e', amber: '#f59e0b', slate: '#64748b' });
 const BAR = { light: '#eef2f8', dark: '#060d1a' };
 const mq = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
@@ -26,13 +29,22 @@ function setThemeColor(theme, system) {
   });
 }
 
-let animTimer = 0;
+const reducedMotion = () => (mq2 && mq2.matches) || document.documentElement.dataset.motion === 'reduce';
+const mq2 = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+
 export function applyAppearance() {
   const root = document.documentElement;
   const theme = resolvedTheme();
   const before = root.dataset.theme;
+  // Theme change on a screen that is already showing: let the browser cross-fade the whole page in one go.
+  if (before && before !== theme && !reducedMotion() && typeof document.startViewTransition === 'function') {
+    try { document.startViewTransition(() => paint(root, theme)); return; } catch { /* fall through to the plain switch */ }
+  }
+  paint(root, theme);
+}
+
+function paint(root, theme) {
   root.dataset.theme = theme;
-  if (before && before !== theme) { root.classList.add('theme-anim'); clearTimeout(animTimer); animTimer = setTimeout(() => root.classList.remove('theme-anim'), 400); }
   root.style.colorScheme = theme;
   setThemeColor(theme, prefs.get(KEYS.theme, 'system') === 'system');
   const accent = prefs.get(KEYS.accent, 'blue');
@@ -40,7 +52,7 @@ export function applyAppearance() {
   root.dataset.font = prefs.get(KEYS.fontSize, 'medium');
   root.dataset.density = prefs.get(KEYS.density, 'compact');
   root.dataset.motion = prefs.get(KEYS.motion, 'system'); // 'system' | 'reduce'
-  root.dataset.ctx = prefs.get(KEYS.blockMenu, true) ? 'off' : 'on'; // 'off' = right-click and long-press menus are blocked
+  root.dataset.ctx = 'off'; // 'off' = right-click and long-press menus are blocked (always, v2.1.3)
   root.dataset.transitions = prefs.get(KEYS.transitions, true) ? 'on' : 'off';
 }
 

@@ -90,3 +90,8 @@ Run these five before trusting the deployed rules (the console UI may differ sli
 5. Simulate **read** at `/vault/<your uid>/links` as you: **denied** (no vault session exists in v2.1.0).
 
 Tell the AI the first row that does not match.
+
+
+## v2.2.0 note
+
+No new database paths or fields. Import, restore, Recycle Bin and export use `/users/<uid>/folders`, `/users/<uid>/links` and the existing `jobs` and `settings` rules, so the matrix above is unchanged. The new link fields written by the points rules (`pt`, `pb`, `ls`, `ds`, `lo`, `oc`, `pw`) and by import (`imp`, `tEdit`) were already part of the schema and rules in v2.1.0; the automated rules test covers them.

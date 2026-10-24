@@ -4,7 +4,7 @@
  *          and Back (registers a back layer).
  * API: openMenu(anchor, items, { align:'end'|'start', onClose }) -> { close(), isOpen() }   (onClose runs once when the menu has closed, v2.1.3)
  *      Pressing the anchor again is NOT an outside click: the caller toggles with isOpen() (v2.1.2).
- *   items: [{ label, icon?, danger?, onSelect() }] or { separator: true }
+ *   items: [{ label, icon?, danger?, disabled?, onSelect() }] or { separator: true }
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
@@ -14,7 +14,7 @@ export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
   const returnTo = document.activeElement;
   let layer;
   const menu = h('div', { class: 'pop', role: 'menu' }, items.map((it) => it.separator ? h('div', { class: 'pop-sep', role: 'separator' }) :
-    h('button', { type: 'button', role: 'menuitem', class: ['pop-item', it.danger && 'is-danger'], on: { click: () => { close(); it.onSelect?.(); } } }, it.icon && icon(it.icon, { size: 18 }), h('span', { text: it.label }))));
+    h('button', { type: 'button', role: 'menuitem', class: ['pop-item', it.danger && 'is-danger'], disabled: it.disabled === true, on: { click: () => { if (it.disabled) return; close(); it.onSelect?.(); } } }, it.icon && icon(it.icon, { size: 18 }), h('span', { text: it.label }))));
 
   function place() {
     const r = anchor.getBoundingClientRect();
@@ -27,7 +27,7 @@ export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
   }
   function onDown(e) { if (!menu.contains(e.target) && !anchor.contains(e.target)) close(); }
   function onKey(e) {
-    const btns = [...menu.querySelectorAll('.pop-item')];
+    const btns = [...menu.querySelectorAll('.pop-item:not(:disabled)')];
     const i = btns.indexOf(document.activeElement);
     if (e.key === 'Escape') { e.preventDefault(); close(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }

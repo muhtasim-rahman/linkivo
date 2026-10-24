@@ -13,7 +13,7 @@ Linkivo/
 │   ├── rules/                  database.rules.json (GENERATED) + history/ snapshots
 │   ├── worker/                 worker.js (2.1.3: /health, /meta) + history/ snapshots
 │   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs
-│   ├── tests/                  *.test.mjs (10 files, 125 tests), rules-matrix.md, helpers/
+│   ├── tests/                  *.test.mjs (12 files, 154 tests), rules-matrix.md, helpers/
 │   └── reference/              v1 splash animation, LinkIntel prototype (not deployed)
 │
 ├── assets/  art/ (empty-state and login SVG artwork, painted via CSS mask)   brand/ (logo, logo-mark, logo-tile, wordmarks)
@@ -21,21 +21,23 @@ Linkivo/
 ├── css/
 │   ├── core/                   tokens, base, layout, motion
 │   ├── components/             buttons, forms, sheet (overlays + popover), toast, feedback (skeleton, empty, ring, install banner, rows), nav, tooltip
-│   └── pages/                  splash, auth, pages (stubs, menu, profile), settings
+│   └── pages/                  splash, auth, pages (stubs, menu, profile), settings, library (library, folder page, pickers), data (import, export, Recycle Bin)
 ├── js/
 │   ├── main.js  boot.js        entry (splash first) and boot sequence
-│   ├── core/                   logger local-prefs flags events utils format mask url-tools dom css-loader appearance session sensitive
+│   ├── core/                   extract activity logger local-prefs flags events utils format mask url-tools dom css-loader appearance session sensitive
 │   │                           router nav-stack back-logic firebase-loader update install rate-limiter worker-client meta-fallback send-limit input-guards app-data app-info config
-│   ├── engine/                 schema idb chunker job-queue engine local-engine cloud-engine rtdb-adapter
-│   ├── ui/                     icons toast sheet confirm popover skeleton empty-state scroll-fade task-chip pull-refresh tooltip image-menu
-│   ├── workers/                (empty: parse.worker.js arrives in v2.2.0)
+│   ├── engine/                 schema idb chunker job-queue engine local-engine cloud-engine rtdb-adapter points
+│   ├── ui/                     icons toast sheet confirm popover skeleton empty-state scroll-fade task-chip pull-refresh tooltip image-menu virtual-list
+│   ├── workers/                parse.worker.js (import parsing off the main thread)
 │   └── features/
 │       auth/                   auth-service account-status login-page
 │       shell/                  routes shell shell-parts install-banner pages/(stub menu profile reactivate)
 │       splash/                 splash splash-start (starts the animation before main.js)
 │       settings/               catalog controls custom-rows advanced-tools metadata-tester settings-page
-│       library import export recycle    v2.2.0      preview search    v2.3.0      random history profile    v2.4.0
-│       vault account    v2.5.0          backup activity stats legal menu    v2.6.0   (folders still empty)
+│       library/                library-page folder-page link-row link-actions folder-actions folder-style pickers quick-add recycle-bin-page lib-prefs
+│       import/                 import-sheet import-review import-progress import-page import-job parse-client parsers pdf-text zip-reader native-import
+│       export/                 export-sheet export-engine native-format zip-writer formats/(json csv xlsx txt markdown html-bookmarks printable opml common index)
+│       preview search    v2.3.0      random history profile    v2.4.0      vault account    v2.5.0      backup activity stats legal menu    v2.6.0   (folders still empty)
 │
 ├── index.html                  shell + splash markup (generated once from the logo paths)
 ├── sw.js                       update-safe service worker (precache list is generated)
@@ -49,7 +51,7 @@ Linkivo/
 
 ## Notes
 
-- Files that appear in later versions: see `PLAN-v2.0_to_v2.5.md` (for example `js/workers/parse.worker.js` in v2.2.0).
+- Files that appear in later versions: see `PLAN-v2.0_to_v2.5.md` (for example `js/features/preview/` in v2.3.0).
 - `.gitkeep` only marks an empty folder so git and zips keep it. Delete it when the folder gets its first real file.
 - Folder names `@ Creator`, `@ Extra files`, `@ Versions` contain a space and a leading `@`: always quote them in shell commands.
 - Nothing starting with `@` is deployed to hosting; `@ Creator` and `@ Versions` are pushed to GitHub, `@ Extra files` is git-ignored.

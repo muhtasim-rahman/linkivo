@@ -123,6 +123,18 @@ function worker() {
   return row('Metadata service', 'The Cloudflare Worker that reads page titles and icons.', h('span', { class: 'ctl-end' }, out, btn));
 }
 
+// ---- v2.2.0: import, export and Recycle Bin rows ----------------------------------------------------------------------------
+function importData(ctx) {
+  return row('Import links', 'Paste text or add files: 20+ formats, a Linkivo backup, bookmarks, documents, spreadsheets and PDFs.', h('button', { type: 'button', class: 'btn btn-sm btn-primary', text: 'Import', on: { click: () => ctx.router.navigate('/import') } }));
+}
+function exportData() {
+  return row('Export library', 'Download everything as a Linkivo backup, or as JSON, CSV, Excel, text, Markdown, bookmarks, a printable page or OPML.', h('button', { type: 'button', class: 'btn btn-sm', text: 'Export', on: { click: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine: getEngine(), scope: { type: 'all' }, title: 'Export library' })) } }));
+}
+function recycleBin(ctx) {
+  const e = getEngine(), c = e ? e.counts() : { deletedFolders: 0, deletedLinks: 0 };
+  return row('Recycle Bin', `Deleted folders and links stay for 15 days. Now: ${plural(c.deletedFolders, 'folder')}, ${plural(c.deletedLinks, 'link')}.`, h('button', { type: 'button', class: 'btn btn-sm', text: 'Open', on: { click: () => ctx.router.navigate('/settings/recycle-bin') } }));
+}
+
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, developer, account, sync, worker })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, account, sync, worker, importData, exportData, recycleBin })[name]?.(ctx) ?? h('div');
 }

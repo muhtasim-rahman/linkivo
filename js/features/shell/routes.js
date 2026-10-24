@@ -6,15 +6,19 @@
  */
 const stub = () => import('./pages/stub-page.js');
 const settings = () => import('../settings/settings-page.js');
+const libraryPage = () => import('../library/library-page.js');
+const folderPage = () => import('../library/folder-page.js');
+const importPage = () => import('../import/import-page.js');
+const recyclePage = () => import('../library/recycle-bin-page.js');
 
 export const ROUTES = [
   { id: 'root', pattern: '/', title: '', parent: null, guard: 'open', redirect: (s) => (s.mode === 'none' ? '/login' : '/library'), load: stub },
   { id: 'login', pattern: '/login', title: 'Sign in', desc: 'Sign in to Linkivo or try it as a guest. A fast, private link manager for your folders, links and bookmarks.', index: true, parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
   { id: 'reactivate', pattern: '/reactivate', title: 'Account scheduled for deletion', parent: null, guard: 'auth', shell: false, load: () => import('./pages/reactivate-page.js') },
 
-  { id: 'library', pattern: '/library', title: 'Library', parent: null, guard: 'auth', tab: 'library', refresh: true, stub: 'library', since: '2.2.0', load: stub },
-  { id: 'folder', pattern: '/folder/:fid', title: 'Folder', parent: '/library', guard: 'auth', tab: 'library', refresh: true, stub: 'folder', since: '2.2.0', load: stub },
-  { id: 'import', pattern: '/import', title: 'Import links', parent: '/library', guard: 'auth', tab: 'import', stub: 'import', since: '2.2.0', load: stub },
+  { id: 'library', pattern: '/library', title: 'Library', parent: null, guard: 'auth', tab: 'library', refresh: true, load: libraryPage },
+  { id: 'folder', pattern: '/folder/:fid', title: 'Folder', parent: '/library', guard: 'auth', tab: 'library', refresh: true, load: folderPage },
+  { id: 'import', pattern: '/import', title: 'Import links', parent: '/library', guard: 'auth', tab: 'import', load: importPage },
   { id: 'link', pattern: '/link/:lid', title: 'Link', parent: (p, env, st) => st.from || '/library', guard: 'auth', tab: 'library', stub: 'link', since: '2.3.0', load: stub },
   { id: 'search', pattern: '/search', title: 'Search', parent: '/library', guard: 'auth', tab: 'search', stub: 'search', since: '2.3.0', load: stub },
   { id: 'random', pattern: '/random', title: 'Random Discover', parent: '/library', guard: 'auth', tab: 'random', stub: 'random', since: '2.4.0', load: stub },
@@ -23,6 +27,7 @@ export const ROUTES = [
   { id: 'menu', pattern: '/menu', title: 'Menu', parent: '/library', guard: 'auth', tab: 'menu', load: () => import('./pages/menu-page.js') },
   { id: 'profile', pattern: '/profile', title: 'Profile', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'menu', refresh: true, load: () => import('./pages/profile-page.js') },
   { id: 'settings', pattern: '/settings', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'settings', load: settings },
+  { id: 'recycle-bin', pattern: '/settings/recycle-bin', title: 'Recycle Bin', parent: '/settings', guard: 'auth', tab: 'settings', load: recyclePage },
   { id: 'settings-section', pattern: '/settings/:section', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'settings', load: settings },
 
   { id: 'terms', pattern: '/terms', title: 'Terms', desc: 'The terms of use for Linkivo.', parent: '/library', guard: 'open', stub: 'terms', since: '2.6.0', load: stub },

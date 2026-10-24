@@ -1,0 +1,27 @@
+feat(v2.2.0): library and import
+
+- Library page: folder grid and list, search, filter, sort, virtual Favourites folder, pin, rename, color and icon picker, duplicate, merge, delete with Undo (name confirmation for folders with links)
+- Folder page: windowed list for thousands of links, domain chips, scope filter, sort, grid and list, multi-select with a bulk bar (move, copy, favourite, tags, pin, read later, block, export, delete) and Undo on every change
+- Link menu and points: fixed owner rules in engine/points.js (like 50/20/10, dislike once, favourite +100/-120, block 0 and restore, weekly limit in the normal preview)
+- Quick add with duplicate warning and optional clipboard detection
+- Import popup: paste and files, 20+ formats read in a Web Worker (text, HTML, JSON, CSV, TSV, Markdown, RTF, XML and OPML, YAML, INI, log, EML, URL and WEBLOC, JSONL, DOCX, PPTX, XLSX, XLSM, ODS, ODT, PDF), review step with duplicate badges, warnings, close confirmation
+- Import engine: chunks of 100 in parallel, pause, stop, retry, resume after reload, Undo, minimize chip with details sheet, title fetch job through the Worker
+- Linkivo backup fast path: validate, remap ids, keep points, tags, flags and times; merge or new folders; skip, update or keep duplicates
+- Recycle Bin page (Settings): date groups, search, multi-select, restore, delete forever, empty; purge of items older than 15 days on app open
+- Export popup: Linkivo backup, JSON, CSV, Excel (own writer, clickable URLs), text, Markdown, HTML bookmarks, printable page, OPML, with options and live preview
+- Settings: sections Library and links, Import export and data (17 new settings, catalog 36)
+- Engine: addLinks keepIds, perItemFolder, recount and chained options; updateFolders, duplicateFolder, copyLinks, mergeFolders, recount, linksOfImport
+- Activity hooks (device only), virtual list, 8 new icons, popover disabled items
+- No third-party runtime library; old .xls is not supported
+- Tests: 154 (29 new in v220-logic and v220-ui)
+
+Removed files:
+- js/features/library/.gitkeep
+- js/features/import/.gitkeep
+- js/features/export/.gitkeep
+- js/workers/.gitkeep
+(each folder now has real files; extracting a zip does not delete them, so remove them by hand if they exist)
+
+Owner actions:
+- Extract the zip over the project folder, commit, firebase deploy --only hosting, hard reload (the update popup appears on an open tab)
+- Worker and database rules are unchanged (Worker 2.1.3): nothing to paste

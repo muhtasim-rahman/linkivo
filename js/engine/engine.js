@@ -7,7 +7,8 @@
  * Records in memory carry their id: { id, ...fields }. The id is the database key and is stripped before writing.
  * Reads:  listFolders({deleted}) getFolder(id) listLinks({fid, deleted}) getLink(id) findByUrl(url) counts() status()
  * Writes: createFolder(data) updateFolder(id, patch) deleteFolders(ids) restoreFolders(ids) purgeFolders(ids)
- *         addLinks(items, {fid, imp, dedupe}) updateLinks(ids, patchOrFn) deleteLinks(ids) restoreLinks(ids) moveLinks(ids, fid) purgeLinks(ids)
+ *         addLinks(items, {fid, imp, dedupe, keepIds, perItemFolder, recount, chained}) updateLinks(ids, patchOrFn) deleteLinks(ids) restoreLinks(ids) moveLinks(ids, fid) purgeLinks(ids)
+ *         v2.2.0: updateFolders(ids, patch) duplicateFolder(id) mergeFolders(ids, targetId) recount(fids) linksOfImport(imp) copyLinks(ids, fid)
  *         getSetting(key, fallback) setSetting(key, value)
  * Events: subscribe(fn) -> off ; fn({type:'change', folders:[ids], links:[ids]} | {type:'ready'} | {type:'sync', state, pending})
  * Deleting is SOFT (field "del" = time, kept 15 days in the Recycle Bin). A folder delete also marks its links with the same time,
@@ -108,16 +109,16 @@ export class Engine {
     }
   }
 
-  async _finish(ch, fids = new Set()) {
+  async _finish(ch, fids = new Set(), { chained = true } = {}) {
     this._recount(ch, fids);
     const ids = { folders: [...ch.folders.keys()], links: [...ch.links.keys()] };
     if (!ids.folders.length && !ids.links.length) return;
     this.bus.emit('event', { type: 'change', ...ids }); // optimistic: the UI updates now, persistence follows
-    await this._commit(ch);
+    await this._commit(ch, { chained });
   }
 
   /** Commits run one after another (so two writes to the same record keep their order); chunks inside a commit run in parallel. */
-  _commit(ch) {
+  _commit(ch, { chained = true } = {}) {
     const entries = [];
     for (const [id, rec] of ch.folders) entries.push({ tree: 'folders', id, rec });
     for (const [id, rec] of ch.links) entries.push({ tree: 'links', id, rec });
@@ -125,6 +126,8 @@ export class Engine {
       const res = await runParallel(chunk(entries, CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 4, sleep: this.sleep });
       if (res.failed.length) { const e = new Error(`${res.failed.length} chunk(s) could not be saved`); e.failed = res.failed; throw e; }
     };
+    // chained=false (v2.2.0 import): the chunks of one import touch only NEW records, so they may be written while other chunks are still in flight.
+    if (!chained) return run();
     const p = this._chain.then(run);
     this._chain = p.catch(() => {});
     return p;
@@ -193,25 +196,37 @@ export class Engine {
   }
 
   // ---- links -------------------------------------------------------------------------------------------------------
-  /** items: [{ url, title?, desc?, tags?, ts?, ... }]. Returns { added:[links], skipped:n, invalid:n }. */
-  async addLinks(items, { fid, imp = null, dedupe = true } = {}) {
+  /** items: [{ url, title?, desc?, tags?, ts?, id?, fid?, ... }]. Returns { added:[links], skipped:n, invalid:n, existing:n }.
+   *  v2.2.0 options: keepIds (use item.id: an id that already exists counts as `existing`, so a resumed import never duplicates),
+   *  perItemFolder (item.fid wins when that folder exists: native restore), recount=false (the caller recounts once at the end),
+   *  chained=false (import chunks are written in parallel). */
+  async addLinks(items, { fid, imp = null, dedupe = true, keepIds = false, perItemFolder = false, recount = true, chained = true } = {}) {
     if (!this.folders.has(fid)) throw new Error('Folder not found');
     const t = this.now();
     const ch = this._newChanges();
-    const added = [];
-    let skipped = 0, invalid = 0;
+    const added = [], touched = new Set([fid]);
+    let skipped = 0, invalid = 0, existing = 0;
     for (const item of items) {
+      if (keepIds && item.id && this.links.has(item.id)) { existing++; continue; }
       const key = dedupeKey(item.url);
       if (!key) { invalid++; continue; }
       if (dedupe && this.keyIndex.has(key)) { skipped++; continue; }
+      const target = perItemFolder && item.fid && this.folders.has(item.fid) ? item.fid : fid;
       let rec;
-      try { rec = { id: newId(t), ...sanitizeLink({ host: hostOf(item.url), ...item, fid, imp: imp || item.imp }, t) }; } catch { invalid++; continue; }
+      try { rec = { id: keepIds && item.id ? item.id : newId(t), ...sanitizeLink({ host: hostOf(item.url), ...item, fid: target, imp: imp || item.imp }, t) }; } catch { invalid++; continue; }
       this._putLink(ch, rec);
+      touched.add(target);
       added.push(rec);
     }
-    await this._finish(ch, new Set([fid]));
-    return { added, skipped, invalid };
+    await this._finish(ch, recount ? touched : new Set(), { chained });
+    return { added, skipped, invalid, existing };
   }
+
+  /** Writes the real link count of these folders once (import jobs call it after the last chunk). */
+  async recount(fids) { const ch = this._newChanges(); await this._finish(ch, new Set(fids)); }
+
+  /** Live links written by one import run (Undo and the run summary use it). */
+  linksOfImport(imp) { const out = []; for (const l of this.links.values()) if (l.imp === imp && !l.del) out.push(l); return out; }
 
   /** patch is an object or a function(link) -> object. null removes a field. */
   async updateLinks(ids, patch) {
@@ -263,6 +278,57 @@ export class Engine {
     for (const id of ids) { const l = this.links.get(id); if (l) { fids.add(l.fid); this._unindexLink(id); ch.links.set(id, null); } }
     await this._finish(ch, fids);
     return ch.links.size;
+  }
+
+  // ---- v2.2.0: folder and link helpers ----------------------------------------------------------------------------
+  /** One patch for several folders (pin, color and icon from the bulk menu). */
+  async updateFolders(ids, patch) {
+    const t = this.now();
+    const { set, unset } = sanitizePatch(FOLDER, patch);
+    const ch = this._newChanges();
+    for (const id of ids) {
+      const f = this.folders.get(id);
+      if (!f || f.del) continue;
+      const rec = { ...f, ...set, up: t };
+      for (const k of unset) delete rec[k];
+      this._putFolder(ch, rec);
+    }
+    await this._finish(ch);
+    return ch.folders.size;
+  }
+
+  /** Copies the folder and every live link in it (new ids, same fields, flags and points). Returns the new folder. */
+  async duplicateFolder(id, name) {
+    const src = this.folders.get(id);
+    if (!src || src.del) return null;
+    const { id: _id, lc, up, del, pinned, ...rest } = src;
+    const copy = await this.createFolder({ ...rest, name: (name || `${src.name} copy`).slice(0, 80), order: (src.order || 0) + 1 });
+    const links = this.listLinks({ fid: id }).map(({ id: _l, fid, up: _u, del: _d, imp, ...fields }) => fields);
+    if (links.length) await this.addLinks(links, { fid: copy.id, dedupe: false });
+    return this.folders.get(copy.id);
+  }
+
+  /** Copies links into another folder (same fields, new ids). Duplicates are allowed on purpose: that is what copy means. */
+  async copyLinks(ids, fid) {
+    if (!this.folders.has(fid)) throw new Error('Folder not found');
+    const items = [];
+    for (const id of ids) { const l = this.links.get(id); if (l && !l.del) { const { id: _i, fid: _f, up, del, imp, ...fields } = l; items.push(fields); } }
+    const r = await this.addLinks(items, { fid, dedupe: false });
+    return r.added.length;
+  }
+
+  /** Moves the live links of the source folders into the target (a link whose address is already in the target is dropped), then deletes the sources. */
+  async mergeFolders(ids, targetId) {
+    const target = this.folders.get(targetId);
+    if (!target || target.del) throw new Error('Folder not found');
+    const sources = ids.filter((i) => i !== targetId && this.folders.has(i));
+    const inTarget = new Set(this.listLinks({ fid: targetId }).map((l) => dedupeKey(l.url)));
+    const move = [], drop = [];
+    for (const sid of sources) for (const l of this.listLinks({ fid: sid })) { const k = dedupeKey(l.url); if (inTarget.has(k)) drop.push(l.id); else { inTarget.add(k); move.push(l.id); } }
+    if (move.length) await this.moveLinks(move, targetId);
+    if (drop.length) await this.deleteLinks(drop);
+    await this.deleteFolders(sources);
+    return { moved: move.length, dropped: drop.length, folders: sources.length };
   }
 
   /** Recycle Bin purge on app open: removes everything deleted more than `days` ago. */

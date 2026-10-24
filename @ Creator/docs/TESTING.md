@@ -56,7 +56,7 @@ Run it with the Firebase emulator when available, otherwise the owner runs it in
 - 5,000 to 10,000 links: scrolling stays smooth, search results under 100 ms, random pick under 50 ms.
 - Import of 1,000 links saved to the database in a few seconds (excluding metadata enrichment) on a normal connection.
 
-## 6. How the suite is organised (10 files, 125 tests as of v2.1.4) (read before adding tests)
+## 6. How the suite is organised (12 files, 154 tests as of v2.2.0) (read before adding tests)
 
 | File | What it covers |
 |---|---|
@@ -68,6 +68,8 @@ Run it with the Firebase emulator when available, otherwise the owner runs it in
 | `v212.test.mjs` | v2.1.2 pure logic: version compare, splash mode, page meta (SEO), context-menu guard, pull distance, settings scroll-spy |
 | `v213.test.mjs` | v2.1.3: splash and settings registry, context guard, image menu, tooltip (hover, long-press), send limits, device-side metadata rescue (fake providers and fake fetch), Worker version check, router refreshCurrent, View Transition theme switch, CSS and index.html contracts |
 | `v214.test.mjs` | v2.1.4 regressions: inline theme script (and its equality with appearance.js), pull-to-refresh lifecycle, bar ring edges and Import active look, collapsed sidebar logo |
+| `v220-logic.test.mjs` | v2.2.0 logic: link extraction, points rules, every parser (text, DOCX, PPTX, XLSX, PDF), zip reader and writer, all export formats, Excel round trip, Linkivo backup round trip, import and enrich jobs (1000 links, pause and resume, restart, Undo), engine helpers, activity hooks |
+| `v220-ui.test.mjs` | v2.2.0 jsdom: Library, folder page (1200 links windowed, select, delete and Undo), link menu, quick add, import popup (paste, review, run, backup fast path), export popup, Recycle Bin, new settings |
 | `boot-smoke.test.mjs` | jsdom: the boot sequence in guest mode, data layer start and teardown, session changes (guest, logout, deleted account) |
 | `ui-smoke.test.mjs` | jsdom: router and Back behavior, overlays, toast, popover, appearance, shell, every route module, login, settings, worker client and metadata tester |
 

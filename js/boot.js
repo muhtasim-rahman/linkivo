@@ -9,7 +9,7 @@ import { log } from './core/logger.js';
 import { getSession, setSession, subscribeSession } from './core/session.js';
 import { createRouter } from './core/router.js';
 import { initUpdates } from './core/update.js';
-import { initData, teardownData, getQueue } from './core/app-data.js';
+import { initData, teardownData, getQueue, getEngine } from './core/app-data.js';
 import { loadFirebase } from './core/firebase-loader.js';
 import { initAuth } from './features/auth/auth-service.js';
 import { loadAccountStatus } from './features/auth/account-status.js';
@@ -37,7 +37,7 @@ export async function boot() {
     }
     if (s.mode === 'none') checkedUid = null;
     if (s.mode === 'guest' || (s.mode === 'account' && s.status === 'active')) {
-      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue() }) : null; }
+      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) }) : null; }
       catch (e) { toast('Storage could not start. Reload the page.', { type: 'error' }); }
     } else { destroyChip?.(); destroyChip = null; await teardownData(); }
     lastKey = keyOf(getSession());

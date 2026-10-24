@@ -13,6 +13,8 @@ import { KEYS, ACCENTS } from '../../core/appearance.js';
 export const SECTIONS = [
   { id: 'appearance', label: 'Appearance', desc: 'Theme, accent color, text size, motion and start screen', icon: 'palette' },
   { id: 'behavior', label: 'Behavior', desc: 'How pages and lists respond', icon: 'zap' },
+  { id: 'library', label: 'Library and links', desc: 'How folders and link lists look and behave', icon: 'library' },
+  { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
   { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
   { id: 'app', label: 'App', desc: 'Install, updates, about and the developer', icon: 'install' },
   { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log, reset', icon: 'terminal' }
@@ -37,6 +39,28 @@ export const CATALOG = [
   // v2.1.3: "Pull down to refresh" and "Block right-click and long-press menus" were removed (owner): both are fixed behavior now. The section keeps
   // one real setting; v2.2.0 onward adds the library and import behavior settings here.
   { id: 'hideBar', section: 'behavior', type: 'switch', key: 'ui.hideBar', label: 'Hide bottom bar on scroll', desc: 'Phones only. The bar returns when you scroll up.', default: true, keywords: ['navigation', 'bottom bar', 'scroll'], since: '2.1.0' },
+
+  // ---- Library and links (v2.2.0)
+  { id: 'libView', section: 'library', type: 'seg', key: 'lib.view', label: 'Library layout', desc: 'Folders as a grid of cards or as a compact list.', default: 'grid', options: opt(['grid', 'Grid'], ['list', 'List']), keywords: ['folders', 'view', 'cards'], since: '2.2.0' },
+  { id: 'libSort', section: 'library', type: 'seg', key: 'lib.sort', label: 'Folder order', desc: 'Pinned folders always stay on top.', default: 'manual', options: opt(['manual', 'Default'], ['name', 'Name'], ['recent', 'Recent'], ['links', 'Size']), keywords: ['sort', 'order', 'folders'], since: '2.2.0' },
+  { id: 'folderView', section: 'library', type: 'seg', key: 'folder.view', label: 'Link layout', desc: 'Links inside a folder as rows or as cards.', default: 'list', options: opt(['list', 'List'], ['grid', 'Grid']), keywords: ['links', 'view', 'cards', 'rows'], since: '2.2.0' },
+  { id: 'folderSort', section: 'library', type: 'seg', key: 'folder.sort', label: 'Link order', desc: 'Default order inside a folder.', default: 'folder', options: opt(['folder', 'Pinned'], ['new', 'Newest'], ['old', 'Oldest'], ['title', 'Title']), keywords: ['sort', 'order', 'links'], since: '2.2.0' },
+  { id: 'showUrl', section: 'library', type: 'switch', key: 'lib.showUrl', label: 'Show the domain on links', desc: 'The site name under each link title.', default: true, keywords: ['domain', 'host', 'url'], since: '2.2.0' },
+  { id: 'showAdded', section: 'library', type: 'switch', key: 'lib.showAdded', label: 'Show when a link was added', default: true, keywords: ['date', 'time', 'added'], since: '2.2.0' },
+  { id: 'showPoints', section: 'library', type: 'switch', key: 'lib.showPoints', label: 'Show points on links', desc: 'The weight Random Discover uses. Useful while you tune it.', default: false, keywords: ['points', 'score', 'random'], since: '2.2.0' },
+  { id: 'confirmDelete', section: 'library', type: 'switch', key: 'lib.confirmDelete', label: 'Type the name to delete a folder with links', desc: 'Off asks a simple yes or no. Deleted folders stay in the Recycle Bin for 15 days either way.', default: true, keywords: ['delete', 'confirm', 'safety'], since: '2.2.0' },
+  { id: 'clipboard', section: 'library', type: 'switch', key: 'lib.clipboard', label: 'Look in the clipboard when adding a link', desc: 'Fills the address if you copied one. Your browser may ask for permission.', default: false, keywords: ['paste', 'clipboard', 'quick add'], since: '2.2.0' },
+
+  // ---- Import, export and data (v2.2.0)
+  { id: 'importData', section: 'data', type: 'custom', custom: 'importData', label: 'Import links', keywords: ['import', 'paste', 'files', 'bookmarks', 'restore'], since: '2.2.0' },
+  { id: 'impReview', section: 'data', type: 'switch', key: 'import.review', label: 'Review links before importing', desc: 'See every link found and untick the ones you do not want.', default: true, keywords: ['import', 'review'], since: '2.2.0' },
+  { id: 'impBare', section: 'data', type: 'switch', key: 'import.bare', label: 'Also find domains without https', desc: 'Picks up example.com/page written without a scheme. May catch a few extra words.', default: false, keywords: ['import', 'domain', 'bare', 'https'], since: '2.2.0' },
+  { id: 'impDedupe', section: 'data', type: 'switch', key: 'import.dedupe', label: 'Skip links that are already saved', default: true, keywords: ['import', 'duplicates'], since: '2.2.0' },
+  { id: 'impClean', section: 'data', type: 'switch', key: 'import.clean', label: 'Remove tracking parameters', desc: 'Drops utm_*, fbclid, gclid and similar from imported addresses.', default: false, keywords: ['import', 'utm', 'tracking', 'privacy'], since: '2.2.0' },
+  { id: 'impEnrich', section: 'data', type: 'switch', key: 'import.enrich', label: 'Fetch titles after importing', desc: 'Reads each page title and description in the background through the metadata service.', default: true, keywords: ['import', 'metadata', 'title'], since: '2.2.0' },
+  { id: 'impSpeed', section: 'data', type: 'seg', key: 'import.speed', label: 'Import speed', desc: 'Fast writes more groups of 100 links at once. Gentle is kinder to a weak connection.', default: 'normal', options: opt(['gentle', 'Gentle'], ['normal', 'Normal'], ['fast', 'Fast']), keywords: ['import', 'speed', 'parallel'], since: '2.2.0' },
+  { id: 'exportData', section: 'data', type: 'custom', custom: 'exportData', label: 'Export library', keywords: ['export', 'backup', 'download', 'json', 'csv', 'excel'], since: '2.2.0' },
+  { id: 'recycleBin', section: 'data', type: 'custom', custom: 'recycleBin', label: 'Recycle Bin', keywords: ['deleted', 'restore', 'trash', 'bin'], since: '2.2.0' },
 
   // ---- Account and sync
   { id: 'accountInfo', section: 'account', type: 'custom', custom: 'account', label: 'Account', keywords: ['sign in', 'log in', 'log out', 'email', 'guest', 'password', 'verification'], since: '2.1.0' },

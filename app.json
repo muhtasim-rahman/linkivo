@@ -1,9 +1,9 @@
 {
   "name": "Linkivo",
   "tagline": "Manage your links",
-  "version": "2.1.4",
-  "buildDate": "2026-10-23",
-  "stage": "foundation",
+  "version": "2.2.0",
+  "buildDate": "2026-10-24",
+  "stage": "library",
   "developer": {
     "name": "Muhtasim Rahman",
     "site": "https://mdturzo.web.app",

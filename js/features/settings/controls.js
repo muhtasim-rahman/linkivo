@@ -1,10 +1,13 @@
 /**
  * Linkivo — js/features/settings/controls.js  (v2.1.3)
  * Purpose: renders one registry entry (seg, switch, swatch) as a row and stores the value through local-prefs.
+ *          v2.2.1: a choice with more than 3 options is the shared dropdown (ui/select.js); 2 or 3 short options stay a segmented control that fills the row
+ *          on phones.
  * API: renderControl(entry) -> Element
  */
 import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
+import { createSelect } from '../../ui/select.js';
 
 function shell(entry, control, stack = false) {
   return h('div', { class: ['row', stack && 'is-stack'], 'data-setting': entry.id },
@@ -19,6 +22,10 @@ export function renderControl(entry) {
     const sync = () => { sw.setAttribute('aria-checked', String(!!get())); sw.firstChild.setAttribute('aria-checked', String(!!get())); };
     sync();
     return shell(entry, sw);
+  }
+  if (entry.type === 'seg' && entry.options.length > 3) {
+    const sel = createSelect({ options: entry.options, value: get(), label: entry.label, align: 'end', onChange: (v) => prefs.set(entry.key, v) });
+    return shell(entry, sel);
   }
   if (entry.type === 'seg') {
     const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': entry.label }, entry.options.map((o) => h('button', { type: 'button', role: 'radio', text: o.label, 'data-v': o.value, 'data-tip': entry.tips && entry.tips[o.value], on: { click: () => { prefs.set(entry.key, o.value); sync(); } } })));

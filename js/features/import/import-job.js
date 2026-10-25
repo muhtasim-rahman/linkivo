@@ -8,7 +8,7 @@
  *                 group. The fetched title replaces the imported one unless the user edited it (tEdit).
  *   Extra fields the handler sets on the job (they are saved with it): stats {saved, skipped, invalid}, live [recent hosts], startedAt, result.
  * API: registerImportJobs({ queue, engine, fetchMeta }) -> void      startImport({ queue, engine, items, fid, options, updates, folderIds }) -> Promise<job>
- *      undoImport(engine, imp) -> Promise<number>      metaPatch(link, result) -> patch|null      groupsOf(items, size)     SPEEDS
+ *      undoImport(engine, imp) -> Promise<number>      metaPatch(link, result) -> patch|null      metaExtras(result) -> linkMeta fields|null      groupsOf(items, size)     SPEEDS
  */
 import { chunk, runParallel } from '../../engine/chunker.js';
 import { newId } from '../../core/utils.js';
@@ -30,6 +30,15 @@ export function metaPatch(link, r) {
   if (r.kw && !link.kw) patch.kw = String(Array.isArray(r.kw) ? r.kw.join(', ') : r.kw).slice(0, 200);
   for (const k of Object.keys(patch)) if (patch[k] === link[k]) delete patch[k];
   return Object.keys(patch).length ? patch : null;
+}
+
+/** v2.2.1 pure: the extra page data of a metadata result, named like the linkMeta fields (schema.js). Empty values are left out. The title, description
+ *  and keywords still go to the link itself (metaPatch); this is everything else the Worker found in the same pass. */
+export function metaExtras(r) {
+  if (!r || typeof r !== 'object') return null;
+  const o = { image: r.image, video: r.video, long: r.desc, site: r.site, author: r.author, lang: r.lang, pub: r.published, canon: r.canonical, icon: r.favicon, type: r.type, theme: r.themeColor || r.theme, frameable: r.frameable === true ? true : undefined };
+  for (const k of Object.keys(o)) if (o[k] == null || o[k] === '' || o[k] === false) delete o[k];
+  return Object.keys(o).length ? o : null;
 }
 
 export async function startImport({ queue, engine, items, fid, options = {}, updates = [], folderIds = [], title = 'Importing links' }) {
@@ -120,6 +129,9 @@ export function registerImportJobs({ queue, engine, fetchMeta }) {
           const patches = new Map();
           for (const l of group) { const patch = metaPatch(l, results.get(l.url)); if (patch) patches.set(l.id, patch); }
           if (patches.size) await engine.updateLinks([...patches.keys()], (l) => patches.get(l.id) || {});
+          // v2.2.1: everything else the page offered (image, site, author, language, ...) is kept in the separate linkMeta tree
+          const extras = []; for (const l of group) { const x = metaExtras(results.get(l.url)); if (x) extras.push([l.id, x]); }
+          if (extras.length) await engine.saveLinkMeta(extras).catch((e) => log.warn('enrich', 'extra page data not saved', e));
         } catch (e) { log.warn('enrich', 'a group of links could not be enriched', e); job.failed = (job.failed || 0) + group.length; }
       }
       at += GROUP;

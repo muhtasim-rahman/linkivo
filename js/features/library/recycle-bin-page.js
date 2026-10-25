@@ -2,6 +2,7 @@
  * Linkivo — js/features/library/recycle-bin-page.js  (v2.2.0)
  * Purpose: /settings/recycle-bin — deleted folders and links, grouped by day, kept 15 days. Search, multi-select, Restore, Delete forever, Empty.
  *          A folder deleted together with its links is one row (restoring it brings the links back). Items older than 15 days are purged when the app opens.
+ * v2.2.1: the selection bar is a dock (always fixed at the bottom), keyboard shortcuts (Ctrl+A, Esc, Delete, R, / and ?), a refresh icon on wide screens.
  * Page module: mount(container, ctx) -> unmount
  */
 import { h } from '../../core/dom.js';
@@ -10,6 +11,10 @@ import { toast } from '../../ui/toast.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { createVirtualList } from '../../ui/virtual-list.js';
+import { mountDock } from '../../ui/dock.js';
+import { refreshButton } from '../../ui/refresh-button.js';
+import { registerShortcuts } from '../../core/shortcuts.js';
+import { openShortcutHelp } from '../../ui/shortcut-help.js';
 import { loadCss } from '../../core/css-loader.js';
 import { getEngine } from '../../core/app-data.js';
 import { plural, relativeTime } from '../../core/format.js';
@@ -36,8 +41,9 @@ export async function mount(container, ctx) {
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search the Recycle Bin', 'aria-label': 'Search the Recycle Bin', autocomplete: 'off' });
   const sub = h('p', { class: 'page-sub' }), body = h('div', { class: 'fp-body' }), bar = h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected items', hidden: true });
   const emptyBtn = h('button', { type: 'button', class: 'btn btn-sm btn-danger', on: { click: emptyBin } }, icon('trash', { size: 16 }), 'Empty bin');
-  page.append(h('header', { class: 'page-head is-stack' }, h('div', { class: 'lib-headrow' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to settings', on: { click: () => ctx.router.navigate('/settings') } }, icon('arrow-left', { size: 20 })), h('h1', { class: 'page-title', text: 'Recycle Bin' }), emptyBtn), sub),
-    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search)), body, bar);
+  page.append(h('header', { class: 'page-head is-stack' }, h('div', { class: 'lib-headrow' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to settings', on: { click: () => ctx.router.navigate('/settings') } }, icon('arrow-left', { size: 20 })), h('h1', { class: 'page-title', text: 'Recycle Bin' }), refreshButton(async () => { await engine.flush?.(); update(); }), emptyBtn), sub),
+    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search)), body);
+  const unDock = mountDock(bar);
   let vl = null;
 
   const pick = () => { const folderIds = [], linkIds = []; for (const r of st.rows) if (st.sel.has(r.id) && r.kind) (r.kind === 'folder' ? folderIds : linkIds).push(r.id); return { folderIds, linkIds }; };
@@ -67,7 +73,7 @@ export async function mount(container, ctx) {
       h('span', { class: ['badge', daysLeft(r.del) <= 2 && 'is-warn'], text: `${daysLeft(r.del)} d left` }));
   };
   function paintBar() {
-    const n = st.sel.size; bar.hidden = n === 0; if (!n) return;
+    const n = st.sel.size; bar.hidden = n === 0; page.classList.toggle('has-dock', n > 0); if (!n) return;
     bar.replaceChildren(h('span', { class: 'selcount', text: `${n} selected` }), h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => { st.sel = new Set(st.rows.filter((r) => r.kind).map((r) => r.id)); paintBar(); vl?.refresh(); } } }, 'Select all'),
       h('button', { type: 'button', class: 'btn btn-sm btn-primary', on: { click: restore } }, icon('restore', { size: 16 }), 'Restore'), h('button', { type: 'button', class: 'btn btn-sm btn-danger', on: { click: () => purge(false) } }, icon('trash', { size: 16 }), 'Delete forever'),
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Clear selection', on: { click: () => { st.sel.clear(); paintBar(); vl?.refresh(); } } }, icon('close', { size: 20 })));
@@ -83,8 +89,21 @@ export async function mount(container, ctx) {
     if (!vl) { body.replaceChildren(); vl = createVirtualList({ scroller, rowHeight: 56, render: row }); vl.el.setAttribute('role', 'list'); body.appendChild(vl.el); }
     vl.setItems(rows);
   }
+  // ---- keyboard (v2.2.1) ----
+  const keys = [
+    { keys: 'mod+a', desc: 'Select everything', run: () => { st.sel = new Set(st.rows.filter((r) => r.kind).map((r) => r.id)); paintBar(); vl?.refresh(); } },
+    { keys: 'escape', desc: 'Clear the selection', run: () => { st.sel.clear(); paintBar(); vl?.refresh(); } },
+    { keys: 'delete', desc: 'Delete the selected items forever', run: () => { if (st.sel.size) purge(false); } },
+    { keys: 'r', desc: 'Restore the selected items', run: () => { if (st.sel.size) restore(); } },
+    { keys: 'backspace', desc: 'Back to Settings', run: () => ctx.router.navigate('/settings') },
+    { keys: '/', desc: 'Search the Recycle Bin', run: () => search.focus() },
+    { keys: 'mod+f', desc: 'Search the Recycle Bin', run: () => search.focus() },
+    { keys: '?', desc: 'Show these shortcuts', run: () => openShortcutHelp(keys) }
+  ];
+  const offKeys = registerShortcuts(keys);
+  search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; st.q = ''; search.blur(); update(); } });
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
   let raf = 0; const off = engine.subscribe((e) => { if (e.type === 'change') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
-  return () => { off(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  return () => { off(); offKeys(); unDock(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
 }

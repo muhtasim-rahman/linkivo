@@ -54,54 +54,56 @@ test('the inline script sits before every stylesheet, so no CSS is evaluated wit
 });
 
 // ------------------------------------------------ 2. pull to refresh
-const { initPullRefresh, pullDistance, THRESHOLD, HOLD } = await imp('js/ui/pull-refresh.js');
+const { initPullRefresh, pullDistance, indicatorY, THRESHOLD, REST } = await imp('js/ui/pull-refresh.js');
 const touch = (el, type, y, x = 100) => { const e = new window.Event(type, { bubbles: true }); e.touches = type === 'touchend' ? [] : [{ clientY: y, clientX: x }]; el.dispatchEvent(e); };
+const chipY = (chip) => parseFloat(/translate3d\(0,\s*(-?[\d.]+)px/.exec(chip.style.transform)[1]);
 
-test('pull to refresh: the page follows the finger, the ring fills, and nothing happens below the threshold', async () => {
+// v2.2.1 (owner request): the PAGE stays still; only the round indicator slides down from above the screen.
+test('pull to refresh: only the indicator moves, the ring fills, and nothing happens below the threshold', async () => {
   const scroller = document.createElement('div'); document.body.appendChild(scroller);
   let runs = 0; const destroy = initPullRefresh({ scroller, enabled: () => true, onRefresh: async () => { runs++; } });
-  const chip = [...document.querySelectorAll('.ptr')].pop();
+  const chip = [...document.querySelectorAll('.ptr')].pop(); const y0 = chipY(chip);
   touch(scroller, 'touchstart', 100); touch(scroller, 'touchmove', 140);
-  const d1 = parseFloat(/translate3d\(0,\s*([\d.]+)px/.exec(scroller.style.transform)[1]); assert.ok(d1 > 20 && d1 < 40, 'page moved down with the finger: ' + d1);
-  assert.ok(parseFloat(chip.style.getPropertyValue('--p')) > 0 && !chip.classList.contains('is-ready')); assert.ok(chip.classList.contains('is-on'));
+  assert.equal(scroller.style.transform, '', 'the page itself never moves'); assert.ok(chipY(chip) > y0, 'the indicator came down with the finger');
+  assert.ok(parseFloat(chip.style.getPropertyValue('--p')) > 0 && !chip.classList.contains('is-ready')); assert.ok(chip.classList.contains('is-on')); assert.match(chip.style.getPropertyValue('--turn'), /deg$/, 'the icon turns with the pull');
   touch(scroller, 'touchend', 140); await tick(5);
-  assert.equal(runs, 0, 'short pull: no refresh'); assert.equal(scroller.style.transform, '', 'page goes back'); assert.ok(chip.classList.contains('is-leaving') && !chip.classList.contains('is-loading'));
+  assert.equal(runs, 0, 'short pull: no refresh'); assert.ok(chip.classList.contains('is-leaving') && !chip.classList.contains('is-loading'));
   destroy();
 });
 
-test('pull to refresh (owner report): after release the ring spins WHERE IT IS, the page holds, and both go back together when done', async () => {
+test('pull to refresh: after release the icon spins WHERE IT RESTS, and slides away when done', async () => {
   const scroller = document.createElement('div'); document.body.appendChild(scroller);
   let finish; const gate = new Promise((r) => { finish = r; }); let runs = 0;
   const destroy = initPullRefresh({ scroller, enabled: () => true, onRefresh: async () => { runs++; await gate; } });
   const chip = [...document.querySelectorAll('.ptr')].pop();
   touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400);
-  assert.ok(chip.classList.contains('is-ready'), 'arrow turns up past the threshold');
+  assert.ok(chip.classList.contains('is-ready'), 'ring complete past the threshold');
   touch(scroller, 'touchend', 400); await tick(5);
-  assert.equal(runs, 1); assert.ok(chip.classList.contains('is-loading'), 'ring spins');
-  assert.ok(!chip.classList.contains('is-leaving'), 'the indicator does not fly back to the top first (v2.1.3 did)');
-  assert.equal(scroller.style.transform, `translate3d(0, ${HOLD}px, 0)`, 'the page settles at the hold position');
-  // a second pull while busy is ignored
-  touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 300); assert.equal(scroller.style.transform, `translate3d(0, ${HOLD}px, 0)`);
+  assert.equal(runs, 1); assert.ok(chip.classList.contains('is-loading'), 'icon spins'); assert.ok(!chip.classList.contains('is-leaving'));
+  assert.equal(chipY(chip), REST - 40, 'it settles at its resting spot'); assert.equal(scroller.style.transform, '', 'the page never moved');
+  const rest = chipY(chip); touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 300); assert.equal(chipY(chip), rest, 'a second pull while busy is ignored');
   finish(); await tick(10);
-  assert.ok(!chip.classList.contains('is-loading') && chip.classList.contains('is-leaving'), 'done: ring and page leave together'); assert.equal(scroller.style.transform, '');
+  assert.ok(!chip.classList.contains('is-loading') && chip.classList.contains('is-leaving'), 'done: it leaves');
   destroy();
 });
 
 test('pull to refresh: ignored when the page is not enabled, scrolled, or inside a sheet or input; a failing refresh still resets', async () => {
   const scroller = document.createElement('div'); document.body.appendChild(scroller);
   let on = false, runs = 0; const destroy = initPullRefresh({ scroller, enabled: () => on, onRefresh: async () => { runs++; throw new Error('boom'); } });
-  touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400); assert.equal(scroller.style.transform, '', 'disabled page');
-  on = true; scroller.scrollTop = 30; touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400); assert.equal(scroller.style.transform, '', 'not at the top'); scroller.scrollTop = 0;
+  const chip = [...document.querySelectorAll('.ptr')].pop();
+  touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400); assert.ok(!chip.classList.contains('is-on'), 'disabled page');
+  on = true; scroller.scrollTop = 30; touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400); assert.ok(!chip.classList.contains('is-on'), 'not at the top'); scroller.scrollTop = 0;
   const input = document.createElement('input'); scroller.appendChild(input);
-  const e = new window.Event('touchstart', { bubbles: true }); e.touches = [{ clientY: 50, clientX: 100 }]; input.dispatchEvent(e); touch(scroller, 'touchmove', 400); assert.equal(scroller.style.transform, '', 'inside an input');
+  const e = new window.Event('touchstart', { bubbles: true }); e.touches = [{ clientY: 50, clientX: 100 }]; input.dispatchEvent(e); touch(scroller, 'touchmove', 400); assert.ok(!chip.classList.contains('is-on'), 'inside an input');
   touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 400); touch(scroller, 'touchend', 400);
   await tick(10);
-  assert.equal(runs, 1); assert.equal(scroller.style.transform, '', 'reset after a failed refresh');
+  assert.equal(runs, 1); assert.ok(!chip.classList.contains('is-loading'), 'reset after a failed refresh');
   destroy();
 });
 
-test('pull curve: threshold is reachable with a normal swipe, never passes MAX', () => {
-  assert.ok(pullDistance(130) >= THRESHOLD, 'about 130px of finger travel reaches the threshold'); assert.ok(pullDistance(40) < THRESHOLD); assert.ok(HOLD < THRESHOLD + 10);
+test('pull curve: threshold is reachable with a normal swipe, never passes MAX; the indicator is hidden at 0 and below the status bar at the threshold', () => {
+  assert.ok(pullDistance(130) >= THRESHOLD, 'about 130px of finger travel reaches the threshold'); assert.ok(pullDistance(40) < THRESHOLD); assert.ok(REST < THRESHOLD + 10);
+  assert.ok(indicatorY(0) < -40, 'fully above the screen'); assert.ok(indicatorY(THRESHOLD) > 0 && indicatorY(THRESHOLD) < 40); assert.equal(indicatorY(0, 20), indicatorY(0) + 20, 'follows the safe-area inset');
 });
 
 // ------------------------------------------------ 3. bottom bar ring and Import button

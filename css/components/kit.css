@@ -1,0 +1,66 @@
+/* Linkivo v2.2.1 - shared UI kit: dropdown, scroll rows, dock bar, icon buttons, keyboard-safe layout, shortcut list, menu headings.
+   Everything here is used by more than one page, so it loads with the app frame (index.html) and not per page. */
+
+/* ---- icon buttons: ONE fixed size, so a hover background is always the same round shape (owner report: uneven hover areas) ---- */
+.btn-icon, .icon-btn { display: inline-grid; place-items: center; flex: none; width: var(--ctl-h); height: var(--ctl-h); min-width: var(--ctl-h); padding: 0; border: 0; border-radius: var(--r-control); background: transparent; color: inherit; transition: background var(--t-micro) var(--ease); }
+.btn-icon:hover, .icon-btn:hover { background: var(--accent-soft); }
+.btn-icon.is-sm, .icon-btn.is-sm { width: 34px; height: 34px; min-width: 34px; }
+.btn-icon > svg, .icon-btn > svg { flex: none; }
+
+/* ---- dropdown (ui/select.js) ---- */
+.sel-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: var(--ctl-h); max-width: 100%; padding: 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--r-control); background: var(--surface); color: var(--text); font-weight: 500; text-align: left; transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease); }
+.sel-btn:hover { border-color: var(--sub); }
+.sel-btn[aria-expanded='true'], .sel-btn:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+.sel-btn > svg { color: var(--sub); }
+.sel-btn.is-block { display: flex; width: 100%; }
+.sel-btn.is-small { min-height: 34px; font-size: var(--fs-sm); }
+.sel-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pop-item { text-align: left; }
+.pop-label { flex: 1; min-width: 0; }
+.pop-mark { width: 18px; height: 18px; display: grid; place-items: center; flex: none; color: var(--accent-text); }
+.pop-item.is-check { padding-left: var(--s2); }
+.pop-head { padding: 10px var(--s3) 4px; font-size: var(--fs-xs); font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sub); }
+.pop-head:first-child { padding-top: 6px; }
+.pop { max-height: calc(100dvh - 16px); }
+
+/* ---- left-right rows (ui/scroll-row.js) ---- */
+.srow { position: relative; min-width: 0; }
+.srow .fade-x { cursor: grab; }
+.fade-x.is-dragging { cursor: grabbing; scroll-behavior: auto; user-select: none; }
+.fade-x.is-dragging * { pointer-events: none; }
+.srow-btn { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; display: none; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); box-shadow: var(--shadow-float); }
+.srow-btn.is-prev { left: 2px; } .srow-btn.is-next { right: 2px; }
+.srow-btn:hover { background: var(--surface-2); }
+.srow-btn[hidden] { display: none !important; }
+@media (hover: hover) and (pointer: fine) { .srow:hover .srow-btn:not([hidden]) { display: grid; } }
+
+/* ---- dock: a bar fixed at the bottom of the page area (ui/dock.js) ---- */
+:root { --dock-b: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + 6px); }
+@media (min-width: 900px) { :root { --dock-b: var(--s4); } }
+html[data-kb='open'] { --dock-b: var(--s2); }
+.dock { position: absolute; left: 50%; bottom: var(--dock-b); z-index: calc(var(--z-bar) + 1); translate: -50% 0; width: min(calc(100% - var(--pad) * 2), 720px); margin: 0; box-sizing: border-box; animation: lk-rise var(--t-std) var(--ease); }
+.page.has-dock { padding-bottom: 112px; }
+
+/* ---- the keyboard never covers the field (js/core/keyboard-safe.js): the app shrinks to the visible part of the screen, the floating bars step aside ---- */
+html[data-kb='open'] #app { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
+html[data-kb='open'] .bar, html[data-kb='open'] .task-chip { opacity: 0; pointer-events: none; transform: translate(-50%, 140%); }
+html[data-kb='open'] #page-root { padding-bottom: var(--s6) !important; }
+html[data-kb='open'] .task-chip { transform: translateY(140%); }
+
+/* ---- bottom sheets: drag handle, never full height ---- */
+.sheet-grab.is-draggable, .sheet-head.is-draggable { touch-action: none; }
+.sheet-grab.is-draggable { height: 20px; margin: 0 auto; background: none; position: relative; cursor: grab; flex: none; width: 100%; }
+.sheet-grab.is-draggable::after { content: ''; position: absolute; left: 50%; top: 8px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
+.sheet { max-height: min(82dvh, 700px); }
+@media (min-width: 720px) { .sheet { max-height: min(88dvh, 760px); } }
+
+/* ---- shortcut list ---- */
+.kb-list { display: grid; gap: var(--s1); }
+.kb-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 36px; padding: 0 var(--s2); border-radius: var(--r-control); }
+.kb-row:nth-child(odd) { background: var(--surface-2); }
+.kb-keys { font: 600 var(--fs-xs) var(--font-mono); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); white-space: nowrap; }
+
+/* ---- refresh button (wide screens only) ---- */
+.only-wide { display: none !important; }
+@media (min-width: 900px) { .only-wide { display: inline-grid !important; } }
+.btn-icon.is-spinning > svg { animation: lk-spin 700ms linear infinite; }

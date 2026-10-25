@@ -9,7 +9,7 @@ import { log } from '../core/logger.js';
 
 /** All stores live in one database per scope ("linkivo-guest" or "linkivo-<uid>"). */
 export const STORES = Object.freeze({
-  folders: 'id', links: 'id', meta: 'key', settings: 'key', outbox: 'id', jobs: 'id'
+  folders: 'id', links: 'id', linkMeta: 'id', meta: 'key', settings: 'key', outbox: 'id', jobs: 'id'   // v2.2.1: linkMeta (extra page data per link); the database version went 1 -> 2 so existing browsers add the store
 });
 
 export function createMemoryDb() {
@@ -31,7 +31,7 @@ export function createMemoryDb() {
 export function openDb(name) {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') return reject(new Error('IndexedDB is not available'));
-    const req = indexedDB.open(name, 1);
+    const req = indexedDB.open(name, 2);
     req.onupgradeneeded = () => { for (const [store, keyPath] of Object.entries(STORES)) if (!req.result.objectStoreNames.contains(store)) req.result.createObjectStore(store, { keyPath }); };
     req.addEventListener('error', () => reject(req.error));
     req.onblocked = () => reject(new Error('IndexedDB is blocked by another tab'));

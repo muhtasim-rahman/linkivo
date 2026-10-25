@@ -19,7 +19,8 @@ import { newId } from '../core/utils.js';
 import { dedupeKey, hostOf } from '../core/url-tools.js';
 
 import { chunk, runParallel } from './chunker.js';
-import { FOLDER, LINK, sanitizeFolder, sanitizeLink, sanitizePatch } from './schema.js';
+import { log } from '../core/logger.js';
+import { FOLDER, LINK, LINK_META, sanitizeFolder, sanitizeLink, sanitizePatch } from './schema.js';
 
 export const CHUNK_SIZE = 100;
 
@@ -135,7 +136,7 @@ export class Engine {
 
   /** Default persistence = the local database. Subclasses extend this (cloud: also the remote database). */
   async _persistChunk(entries) {
-    for (const tree of ['folders', 'links']) {
+    for (const tree of ['folders', 'links', 'linkMeta']) {
       const puts = entries.filter((e) => e.tree === tree && e.rec).map((e) => e.rec);
       const dels = entries.filter((e) => e.tree === tree && !e.rec).map((e) => e.id);
       if (puts.length) await this.db.putMany(tree, puts);
@@ -277,7 +278,27 @@ export class Engine {
     const fids = new Set();
     for (const id of ids) { const l = this.links.get(id); if (l) { fids.add(l.fid); this._unindexLink(id); ch.links.set(id, null); } }
     await this._finish(ch, fids);
+    await this._dropLinkMeta([...ch.links.keys()]);      // v2.2.1: the extra page data goes with the link, nothing is left behind in the database
     return ch.links.size;
+  }
+
+  /** v2.2.1: extra page data per link (image, site, author, language, published, canonical, icon, type, theme, long description) in its OWN tree, so the
+   *  link list stays light. entries: [[linkId, rawMeta]]. Fields outside the schema are dropped; returns how many links got data. */
+  async saveLinkMeta(entries) {
+    const t = this.now(), out = [];
+    for (const [id, raw] of entries) {
+      if (!this.links.has(id)) continue;
+      const { set } = sanitizePatch(LINK_META, { ...raw, checkedAt: t });
+      if (Object.keys(set).length > 1) out.push({ tree: 'linkMeta', id, rec: { id, ...set } });   // more than checkedAt alone
+    }
+    if (!out.length) return 0;
+    const res = await runParallel(chunk(out, CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 3, sleep: this.sleep });
+    if (res.failed.length) log.warn('engine', `${res.failed.length} link-data chunk(s) could not be saved`);
+    return out.length;
+  }
+  async _dropLinkMeta(ids) {
+    if (!ids.length) return;
+    await runParallel(chunk(ids.map((id) => ({ tree: 'linkMeta', id, rec: null })), CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 3, sleep: this.sleep });
   }
 
   // ---- v2.2.0: folder and link helpers ----------------------------------------------------------------------------

@@ -1,41 +1,64 @@
 /**
- * Linkivo — js/ui/popover.js  (v2.1.3)
- * Purpose: anchored menu (three-dot menus). Keyboard: arrows, Home/End, Enter, Escape. Closes on outside click, scroll, resize
+ * Linkivo — js/ui/popover.js  (v2.2.1)
+ * Purpose: anchored menu (three-dot menus, dropdown lists). Keyboard: arrows, Home/End, Enter, Escape. Closes on outside click, scroll, resize
  *          and Back (registers a back layer).
- * API: openMenu(anchor, items, { align:'end'|'start', onClose }) -> { close(), isOpen() }   (onClose runs once when the menu has closed, v2.1.3)
+ * API: openMenu(anchor, items, { align:'end'|'start', onClose, minWidth }) -> { close(), isOpen() }   (onClose runs once when the menu has closed)
  *      Pressing the anchor again is NOT an outside click: the caller toggles with isOpen() (v2.1.2).
- *   items: [{ label, icon?, danger?, disabled?, onSelect() }] or { separator: true }
+ *   items: [{ label, icon?, danger?, disabled?, onSelect() }] | { separator: true } | { heading: 'Group name' }
+ *   v2.2.1: an item with `checked` (true/false) is a choice row with a check mark on the left (role menuitemradio, or menuitemcheckbox when `multi`).
+ *           `keepOpen: true` toggles `checked` in place and calls onSelect(checked) without closing (multi-select lists).
+ *           No fixed max-height any more: the menu only limits itself to the screen, and flips above the anchor when there is more room there.
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
 import { icon } from './icons.js';
 
-export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
+export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 } = {}) {
   const returnTo = document.activeElement;
   let layer;
-  const menu = h('div', { class: 'pop', role: 'menu' }, items.map((it) => it.separator ? h('div', { class: 'pop-sep', role: 'separator' }) :
-    h('button', { type: 'button', role: 'menuitem', class: ['pop-item', it.danger && 'is-danger'], disabled: it.disabled === true, on: { click: () => { if (it.disabled) return; close(); it.onSelect?.(); } } }, it.icon && icon(it.icon, { size: 18 }), h('span', { text: it.label }))));
+  const build = (it) => {
+    if (it.separator) return h('div', { class: 'pop-sep', role: 'separator' });
+    if (it.heading) return h('div', { class: 'pop-head', role: 'presentation', text: it.heading });
+    const checkable = it.checked !== undefined;
+    const mark = checkable ? h('span', { class: 'pop-mark', 'aria-hidden': 'true' }, it.checked ? icon('check', { size: 16 }) : null) : null;
+    const btn = h('button', { type: 'button', role: checkable ? (it.multi ? 'menuitemcheckbox' : 'menuitemradio') : 'menuitem', class: ['pop-item', it.danger && 'is-danger', checkable && 'is-check'], disabled: it.disabled === true,
+      'aria-checked': checkable ? String(!!it.checked) : null,
+      on: { click: () => {
+        if (it.disabled) return;
+        if (it.keepOpen) { it.checked = !it.checked; btn.setAttribute('aria-checked', String(it.checked)); mark.replaceChildren(...(it.checked ? [icon('check', { size: 16 })] : [])); it.onSelect?.(it.checked); return; }
+        close(); it.onSelect?.();
+      } } }, mark, !checkable && it.icon && icon(it.icon, { size: 18 }), h('span', { class: 'pop-label', text: it.label }));
+    return btn;
+  };
+  const menu = h('div', { class: 'pop', role: 'menu' }, items.map(build));
 
   function place() {
     const r = anchor.getBoundingClientRect();
-    const mw = menu.offsetWidth, mh = menu.offsetHeight, vw = innerWidth, vh = innerHeight;
+    const vw = innerWidth, vh = innerHeight;
+    menu.style.minWidth = Math.max(minWidth, 0) + 'px';
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
     let left = align === 'end' ? r.right - mw : r.left;
     left = Math.max(8, Math.min(left, vw - mw - 8));
-    let top = r.bottom + 6, origin = align === 'end' ? 'top right' : 'top left';
-    if (top + mh > vh - 8) { top = Math.max(8, r.top - mh - 6); origin = align === 'end' ? 'bottom right' : 'bottom left'; }
+    const below = vh - r.bottom - 14, above = r.top - 14;
+    let top, origin;
+    if (mh <= below || below >= above) { top = r.bottom + 6; origin = align === 'end' ? 'top right' : 'top left'; }
+    else { top = r.top - mh - 6; origin = align === 'end' ? 'bottom right' : 'bottom left'; }
+    top = Math.max(8, Math.min(top, vh - mh - 8));          // never off screen; the CSS max-height scrolls the rare menu that is taller than the screen
     menu.style.left = left + 'px'; menu.style.top = top + 'px'; menu.style.setProperty('--ox', origin);
   }
   function onDown(e) { if (!menu.contains(e.target) && !anchor.contains(e.target)) close(); }
   function onKey(e) {
     const btns = [...menu.querySelectorAll('.pop-item:not(:disabled)')];
     const i = btns.indexOf(document.activeElement);
-    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+    else if (!btns.length) return;
     else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
     else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
     else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
     else if (e.key === 'Tab') close();
   }
+  function onScroll(e) { if (!menu.contains(e.target)) close(); }   // v2.2.1: scrolling INSIDE a long menu must not close it
   function close() {
     if (!menu.isConnected) return;
     layer?.remove();
@@ -43,7 +66,7 @@ export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
     removeEventListener('resize', close);
-    document.removeEventListener('scroll', close, true);
+    document.removeEventListener('scroll', onScroll, true);
     if (returnTo && returnTo.isConnected && returnTo.focus) returnTo.focus({ preventScroll: true });
     if (onClose) onClose();
   }
@@ -52,8 +75,8 @@ export function openMenu(anchor, items, { align = 'end', onClose } = {}) {
   document.addEventListener('pointerdown', onDown, true);
   document.addEventListener('keydown', onKey, true);
   addEventListener('resize', close);
-  document.addEventListener('scroll', close, true);
+  document.addEventListener('scroll', onScroll, true);
   layer = pushLayer(() => { layer = null; close(); });
-  menu.querySelector('.pop-item')?.focus({ preventScroll: true });
+  (menu.querySelector('.pop-item[aria-checked="true"]') || menu.querySelector('.pop-item'))?.focus({ preventScroll: true });
   return { close, isOpen: () => menu.isConnected };
 }

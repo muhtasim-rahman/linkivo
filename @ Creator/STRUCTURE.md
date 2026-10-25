@@ -55,3 +55,17 @@ Linkivo/
 - `.gitkeep` only marks an empty folder so git and zips keep it. Delete it when the folder gets its first real file.
 - Folder names `@ Creator`, `@ Extra files`, `@ Versions` contain a space and a leading `@`: always quote them in shell commands.
 - Nothing starting with `@` is deployed to hosting; `@ Creator` and `@ Versions` are pushed to GitHub, `@ Extra files` is git-ignored.
+
+## Added in v2.2.1
+
+| Path | Purpose |
+|---|---|
+| `css/components/kit.css` | shared kit: icon buttons, dropdown, scroll rows, dock, keyboard-safe layout, sheet handle, shortcut list |
+| `js/core/keyboard-safe.js` `shortcuts.js` `settings-sync.js` `wake-lock.js` | keyboard layout, shortcuts, account settings sync, screen wake lock |
+| `js/ui/select.js` `scroll-row.js` `dock.js` `shortcut-help.js` `refresh-button.js` | shared dropdown, scroll rows, fixed bottom bar, shortcut list, PC refresh icon |
+| `js/features/import/import-form.js` `import-backup.js` `restore-popup.js` | the Import form (page and compact), backup panel, Settings restore popup |
+| `js/features/shell/install-card.js` | Menu page install card |
+| `js/features/export/formats/page-render.js` `webpage.js` `print.js` | designed Web page and Print exports |
+| `assets/art/install-pattern.svg` | pattern behind the install card |
+| `@ Creator/tests/v221.test.mjs` | tests for all of the above |
+| Unused, kept | `import-review.js` openReview, `link-actions.js` editTitle, `formats/printable.js` |

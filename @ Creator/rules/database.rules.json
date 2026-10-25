@@ -200,6 +200,30 @@
           "log": {
             ".validate": "newData.isString() && newData.val().length <= 3000"
           },
+          "site": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "author": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "lang": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "pub": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "canon": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "icon": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "type": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "theme": {
+            ".validate": "newData.isString() && newData.val().length <= 9"
+          },
           "frameable": {
             ".validate": "newData.val() === true"
           },
@@ -420,6 +444,30 @@
             },
             "log": {
               ".validate": "newData.isString() && newData.val().length <= 3000"
+            },
+            "site": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "author": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "lang": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "pub": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "canon": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "icon": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "type": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "theme": {
+              ".validate": "newData.isString() && newData.val().length <= 9"
             },
             "frameable": {
               ".validate": "newData.val() === true"

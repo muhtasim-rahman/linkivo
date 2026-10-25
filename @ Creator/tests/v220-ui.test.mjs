@@ -64,7 +64,8 @@ test('folder page: 1200 links render windowed, select all, delete with Undo, fil
 
 test('folder page: link menu, favourite toggles points, not found and Favourites folder', async () => {
   await router.navigate(`/folder/${A.id}`); await waitFor(() => $('.lrow'));
-  click($('.lmore')); await waitFor(() => $('.pop')); const labels = $$('.pop-item').map((b) => b.textContent); assert.ok(['Open in new tab', 'Copy URL', 'Edit title', 'Add tags', 'Move to folder', 'Delete'].every((l) => labels.includes(l)), labels.join('|'));
+  click($('.lmore')); await waitFor(() => $('.pop')); const labels = $$('.pop-item').map((b) => b.textContent); assert.ok(['Copy URL', 'Edit link', 'Add tags', 'Move to folder', 'Copy to folder', 'Delete'].every((l) => labels.includes(l)), labels.join('|'));
+  assert.ok(!labels.includes('Open in new tab') && !labels.includes('Select') && !labels.includes('Edit title'), 'v2.2.1: those left the menu'); assert.equal($$('.pop-head').length, 3, 'grouped under headings'); assert.ok($('.lopen'), 'open in new tab is an icon beside the three dots');
   const id = $('.lrow').dataset.id; click($$('.pop-item').find((b) => b.textContent === 'Add to favourites')); await waitFor(() => engine.getLink(id).fv);
   assert.equal(engine.getLink(id).pt, 200); await waitFor(() => $$('.toast button').some((b) => b.textContent === 'Undo')); assert.ok($$('.toast button').some((b) => b.textContent === 'Undo'));
   await router.navigate('/folder/favourites'); await waitFor(() => $('.fp-name')); assert.equal($('.fp-name').textContent, 'Favourites'); assert.ok($$('.lrow').length >= 2);
@@ -81,45 +82,73 @@ test('quick add: valid, duplicate warning, saves into the chosen folder', async 
   await queue.whenIdle(); assert.equal(engine.getLink(saved.id).title, 'Fetched page'.slice(0, 0) + engine.getLink(saved.id).title);
 });
 
-test('import popup: paste, review (duplicates unticked), run, details, Undo', async () => {
-  const { openImport } = await import('../../js/features/import/import-sheet.js');
+test('import page: paste, found list (duplicates unticked), domain switch, icon files ignored, run, details, Undo', async () => {
   prefs.set('import.enrich', false);
-  const done = openImport({ engine, router, fid: B.id }); await waitFor(() => $('.imp-text'));
-  typeIn($('.imp-text'), 'Read https://new1.test/a and https://new2.test/b, https://fav.test/x again https://new1.test/a'); await waitFor(() => /4 links found/.test($('.imp-count').textContent));
-  assert.match($('.imp-count').textContent, /3 unique/);
-  click(btn($('.sheet'), 'Review 4 links')); await waitFor(() => $('.rv-row'));
-  assert.equal($$('.rv-row').length, 4); assert.match($('.rv-count').textContent, /2 of 4 selected\s+.\s+2 duplicates/);
-  assert.equal($$('.badge.is-warn').length, 2);
-  click(btn($('.sheet'), 'Import 2 links')); const job = await done; assert.ok(job);
+  await router.navigate(`/import?fid=${B.id}`); await waitFor(() => $('.imp-text'));
+  typeIn($('.imp-text'), 'Read https://new1.test/a and https://new2.test/b, https://fav.test/x again https://new1.test/a https://new3.test/favicon.ico');
+  await waitFor(() => /4 links found/.test($('.imp-count').textContent));
+  assert.match($('.imp-count').textContent, /3 unique/); assert.match($('.imp-count').textContent, /1 icon file ignored/);
+  await waitFor(() => $$('.rv-row').length === 4); assert.match($('.rv-count').textContent, /2 of 4 selected\s+.\s+2 duplicates/); assert.equal($$('.badge.is-warn').length, 2);
+  const chipOf = () => $$('.imp-chip').find((c) => c.textContent.startsWith('new2.test')); assert.ok(chipOf(), 'a chip per domain');
+  click(chipOf()); await waitFor(() => /1 of 4 selected/.test($('.rv-count').textContent)); assert.equal(chipOf().getAttribute('aria-pressed'), 'false'); click(chipOf()); await waitFor(() => /2 of 4 selected/.test($('.rv-count').textContent));
+  assert.equal($('.imp-go').textContent, 'Import 2 links');
+  click($('.imp-go')); await waitFor(() => queue.list().some((j) => j.type === 'import'));
+  const job = queue.list().filter((j) => j.type === 'import').sort((x, y) => y.createdAt - x.createdAt)[0];
   await queue.whenIdle(); const j = queue.get(job.id); assert.equal(j.status, 'done'); assert.equal(j.result.saved, 2);
-  assert.ok(engine.findByUrl('https://new2.test/b')); assert.equal(engine.getFolder(B.id).lc, engine.listLinks({ fid: B.id }).length);
-  await waitFor(() => $('.jp')); assert.match($('.jp-state').textContent, /Finished/);
+  assert.ok(engine.findByUrl('https://new2.test/b')); assert.ok(!engine.findByUrl('https://new3.test/favicon.ico'), 'the icon file was not imported'); assert.equal(engine.getFolder(B.id).lc, engine.listLinks({ fid: B.id }).length);
+  await waitFor(() => $('.jp')); assert.match($('.jp-state').textContent, /Finished/); assert.equal($('.imp-text').value, '', 'the form is ready for the next import');
   click(btn($('.sheet'), 'Undo import')); await waitFor(() => !engine.findByUrl('https://new2.test/b')); click(btn($('.sheet') || document, 'Close') || $('.sheet-head button'));
-  await tick(250); prefs.remove('import.enrich');
+  await tick(250); prefs.remove('import.enrich'); await router.navigate('/library'); await tick(30);
 });
 
-test('import popup: a Linkivo backup file takes the fast path', async () => {
+test('import dialog: wide screens open the same form compact; phones are sent to the page with the folder', async () => {
+  const { openImport } = await import('../../js/features/import/import-sheet.js');
+  assert.equal(await openImport({ engine, router, fid: B.id }), null); await waitFor(() => $('.imp-text')); assert.match(location.pathname + location.search, new RegExp(`/import\\?fid=${B.id}`)); assert.ok(!$('.sheet'), 'no popup on a phone');
+  await router.navigate('/library'); await tick(30);
+  const real = w.matchMedia; w.matchMedia = (q) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }); globalThis.matchMedia = w.matchMedia;
+  openImport({ engine, router, fid: B.id }); await waitFor(() => $('.sheet .impf.is-compact')); assert.ok($('.sheet .imp-dock'), 'action bar inside the dialog');
+  click($('.sheet-head button')); await waitFor(() => !$('.sheet')); w.matchMedia = real; globalThis.matchMedia = real;
+});
+
+test('import page: a Linkivo backup is found by its CONTENT (renamed file) and takes the fast path', async () => {
   const { openImport } = await import('../../js/features/import/import-sheet.js');
   const { runExport } = await import('../../js/features/export/export-engine.js');
   const out = await runExport({ engine, scope: { type: 'folders', fids: [B.id] }, formatId: 'linkivo' });
   const e2 = new Engine({ kind: 'guest', db: createMemoryDb(), sleep: () => Promise.resolve() }); await e2.init();
   const q2 = createJobQueue({ db: e2.db, now: () => e2.now() }); registerImportJobs({ queue: q2, engine: e2, fetchMeta: async () => new Map() }); await q2.start();
   installDataForTests(e2, q2);
-  const file = new w.File([await out.blob.text()], 'backup.linkivo.json', { type: 'application/json' });
-  const done = openImport({ engine: e2, router, files: [file] }); await waitFor(() => /Linkivo backup found/.test(document.body.textContent), 3000);
-  assert.ok(btn($('.sheet'), 'Restore backup')); click(btn($('.sheet'), 'Restore backup')); const job = await done;
-  await q2.whenIdle(); assert.equal(q2.get(job.id).status, 'done'); assert.equal(e2.listFolders().length, 1); assert.equal(e2.listFolders()[0].name, 'Tools'); assert.ok(e2.listFolders()[0].pinned);
+  const file = new w.File([await out.blob.text()], 'my-notes.txt', { type: 'text/plain' }); // renamed on purpose: the watermark inside decides, not the name
+  await openImport({ engine: e2, router, files: [file] }); await waitFor(() => /Linkivo backup found/.test(document.body.textContent), 3000);
+  assert.equal($('.imp-go').textContent, 'Restore backup'); click($('.imp-go')); await waitFor(() => q2.list().some((j) => j.type === 'import'));
+  const job = q2.list().find((j) => j.type === 'import'); await q2.whenIdle(); assert.equal(q2.get(job.id).status, 'done'); assert.equal(e2.listFolders().length, 1); assert.equal(e2.listFolders()[0].name, 'Tools'); assert.ok(e2.listFolders()[0].pinned);
   assert.ok(e2.listLinks().some((l) => l.url === 'https://fav.test/x' && l.fv));
+  installDataForTests(engine, queue); await tick(100); if ($('.sheet')) click($('.sheet-head button')); await router.navigate('/library'); await tick(250);
+});
+
+test('settings > Import opens ONE small popup that takes only a Linkivo backup', async () => {
+  const { openRestorePopup } = await import('../../js/features/import/restore-popup.js');
+  const { runExport } = await import('../../js/features/export/export-engine.js');
+  const out = await runExport({ engine, scope: { type: 'folders', fids: [B.id] }, formatId: 'linkivo' });
+  const e3 = new Engine({ kind: 'guest', db: createMemoryDb(), sleep: () => Promise.resolve() }); await e3.init();
+  const q3 = createJobQueue({ db: e3.db, now: () => e3.now() }); registerImportJobs({ queue: q3, engine: e3, fetchMeta: async () => new Map() }); await q3.start(); installDataForTests(e3, q3);
+  const done = openRestorePopup({ engine: e3, router, file: new w.File(['{"hello": 1}'], 'other.json') }); await waitFor(() => $('.sheet'));
+  await waitFor(() => /not a Linkivo backup/.test($('.sheet').textContent)); assert.ok(btn($('.sheet'), 'Restore backup').disabled, 'a foreign file is refused');
+  const input = $('.sheet input[type=file]'); Object.defineProperty(input, 'files', { value: [new w.File([await out.blob.text()], 'x.bin')], configurable: true }); input.dispatchEvent(new w.Event('change', { bubbles: true }));
+  await waitFor(() => /Linkivo backup found/.test($('.sheet').textContent)); assert.equal($$('.sel-btn', $('.sheet')).length, 2, 'folder and duplicate choices use the shared dropdown');
+  click(btn($('.sheet'), 'Restore backup')); const job = await done; assert.ok(job); await q3.whenIdle(); assert.equal(e3.listFolders().length, 1);
   installDataForTests(engine, queue); await tick(100); if ($('.sheet')) click($('.sheet-head button')); await tick(250);
 });
 
-test('export popup: format list, options, preview, download', async () => {
+test('export popup: backup tile first, icon tiles, per-format options, live page preview, download', async () => {
   const { openExport } = await import('../../js/features/export/export-sheet.js');
   let blob = null; globalThis.URL.createObjectURL = (b) => { blob = b; return 'blob:x'; }; globalThis.URL.revokeObjectURL = () => {};
   w.HTMLAnchorElement.prototype.click = function () {};
-  openExport({ engine, scope: { type: 'folders', fids: [B.id] }, title: 'Export "Tools"' }); await waitFor(() => $('.ex-formats'));
-  const names = $$('.ex-fmt strong').map((n) => n.textContent); assert.equal(names[0], 'Linkivo backup'); assert.deepEqual(names.slice(1), ['JSON', 'CSV', 'Excel', 'Text', 'Markdown', 'HTML bookmarks', 'Printable page', 'OPML']);
-  click($$('.ex-fmt').find((b) => b.textContent.startsWith('CSV'))); await waitFor(() => /Title,URL/.test($('.ex-preview').textContent));
+  openExport({ engine, scope: { type: 'folders', fids: [B.id] }, title: 'Export \"Tools\"' }); await waitFor(() => $('.ex-grid .ex-fmt'));
+  assert.equal($('.ex-native strong').textContent, 'Linkivo backup'); assert.match($('.ex-native').textContent, /Recommended/);
+  assert.deepEqual($$('.ex-fmt span').map((n) => n.textContent), ['Web page', 'Print', 'Excel', 'CSV', 'JSON', 'Text', 'Markdown', 'HTML bookmarks', 'OPML']);
+  click($$('.ex-fmt').find((b) => b.textContent === 'Web page')); await waitFor(() => $('.ex-frame')); assert.match($('.ex-frame').getAttribute('srcdoc'), /Fav one|fav\.test/); assert.ok($$('.ex-seg').length >= 2, 'layout and theme are icon choices'); assert.ok($$('.ex-dot').length === 6, 'accent colors');
+  click($$('.ex-fmt').find((b) => b.textContent === 'Print')); await waitFor(() => $$('.ex-seg').some((s) => /A4/.test(s.textContent))); assert.ok($$('.ex-seg').some((s) => /Portrait/.test(s.textContent)));
+  click($$('.ex-fmt').find((b) => b.textContent === 'CSV')); await waitFor(() => $('.ex-preview') && /Title,URL/.test($('.ex-preview').textContent));
   assert.match($('.ex-preview').textContent, /https:\/\/fav\.test\/x/);
   click(btn($('.sheet'), 'Export 2 links')); await waitFor(() => blob); assert.ok(blob.size > 20); await tick(250);
   assert.equal(prefs.get('export.format'), 'csv');

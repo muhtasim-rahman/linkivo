@@ -1,30 +1,30 @@
 /**
- * Linkivo — js/ui/pull-refresh.js  (v2.1.4)
- * Purpose: pull down at the top of a page to refresh it (phones). The browser's own pull-to-refresh is disabled app-wide
- *          (overscroll-behavior: none on html, contain on the page scroller; the browser's version reloads the whole app and replays the
- *          splash), so the app provides its own in-app refresh. It only runs on pages that ask for it (`enabled()`), has no setting.
- * Design (v2.1.4, redesigned after owner feedback):
- *   - the whole page follows the finger down with resistance, and a round indicator sits in the space that opens up
- *   - a ring around the indicator fills as you pull; past the threshold the arrow turns up ("release")
- *   - on release the page settles at a hold position and the ring SPINS RIGHT THERE (v2.1.3 sent the indicator back to the top first and
- *     only then spun it, which looked wrong)
- *   - when the refresh is done, page and indicator go back together
+ * Linkivo — js/ui/pull-refresh.js  (v2.2.1)
+ * Purpose: pull down at the top of a page to refresh it (phones). The browser's own pull-to-refresh is disabled app-wide (it reloads the whole app and
+ *          replays the splash), so the app provides its own in-app refresh. It only runs on pages that ask for it (`enabled()`), has no setting.
+ * Design (v2.2.1, owner request): the PAGE STAYS STILL. Only a round indicator slides down from above the screen, following the finger with resistance.
+ *   - while pulling, the refresh icon turns with the pull and a ring around it fills; past the threshold the ring completes and the indicator pops slightly
+ *   - on release it settles at its resting spot and the icon spins THERE; when the refresh is done it slides back up and fades out
+ *   (v2.1.4 moved the whole page down, which looked heavy and the icon barely moved.)
  * API: initPullRefresh({ scroller, onRefresh, enabled }) -> destroy()     pullDistance(dy, max) -> number (pure, tested)
- *      THRESHOLD, HOLD, MAX (pull units, pixels the page has moved down; the phone's top safe-area inset is added on top)
+ *      indicatorY(d, inset) -> px offset of the indicator (pure)      THRESHOLD, REST, MAX
  */
 import { h } from '../core/dom.js';
 import { icon } from './icons.js';
 import { layerCount } from '../core/nav-stack.js';
 import { log } from '../core/logger.js';
 
-export const THRESHOLD = 64, HOLD = 60, MAX = 112;
+export const THRESHOLD = 70, REST = 72, MAX = 130;
+const CHIP = 40, HIDDEN = -(CHIP + 12);
 /** Resistance curve: close to 1:1 at the start, then it stiffens and never passes `max`. */
 export const pullDistance = (dy, max = MAX) => (dy <= 0 ? 0 : Math.min(max, max * (1 - Math.exp(-dy / 150))));
+/** Vertical position of the indicator for a pull of `d` pixels: hidden above the screen at 0, below the status bar at the threshold. */
+export const indicatorY = (d, inset = 0) => HIDDEN + inset + d * 0.95;
 
 export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
+  const glyph = h('span', { class: 'ptr-glyph' }, icon('refresh', { size: 20 }));
   const ring = h('span', { class: 'ptr-ring' });
-  const arrow = h('span', { class: 'ptr-arrow' }, icon('arrow-left', { size: 18 })); // rotated by CSS: points down, then up
-  const chip = h('div', { class: 'ptr', 'aria-hidden': 'true' }, ring, arrow);
+  const chip = h('div', { class: 'ptr', 'aria-hidden': 'true' }, ring, glyph);
   document.body.appendChild(chip);
   let startY = 0, startX = 0, pull = 0, tracking = false, busy = false, inset = 0;
 
@@ -36,28 +36,27 @@ export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
     probe.remove();
     return px;
   }
-
-  // d = how far the page has moved down; the indicator lives below the inset, so progress counts from the inset
-  function render(d, { animate = false } = {}) {
-    const span = Math.max(1, THRESHOLD);
-    const p = Math.max(0, Math.min(1, (d - inset) / (span + inset * 0.2)));
-    scroller.style.transition = animate ? 'transform 260ms cubic-bezier(0.2, 0.9, 0.3, 1)' : 'none';
-    scroller.style.transform = d > 0 ? `translate3d(0, ${d}px, 0)` : '';
-    chip.style.setProperty('--p', p.toFixed(3));
-    chip.style.setProperty('--ty', `${inset}px`);
-    chip.classList.toggle('is-ready', p >= 1);
-    chip.classList.toggle('is-on', p > 0.02);
+  function place(y, { animate = false } = {}) {
+    chip.style.transition = animate ? 'transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1), opacity 200ms ease' : 'none';
+    chip.style.transform = `translate3d(0, ${y}px, 0)`;
   }
-  function reset() {
-    chip.classList.remove('is-loading', 'is-ready', 'is-on');
-    chip.classList.add('is-leaving');
-    render(0, { animate: true });
-    setTimeout(() => { if (!busy && !tracking) { scroller.style.transition = ''; scroller.style.transform = ''; chip.classList.remove('is-leaving'); chip.style.setProperty('--p', '0'); } }, 300);
+  function render(d) {
+    const p = Math.max(0, Math.min(1, d / THRESHOLD));
+    place(indicatorY(d, inset));
+    chip.style.setProperty('--p', p.toFixed(3));
+    chip.style.setProperty('--turn', `${(p * 300).toFixed(0)}deg`);
+    chip.classList.toggle('is-ready', p >= 1);
+    chip.classList.toggle('is-on', d > 2);
+  }
+  function leave() {
+    chip.classList.remove('is-loading', 'is-ready'); chip.classList.add('is-leaving');
+    place(HIDDEN + inset - 8, { animate: true });
+    setTimeout(() => { if (!busy && !tracking) { chip.classList.remove('is-on', 'is-leaving'); chip.style.setProperty('--p', '0'); place(HIDDEN, {}); } }, 320);
   }
 
   function onStart(e) {
     if (busy || !enabled() || layerCount() > 0 || e.touches.length !== 1 || scroller.scrollTop > 0) return;
-    if (e.target.closest && e.target.closest('.sheet, .pop, input, textarea, .set-nav')) return;
+    if (e.target.closest && e.target.closest('.sheet, .pop, input, textarea, .set-nav, .fade-x')) return;
     inset = measureInset();
     tracking = true; pull = 0; startY = e.touches[0].clientY; startX = e.touches[0].clientX;
     chip.classList.remove('is-leaving');
@@ -65,23 +64,25 @@ export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
   function onMove(e) {
     if (!tracking) return;
     const dy = e.touches[0].clientY - startY, dx = Math.abs(e.touches[0].clientX - startX);
-    if (dy <= 0 || dx > dy || scroller.scrollTop > 0) { tracking = false; reset(); return; }
-    pull = pullDistance(dy, MAX + inset);
+    if (dy <= 0 || dx > dy || scroller.scrollTop > 0) { tracking = false; leave(); return; }
+    pull = pullDistance(dy);
     render(pull);
   }
   async function onEnd() {
     if (!tracking) return;
     tracking = false;
-    if (pull - inset < THRESHOLD) { reset(); return; }
+    if (pull < THRESHOLD) { leave(); return; }
     busy = true;
     chip.classList.add('is-loading');
-    render(HOLD + inset, { animate: true }); // settle where the ring already is; the ring spins in place
+    chip.style.setProperty('--p', '1');
+    place(REST + inset - CHIP, { animate: true });          // settle at the resting spot; the icon spins right there
     try { await onRefresh(); } catch (e) { log.warn('pull-refresh', 'refresh failed', e); } // never an unhandled rejection from a touch handler
-    finally { busy = false; reset(); }
+    finally { busy = false; leave(); }
   }
+  place(HIDDEN);
   scroller.addEventListener('touchstart', onStart, { passive: true });
   scroller.addEventListener('touchmove', onMove, { passive: true });
   scroller.addEventListener('touchend', onEnd, { passive: true });
-  scroller.addEventListener('touchcancel', () => { if (tracking) { tracking = false; reset(); } }, { passive: true });
-  return () => { chip.remove(); scroller.style.transform = ''; scroller.style.transition = ''; };
+  scroller.addEventListener('touchcancel', () => { if (tracking) { tracking = false; leave(); } }, { passive: true });
+  return () => { chip.remove(); };
 }

@@ -10,6 +10,7 @@ import { initInstall } from './core/install.js';
 import { installInputGuards } from './core/input-guards.js';
 import { initTooltips } from './ui/tooltip.js';
 import { initImageMenu } from './ui/image-menu.js';
+import { initKeyboardSafe } from './core/keyboard-safe.js';
 
 installGlobalHandlers();
 applyAppearance();
@@ -20,6 +21,7 @@ initInstall();
 installInputGuards();
 initTooltips();
 initImageMenu();
+initKeyboardSafe();
 import('./boot.js').then((m) => m.boot()).catch((e) => {
   log.error('boot', 'the app could not start', e);
   const fail = document.getElementById('splash-fail');

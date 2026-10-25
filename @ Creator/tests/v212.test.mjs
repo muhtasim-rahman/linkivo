@@ -37,7 +37,7 @@ test('pullDistance is a damped, capped rubber band', async () => {
   assert.equal(pullDistance(-20), 0); assert.equal(pullDistance(0), 0);
   const a = pullDistance(60), b = pullDistance(120), c = pullDistance(180); // equal finger steps: each gains less
   assert.ok(a > 0 && a < b && b < c, 'keeps growing'); assert.ok(a > 60 * 0.6, 'close to the finger at the start'); assert.ok(c - b < b - a, 'resistance grows');
-  assert.ok(pullDistance(100000) <= 112 && pullDistance(100000) > 111, 'capped at MAX'); assert.equal(pullDistance(100000, 50) <= 50, true, 'custom max'); // v2.1.4 curve
+  assert.ok(pullDistance(100000) <= 130 && pullDistance(100000) > 129, 'capped at MAX (130 since v2.2.1)'); assert.equal(pullDistance(100000, 50) <= 50, true, 'custom max'); // v2.1.4 curve
 });
 
 test('settings scroll-spy picks the section at the top; the last one at the bottom', async () => {

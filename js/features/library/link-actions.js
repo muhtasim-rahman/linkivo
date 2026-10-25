@@ -6,6 +6,9 @@
  *      openLink(link)  copyText(text)  patchWithUndo(engine, ids, patchOf, message)  normalizeTags(text)
  */
 import { toast } from '../../ui/toast.js';
+import { h } from '../../core/dom.js';
+import { openSheet } from '../../ui/sheet.js';
+import { dedupeKey, hostOf, parseUrl } from '../../core/url-tools.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { plural } from '../../core/format.js';
 import { logActivity } from '../../core/activity.js';
@@ -54,11 +57,38 @@ export const bulk = {
     if (text == null) return 0;
     return patchWithUndo(engine, ids, () => ({ tags: normalizeTags(text) || null }), () => 'Tags saved.');
   },
+  // ! Unused since v2.2.1: replaced by editLink() (title and address in one sheet). Kept, not deleted; safe to remove in a later cleanup.
   async editTitle(engine, ids) {
     const l = engine.getLink(ids[0]); if (!l) return 0;
     const text = await openTextPrompt({ title: 'Edit title', label: 'Title', value: l.title || '', placeholder: l.host || 'Title', maxLength: 300, help: 'Your title is kept when metadata is fetched again.' });
     if (text == null) return 0;
     return patchWithUndo(engine, ids, () => (text ? { title: text, tEdit: true } : { title: null, tEdit: null }), () => 'Title saved.');
+  },
+  /** v2.2.1: one Edit sheet for the title AND the address (owner request). A changed address keeps the link's flags and points, updates the host,
+   *  and is refused when another saved link already has it. A title typed here is kept when titles are fetched again (tEdit). */
+  async editLink(engine, ids) {
+    const l = engine.getLink(ids[0]); if (!l) return 0;
+    return new Promise((resolve) => {
+      let done = 0;
+      const title = h('input', { class: 'input', value: l.title || '', placeholder: l.host || 'Title', maxlength: '300', 'aria-label': 'Title', autocomplete: 'off' });
+      const url = h('input', { class: 'input', value: l.url, maxlength: '2048', inputmode: 'url', 'aria-label': 'Address', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      const note = h('p', { class: 'help is-error', role: 'alert' });
+      const save = async () => {
+        const nextUrl = url.value.trim(); const parsed = parseUrl(nextUrl, { assumeHttps: true });
+        if (!parsed) { note.textContent = 'This does not look like a web address.'; url.focus(); return false; }
+        const href = parsed.toString(); const clash = dedupeKey(href) !== dedupeKey(l.url) && engine.findByUrl(href);
+        if (clash) { note.textContent = `Already saved in "${engine.getFolder(clash.fid)?.name || 'another folder'}".`; return false; }
+        const t = title.value.trim(); const patch = {};
+        if (href !== l.url) { patch.url = href; patch.host = hostOf(href); }
+        if (t !== (l.title || '')) { if (t) { patch.title = t; patch.tEdit = true; } else { patch.title = null; patch.tEdit = null; } }
+        if (Object.keys(patch).length) { done = await patchWithUndo(engine, ids, () => patch, () => 'Link saved.'); }
+        return true;
+      };
+      const sheet = openSheet({ title: 'Edit link', body: h('div', { class: 'form' }, h('label', { class: 'label', text: 'Title' }), title, h('label', { class: 'label', text: 'Address' }), url, note, h('p', { class: 'help', text: 'Your title is kept when titles are fetched again.' })),
+        actions: [{ label: 'Cancel', variant: 'quiet' }, { label: 'Save', variant: 'primary', onClick: async () => (await save()) }], onClose: () => resolve(done) });
+      for (const i of [title, url]) i.addEventListener('keydown', async (e) => { if (e.key === 'Enter') { e.preventDefault(); if (await save()) sheet.close(); } });
+      setTimeout(() => title.focus(), 60);
+    });
   },
   async like(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.like(l, { random: false, now: engine.now() }), (c) => `Points raised for ${plural(c, 'link')}.`); if (!n) toast(LIMIT_MSG); return n; },
   async dislike(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.dislike(l, { random: false, now: engine.now() }), (c) => `Points lowered for ${plural(c, 'link')}.`); if (!n) toast(LIMIT_MSG); return n; },
@@ -88,24 +118,26 @@ export const bulk = {
   }
 };
 
-export function linkMenuItems({ engine, link: l, onSelect = null }) {
-  const ids = [l.id];
+/** v2.2.1: shorter menu in four labelled groups. "Open in new tab" moved next to the three dots (and the row itself opens the link) and "Select" left the
+ *  menu because the folder page has a select button. Edit title and Edit tags became Edit link plus Tags. */
+export function linkMenuItems({ engine, link: l }) {
+  const ids = [l.id], now = engine.now();
   return [
-    { label: 'Open in new tab', icon: 'external', onSelect: () => openLink(l) },
-    { label: 'Copy URL', icon: 'copy', onSelect: () => copyText(l.url, 'Link copied.') },
-    { label: 'Edit title', icon: 'edit', onSelect: () => bulk.editTitle(engine, ids) },
+    { heading: 'Link' },
+    { label: 'Edit link', icon: 'edit', onSelect: () => bulk.editLink(engine, ids) },
     { label: l.tags ? 'Edit tags' : 'Add tags', icon: 'tag', onSelect: () => bulk.editTags(engine, ids) },
-    { separator: true },
+    { label: 'Copy URL', icon: 'copy', onSelect: () => copyText(l.url, 'Link copied.') },
+    { heading: 'Mark' },
     { label: l.pn ? 'Unpin' : 'Pin to top', icon: 'pin', onSelect: () => bulk.pin(engine, ids) },
     { label: l.fv ? 'Remove from favourites' : 'Add to favourites', icon: 'star', onSelect: () => bulk.favourite(engine, ids) },
     { label: l.rl ? 'Remove from read later' : 'Read later', icon: 'clock', onSelect: () => bulk.readLater(engine, ids) },
-    { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l, { random: false, now: engine.now() }), onSelect: () => bulk.like(engine, ids) },
-    { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l, { random: false, now: engine.now() }), onSelect: () => bulk.dislike(engine, ids) },
-    { separator: true },
+    { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l, { random: false, now }), onSelect: () => bulk.like(engine, ids) },
+    { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l, { random: false, now }), onSelect: () => bulk.dislike(engine, ids) },
+    { label: l.bl ? 'Unblock from Random' : 'Block from Random', icon: 'block', onSelect: () => bulk.block(engine, ids) },
+    { heading: 'Organize' },
     { label: 'Move to folder', icon: 'folder', onSelect: () => bulk.move(engine, ids) },
     { label: 'Copy to folder', icon: 'copy', onSelect: () => bulk.copy(engine, ids) },
-    { label: l.bl ? 'Unblock from Random' : 'Block from Random', icon: 'block', onSelect: () => bulk.block(engine, ids) },
-    onSelect && { label: 'Select', icon: 'check-square', onSelect },
+    { separator: true },
     { label: 'Delete', icon: 'trash', danger: true, onSelect: () => bulk.remove(engine, ids) }
-  ].filter(Boolean);
+  ];
 }

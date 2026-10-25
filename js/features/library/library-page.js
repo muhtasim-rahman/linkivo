@@ -2,11 +2,17 @@
  * Linkivo — js/features/library/library-page.js  (v2.2.0)
  * Purpose: /library — every folder as a grid or list: search, filter, sort, the virtual Favourites folder, pin, and the three-dot menu with
  *          rename, color and icon, import here, export, duplicate, merge and delete. Works the same for guests and accounts (the engine hides the difference).
+ * v2.2.1: flat minimal folder cards (css/pages/library.css), the shared dropdown for filter and sort, keyboard shortcuts (press ? to list them) and a refresh
+ *          icon on wide screens.
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
+import { createSelect } from '../../ui/select.js';
+import { refreshButton } from '../../ui/refresh-button.js';
+import { registerShortcuts } from '../../core/shortcuts.js';
+import { openShortcutHelp } from '../../ui/shortcut-help.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { skeletonList } from '../../ui/skeleton.js';
 import { toast } from '../../ui/toast.js';
@@ -41,21 +47,22 @@ export async function mount(container, ctx) {
 
   const sub = h('p', { class: 'page-sub lib-sub', 'aria-live': 'polite' });
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search folders', 'aria-label': 'Search folders', autocomplete: 'off' });
-  const filterBtn = h('button', { type: 'button', class: 'btn btn-sm', 'aria-haspopup': 'menu' });
-  const sortBtn = h('button', { type: 'button', class: 'btn btn-sm', 'aria-haspopup': 'menu' });
+  const pairs = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
+  const filterSel = createSelect({ options: pairs(FILTERS), value: st.filter, label: 'Filter folders', small: true, onChange: (v) => { st.filter = v; update(); } });
+  const sortSel = createSelect({ options: pairs(SORTS), value: st.sort, label: 'Sort folders', small: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.sort, v); update(); } });
   const viewBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Switch view' });
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add a link', 'data-tip': 'Add a link', on: { click: () => openQuickAdd({ engine, queue }) } }, icon('link', { size: 20 })), viewBtn,
+      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add a link', 'data-tip': 'Add a link', on: { click: () => openQuickAdd({ engine, queue }) } }, icon('link', { size: 20 })), viewBtn,
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
-    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), filterBtn, sortBtn), body);
+    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), filterSel, sortSel), body);
 
   function card(f, wide) {
     const virtual = f.id === FAV_ID;
     const more = virtual ? null : h('button', { type: 'button', class: 'btn-icon fcard-more', 'aria-label': `Actions for ${f.name}`, 'aria-haspopup': 'menu', on: { click: (e) => { const b = e.currentTarget; if (b._m?.isOpen()) return; b._m = openMenu(b, folderMenuItems({ engine, router, folder: engine.getFolder(f.id) || f, onSelectMode: () => router.navigate(`/folder/${f.id}?select=1`) })); } } }, icon('more', { size: 18 }));
     return h('div', { class: ['fcard-wrap', wide && 'is-row', virtual && 'is-virtual'], style: { '--fc': colorOf(f) } },
-      h('a', { class: 'fcard', href: `/folder/${f.id}` }, folderTile(f, wide ? 40 : 46),
+      h('a', { class: 'fcard', href: `/folder/${f.id}` }, folderTile(f, 36),
         h('span', { class: 'fcard-text' }, h('span', { class: 'fcard-name', text: f.name }), h('span', { class: 'fcard-meta', text: `${plural(f.lc || 0, 'link')}${!virtual && f.up ? '  \u00b7  ' + relativeTime(f.up) : ''}` })),
         f.pinned && h('span', { class: 'fcard-pin', 'aria-label': 'Pinned' }, icon('pin', { size: 14 }))), more);
   }
@@ -63,7 +70,6 @@ export async function mount(container, ctx) {
   function update() {
     const folders = engine.listFolders(), counts = engine.counts(), favCount = engine.listLinks().filter((l) => l.fv).length;
     sub.textContent = folders.length ? `${plural(counts.folders, 'folder')}  \u00b7  ${plural(counts.links, 'link')}` : '';
-    filterBtn.replaceChildren(icon('filter', { size: 16 }), h('span', { text: FILTERS[st.filter] })); sortBtn.replaceChildren(icon('sort', { size: 16 }), h('span', { text: SORTS[st.sort] }));
     viewBtn.replaceChildren(icon(st.view === 'grid' ? 'list' : 'grid', { size: 20 })); viewBtn.setAttribute('aria-label', st.view === 'grid' ? 'Switch to list' : 'Switch to grid');
     const syncing = engine.status().state === 'syncing';
     if (!folders.length && syncing) { body.replaceChildren(skeletonList(6)); return; }
@@ -72,17 +78,27 @@ export async function mount(container, ctx) {
     const showFav = (!st.q.trim() || 'favourites'.includes(st.q.trim().toLowerCase())) && st.filter === 'all';
     const wide = st.view === 'list';
     const nodes = [...(showFav ? [card(favouritesFolder(favCount), wide)] : []), ...list.map((f) => card(f, wide))];
-    if (!list.length && !showFav) { body.replaceChildren(emptyState({ art: 'search', title: 'No folder matches', text: 'Try another name or clear the filter.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.filter = 'all'; search.value = ''; update(); } }] })); return; }
+    if (!list.length && !showFav) { body.replaceChildren(emptyState({ art: 'search', title: 'No folder matches', text: 'Try another name or clear the filter.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.filter = 'all'; filterSel.setValue('all'); search.value = ''; update(); } }] })); return; }
     body.replaceChildren(h('div', { class: ['lib-grid', wide && 'is-list'], role: 'list' }, nodes.map((n) => { n.setAttribute('role', 'listitem'); return n; })));
   }
 
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
-  const choose = (btn, map, key, pk) => btn.addEventListener('click', () => { if (btn._m?.isOpen()) return; btn._m = openMenu(btn, Object.entries(map).map(([v, label]) => ({ label, icon: st[key] === v ? 'check' : null, onSelect: () => { st[key] = v; if (pk) setPref(pk, v); update(); } })), { align: 'start' }); });
-  choose(filterBtn, FILTERS, 'filter'); choose(sortBtn, SORTS, 'sort', LIB.sort);
-  viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.view, st.view); update(); });
+    viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.view, st.view); update(); });
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready' || ev.type === 'sync') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
+  // ---- keyboard (v2.2.1) ----
+  const keys = [
+    { keys: '/', desc: 'Search folders', run: () => search.focus() },
+    { keys: 'mod+f', desc: 'Search folders', run: () => search.focus() },
+    { keys: 'n', desc: 'New folder', run: () => openFolderForm({ engine }) },
+    { keys: 'a', desc: 'Add a link', run: () => openQuickAdd({ engine, queue }) },
+    { keys: 'i', desc: 'Import links', run: () => router.navigate('/import') },
+    { keys: 'v', desc: 'Switch grid and list', run: () => viewBtn.click() },
+    { keys: '?', desc: 'Show these shortcuts', run: () => openShortcutHelp(keys) }
+  ];
+  const offKeys = registerShortcuts(keys);
+  search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; st.q = ''; search.blur(); update(); } });
   update();
-  return () => { off(); cancelAnimationFrame(raf); clearTimeout(t); };
+  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

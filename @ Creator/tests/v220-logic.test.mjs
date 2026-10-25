@@ -121,7 +121,7 @@ async function sample() {
 }
 test('export: every format builds, csv is formula-safe with BOM and delimiter, txt template, markdown, bookmarks, opml, json', async () => {
   const { e } = await sample(); const { items } = collect(e, { type: 'all' });
-  assert.equal(items.length, 3); assert.equal(EXPORTS.length, 8);
+  assert.equal(items.length, 3); assert.equal(EXPORTS.length, 9); // v2.2.1: Web page and Print replaced the printable page
   for (const f of EXPORTS) { const o = defaultOptions(f); const blob = await f.build(items, o); assert.ok(blob.size > 0, f.id); assert.ok((await f.preview(items, o)).length > 0, f.id); }
   const csv = getFormat('csv'); const o = { ...defaultOptions(csv), delimiter: 'semicolon', fields: ['title', 'url'] };
   const blob = await csv.build(items, o); const head = new Uint8Array(await blob.arrayBuffer()).subarray(0, 3);

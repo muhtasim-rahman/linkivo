@@ -2,6 +2,8 @@
  * Linkivo — js/features/library/link-row.js  (v2.2.0)
  * Purpose: builds one link as a list row or as a grid card. Pure DOM, no listeners: the folder page uses event delegation on data-id and data-act,
  *          so windowed rows can be created and thrown away cheaply. Favicons load lazily and fall back to a letter tile.
+ * v2.2.1: grid cards keep the flags INSIDE the text block, the checkbox is its own column (it used to float over the title) and the three-dot button
+ *          has a fixed size so it can not leave the card. List rows get an "open in new tab" icon on mouse screens (it left the link menu).
  * API: createLinkRow(link, { card, selecting, selected, show: { url, points, added } }) -> Element      ROW_HEIGHT  CARD_HEIGHT  CARD_MIN_WIDTH
  */
 import { h } from '../../core/dom.js';
@@ -24,14 +26,16 @@ export function createLinkRow(l, { card = false, selecting = false, selected = f
     l.fv && h('span', { class: 'lflag is-fav', 'data-tip': 'Favourite' }, icon('star', { size: 14, label: 'Favourite' })),
     l.rl && h('span', { class: 'lflag', 'data-tip': 'Read later' }, icon('clock', { size: 14, label: 'Read later' })),
     l.bl && h('span', { class: 'lflag is-block', 'data-tip': 'Blocked from Random' }, icon('block', { size: 14, label: 'Blocked from Random' })));
+  const hasFlags = l.pn || l.fv || l.rl || l.bl;
   const meta = [show.url !== false ? l.host : '', show.added !== false ? relativeTime(l.ts) : '', show.points ? `${l.pt ?? 100} pts` : ''].filter(Boolean).join('  \u00b7  ');
   const tags = l.tags ? h('span', { class: 'ltags' }, l.tags.split(',').slice(0, 3).map((t) => h('span', { class: 'ltag', text: t }))) : null;
   return h('div', { class: `lrow${card ? ' is-card' : ''}${selected ? ' is-selected' : ''}${selecting ? ' is-selecting' : ''}`, role: 'listitem', 'data-id': l.id },
     selecting && h('button', { type: 'button', class: 'lcheck', 'data-act': 'toggle', role: 'checkbox', 'aria-checked': String(selected), 'aria-label': `Select ${linkTitle(l)}` }, icon('check', { size: 14 })),
     h('a', { class: 'lmain', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'data-act': 'open', title: l.url },
       favicon(l),
-      h('span', { class: 'ltext' }, h('span', { class: 'ltitle', text: linkTitle(l) }), h('span', { class: 'lsub', text: meta }), card && tags),
-      !card && flags),
-    card && flags,
-    h('button', { type: 'button', class: 'icon-btn lmore', 'data-act': 'menu', 'aria-label': `Actions for ${linkTitle(l)}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 })));
+      h('span', { class: 'ltext' }, h('span', { class: 'ltitle', text: linkTitle(l) }), h('span', { class: 'lsub', text: meta }), card && tags, card && hasFlags && flags),
+      !card && hasFlags && flags),
+    // mouse screens: a quick "open in new tab" button beside the menu (the row itself opens the link on touch screens)
+    !card && h('a', { class: 'icon-btn is-sm lopen', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'data-act': 'open', 'aria-label': `Open ${linkTitle(l)} in a new tab`, 'data-tip': 'Open in new tab' }, icon('external', { size: 16 })),
+    h('button', { type: 'button', class: 'icon-btn is-sm lmore', 'data-act': 'menu', 'aria-label': `Actions for ${linkTitle(l)}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 })));
 }

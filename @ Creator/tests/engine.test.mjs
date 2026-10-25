@@ -46,6 +46,7 @@ test('local engine: soft delete, restore, folder cascade, move, purge', async ()
   await e.moveLinks(added.slice(5).map((l) => l.id), b.id);
   assert.equal(e.getFolder(a.id).lc, 3); assert.equal(e.getFolder(b.id).lc, 5);
 
+  await new Promise((r) => setTimeout(r, 4));              // v2.2.1: the link deletions and the folder deletion must not share one millisecond stamp (the test was flaky)
   await e.deleteFolders([a.id]);                           // cascades to a's remaining live links, same time stamp
   assert.equal(e.listFolders().length, 1); assert.ok(e.getFolder(a.id).del);
   const delLinks = e.listLinks({ fid: a.id, deleted: true });

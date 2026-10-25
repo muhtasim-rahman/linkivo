@@ -11,7 +11,9 @@
 
 /* Phones: the category list becomes a horizontal bar that stays under the top edge while the page scrolls. It scrolls left and right, and
    the edges fade (class fade-x, js/ui/scroll-fade.js) where more categories are hidden. */
-.set-nav { --set-bar-h: 52px; position: sticky; top: 0; z-index: 5; display: flex; gap: var(--s2); align-items: center; height: var(--set-bar-h); margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.set-navwrap { --set-bar-h: 52px; position: sticky; top: 0; z-index: 5; height: var(--set-bar-h); margin-inline: calc(var(--pad) * -1); background: var(--bg); border-bottom: 1px solid var(--line); } /* v2.2.1: fully opaque (owner request) */
+.set-nav { display: flex; gap: var(--s2); align-items: center; height: 100%; padding-inline: var(--pad); overflow-x: auto; scrollbar-width: none; }
+.set-nav::-webkit-scrollbar { display: none; }
 .settings { --set-bar-h: 52px; }
 .set-nav.fade-x { -webkit-mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); }
 .set-nav-item { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 var(--s3); border-radius: 19px; border: 1px solid var(--line); background: var(--surface); color: var(--sub); font-weight: 560; font-size: var(--fs-sm); white-space: nowrap; transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
@@ -19,7 +21,8 @@
 @media (min-width: 900px) {
   .settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: var(--s8); align-items: start; --set-bar-h: 0px; }
   .set-body { margin-top: 0; }
-  .set-nav { display: grid; gap: 2px; position: sticky; top: var(--s6); align-content: start; height: auto; margin: 0; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
+  .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
+  .set-nav { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
   .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }
   .set-nav-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
   .set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
@@ -64,3 +67,16 @@
 .dev-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s2); }
 @media (min-width: 640px) { .dev-section { grid-template-columns: auto 1fr auto; } .dev-links { grid-column: auto; } }
 .about-links { display: grid; }
+
+/* ---- v2.2.1: tidier settings ---- */
+.set-sec-head { padding-inline: 2px; }
+.set-body .group { border-radius: var(--r-sheet); }
+.row.is-stack .seg { width: 100%; }
+.row.is-stack .seg button { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.row-end .sel-btn { min-width: 150px; }
+@media (max-width: 599px) {
+  .row { padding-block: var(--s3); }
+  .row-end .sel-btn { min-width: 0; }
+  .row:has(.sel-btn) { flex-wrap: wrap; } .row:has(.sel-btn) .row-end { width: 100%; } .row:has(.sel-btn) .sel-btn { width: 100%; }
+  .swatches { gap: var(--s3); }
+}

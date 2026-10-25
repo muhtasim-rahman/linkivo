@@ -9,11 +9,11 @@
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: lk-dot 1.2s ease-in-out infinite; }
 .dots i:nth-child(2) { animation-delay: 0.15s; } .dots i:nth-child(3) { animation-delay: 0.3s; }
 
-.empty { display: grid; gap: var(--s3); justify-items: start; padding: var(--s6) 0; max-width: 48ch; }
+.empty { display: grid; gap: var(--s3); justify-items: center; text-align: center; padding: var(--s8) var(--s3); max-width: 48ch; margin-inline: auto; } /* v2.2.1: the drawing, title, text and buttons are centered (owner request) */
 .empty-art { display: block; width: 112px; height: 86px; margin-bottom: var(--s2); background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-mask: var(--art) center / contain no-repeat; mask: var(--art) center / contain no-repeat; }
 .empty-title { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
 .empty-text { color: var(--sub); }
-.empty-actions { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s2); }
+.empty-actions { display: flex; gap: var(--s2); flex-wrap: wrap; justify-content: center; margin-top: var(--s2); }
 
 /* ring progress (the brand ring doing real work) */
 .ring { --p: 0; width: 32px; height: 32px; flex: none; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
@@ -57,17 +57,15 @@ a.row:hover, button.row:hover { background: var(--surface-2); text-decoration: n
 .banner-host:not(:empty) { padding: var(--s3) var(--pad) 0; flex: none; max-width: calc(var(--content-max) + var(--pad) * 2); width: 100%; margin-inline: auto; }
 .banner-host .ibanner { margin-bottom: 0; }
 
-/* Pull-to-refresh indicator (v2.1.4). Fixed under the status bar; the page itself moves down beneath it (js/ui/pull-refresh.js).
-   --p (0 to 1) = pull progress, --ty = the phone's top inset. The ring is a conic gradient, so it needs no SVG. */
-.ptr { --p: 0; --ty: 0px; position: fixed; left: 50%; top: calc(var(--ty) + 10px); width: 38px; height: 38px; margin-left: -19px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%;
-  background: var(--surface); box-shadow: var(--shadow-float), 0 0 0 1px var(--line); color: var(--accent-text); pointer-events: none;
-  opacity: 0; transform: scale(calc(0.55 + var(--p) * 0.45)); }
-.ptr.is-on { opacity: 1; }
-.ptr.is-leaving { opacity: 0; transform: scale(0.6); transition: opacity 200ms var(--ease), transform 220ms var(--ease); }
+/* Pull-to-refresh indicator (v2.2.1). Only this round chip moves (js/ui/pull-refresh.js sets its transform); the page stays still.
+   --p (0 to 1) = pull progress, --turn = how far the icon has turned. The ring is a conic gradient, so it needs no SVG. */
+.ptr { --p: 0; --turn: 0deg; position: fixed; left: 50%; top: 0; width: 40px; height: 40px; margin-left: -20px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%;
+  background: var(--surface); box-shadow: var(--shadow-float), 0 0 0 1px var(--line); color: var(--accent-text); pointer-events: none; opacity: 0; will-change: transform; }
+.ptr.is-on, .ptr.is-loading { opacity: 1; }
+.ptr.is-leaving { opacity: 0; }
 .ptr-ring { position: absolute; inset: 3px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 360deg), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
-.ptr-arrow { position: relative; display: grid; place-items: center; transform: rotate(-90deg); transition: transform 180ms var(--spring), opacity 140ms var(--ease); }
-.ptr.is-ready .ptr-arrow { transform: rotate(90deg); }
-/* loading: the arrow goes, a 30% arc turns in place */
-.ptr.is-loading { opacity: 1; transform: none; }
-.ptr.is-loading .ptr-arrow { opacity: 0; }
-.ptr.is-loading .ptr-ring { --p: 0.3; animation: lk-spin 760ms linear infinite; }
+.ptr-glyph { position: relative; display: grid; place-items: center; transform: rotate(var(--turn)); }
+.ptr.is-ready .ptr-glyph { color: var(--accent-strong); animation: ptr-pop 220ms var(--spring); }
+.ptr.is-loading .ptr-ring { --p: 0.3; animation: lk-spin 760ms linear infinite; opacity: 0.35; }
+.ptr.is-loading .ptr-glyph { animation: lk-spin 900ms linear infinite; }
+@keyframes ptr-pop { 0% { scale: 0.8; } 60% { scale: 1.18; } 100% { scale: 1; } }

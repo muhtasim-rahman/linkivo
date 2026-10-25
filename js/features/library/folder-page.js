@@ -3,11 +3,19 @@
  * Purpose: /folder/:fid — the links of one folder (or the virtual Favourites folder) with search, domain chips, sort, list/grid, windowed rendering
  *          for thousands of links, multi-select with a bulk bar (Undo on every change) and the folder header actions. A deleted or unknown
  *          folder shows a designed "not found" state.
+ * v2.2.1: the selection bar is a dock (always fixed at the bottom), the "Show" filter uses the shared dropdown, domain chips scroll like every row,
+ *          keyboard shortcuts (press ? to list them), a refresh icon on wide screens, and the link menu is the shorter grouped one.
  * Page module: mount(container, ctx) -> unmount;  refresh(ctx)
  */
 import { h, clear } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
+import { createSelect } from '../../ui/select.js';
+import { attachScrollRow } from '../../ui/scroll-row.js';
+import { mountDock } from '../../ui/dock.js';
+import { refreshButton } from '../../ui/refresh-button.js';
+import { registerShortcuts } from '../../core/shortcuts.js';
+import { openShortcutHelp } from '../../ui/shortcut-help.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { toast } from '../../ui/toast.js';
 import { createVirtualList } from '../../ui/virtual-list.js';
@@ -52,9 +60,12 @@ export async function mount(container, ctx) {
   // ---- static parts ---------------------------------------------------------------------------------------------------
   const title = h('h1', { class: 'page-title fp-name' }), sub = h('p', { class: 'fp-sub', 'aria-live': 'polite' }), tile = h('span', { class: 'fp-tile' });
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search in this folder', 'aria-label': 'Search in this folder', autocomplete: 'off' });
-  const scopeSel = h('select', { class: 'select fp-scope', 'aria-label': 'Show' }, Object.entries(SCOPES).map(([v, l]) => h('option', { value: v, text: l })));
-  const sortBtn = h('button', { type: 'button', class: 'btn btn-sm fp-sort', 'aria-haspopup': 'menu' });
+  const scopeSel = createSelect({ options: Object.entries(SCOPES).map(([value, label]) => ({ value, label })), value: 'all', label: 'Show', onChange: (v) => { st.scope = v; update(); } });
+  scopeSel.classList.add('fp-scope');
+  const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'folder', label: 'Sort links', small: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.fsort, v); update(); } });
+  sortBtn.classList.add('fp-sort');
   const chips = h('div', { class: 'fp-chips fade-x', role: 'toolbar', 'aria-label': 'Filter by domain' });
+  const chipRow = h('div', { class: 'fp-chiprow' }, chips);
   const info = h('div', { class: 'fp-info', role: 'status' });
   const viewBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Switch view' });
   const selBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Select links', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
@@ -66,8 +77,10 @@ export async function mount(container, ctx) {
     h('header', { class: 'fp-head' },
       h('button', { type: 'button', class: 'btn-icon fp-back', 'aria-label': 'Back to library', on: { click: () => router.navigate('/library') } }, icon('arrow-left', { size: 20 })),
       tile, h('div', { class: 'fp-titles' }, title, sub),
-      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), 'Add link'), viewBtn, selBtn, moreBtn)),
-    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chips, info, body, bar);
+      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), 'Add link'), refreshButton(() => refresh()), viewBtn, selBtn, moreBtn)),
+    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chipRow, info, body);
+  const removeDock = mountDock(bar);
+  const detachChips = attachScrollRow(chips);
 
   let vl = null;
   const paintHead = () => {
@@ -75,14 +88,13 @@ export async function mount(container, ctx) {
     title.textContent = f.name; tile.replaceChildren(folderTile(f, 44)); page.style.setProperty('--fc', colorOf(f));
     sub.textContent = plural(sourceLinks().length, 'link');
     viewBtn.replaceChildren(icon(st.view === 'grid' ? 'list' : 'grid', { size: 20 })); viewBtn.setAttribute('aria-label', st.view === 'grid' ? 'Switch to list' : 'Switch to grid');
-    sortBtn.replaceChildren(icon('sort', { size: 16 }), h('span', { text: SORTS[st.sort] || SORTS.folder }));
     selBtn.setAttribute('aria-pressed', String(st.selecting)); selBtn.classList.toggle('is-on', st.selecting);
   };
 
   function paintChips(all) {
     const counts = new Map(); for (const l of all) if (l.host) counts.set(l.host, (counts.get(l.host) || 0) + 1);
     const top = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 24);
-    chips.hidden = top.length < 2;
+    chipRow.hidden = top.length < 2;
     chips.replaceChildren(h('button', { type: 'button', class: ['chip', !st.domain && 'is-on'], 'aria-pressed': String(!st.domain), on: { click: () => { st.domain = null; update(); } } }, 'All'),
       ...top.map(([d, n]) => h('button', { type: 'button', class: ['chip', st.domain === d && 'is-on'], 'aria-pressed': String(st.domain === d), on: { click: () => { st.domain = st.domain === d ? null : d; update(); } } }, d, h('span', { class: 'chip-n', text: String(n) }))));
   }
@@ -106,7 +118,7 @@ export async function mount(container, ctx) {
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Done selecting', on: { click: () => setSelecting(false) } }, icon('close', { size: 20 })));
   }
 
-  function setSelecting(on) { st.selecting = on; if (!on) st.selected.clear(); page.classList.toggle('is-selecting', on); paintHead(); paintBar(); vl?.refresh(); }
+  function setSelecting(on) { st.selecting = on; if (!on) st.selected.clear(); page.classList.toggle('is-selecting', on); page.classList.toggle('has-dock', on); paintHead(); paintBar(); vl?.refresh(); }
 
   function update() {
     const f = folder(); if (!f || f.del) { router.navigate('/library', { replace: true }); return; }
@@ -119,7 +131,7 @@ export async function mount(container, ctx) {
       body.replaceChildren(emptyState({ art: isFav ? 'search' : 'import', title: isFav ? 'No favourites yet' : 'This folder is empty', text: isFav ? 'Open a link menu and choose "Add to favourites". Favourites from every folder appear here.' : 'Add a link, or import many at once from a file or pasted text.', actions: isFav ? [] : [{ label: 'Add link', primary: true, onClick: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Import links', onClick: () => import('../import/import-sheet.js').then((m) => m.openImport({ engine, router, fid })) }] }));
       return;
     }
-    if (!st.rows.length) { vl?.destroy(); vl = null; body.replaceChildren(emptyState({ art: 'search', title: 'No links match', text: 'Try another word, or clear the filters.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.domain = null; st.scope = 'all'; search.value = ''; scopeSel.value = 'all'; update(); } }] })); return; }
+    if (!st.rows.length) { vl?.destroy(); vl = null; body.replaceChildren(emptyState({ art: 'search', title: 'No links match', text: 'Try another word, or clear the filters.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.domain = null; st.scope = 'all'; search.value = ''; scopeSel.setValue('all'); update(); } }] })); return; }
     const card = st.view === 'grid';
     if (!vl) { clear(body); vl = createVirtualList({ scroller, rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0, gap: card ? 10 : 0, render: renderRow }); vl.el.setAttribute('role', 'list'); vl.el.setAttribute('aria-label', 'Links'); body.appendChild(vl.el); vl.setLayout({ rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0 }); }
     else vl.setLayout({ rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0 });
@@ -128,9 +140,7 @@ export async function mount(container, ctx) {
 
   // ---- events ---------------------------------------------------------------------------------------------------------
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
-  scopeSel.addEventListener('change', () => { st.scope = scopeSel.value; update(); });
-  sortBtn.addEventListener('click', () => { if (sortBtn._m?.isOpen()) return; sortBtn._m = openMenu(sortBtn, Object.entries(SORTS).map(([v, l]) => ({ label: l, icon: st.sort === v ? 'check' : null, onSelect: () => { st.sort = v; setPref(LIB.fsort, v); update(); } })), { align: 'start' }); });
-  viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); });
+    viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); });
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
   moreBtn.addEventListener('click', () => {
     if (moreBtn._m?.isOpen()) return;
@@ -142,7 +152,7 @@ export async function mount(container, ctx) {
   body.addEventListener('click', (e) => {
     const row = e.target.closest('.lrow'); if (!row) return;
     const id = row.dataset.id, act = e.target.closest('[data-act]')?.dataset.act, l = engine.getLink(id); if (!l) return;
-    if (act === 'menu') { openMenu(e.target.closest('[data-act]'), linkMenuItems({ engine, link: l, onSelect: () => { setSelecting(true); st.selected.add(id); paintBar(); vl?.refresh(); } })); return; }
+    if (act === 'menu') { const a = e.target.closest('[data-act]'); if (a._m?.isOpen()) return; a._m = openMenu(a, linkMenuItems({ engine, link: l })); return; }
     if (st.selecting && act !== 'menu') {
       e.preventDefault();
       const idx = st.rows.findIndex((x) => x.id === id);
@@ -151,12 +161,27 @@ export async function mount(container, ctx) {
       st.last = idx; paintBar(); vl?.refresh();
     }
   });
-  body.addEventListener('keydown', (e) => { if (e.key === 'Delete' && st.selecting && st.selected.size) bulk.remove(engine, [...st.selected], { ask: true }); });
+  // ---- keyboard (v2.2.1): never while typing in a field or while a popup is open (core/shortcuts.js decides) ----
+  const removeSelected = () => { if (st.selected.size) bulk.remove(engine, [...st.selected], { ask: true }).then((c) => { if (c) { st.selected.clear(); paintBar(); vl?.refresh(); } }); };
+  const keys = [
+    { keys: 'mod+a', desc: 'Select all links', run: () => { if (!st.selecting) setSelecting(true); st.selected = new Set(st.rows.map((l) => l.id)); paintBar(); vl?.refresh(); } },
+    { keys: 'escape', desc: 'Clear the selection, then leave select mode', run: () => { if (st.selected.size) { st.selected.clear(); paintBar(); vl?.refresh(); } else if (st.selecting) setSelecting(false); } },
+    { keys: 'delete', desc: 'Delete the selected links', run: removeSelected },
+    { keys: 'backspace', desc: 'Delete the selected links, or go back to the Library', run: () => { if (st.selecting && st.selected.size) removeSelected(); else if (!st.selecting) router.navigate('/library'); } },
+    { keys: '/', desc: 'Search in this folder', run: () => search.focus() },
+    { keys: 'mod+f', desc: 'Search in this folder', run: () => search.focus() },
+    { keys: 's', desc: 'Select links', run: () => setSelecting(!st.selecting) },
+    { keys: 'n', desc: 'Add a link', run: () => { if (!isFav) openQuickAdd({ engine, queue, fid }); } },
+    { keys: 'i', desc: 'Import links into this folder', run: () => { if (!isFav) import('../import/import-sheet.js').then((m) => m.openImport({ engine, router, fid })); } },
+    { keys: '?', desc: 'Show these shortcuts', run: () => openShortcutHelp(keys) }
+  ];
+  const offKeys = registerShortcuts(keys);
+  search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; st.q = ''; search.blur(); update(); } });
 
-  page.classList.toggle('is-selecting', st.selecting);
+  page.classList.toggle('is-selecting', st.selecting); page.classList.toggle('has-dock', st.selecting);
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
-  return () => { off(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  return () => { off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

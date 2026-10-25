@@ -4,6 +4,7 @@
  *          Link EXTRACTION from free text arrives in v2.2.0; this module only handles single URLs.
  * API: parseUrl(input, {assumeHttps}) -> URL|null   hostOf(input) -> "example.com"   dedupeKey(input) -> string|null
  *      cleanTracking(input) -> string   TRACKING_PARAMS
+ *      isIconUrl(input) -> boolean   (v2.2.1: favicon and app-icon files, which are not pages and should not be imported as links)
  */
 export const TRACKING_PARAMS = /^(utm_[a-z0-9_]*|fbclid|gclid|gbraid|wbraid|dclid|msclkid|mc_[a-z]+|igshid|yclid|twclid|ttclid|li_fat_id|_ga|_gl|_hsenc|_hsmi|vero_id|oly_[a-z_]+|mkt_tok|ref_src|ref_url)$/i;
 
@@ -45,4 +46,17 @@ export function dedupeKey(input) {
   const port = u.port && !['80', '443'].includes(u.port) ? ':' + u.port : '';
   const q = u.searchParams.toString();
   return `${host}${port}${path}${q ? '?' + q : ''}`;
+}
+
+/** v2.2.1: true for favicon / app-icon files and favicon services. Pages that merely mention "favicon" in a path segment name are NOT matched. */
+const ICON_FILE = /(^|\/)(favicon[\w.-]*|apple-touch-icon[\w.-]*|android-chrome-[\w.-]*|mstile-[\w.-]*|safari-pinned-tab|site-icon[\w.-]*)\.(ico|png|svg|jpe?g|gif|webp)$/i;
+const ICON_HOSTS = /^(icons\.duckduckgo\.com|favicon\.yandex\.net|favicon\.im|favicons?\.[a-z0-9.-]+|t[0-3]\.gstatic\.com)$/i;
+export function isIconUrl(input) {
+  const u = parseUrl(input, { assumeHttps: true });
+  if (!u) return false;
+  const path = u.pathname.toLowerCase(), host = u.hostname.toLowerCase();
+  if (path.endsWith('.ico') || ICON_FILE.test(path)) return true;
+  if (/(^|\.)google\.com$/.test(host) && path.startsWith('/s2/favicons')) return true;
+  if (/(^|\.)gstatic\.com$/.test(host) && path.startsWith('/favicon')) return true;
+  return ICON_HOSTS.test(host);
 }

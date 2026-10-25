@@ -4,7 +4,8 @@
  *          index (so it works offline and for guests), then builds the chosen format. The Recycle Bin is never exported; vault data is
  *          not part of v2.2.0 (the vault arrives in v2.5.0).
  * Scope: { type: 'all' | 'folders' | 'links' | 'favourites', fids?: string[], lids?: string[] }
- * API: collect(engine, scope) -> { folders, links, items, label }     runExport({ engine, scope, formatId, options, app, now }) -> Promise<{ blob, name, count, size, text? }>
+ * API: previewHtml({ engine, scope, formatId, options }) -> Promise<string|null>  (v2.2.1: the designed page formats show a live miniature)
+ *      collect(engine, scope) -> { folders, links, items, label }     runExport({ engine, scope, formatId, options, app, now }) -> Promise<{ blob, name, count, size, text? }>
  *      previewExport({ engine, scope, formatId, options }) -> Promise<string>      NATIVE_ID
  */
 import { buildBackup } from './native-format.js';
@@ -39,7 +40,7 @@ export async function runExport({ engine, scope, formatId, options = {}, app = '
   }
   const fmt = getFormat(formatId);
   if (!fmt) throw new Error('Unknown export format');
-  const blob = await fmt.build(items, options);
+  const blob = await fmt.build(items, options, { label, now });
   const out = { blob, name: fileName(options.fileName, label, fmt.ext, now), count: items.length, size: blob.size, folders: folders.length };
   if (fmt.text) out.text = () => blob.text();
   return out;
@@ -49,5 +50,13 @@ export async function previewExport({ engine, scope, formatId, options = {} }) {
   const { items, folders, links } = collect(engine, scope);
   if (formatId === NATIVE_ID) return `Linkivo backup\n${folders.length} folders, ${links.length} links\nFolders, points, flags and tags are kept. Import it again from the Import page.`;
   const fmt = getFormat(formatId);
-  return fmt ? fmt.preview(items, options) : '';
+  return fmt ? fmt.preview(items, options, { label: collect(engine, scope).label }) : '';
+}
+
+/** v2.2.1: the HTML of a small live preview for the designed page formats; null for every other format. */
+export async function previewHtml({ engine, scope, formatId, options = {} }) {
+  const fmt = getFormat(formatId);
+  if (!fmt || !fmt.previewHtml) return null;
+  const { items, label } = collect(engine, scope);
+  return fmt.previewHtml(items, options, { label });
 }

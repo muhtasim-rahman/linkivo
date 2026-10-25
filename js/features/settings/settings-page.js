@@ -4,6 +4,7 @@
  *          a fixed category list sits on the left and follows the scroll (scroll-spy); clicking an entry scrolls to its heading.
  *          Phones (v2.1.3): the same list is a sticky horizontal bar under the top edge: it scrolls left and right, fades at the edges and keeps
  *          the current category centred.
+ *          v2.2.1: the bar sits on a fully opaque background (a wrapper), the fade is drawn on the chips only, and the mouse can drag it.
  *          /settings/:section opens the page scrolled to that category (deep link).
  * Routes: /settings  and  /settings/:section
  * Page module: mount(container, ctx)
@@ -11,7 +12,7 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
-import { attachScrollFade } from '../../ui/scroll-fade.js';
+import { attachScrollRow } from '../../ui/scroll-row.js';
 import { SECTIONS, findSection, entriesFor } from './catalog.js';
 import { renderControl } from './controls.js';
 import { renderCustom } from './custom-rows.js';
@@ -82,9 +83,9 @@ export async function mount(container, ctx) {
 
   container.appendChild(h('div', { class: 'page is-wide' },
     h('header', { class: 'page-head is-stack' }, h('h1', { class: 'page-title', text: 'Settings' }), h('p', { class: 'page-sub', text: 'Make Linkivo look and behave the way you like.' })),
-    h('div', { class: 'settings' }, nav, body)));
+    h('div', { class: 'settings' }, h('div', { class: 'set-navwrap' }, nav), body)));
 
-  const detachFade = attachScrollFade(nav);
+  const detachFade = attachScrollRow(nav, { arrows: false });   // v2.2.1: edge fades, touch scroll and mouse drag
   spy();
   if (target) requestAnimationFrame(() => { scrollTo(target.id, false); spy(); });
   return () => { container.removeEventListener('scroll', onScroll); detachFade(); if (frame) cancelAnimationFrame(frame); };

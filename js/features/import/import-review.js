@@ -1,5 +1,7 @@
 /**
  * Linkivo — js/features/import/import-review.js  (v2.2.0)
+ * ! v2.2.1: openReview() below is UNUSED now (the review list lives inside import-form.js on the page). buildRows() and sortRows() are still used.
+ *   Kept on purpose (owner prefers pointing out unused code over silent deletion); safe to delete in a later cleanup together with its tests.
  * Purpose: the review step of the Import popup: every link that was found, with a checkbox, a duplicate badge (already in the library, or repeated
  *          in this list), search, sort and quick selections. Long lists are windowed. Pure row-building lives in buildRows() so it can be tested.
  * API: buildRows(links, engine) -> rows [{ i, url, title, host, key, dupOf, repeat, selected }]      sortRows(rows, mode)

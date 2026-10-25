@@ -28,7 +28,8 @@ export const LINK = {
 
 export const LINK_META = {
   required: [],
-  fields: { image: s(2048), video: s(2048), shot: s(2048), long: s(2000), og: s(2000), log: s(3000), frameable: b(), checkedAt: ts() }
+  // v2.2.1: the import's title fetch also keeps site, author, lang, published, canonical, icon, type and theme (the Worker returns them in the same pass, no extra time)
+  fields: { image: s(2048), video: s(2048), shot: s(2048), long: s(2000), og: s(2000), log: s(3000), site: s(120), author: s(120), lang: s(16), pub: s(40), canon: s(2048), icon: s(2048), type: s(16), theme: s(9), frameable: b(), checkedAt: ts() }
 };
 
 export const HISTORY = { required: ['lid', 'ts'], fields: { lid: s(40, 1), url: s(2048), title: s(300), host: s(253), fid: s(40), src: s(10), ts: ts() } };

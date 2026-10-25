@@ -1,0 +1,21 @@
+feat(v2.2.1): import page, new menu, export redesign, settings sync
+
+- Import is a full page: paste or files, found links listed inline with domain switches, favicon and icon-file filter, keep-screen-on, sticky action bar above the keyboard; other pages open the same form compact (wide screens) or go to /import (phones)
+- Settings > Import opens one small popup for Linkivo backups only; backups are recognised by a watermark inside the file, not by the file name
+- Link menu in four groups, open-in-new-tab icon beside the three dots, one Edit link sheet (title and address); grid cards no longer overlap the checkbox or lose the menu button
+- Flat folder cards; fixed-size icon buttons; selection and action bars are always fixed at the bottom (dock); keyboard shortcuts on Library, Folder and Recycle Bin (? lists them)
+- One shared dropdown everywhere; left-right rows share edge fades, touch, mouse drag and arrows; fields stay above the on-screen keyboard
+- Bottom sheets can be dragged down to close and are never full height; sheets can guard unsaved input
+- Pull-to-refresh redesigned (only the indicator moves); refresh icon on wide screens
+- Menu page rebuilt: profile, install card, quick settings, Recycle Bin card, one app info card, link buttons
+- Settings tidied: opaque category bar, dropdown for long choices; removed page transitions, show-added and review-before-import; added ignore favicons and keep-screen-on
+- Export popup redesigned (icon tiles, per-format options, live preview); new Web page and Print formats replace the printable page
+- Account settings sync to the Realtime Database with offline-safe retry
+- Extra page data from the title fetch is saved in the linkMeta tree (schema, rules and IndexedDB version 2)
+- Empty states centered; flaky engine test fixed; 20 new tests (174 total)
+
+Removed files:
+- none (js/features/import/import-review.js openReview, link-actions.js editTitle and formats/printable.js are unused and kept)
+
+Owner actions:
+- firebase deploy --only database (rules changed), then hosting

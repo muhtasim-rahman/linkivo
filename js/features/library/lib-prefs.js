@@ -12,8 +12,8 @@ export const LIB = {
   exportFormat: 'export.format', exportOpts: 'export.opts'
 };
 export const DEFAULTS = {
-  [LIB.view]: 'grid', [LIB.sort]: 'manual', [LIB.fview]: 'list', [LIB.fsort]: 'folder', [LIB.showUrl]: true, [LIB.showPoints]: false, [LIB.showAdded]: true,
-  [LIB.confirmDelete]: true, [LIB.clipboard]: false,
+  [LIB.view]: 'grid', [LIB.sort]: 'manual', [LIB.fview]: 'list', [LIB.fsort]: 'new', [LIB.showUrl]: true, [LIB.showPoints]: false, [LIB.showAdded]: true,
+  [LIB.confirmDelete]: true, [LIB.clipboard]: true,
   [LIB.impBare]: false, [LIB.impDedupe]: true, [LIB.impClean]: false, [LIB.impEnrich]: true, [LIB.impSpeed]: 'normal', [LIB.impReview]: true, [LIB.impIcons]: true, [LIB.keepAwake]: true,
   [LIB.exportFormat]: 'linkivo', [LIB.exportOpts]: {}
 };

@@ -13,10 +13,9 @@ import { maskEmail } from '../../../core/mask.js';
 import { loadCss } from '../../../core/css-loader.js';
 import { prefs } from '../../../core/local-prefs.js';
 import { KEYS } from '../../../core/appearance.js';
-import { getEngine } from '../../../core/app-data.js';
-import { plural } from '../../../core/format.js';
 import { avatar } from '../shell-parts.js';
 import { installCard } from '../install-card.js';
+import { binCard } from '../bin-card.js';
 import { appInfoCard, appLinkButtons } from '../../settings/about-card.js';
 import { findEntry } from '../../settings/catalog.js';
 import { renderControl } from '../../settings/controls.js';
@@ -39,8 +38,6 @@ export async function mount(container) {
   const s = getSession();
   const name = s.mode === 'guest' ? 'Guest' : s.user.name;
   const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
-  const e = getEngine(), c = e ? e.counts() : { deletedFolders: 0, deletedLinks: 0 };
-  const binN = c.deletedFolders + c.deletedLinks;
   const hide = findEntry('hideBar');
   container.appendChild(h('div', { class: 'page page-enter' },
     h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Menu' })),
@@ -50,8 +47,7 @@ export async function mount(container) {
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),
         h('div', { class: 'group' }, themeRow(), hide && renderControl(hide), linkRow('database', 'Import and export', 'Backup, restore, export formats', '/settings/data'), linkRow('settings', 'View all settings', null, '/settings'))),
-      h('a', { class: 'binrow', href: '/settings/recycle-bin' }, h('span', { class: 'binrow-ic' }, icon('trash', { size: 20 })),
-        h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Recycle Bin' }), h('span', { class: 'row-desc', text: binN ? `${plural(binN, 'item')}, kept for 15 days` : 'Empty. Deleted items wait here for 15 days.' })), h('span', { class: 'row-end' }, icon('chevron-right'))),
+      binCard(),
       appInfoCard(),
       appLinkButtons())));
 }

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!-- Linkivo password reset email, minimal and responsive. Owner's design (kept for v2.5.0, when the Worker sends branded emails). Not used by Firebase's default email service, which does not take custom HTML. %EMAIL% and %LINK% are placeholders to fill. Some old clients (Windows Outlook) do not draw SVG: host a PNG logo if needed. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Password Reset - Linkivo</title>
+<style>
+body{margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.email-container{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #eaeaea}
+.header{padding:30px;text-align:center;border-bottom:1px solid #eaeaea}.header img{max-height:45px}
+.content{padding:40px 30px;color:#333;line-height:1.6;font-size:16px}.content h2{margin-top:0;color:#111;font-size:22px;font-weight:600}
+.button-container{text-align:center;margin:35px 0}.button{display:inline-block;padding:14px 30px;background:#111;color:#fff!important;text-decoration:none;border-radius:6px;font-weight:600}
+.link-box{background:#f9f9f9;padding:15px;border-radius:6px;word-break:break-all;font-size:14px;margin-top:10px;border:1px solid #eee}.link-box a{color:#06c;text-decoration:none}
+.footer{background:#f9fafb;padding:30px;text-align:center;color:#6b7280;font-size:13px;border-top:1px solid #eaeaea}.footer .brand{font-weight:600;font-size:16px;color:#374151;margin-bottom:8px}.footer .desc{margin-bottom:15px;font-size:12px;line-height:1.5}.footer a{color:#6b7280;text-decoration:none}
+@media screen and (max-width:600px){.email-container{margin:0;border-radius:0;border-left:none;border-right:none}.content{padding:30px 20px}}
+</style></head>
+<body>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f5f7;padding:20px 0"><tr><td align="center">
+<div class="email-container">
+  <div class="header"><a href="https://linkivo.web.app/"><img src="https://linkivo.web.app/assets/brand/logo-tile.svg" alt="Linkivo"></a></div>
+  <div class="content">
+    <h2>Reset your password</h2><p>Hello,</p>
+    <p>We received a request to reset the password for the Linkivo account of <strong>%EMAIL%</strong>. If you made this request, click the button:</p>
+    <div class="button-container"><a href="%LINK%" class="button">Reset password</a></div>
+    <p style="font-size:14px;color:#666">Or copy this link into your browser:</p><div class="link-box"><a href="%LINK%">%LINK%</a></div>
+    <p style="margin-top:30px">If you did not ask to reset your password, you can ignore this email. Your password stays the same.</p>
+    <p style="margin-bottom:0">Thanks,<br>Your Linkivo team</p>
+  </div>
+  <div class="footer"><div class="brand">Linkivo</div>
+    <div class="desc">Manage your links. A fast, private link manager for people with hundreds or thousands of links. Free, with no ads.</div>
+    <div><a href="https://linkivo.web.app/">Website</a> &nbsp;&bull;&nbsp; <a href="mailto:mdturzo.dev@gmail.com">Contact</a></div>
+    <div style="margin-top:25px;font-size:12px;color:#9ca3af">Developed by <a href="https://mdturzo.web.app" style="color:#9ca3af;text-decoration:underline">Muhtasim Rahman</a></div>
+  </div>
+</div>
+</td></tr></table></body></html>

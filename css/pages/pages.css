@@ -48,3 +48,8 @@
 .alink:hover { background: var(--surface-2); text-decoration: none; } .alink svg { color: var(--accent-text); flex: none; }
 .alink:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 380px) { .infocard-feats { grid-template-columns: 1fr; } }
+
+/* v2.2.2: developer block of the app info card is TWO columns on every screen: photo | name, caption and the round links under them */
+.infocard-dev { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+.infocard-dev .dev-rounds { margin-top: var(--s2); }
+.alink.is-wide { grid-column: 1 / -1; }

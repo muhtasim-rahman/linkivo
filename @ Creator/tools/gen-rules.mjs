@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FOLDER, LINK, LINK_META, HISTORY, ACTIVITY, CLOCK_SKEW_MS } from '../../js/engine/schema.js';
+import { FOLDER, LINK, LINK_META, HISTORY, ACTIVITY, IMPORT_LOG, DEVICE, CLOCK_SKEW_MS } from '../../js/engine/schema.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -75,6 +75,9 @@ export function buildRules() {
             '.read': GATE,
             $key: { '.write': GATE, '.validate': "$key.matches(/^[a-zA-Z0-9_-]{1,40}$/) && ((newData.isString() && newData.val().length <= 200) || newData.isNumber() || newData.isBoolean())" }
           },
+          // v2.2.2: Recent imports follow the account (not part of the library, so the app lock gate is not needed) and the signed-in devices list.
+          importLog: { '.read': `${OWN} && ${ACTIVE}`, $iid: recordRule(IMPORT_LOG, `${OWN} && ${ACTIVE}`) },
+          devices: { '.read': `${OWN} && ${ACTIVE}`, $did: recordRule(DEVICE, `${OWN} && ${ACTIVE}`) },
           lockState: { '.read': `${OWN}` },                       // Worker writes it; readable before unlock so the lock screen can render
           vaultCount: { '.read': `${OWN} && ${ACTIVE}`, '.write': VAULT_GATE, '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000' },
           meta: { purgeEpoch: { '.read': GATE } }                  // Worker writes

@@ -30,7 +30,7 @@ export async function openImport({ engine, router = null, fid = null, files = []
     form.onStarted((j) => { job = j; sheet.close(); });
     const sheet = openSheet({ title: 'Import links', wide: true, body: h('div', { class: 'form imp-dialog' }, form.el, form.dockEl), actions: [],
       beforeClose: async () => !form.dirty() || confirmDialog({ title: 'Discard this import?', message: 'The pasted text and chosen files will be lost.', confirmLabel: 'Discard', danger: true }),
-      onClose: () => { form.destroy(); if (job) openJobDetails({ queue, engine, router, jobId: job.id }); resolve(job); } });
+      onClose: () => { form.destroy(); if (job) openJobDetails({ queue, engine, router, jobId: job.id, autoClose: true }); resolve(job); } });
     setTimeout(() => form.focus(), 80);
   });
 }

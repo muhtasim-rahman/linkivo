@@ -23,7 +23,7 @@ Step-by-step actions only the owner can do. Console menus change over time: if a
 ## C. Cloudflare Worker (first needed in v2.1.0)
 
 1. Cloudflare dashboard > Workers & Pages > `linkivo` > Edit code. Replace everything with the content of `@ Creator/worker/worker.js`, then Deploy.
-2. Open `https://linkivo.programs-turzo.workers.dev/health`: it must return the Worker version.
+2. Open `https://linkivo.programs-turzo.workers.dev/health`: it must return the Worker version (2.2.2 from v2.2.2; it adds `/whoami`, which gives the approximate place of a device in Account > Logged-in devices. Older Workers still work, the place is just empty).
 3. Redeploy the same way whenever a version changes `worker.js` (the AI tells you).
 4. Cron triggers (v2.5.0): Worker > Settings > Triggers > Cron Triggers: add what the AI specifies (for example `* * * * *` for background jobs and `0 3 * * *` for the daily purge).
 5. Free plan limits (CPU time, subrequests, requests per day) can return errors under heavy use. If you see Worker errors, tell the AI the message and the time.
@@ -57,3 +57,7 @@ Where: Cloudflare > Workers & Pages > `linkivo` > Settings > Variables and Secre
 4. **Hosting.** `firebase deploy --only hosting`, then hard-reload (Ctrl+Shift+R). The old v1 or v2.0 service worker is replaced by the new one; the page reloads once by itself.
 5. **First sign-in check.** If the app shows "Sign-in could not load", open the browser console (F12): the first red line tells whether the Firebase SDK URL (`https://www.gstatic.com/firebasejs/12.19.0/...`) failed. Send that line to the AI.
 6. **Metadata check.** Settings > Advanced > Metadata tester > Load 25 sample URLs > Run test. Send the AI the summary line and any URL that failed unexpectedly (the last two sample URLs, localhost and 169.254.169.254, MUST fail with "blocked target").
+
+## G. Email links on Linkivo's own page (optional, v2.2.2; skipped by the owner for now, the console refuses the address)
+Firebase Console > Authentication > Templates > (Password reset) > edit > Customize action URL: `https://linkivo.web.app/auth/action`. Save. The app already has the page.
+If the console answers "An error occurred updating action URL", check Authentication > Settings > Authorized domains (it must list `linkivo.web.app`) and type the address exactly; if it still fails, contact Firebase Support (the cause is not known). Nothing breaks without this step: Firebase's own page is used. A fully branded email arrives with v2.5.0 (Worker sends it).

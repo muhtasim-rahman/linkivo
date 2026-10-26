@@ -65,7 +65,7 @@ test('folder page: 1200 links render windowed, select all, delete with Undo, fil
 test('folder page: link menu, favourite toggles points, not found and Favourites folder', async () => {
   await router.navigate(`/folder/${A.id}`); await waitFor(() => $('.lrow'));
   click($('.lmore')); await waitFor(() => $('.pop')); const labels = $$('.pop-item').map((b) => b.textContent); assert.ok(['Copy URL', 'Edit link', 'Add tags', 'Move to folder', 'Copy to folder', 'Delete'].every((l) => labels.includes(l)), labels.join('|'));
-  assert.ok(!labels.includes('Open in new tab') && !labels.includes('Select') && !labels.includes('Edit title'), 'v2.2.1: those left the menu'); assert.equal($$('.pop-head').length, 3, 'grouped under headings'); assert.ok($('.lopen'), 'open in new tab is an icon beside the three dots');
+  assert.ok(!labels.includes('Open in new tab') && !labels.includes('Select') && !labels.includes('Edit title'), 'v2.2.1: those left the menu'); assert.equal($$('.pop-head').length, 0, 'v2.2.2: no group names'); assert.equal($$('.pop-sep').length, 3, 'groups are separated by plain rules'); assert.ok($('.lopen'), 'open in new tab is an icon beside the three dots');
   const id = $('.lrow').dataset.id; click($$('.pop-item').find((b) => b.textContent === 'Add to favourites')); await waitFor(() => engine.getLink(id).fv);
   assert.equal(engine.getLink(id).pt, 200); await waitFor(() => $$('.toast button').some((b) => b.textContent === 'Undo')); assert.ok($$('.toast button').some((b) => b.textContent === 'Undo'));
   await router.navigate('/folder/favourites'); await waitFor(() => $('.fp-name')); assert.equal($('.fp-name').textContent, 'Favourites'); assert.ok($$('.lrow').length >= 2);

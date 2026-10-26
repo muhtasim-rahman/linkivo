@@ -11,7 +11,8 @@ export function createFakeRtdb({ clockOffset = 0 } = {}) {
       if (fail) throw fail;
       log.push(updates);
       for (const [path, value] of Object.entries(updates)) {
-        if (value === null) delete tree[path]; else tree[path] = structuredClone(value);
+        if (value === null) { delete tree[path]; for (const k of Object.keys(tree)) if (k.startsWith(path + '/')) delete tree[k]; }   // like the real database: removing a node removes everything below it
+        else tree[path] = structuredClone(value);
         for (const s of subs) {
           if (!path.startsWith(s.prefix + '/')) continue;
           const key = path.slice(s.prefix.length + 1);
@@ -25,6 +26,12 @@ export function createFakeRtdb({ clockOffset = 0 } = {}) {
       const s = { prefix, since, onUpsert, onRemove };
       subs.push(s);
       return { unsubscribe: () => subs.splice(subs.indexOf(s), 1) };
+    },
+    async get(path) { // v2.2.2: value of a path, or an object of the children below it (like the real database)
+      if (path in tree) return structuredClone(tree[path]);
+      const out = {}; let any = false;
+      for (const [p, v] of Object.entries(tree)) if (p.startsWith(path + '/')) { const rest = p.slice(path.length + 1).split('/'); let o = out; rest.forEach((k, i) => { if (i === rest.length - 1) o[k] = structuredClone(v); else o = (o[k] ||= {}); }); any = true; }
+      return any ? out : null;
     },
     watchValue(path, cb) { const w = { path, cb }; watchers.push(w); if (path in tree) cb(tree[path]); return () => watchers.splice(watchers.indexOf(w), 1); },
     async shallowKeys(prefix) { return Object.keys(tree).filter((p) => p.startsWith(prefix + '/')).map((p) => p.slice(prefix.length + 1)); }

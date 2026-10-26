@@ -21,18 +21,17 @@
 .pop-item.is-check { padding-left: var(--s2); }
 .pop-head { padding: 10px var(--s3) 4px; font-size: var(--fs-xs); font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sub); }
 .pop-head:first-child { padding-top: 6px; }
-.pop { max-height: calc(100dvh - 16px); }
+.pop { max-height: min(420px, calc(100dvh - 16px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; -webkit-overflow-scrolling: touch; }   /* v2.2.2: long menus scroll inside themselves */
 
 /* ---- left-right rows (ui/scroll-row.js) ---- */
-.srow { position: relative; min-width: 0; }
-.srow .fade-x { cursor: grab; }
+.srow { display: flex; align-items: center; gap: 6px; min-width: 0; }   /* v2.2.2: arrows are columns beside the row, never over the chips */
+.srow > .fade-x { flex: 1 1 auto; min-width: 0; cursor: grab; }
 .fade-x.is-dragging { cursor: grabbing; scroll-behavior: auto; user-select: none; }
 .fade-x.is-dragging * { pointer-events: none; }
-.srow-btn { position: absolute; top: 50%; translate: 0 -50%; z-index: 2; display: none; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); box-shadow: var(--shadow-float); }
-.srow-btn.is-prev { left: 2px; } .srow-btn.is-next { right: 2px; }
+.srow-btn { display: none; flex: none; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); transition: opacity var(--t-micro) var(--ease); }
 .srow-btn:hover { background: var(--surface-2); }
-.srow-btn[hidden] { display: none !important; }
-@media (hover: hover) and (pointer: fine) { .srow:hover .srow-btn:not([hidden]) { display: grid; } }
+.srow-btn.is-off { opacity: 0.35; pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .srow.has-arrows .srow-btn { display: grid; } }
 
 /* ---- dock: a bar fixed at the bottom of the page area (ui/dock.js) ---- */
 :root { --dock-b: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + 6px); }
@@ -64,3 +63,8 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .only-wide { display: none !important; }
 @media (min-width: 900px) { .only-wide { display: inline-grid !important; } }
 .btn-icon.is-spinning > svg { animation: lk-spin 700ms linear infinite; }
+
+/* v2.2.2: on phones a dock follows the bottom bar: when the bar hides on scroll the dock drops to the bottom edge, and rises again with the bar */
+.dock { transition: bottom var(--t-large) var(--ease); }
+@media (max-width: 899px) { html.bar-hidden:not([data-kb='open']) { --dock-b: calc(var(--safe-b) + var(--s3)); } }
+@media (prefers-reduced-motion: reduce) { .dock { transition: none; } }

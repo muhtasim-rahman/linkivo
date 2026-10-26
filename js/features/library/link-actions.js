@@ -118,23 +118,22 @@ export const bulk = {
   }
 };
 
-/** v2.2.1: shorter menu in four labelled groups. "Open in new tab" moved next to the three dots (and the row itself opens the link) and "Select" left the
+/** v2.2.1: shorter menu in four groups (v2.2.2: separated by plain rules, no group names). "Open in new tab" moved next to the three dots (and the row itself opens the link) and "Select" left the
  *  menu because the folder page has a select button. Edit title and Edit tags became Edit link plus Tags. */
 export function linkMenuItems({ engine, link: l }) {
   const ids = [l.id], now = engine.now();
   return [
-    { heading: 'Link' },
     { label: 'Edit link', icon: 'edit', onSelect: () => bulk.editLink(engine, ids) },
     { label: l.tags ? 'Edit tags' : 'Add tags', icon: 'tag', onSelect: () => bulk.editTags(engine, ids) },
     { label: 'Copy URL', icon: 'copy', onSelect: () => copyText(l.url, 'Link copied.') },
-    { heading: 'Mark' },
+    { separator: true },
     { label: l.pn ? 'Unpin' : 'Pin to top', icon: 'pin', onSelect: () => bulk.pin(engine, ids) },
     { label: l.fv ? 'Remove from favourites' : 'Add to favourites', icon: 'star', onSelect: () => bulk.favourite(engine, ids) },
     { label: l.rl ? 'Remove from read later' : 'Read later', icon: 'clock', onSelect: () => bulk.readLater(engine, ids) },
     { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l, { random: false, now }), onSelect: () => bulk.like(engine, ids) },
     { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l, { random: false, now }), onSelect: () => bulk.dislike(engine, ids) },
     { label: l.bl ? 'Unblock from Random' : 'Block from Random', icon: 'block', onSelect: () => bulk.block(engine, ids) },
-    { heading: 'Organize' },
+    { separator: true },
     { label: 'Move to folder', icon: 'folder', onSelect: () => bulk.move(engine, ids) },
     { label: 'Copy to folder', icon: 'copy', onSelect: () => bulk.copy(engine, ids) },
     { separator: true },

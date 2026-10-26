@@ -15,7 +15,7 @@ test('splash: Full is the default and the Automatic option is gone', async () =>
   assert.equal(splash.default, 'full'); assert.deepEqual(splash.options.map((o) => o.value), ['full', 'short']);
   const ids = CATALOG.map((e) => e.id);
   for (const gone of ['pullRefresh', 'blockContextMenu']) assert.ok(!ids.includes(gone), gone + ' was removed');
-  assert.ok(ids.includes('developer') && ids.includes('metaBrowser'));
+  assert.ok(ids.includes('appDetails') && ids.includes('metaBrowser'));   // v2.2.2: About and Developer became one App details row
   assert.equal(new Set(ids).size, ids.length, 'ids stay unique');
 });
 

@@ -1,30 +1,30 @@
 /**
- * Linkivo — js/ui/pull-refresh.js  (v2.2.1)
+ * Linkivo — js/ui/pull-refresh.js  (v2.2.1, v2.2.2)
  * Purpose: pull down at the top of a page to refresh it (phones). The browser's own pull-to-refresh is disabled app-wide (it reloads the whole app and
  *          replays the splash), so the app provides its own in-app refresh. It only runs on pages that ask for it (`enabled()`), has no setting.
  * Design (v2.2.1, owner request): the PAGE STAYS STILL. Only a round indicator slides down from above the screen, following the finger with resistance.
  *   - while pulling, the refresh icon turns with the pull and a ring around it fills; past the threshold the ring completes and the indicator pops slightly
  *   - on release it settles at its resting spot and the icon spins THERE; when the refresh is done it slides back up and fades out
  *   (v2.1.4 moved the whole page down, which looked heavy and the icon barely moved.)
+ * v2.2.2 (owner request: more minimal): the indicator is a small 30px circle holding only a thin ring (no icon): the ring fills while pulling, grows a
+ *          little when ready, and becomes a short spinning arc while refreshing.
  * API: initPullRefresh({ scroller, onRefresh, enabled }) -> destroy()     pullDistance(dy, max) -> number (pure, tested)
  *      indicatorY(d, inset) -> px offset of the indicator (pure)      THRESHOLD, REST, MAX
  */
 import { h } from '../core/dom.js';
-import { icon } from './icons.js';
 import { layerCount } from '../core/nav-stack.js';
 import { log } from '../core/logger.js';
 
 export const THRESHOLD = 70, REST = 72, MAX = 130;
-const CHIP = 40, HIDDEN = -(CHIP + 12);
+const CHIP = 30, HIDDEN = -(CHIP + 12);
 /** Resistance curve: close to 1:1 at the start, then it stiffens and never passes `max`. */
 export const pullDistance = (dy, max = MAX) => (dy <= 0 ? 0 : Math.min(max, max * (1 - Math.exp(-dy / 150))));
 /** Vertical position of the indicator for a pull of `d` pixels: hidden above the screen at 0, below the status bar at the threshold. */
 export const indicatorY = (d, inset = 0) => HIDDEN + inset + d * 0.95;
 
 export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
-  const glyph = h('span', { class: 'ptr-glyph' }, icon('refresh', { size: 20 }));
   const ring = h('span', { class: 'ptr-ring' });
-  const chip = h('div', { class: 'ptr', 'aria-hidden': 'true' }, ring, glyph);
+  const chip = h('div', { class: 'ptr', 'aria-hidden': 'true' }, ring);
   document.body.appendChild(chip);
   let startY = 0, startX = 0, pull = 0, tracking = false, busy = false, inset = 0;
 
@@ -44,7 +44,6 @@ export function initPullRefresh({ scroller, onRefresh, enabled = () => true }) {
     const p = Math.max(0, Math.min(1, d / THRESHOLD));
     place(indicatorY(d, inset));
     chip.style.setProperty('--p', p.toFixed(3));
-    chip.style.setProperty('--turn', `${(p * 300).toFixed(0)}deg`);
     chip.classList.toggle('is-ready', p >= 1);
     chip.classList.toggle('is-on', d > 2);
   }

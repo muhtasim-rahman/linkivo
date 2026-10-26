@@ -97,3 +97,15 @@ Tell the AI the first row that does not match.
 ## v2.2.0 note
 
 No new database paths or fields. Import, restore, Recycle Bin and export use `/users/<uid>/folders`, `/users/<uid>/links` and the existing `jobs` and `settings` rules, so the matrix above is unchanged. The new link fields written by the points rules (`pt`, `pb`, `ls`, `ds`, `lo`, `oc`, `pw`) and by import (`imp`, `tEdit`) were already part of the schema and rules in v2.1.0; the automated rules test covers them.
+
+## v2.2.2 additions (paths `users/<uid>/importLog/*` and `users/<uid>/devices/*`; automated in `rules.test.mjs`-style cases inside `v222.test.mjs`)
+
+| # | Situation | Path | Op | Expected |
+|---|---|---|---|---|
+| M1 | owner, active account | `users/u1/importLog/j1` valid record (`ty`, `ts` required) | write | allow |
+| M2 | owner | same, without `ty` / with an unknown field | write | deny |
+| M3 | other user or anonymous | `users/u1/importLog`, `users/u1/devices` | read, write | deny |
+| M4 | owner | `users/u1/devices/d1` with `ts`, `seen` (name 60, `cc` 2 letters) | write | allow |
+| M5 | owner | same with `cc` of 3 letters, or without `ts` and `seen` | write | deny |
+| M6 | owner | `users/u1/devices/d1` with `rv` (a time) | write | allow (a sign-out request is written by another device of the same user) |
+Rules Playground (owner): simulate write at `/users/<uid>/devices/test1` with `{"ts":1,"seen":1,"name":"x"}` as you: allowed; as another uid: denied.

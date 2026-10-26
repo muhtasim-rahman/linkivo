@@ -80,3 +80,28 @@
   .row:has(.sel-btn) { flex-wrap: wrap; } .row:has(.sel-btn) .row-end { width: 100%; } .row:has(.sel-btn) .sel-btn { width: 100%; }
   .swatches { gap: var(--s3); }
 }
+
+/* v2.2.2: choices with 2 or 3 options (class is-dual): dropdown on the right from 600px up, full-width segmented control under the label on phones */
+.row.is-dual .set-seg { display: none; }
+@media (max-width: 599px) {
+  .row.is-dual { flex-wrap: wrap; } .row.is-dual .row-end { display: none; }
+  .row.is-dual .set-seg { display: flex; width: 100%; flex: 1 1 100%; } .row.is-dual .set-seg button { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ---- v2.2.2: top cards (wide screens only), Account section, devices, app details ---- */
+.set-top { display: none; }
+@media (min-width: 900px) { .set-top { display: grid; gap: var(--s3); margin-bottom: var(--s5); } }
+.acc-head { gap: var(--s3); } .acc-head .row-end { gap: var(--s2); } .acc-head .avatar { flex: none; }
+.acc-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--success, #16a34a); font-weight: 600; font-size: var(--fs-sm); }
+.acc-methods { display: inline-flex; gap: var(--s2); }
+.acc-method { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--sub); }
+.acc-method:not(:disabled):hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+.acc-method.is-linked { border-color: color-mix(in srgb, var(--success, #16a34a) 55%, var(--line)); color: var(--text); opacity: 1; } .acc-method:disabled { cursor: default; }
+.acc-tick { position: absolute; right: -5px; top: -5px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--success, #16a34a); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
+.acc-warn { display: flex; align-items: flex-start; gap: var(--s2); margin: 0; padding: var(--s2) var(--s4); font-size: var(--fs-sm); color: var(--text); background: color-mix(in srgb, var(--warning, #d97706) 14%, transparent); border-top: 1px solid var(--line); }
+.acc-warn svg { color: var(--warning, #d97706); flex: none; margin-top: 2px; }
+.acc-field { display: grid; gap: 6px; } .acc-label { font-size: var(--fs-sm); font-weight: 600; color: var(--sub); }
+.acc-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.dev-list { display: grid; gap: 0; } .dev-row { border-radius: var(--r-control); } .dev-note { margin: 0 0 var(--s2); }
+.app-links { margin-top: var(--s3); }
+@media (max-width: 599px) { .acc-head { flex-wrap: wrap; } .acc-head .row-end { width: 100%; justify-content: flex-end; } }

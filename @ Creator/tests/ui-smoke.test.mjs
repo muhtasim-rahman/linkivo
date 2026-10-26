@@ -221,9 +221,9 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
   await router.navigate('/settings/app'); await tick(5); const { default: appInfo } = await import('../../js/core/app-info.js'); // not hard-coded: it broke on every version bump
-  assert.ok(container.textContent.includes('Version ' + appInfo.version), 'About shows the current version');
+  assert.ok(container.textContent.includes('v' + appInfo.version), 'App details show the current version');
   // v2.1.3: the developer is its own section (not inside the About card); two settings are gone; the browser-fallback switch is new
-  assert.ok($('.dev-section') && !$('.about-card .dev-section'), 'developer section is separate'); assert.ok(!/Pull down to refresh|Block right-click/.test(container.textContent));
+  assert.ok($('.infocard-dev') && $('.alinks, .app-links'), 'v2.2.2: App details = info card with the developer badge, plus the link rows'); assert.ok(!/Pull down to refresh|Block right-click/.test(container.textContent));
   await router.navigate('/settings/account'); await tick(5); assert.match(container.textContent, /Guest mode/);
   router.destroy();
 });

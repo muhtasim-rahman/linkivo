@@ -1,0 +1,17 @@
+feat(v2.2.2): owner feedback round - account, devices, import history, selection bar, settings cleanup
+
+- Import: 10 s auto-close countdown on the job popup (not when opened from the list), Recent imports stored in the account with Remove and Clear all, same file added once (drop no longer reaches two handlers), arrow on Supported file types, small left-aligned link in the restore popup, mobile import button follows the bottom bar
+- Library and folder: link menu scrolls inside a capped box (a phone address bar no longer closes it), rule separators instead of group names, favicon turns into a check box on hover, icon-based selection bar for folder and Recycle Bin, tab title "<name> - Folder | Linkivo", equal control heights and one toolbar row on phones, select icon moved to the three-dot menu on phones, filter dropdown and Add link button removed, Sort is an icon on phones, pinned links always first, scroll-row arrows are columns beside the chips
+- Settings: choices as dropdown on tablets and PCs, Link order and Update rows removed, sidebar collapse under Behavior, clipboard suggestion card, Recycle Bin and install cards on top (wide screens), App section shows the app details card with link rows
+- Account: profile line with View profile and sync icon, verified tick, sign-in method icons (link Google or password to the same account), Change password with Forgot step, Change email, warning when Google and account emails differ, Logged-in devices with details and sign-out
+- New /auth/action page for Firebase email links (used once the console action URL can be set)
+- Menu: two-column developer block, Report a problem fifth and full width; pull-to-refresh is a thin ring
+- Rules: importLog and devices trees. Worker 2.2.2: GET /whoami. Tests: 190.
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database (rules changed), firebase deploy --only hosting
+- paste @ Creator/worker/worker.js into the Cloudflare Worker (device places)
+- none for the action URL: the owner skipped it (the console refuses it); the /auth/action page stays for later

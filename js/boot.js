@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/boot.js  (v2.1.3)
+ * Linkivo — js/boot.js  (v2.1.3, v2.2.2)
  * Purpose: the boot sequence (PLAN slice 4): install + update systems -> auth state -> account status -> data layer -> router and
  *          shell -> first page mounted -> splash ends. After that it keeps data, chrome and route guards in step with the session
  *          (login, logout, guest entry, deleted account).
@@ -20,6 +20,7 @@ import { initTaskChip } from './ui/task-chip.js';
 import { initPullRefresh } from './ui/pull-refresh.js';
 import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
+import { initClipboardSuggest } from './features/import/clipboard-suggest.js';
 
 export async function boot() {
   initUpdates({ isBusy: () => !!(getQueue() && getQueue().isBusy()), onAvailable: (v) => import('./features/shell/update-prompt.js').then((m) => m.showUpdatePrompt(v)) });
@@ -37,7 +38,7 @@ export async function boot() {
     }
     if (s.mode === 'none') checkedUid = null;
     if (s.mode === 'guest' || (s.mode === 'account' && s.status === 'active')) {
-      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) }) : null; }
+      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
       catch (e) { toast('Storage could not start. Reload the page.', { type: 'error' }); }
     } else { destroyChip?.(); destroyChip = null; await teardownData(); }
     lastKey = keyOf(getSession());
@@ -62,7 +63,11 @@ export async function boot() {
   initPullRefresh({ scroller: container, enabled: () => getSession().mode !== 'none' && router.canRefresh(),
     onRefresh: async () => { await Promise.all([router.refreshCurrent(), sleep(500)]); } });
 
-  router.on('mounted', () => { document.documentElement.dataset.boot = 'ok'; endSplash(); });
+  let stopClip = null;
+  router.on('mounted', () => {
+    document.documentElement.dataset.boot = 'ok'; endSplash();
+    if (!stopClip) stopClip = initClipboardSuggest({ router });   // v2.2.2: after the app has loaded, suggest importing links found in the clipboard (needs the browser's permission)
+  });
   window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));
   window.addEventListener('online', () => toast('Back online.'));
   await router.start();

@@ -33,6 +33,101 @@
             ".validate": "$key.matches(/^[a-zA-Z0-9_-]{1,40}$/) && ((newData.isString() && newData.val().length <= 200) || newData.isNumber() || newData.isBoolean())"
           }
         },
+        "importLog": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+          "$iid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.hasChildren(['ty', 'ts'])",
+            "ty": {
+              ".validate": "newData.isString() && newData.val().length <= 10 && newData.val().length >= 1"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "st": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "total": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "done": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "failed": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "saved": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "skipped": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "invalid": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "fid": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "imp": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "devices": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+          "$did": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.hasChildren(['ts', 'seen'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "br": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "os": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "kind": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "ip": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "city": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "reg": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "cc": {
+              ".validate": "newData.isString() && newData.val().length <= 2"
+            },
+            "tz": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "via": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "seen": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "rv": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
         "lockState": {
           ".read": "auth != null && auth.uid === $uid"
         },

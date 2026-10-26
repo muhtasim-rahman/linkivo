@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/ui/popover.js  (v2.2.1)
+ * Linkivo — js/ui/popover.js  (v2.2.1, v2.2.2)
  * Purpose: anchored menu (three-dot menus, dropdown lists). Keyboard: arrows, Home/End, Enter, Escape. Closes on outside click, scroll, resize
  *          and Back (registers a back layer).
  * API: openMenu(anchor, items, { align:'end'|'start', onClose, minWidth }) -> { close(), isOpen() }   (onClose runs once when the menu has closed)
@@ -8,6 +8,9 @@
  *   v2.2.1: an item with `checked` (true/false) is a choice row with a check mark on the left (role menuitemradio, or menuitemcheckbox when `multi`).
  *           `keepOpen: true` toggles `checked` in place and calls onSelect(checked) without closing (multi-select lists).
  *           No fixed max-height any more: the menu only limits itself to the screen, and flips above the anchor when there is more room there.
+ *   v2.2.2: a long menu (the link menu) is capped (css .pop max-height) and scrolls inside itself with a thin scrollbar. On phones the address bar
+ *           shrinks and grows while you scroll, which fires \"resize\": that used to close the menu in the middle of a scroll. Only a change of WIDTH
+ *           (rotation, window resize) closes it now; a change of height just places it again.
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
@@ -58,6 +61,8 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
     else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
     else if (e.key === 'Tab') close();
   }
+  const w0 = innerWidth;
+  function onResize() { if (innerWidth !== w0) close(); else place(); }
   function onScroll(e) { if (!menu.contains(e.target)) close(); }   // v2.2.1: scrolling INSIDE a long menu must not close it
   function close() {
     if (!menu.isConnected) return;
@@ -65,7 +70,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
     menu.remove();
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
-    removeEventListener('resize', close);
+    removeEventListener('resize', onResize);
     document.removeEventListener('scroll', onScroll, true);
     if (returnTo && returnTo.isConnected && returnTo.focus) returnTo.focus({ preventScroll: true });
     if (onClose) onClose();
@@ -74,7 +79,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
   place();
   document.addEventListener('pointerdown', onDown, true);
   document.addEventListener('keydown', onKey, true);
-  addEventListener('resize', close);
+  addEventListener('resize', onResize);
   document.addEventListener('scroll', onScroll, true);
   layer = pushLayer(() => { layer = null; close(); });
   (menu.querySelector('.pop-item[aria-checked="true"]') || menu.querySelector('.pop-item'))?.focus({ preventScroll: true });

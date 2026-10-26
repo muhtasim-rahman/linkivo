@@ -1,9 +1,10 @@
 /**
- * Linkivo — js/core/worker-client.js  (v2.1.3)
+ * Linkivo — js/core/worker-client.js  (v2.1.3, v2.2.2)
  * Purpose: the only code that talks to the Cloudflare Worker. Adds the Firebase ID token for account users (guests send none and
  *          get stricter server limits), applies timeouts, splits big lists into small batches (6) and retries with backoff.
  *          v2.1.3: results that are weak (Worker failed, or only a title guessed from the URL) are rescued on this device by
  *          core/meta-fallback.js, so every link ends with at least a title and a favicon. The Worker is still asked first.
+ * v2.2.2: whoami() -> { ip (hidden end), city, region, cc, tz } | null   (Worker route /whoami, used for the device list; null when the Worker is older or offline)
  * API: setTokenProvider(fn)   health() -> { ok, version, ms }   fetchMeta(urls, { onBatch }) -> Map<url, result>   META_BATCH
  *      EXPECTED_WORKER  isWorkerOutdated(version) -> boolean   (the app knows which Worker version it was built for)
  *   A meta result: { url, ok, title, desc, kw, lang, author, site, canonical, favicon, image, video, type, frameable,
@@ -24,6 +25,8 @@ const vnum = (v) => String(v || '0').split('.').map((n) => parseInt(n, 10) || 0)
 export function isWorkerOutdated(version) { const a = vnum(version), b = vnum(EXPECTED_WORKER); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); } return false; }
 let tokenProvider = async () => null;
 const limiter = createRateLimiter({ capacity: 40, perMs: 60000 });
+/** v2.2.2: where this device appears to be (approximate, from the Worker). Never throws: no answer is just null. */
+export async function whoami() { try { const { data } = await call('/whoami', { method: 'GET', timeout: 5000 }); return data && data.ok ? data : null; } catch { return null; } }
 export const setTokenProvider = (fn) => { tokenProvider = fn || (async () => null); };
 
 async function call(path, { method = 'POST', body, timeout = 15000 } = {}) {

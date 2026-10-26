@@ -1,12 +1,12 @@
 /**
- * Linkivo — js/features/import/import-form.js  (v2.2.1)
+ * Linkivo — js/features/import/import-form.js  (v2.2.1, v2.2.2)
  * Purpose: the whole Import experience as ONE form (owner request: no popup on the Import page). The /import page shows it full size; every other
  *          page opens the same form COMPACT in a dialog (phones go to /import instead, no bottom popup). It replaces the v2.2.0 popup and its
  *          separate review step: the links that were found are listed right under the input, with domain chips to switch whole sites off.
  *          Sections: input (paste text or files) -> options -> found links (domains, search, sort, ticks) -> action bar.
  *          A Linkivo backup file switches the form to the restore panel (import-backup.js).
  * API: createImportForm({ engine, router, fid?, files?, compact? }) -> { el, dockEl, addFiles(files), dirty(), reset(), destroy(), onStarted(fn) }
- *      collectWarnings({ files, found, pasteSize }) -> string[]      stashFiles(files) / takeFiles()  (files handed to the Import page from another page)
+ *      collectWarnings({ files, found, pasteSize }) -> string[]      fileSig(file) -> string      stashFiles(files) / takeFiles()  (files handed to the Import page from another page)      stashText(text) / takeText()  (v2.2.2: clipboard suggestion)
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -42,10 +42,17 @@ export function collectWarnings({ files, found, pasteSize }) {
   return w;
 }
 
+/** v2.2.2 pure: identifies a file for the duplicate check. Exported for tests. */
+export const fileSig = (f) => `${f.name}|${f.size}|${f.lastModified || 0}`;
+
 // Files dropped on another page cannot cross a page change by themselves: they wait here until the Import page mounts.
 let stash = [];
 export const stashFiles = (files) => { stash = [...files]; };
 export const takeFiles = () => { const f = stash; stash = []; return f; };
+// v2.2.2: text for the paste box that was found in the clipboard (see clipboard-suggest.js)
+let textStash = '';
+export const stashText = (t) => { textStash = String(t || ''); };
+export const takeText = () => { const t = textStash; textStash = ''; return t; };
 
 /** Pure: the rows with the user's own ticks kept (manual) and whole domains switched off (off). Exported for tests. */
 export function applySelection(rows, { manual, off }) {
@@ -57,7 +64,7 @@ export function domainCounts(rows, limit = 40) {
   return [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit);
 }
 
-export function createImportForm({ engine, router = null, fid = null, files = [], compact = false }) {
+export function createImportForm({ engine, router = null, fid = null, files = [], compact = false, text = '' }) {
   const queue = getQueue();
   const parser = createParseClient();
   const st = { tab: files.length ? 'files' : 'paste', text: '', paste: [], files: [], backup: null, q: '', sort: 'order', rows: [], view: [], manual: new Map(), off: new Set(), seq: 0,
@@ -74,7 +81,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
   const filesBox = h('div', { class: 'imp-files' });
   const fileInput = h('input', { type: 'file', multiple: true, hidden: true, accept: FORMATS.flatMap((f) => f.exts.map((e) => '.' + e)).join(','), on: { change: (e) => { addFiles(e.target.files); e.target.value = ''; } } });
   const drop = h('div', { class: 'imp-drop', tabindex: '0', role: 'button', 'aria-label': 'Choose files or drop them here', on: { click: () => fileInput.click(), keydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } },
-    dragover: (e) => { e.preventDefault(); drop.classList.add('is-over'); }, dragleave: () => drop.classList.remove('is-over'), drop: (e) => { e.preventDefault(); drop.classList.remove('is-over'); if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); } } },
+    dragover: (e) => { e.preventDefault(); drop.classList.add('is-over'); }, dragleave: () => drop.classList.remove('is-over'), drop: (e) => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('is-over'); if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); } } },   // v2.2.2: stopPropagation, the page also listens for drops and added every file a second time
     icon('upload', { size: 26 }), h('strong', { text: 'Choose files or drop them here' }), h('span', { class: 'help', text: 'Many files at once are fine.' }));
   const formats = h('details', { class: 'imp-formats' }, h('summary', { text: 'Supported file types' }),
     h('div', { class: 'imp-fmt' }, FORMATS.map((f) => h('span', { class: ['badge', f.popular && 'is-on'], text: f.label, title: f.exts.map((e) => '.' + e).join(' ') }))), h('p', { class: 'help', text: 'Old Excel (.xls) is not supported: save it as .xlsx first.' }));
@@ -176,8 +183,12 @@ export function createImportForm({ engine, router = null, fid = null, files = []
   ta.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); proceed(); } });
 
   async function addFiles(list) {
+    const again = [];
     for (const file of [...list]) {
-      const entry = { name: file.name, size: file.size, status: 'reading', links: [], warnings: [], format: '' }; st.files.push(entry); st.tab = 'files'; paintTabs(); paintFiles(); paintAction();
+      // v2.2.2: the same file (name, size, last change) is added once, however it arrives (drop, picker, page drop)
+      const sig = fileSig(file);
+      if (st.files.some((f) => f.sig === sig)) { again.push(file.name); continue; }
+      const entry = { name: file.name, size: file.size, sig, status: 'reading', links: [], warnings: [], format: '' }; st.files.push(entry); st.tab = 'files'; paintTabs(); paintFiles(); paintAction();
       try {
         // v2.2.1: a backup is recognised by its CONTENT (the watermark), never by the file name
         if (file.size < 200e6) {
@@ -194,6 +205,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
       if (destroyed) return;
       paintFiles(); rebuild();
     }
+    if (again.length) toast(again.length === 1 ? `${again[0]} is already added.` : `${again.length} files were already added.`);
   }
 
   // ---- start ------------------------------------------------------------------------------------------------------
@@ -228,6 +240,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
     h('section', { class: 'imp-card imp-input', 'aria-label': 'Links to import' }, tabs, paneP, paneF, backup.el, warnBox), optsBox, foundBox);
   paintTabs(); paintOpts(); paintFiles(); paintCount(); paintAction();
   if (files.length) addFiles(files);
+  if (text) { ta.value = st.text = text; reparse(); }   // v2.2.2: text handed over by the clipboard suggestion
   return {
     el, dockEl, addFiles, dirty, reset,
     onStarted(fn) { startedCb = fn; },

@@ -1,8 +1,10 @@
 /**
- * Linkivo Worker  (v2.1.3)  -  one Cloudflare Worker, free plan, paste this whole file into Workers & Pages > linkivo > Edit code.
+ * Linkivo Worker  (v2.2.2)  -  one Cloudflare Worker, free plan, paste this whole file into Workers & Pages > linkivo > Edit code.
  *
  * Routes in this version
  *   GET  /health   status and version
+ *   GET  /whoami   (v2.2.2) where this request comes from, for the "Logged-in devices" list: approximate city, region and country from Cloudflare's own
+ *                  request data (no outside service), the time zone and the IP address with its last part hidden. Nothing is stored by the Worker.
  *   POST /meta     batch metadata. Body: { "urls": ["https://..."], "shot": false }. The app sends 6 URLs per call (accounts may send 25, guests 10).
  *
  * What /meta does for each URL. Every attempt is logged; the first engine that returns a REAL title wins, weaker answers are kept and
@@ -22,9 +24,10 @@
  * Secrets: none are needed in v2.1.2. PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT arrive with v2.5.0 and live only in Cloudflare.
  * Nothing in this file is secret; the Firebase project id below is public.
  */
+// 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.1.3';
+const VERSION = '2.2.2';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -625,6 +628,23 @@ async function handleMeta(request, ctx, cors) {
   return json({ ok: true, version: VERSION, results, budget: { used: ctx.budget.used, max: ctx.budget.max } }, 200, cors);
 }
 
+/** v2.2.2: hides the end of an address: 103.45.67.89 -> 103.45.*.*   2001:db8:85a3:1::7 -> 2001:db8:85a3:*:*. The owner can ask for the full address later. */
+function maskIp(ip) {
+  const s = String(ip || '').trim();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(s)) return s.split('.').slice(0, 2).join('.') + '.*.*';
+  if (s.includes(':')) return s.split(':').slice(0, 3).join(':') + ':*:*';
+  return '';
+}
+/** v2.2.2: GET /whoami. Reads request.cf (city, region, country, timezone: present on every plan; absent in the dashboard editor, then the fields are empty). */
+function handleWhoami(request, cors) {
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const a = takeTokens('ip:' + (ip || 'unknown'), 1, { capacity: 30, perMs: 60000 });
+  if (!a.ok) return json({ ok: false, error: 'rate_limited' }, 429, { ...cors, 'Retry-After': String(a.retryAfter || 1) });
+  const cf = request.cf || {};
+  const t = (v, n) => String(v || '').slice(0, n);
+  return json({ ok: true, ip: maskIp(ip), city: t(cf.city, 60), region: t(cf.region, 60), cc: t(cf.country, 2).toUpperCase(), tz: t(cf.timezone, 60) }, 200, cors);
+}
+
 async function route(request, env, deps = {}) {
   const origin = request.headers.get('origin');
   const cors = corsHeaders(origin);
@@ -635,7 +655,8 @@ async function route(request, env, deps = {}) {
   try {
     if (url.pathname === '/health' && request.method === 'GET') return json({ ok: true, version: VERSION, time: nowMs(), project: CONFIG.firebaseProject }, 200, cors);
     if (url.pathname === '/meta' && request.method === 'POST') return await handleMeta(request, ctx, cors);
-    if (url.pathname === '/health' || url.pathname === '/meta') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
+    if (url.pathname === '/whoami' && request.method === 'GET') return handleWhoami(request, cors);
+    if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
     return json({ ok: false, error: 'not_found' }, 404, cors);
   } catch (e) {
     return json({ ok: false, error: 'internal' }, 500, cors);
@@ -645,5 +666,5 @@ async function route(request, env, deps = {}) {
 export default {
   fetch: (request, env) => route(request, env),
   // Pure functions exposed for the unit tests in @ Creator/tests/worker.test.mjs. Harmless in production.
-  __test: { CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
+  __test: { maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
 };

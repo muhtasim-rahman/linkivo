@@ -29,7 +29,7 @@ export async function openRestorePopup({ engine, router = null, file = null }) {
         drop: (e) => { e.preventDefault(); drop.classList.remove('is-over'); read(e.dataTransfer?.files?.[0]); } } },
       icon('shield', { size: 28 }), h('strong', { text: 'Choose a Linkivo backup' }), h('span', { class: 'help', text: 'or drop the file here' }));
     const go = h('button', { type: 'button', class: 'btn btn-primary', disabled: true, text: 'Restore backup', on: { click: start } });
-    const other = h('a', { class: 'link-btn', href: '/import', text: 'Import links from other files', on: { click: (e) => { if (router) { e.preventDefault(); sheet.close(); router.navigate('/import'); } } } });
+    const other = h('a', { class: 'link-btn is-sm imp-other', href: '/import', text: 'Import links from other files', on: { click: (e) => { if (router) { e.preventDefault(); sheet.close(); router.navigate('/import'); } } } });
 
     async function read(f) {
       if (!f) return;
@@ -47,8 +47,8 @@ export async function openRestorePopup({ engine, router = null, file = null }) {
       try { job = await runRestore({ engine, queue, backup, state: panel.state }); if (job) sheet.close(); } catch { toast('The restore could not start.', { type: 'error' }); }
       busy = false; go.disabled = !backup;
     }
-    const sheet = openSheet({ title: 'Restore a Linkivo backup', body: h('div', { class: 'form' }, drop, input, panel.el, note, h('div', { class: 'imp-foot' }, other, go)), actions: [],
-      onClose: () => { if (job) openJobDetails({ queue, engine, router, jobId: job.id }); resolve(job); } });
+    const sheet = openSheet({ title: 'Restore a Linkivo backup', body: h('div', { class: 'form' }, drop, input, panel.el, note, other, h('div', { class: 'imp-foot' }, go)), actions: [],   // v2.2.2: the link is small and left aligned, the button stays alone in the footer
+      onClose: () => { if (job) openJobDetails({ queue, engine, router, jobId: job.id, autoClose: true }); resolve(job); } });
     if (file) read(file);
   });
 }

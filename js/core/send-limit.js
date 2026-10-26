@@ -13,7 +13,8 @@ import { prefs } from './local-prefs.js';
 
 export const RULES = Object.freeze({
   reset: { sameMs: 5 * 60 * 1000, perHour: 5 },
-  verify: { sameMs: 2 * 60 * 1000, perHour: 6 }
+  verify: { sameMs: 2 * 60 * 1000, perHour: 6 },
+  emailchange: { sameMs: 2 * 60 * 1000, perHour: 4 }   // v2.2.2: the link that confirms a new account email
 });
 const HOUR = 3600 * 1000;
 

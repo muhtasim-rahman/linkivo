@@ -50,6 +50,8 @@ users/{uid}/meta/purgeEpoch  number                     (bumped on hard purge so
 
 folders/{uid}/{fid}      { name, color, icon, order, pinned, lc, ts, up, del? }
 links/{uid}/{lid}        { url, host, title, desc, kw, fid, pt, oc, lo, ls, ds, pw, pb, pn, fv, bl, rl, dd, tags, imp, ts, up, del? }
+users/{uid}/importLog/{jobId}  { ty, title, st, total, done, failed, saved, skipped, invalid, fid, imp, ts }   Recent imports, newest 50 (v2.2.2)
+users/{uid}/devices/{deviceId}  { name, br, os, kind, via, ip (end hidden), city, reg, cc, tz, ts, seen, rv }   signed-in devices; rv = sign-out asked by another device (v2.2.2)
 linkMeta/{uid}/{lid}     { image, video, shot, long, og, log, frameable, checkedAt }   heavy, loaded on demand
 
 vault/{uid}/folders/{fid}   same shape as folders

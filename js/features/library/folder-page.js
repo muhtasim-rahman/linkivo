@@ -1,10 +1,13 @@
 /**
- * Linkivo — js/features/library/folder-page.js  (v2.2.0)
+ * Linkivo — js/features/library/folder-page.js  (v2.2.0, v2.2.1, v2.2.2)
  * Purpose: /folder/:fid — the links of one folder (or the virtual Favourites folder) with search, domain chips, sort, list/grid, windowed rendering
  *          for thousands of links, multi-select with a bulk bar (Undo on every change) and the folder header actions. A deleted or unknown
  *          folder shows a designed "not found" state.
  * v2.2.1: the selection bar is a dock (always fixed at the bottom), the "Show" filter uses the shared dropdown, domain chips scroll like every row,
  *          keyboard shortcuts (press ? to list them), a refresh icon on wide screens, and the link menu is the shorter grouped one.
+ * v2.2.2: tab title "<name> - Folder | Linkivo"; the Show and Sort controls have the same height, on phones they share ONE row (Sort is an icon);
+ *          the select icon of the header lives in the three-dot menu on phones; the selection bar is icon based (ui/sel-bar.js); a link row's favicon
+ *          becomes a checkbox on hover (css) and a click on it starts selecting.
  * Page module: mount(container, ctx) -> unmount;  refresh(ctx)
  */
 import { h, clear } from '../../core/dom.js';
@@ -13,6 +16,7 @@ import { openMenu } from '../../ui/popover.js';
 import { createSelect } from '../../ui/select.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
 import { mountDock } from '../../ui/dock.js';
+import { selBarContent } from '../../ui/sel-bar.js';
 import { refreshButton } from '../../ui/refresh-button.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { openShortcutHelp } from '../../ui/shortcut-help.js';
@@ -30,13 +34,14 @@ import { folderMenuItems } from './folder-actions.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
 
-const SORTS = { folder: 'Pinned, then newest', new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high' };
+const SORTS = { new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high' };
 const SCOPES = { all: 'All links', fv: 'Favourites', rl: 'Read later', pn: 'Pinned', bl: 'Blocked' };
 const text = (l) => `${l.title || ''} ${l.url} ${l.host || ''} ${l.desc || ''} ${l.tags || ''} ${l.kw || ''}`.toLowerCase();
 
 export function sortLinks(list, sort) {
-  const by = { folder: (a, b) => (b.pn ? 1 : 0) - (a.pn ? 1 : 0) || b.ts - a.ts, new: (a, b) => b.ts - a.ts, old: (a, b) => a.ts - b.ts, title: (a, b) => (a.title || a.host || a.url).localeCompare(b.title || b.host || b.url), domain: (a, b) => (a.host || '').localeCompare(b.host || '') || b.ts - a.ts, 'pts-hi': (a, b) => (b.pt ?? 100) - (a.pt ?? 100), 'pts-lo': (a, b) => (a.pt ?? 100) - (b.pt ?? 100) }[sort] || ((a, b) => b.ts - a.ts);
-  return [...list].sort(by);
+  // v2.2.2 (owner): pinned links are ALWAYS first, whatever the sort; the old 'folder' value (Pinned, then newest) now means plain newest
+  const by = { folder: (a, b) => b.ts - a.ts, new: (a, b) => b.ts - a.ts, old: (a, b) => a.ts - b.ts, title: (a, b) => (a.title || a.host || a.url).localeCompare(b.title || b.host || b.url), domain: (a, b) => (a.host || '').localeCompare(b.host || '') || b.ts - a.ts, 'pts-hi': (a, b) => (b.pt ?? 100) - (a.pt ?? 100), 'pts-lo': (a, b) => (a.pt ?? 100) - (b.pt ?? 100) }[sort] || ((a, b) => b.ts - a.ts);
+  return [...list].sort((a, b) => (b.pn ? 1 : 0) - (a.pn ? 1 : 0) || by(a, b));
 }
 export function filterLinks(list, { q = '', domain = null, scope = 'all' }) {
   const needle = q.trim().toLowerCase();
@@ -49,7 +54,7 @@ export async function mount(container, ctx) {
   const engine = getEngine(), queue = getQueue(), router = ctx.router;
   const fid = ctx.params.fid, isFav = fid === FAV_ID;
   const scroller = document.getElementById('page-root') || document.scrollingElement;
-  const st = { q: '', domain: null, scope: 'all', sort: pref(LIB.fsort), view: pref(LIB.fview), selecting: ctx.query.select === '1', selected: new Set(), last: -1, rows: [] };
+  const st = { q: '', domain: null, scope: 'all', sort: pref(LIB.fsort) === 'folder' ? 'new' : pref(LIB.fsort), view: pref(LIB.fview), selecting: ctx.query.select === '1', selected: new Set(), last: -1, rows: [] };
   const sourceLinks = () => (isFav ? engine.listLinks().filter((l) => l.fv) : engine.listLinks({ fid }));
   const folder = () => (isFav ? favouritesFolder(sourceLinks().length) : engine.getFolder(fid));
   const page = h('div', { class: 'page fp page-enter' });
@@ -62,13 +67,13 @@ export async function mount(container, ctx) {
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search in this folder', 'aria-label': 'Search in this folder', autocomplete: 'off' });
   const scopeSel = createSelect({ options: Object.entries(SCOPES).map(([value, label]) => ({ value, label })), value: 'all', label: 'Show', onChange: (v) => { st.scope = v; update(); } });
   scopeSel.classList.add('fp-scope');
-  const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'folder', label: 'Sort links', small: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.fsort, v); update(); } });
+  const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'new', label: 'Sort links', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.fsort, v); update(); } });
   sortBtn.classList.add('fp-sort');
   const chips = h('div', { class: 'fp-chips fade-x', role: 'toolbar', 'aria-label': 'Filter by domain' });
   const chipRow = h('div', { class: 'fp-chiprow' }, chips);
   const info = h('div', { class: 'fp-info', role: 'status' });
   const viewBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Switch view' });
-  const selBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Select links', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
+  const selBtn = h('button', { type: 'button', class: 'btn-icon fp-sel', 'aria-label': 'Select links', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
   const moreBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'More actions', 'aria-haspopup': 'menu' }, icon('more-h', { size: 20 }));
   const bar = h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected links', hidden: true });
   const body = h('div', { class: 'fp-body' });
@@ -85,7 +90,8 @@ export async function mount(container, ctx) {
   let vl = null;
   const paintHead = () => {
     const f = folder(); if (!f) return;
-    title.textContent = f.name; tile.replaceChildren(folderTile(f, 44)); page.style.setProperty('--fc', colorOf(f));
+    title.textContent = f.name; document.title = `${f.name} - Folder | Linkivo`;   // v2.2.2
+    tile.replaceChildren(folderTile(f, 44)); page.style.setProperty('--fc', colorOf(f));
     sub.textContent = plural(sourceLinks().length, 'link');
     viewBtn.replaceChildren(icon(st.view === 'grid' ? 'list' : 'grid', { size: 20 })); viewBtn.setAttribute('aria-label', st.view === 'grid' ? 'Switch to list' : 'Switch to grid');
     selBtn.setAttribute('aria-pressed', String(st.selecting)); selBtn.classList.toggle('is-on', st.selecting);
@@ -105,17 +111,21 @@ export async function mount(container, ctx) {
   function paintBar() {
     const n = st.selected.size;
     bar.hidden = !st.selecting; if (!st.selecting) return;
-    const btn = (ic, label, fn, danger) => h('button', { type: 'button', class: ['selbtn', danger && 'is-danger'], 'aria-label': label, disabled: n === 0, 'data-tip': label, on: { click: fn } }, icon(ic, { size: 20 }), h('span', { class: 'selbtn-l', text: label }));
     const ids = () => [...st.selected];
     const done = (promise) => promise.then((c) => { if (c) { st.selected.clear(); paintBar(); vl?.refresh(); } });
-    bar.replaceChildren(
-      h('span', { class: 'selcount', text: n ? `${n} selected` : 'Select links' }),
-      h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => { const all = st.rows.length === st.selected.size; st.selected = new Set(all ? [] : st.rows.map((l) => l.id)); paintBar(); vl?.refresh(); } } }, st.rows.length && st.rows.length === st.selected.size ? 'Select none' : 'Select all'),
-      btn('folder', 'Move', () => done(bulk.move(engine, ids()))), btn('star', 'Favourite', () => done(bulk.favourite(engine, ids()))), btn('tag', 'Tags', () => done(bulk.addTags(engine, ids()))), btn('trash', 'Delete', () => done(bulk.remove(engine, ids())), true),
-      h('button', { type: 'button', class: 'selbtn', 'aria-label': 'More selection actions', 'aria-haspopup': 'menu', disabled: n === 0, on: { click: (e) => openMenu(e.currentTarget, [
+    const allOn = st.rows.length > 0 && st.rows.length === st.selected.size;
+    bar.replaceChildren(...selBarContent({
+      count: n, allOn, closeLabel: 'Done selecting', onClose: () => setSelecting(false),
+      onAll: () => { st.selected = new Set(allOn ? [] : st.rows.map((l) => l.id)); paintBar(); vl?.refresh(); },
+      actions: [
+        { icon: 'folder', label: 'Move', onClick: () => done(bulk.move(engine, ids())) },
+        { icon: 'star', label: 'Favourite', onClick: () => done(bulk.favourite(engine, ids())) },
+        { icon: 'trash', label: 'Delete', danger: true, onClick: () => done(bulk.remove(engine, ids())) }],
+      more: () => [
+        { label: 'Add tags', icon: 'tag', onSelect: () => done(bulk.addTags(engine, ids())) },
         { label: 'Copy to folder', icon: 'copy', onSelect: () => done(bulk.copy(engine, ids())) }, { label: 'Read later', icon: 'clock', onSelect: () => done(bulk.readLater(engine, ids())) }, { label: 'Pin', icon: 'pin', onSelect: () => done(bulk.pin(engine, ids())) },
-        { label: 'Block from Random', icon: 'block', onSelect: () => done(bulk.block(engine, ids())) }, { label: 'Export selection', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'links', lids: ids() }, title: `Export ${plural(n, 'link')}` })) }]) } }, icon('more-h', { size: 20 })),
-      h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Done selecting', on: { click: () => setSelecting(false) } }, icon('close', { size: 20 })));
+        { label: 'Block from Random', icon: 'block', onSelect: () => done(bulk.block(engine, ids())) }, { label: 'Export selection', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'links', lids: ids() }, title: `Export ${plural(n, 'link')}` })) }]
+    }));
   }
 
   function setSelecting(on) { st.selecting = on; if (!on) st.selected.clear(); page.classList.toggle('is-selecting', on); page.classList.toggle('has-dock', on); paintHead(); paintBar(); vl?.refresh(); }
@@ -145,14 +155,19 @@ export async function mount(container, ctx) {
   moreBtn.addEventListener('click', () => {
     if (moreBtn._m?.isOpen()) return;
     const f = folder();
-    const items = isFav ? [{ label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
-      : [...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
+    const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
+    const pick = phone ? [{ label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
+    const items = isFav ? [...pick, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
+      : [...pick, ...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
     moreBtn._m = openMenu(moreBtn, items);
   });
   body.addEventListener('click', (e) => {
     const row = e.target.closest('.lrow'); if (!row) return;
     const id = row.dataset.id, act = e.target.closest('[data-act]')?.dataset.act, l = engine.getLink(id); if (!l) return;
     if (act === 'menu') { const a = e.target.closest('[data-act]'); if (a._m?.isOpen()) return; a._m = openMenu(a, linkMenuItems({ engine, link: l })); return; }
+    if (act === 'toggle' && !st.selecting) {   // v2.2.2: the favicon turned into a checkbox on hover: a click on it starts selecting
+      e.preventDefault(); setSelecting(true); st.selected.add(id); st.last = st.rows.findIndex((x) => x.id === id); paintBar(); vl?.refresh(); return;
+    }
     if (st.selecting && act !== 'menu') {
       e.preventDefault();
       const idx = st.rows.findIndex((x) => x.id === id);

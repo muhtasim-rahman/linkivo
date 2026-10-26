@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/features/settings/custom-rows.js  (v2.1.3)
+ * Linkivo — js/features/settings/custom-rows.js  (v2.1.3, v2.2.2)
  * Purpose: the rows of the settings registry that are not plain controls: install status, updates, about, developer, account, data and sync,
  *          metadata service status. v2.1.3: the password reset row asks for confirmation and is rate limited (it used to send an email per tap).
  * API: renderCustom(name, ctx) -> Element|Element[]     ctx = { router }
@@ -18,7 +18,8 @@ import { resendVerification, sendReset } from '../auth/auth-service.js';
 import { sendAllowed, friendlyWait } from '../../core/send-limit.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { requireSensitive } from '../../core/sensitive.js';
-import { aboutCard, developerCard } from './about-card.js';
+import { aboutCard, developerCard, appDetails as appDetailsNodes } from './about-card.js';
+import { accountRows } from './account-card.js';
 import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
 
@@ -51,7 +52,8 @@ function update() {
 function about() { return aboutCard(); }
 function developer() { return developerCard(); }
 
-function account({ router }) {
+// ! Unused since v2.2.2: the Account section is built by account-card.js. This older version (and passwordRow below) is kept for reference only.
+function accountOld({ router }) {
   const s = getSession();
   if (s.mode === 'guest') {
     return [
@@ -87,6 +89,9 @@ function passwordRow(u) {
   } } }, h('span', { class: 'row-ic' }, icon('lock')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Reset password' }), sub));
 }
 
+function account(ctx) { return accountRows({ router: ctx.router, rerender: ctx.rerender }); }
+function appDetails() { return appDetailsNodes(); }
+
 function sync() {
   const box = h('div');
   const render = () => {
@@ -95,15 +100,11 @@ function sync() {
     const st = e.status(), c = e.counts();
     const where = st.kind === 'guest' ? 'On this device only (IndexedDB).' : 'In your account, cached on this device (IndexedDB).';
     const state = st.kind === 'guest' ? (st.persistent ? 'Saved' : 'Not saved: this browser blocks storage') : { idle: 'In sync', syncing: 'Syncing', offline: 'Offline, changes are queued', error: 'Sync problem, will retry' }[st.state];
-    const btn = st.kind === 'guest' ? null : h('button', { type: 'button', class: 'btn btn-sm', text: 'Sync now', on: { click: async (ev) => {
-      ev.currentTarget.classList.add('is-loading');
-      try { await e.flush?.(); toast('Everything is synced.'); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }
-      render();
-    } } });
+    // v2.2.2 (owner): the separate "Sync now" row is gone; the sync icon sits beside View profile in the Account card.
     box.replaceChildren(h('div', { class: 'row is-stack' }, h('dl', { class: 'kv', style: { width: '100%' } },
       h('dt', { text: 'Location' }), h('dd', { text: where }), h('dt', { text: 'Status' }), h('dd', { text: state }),
       h('dt', { text: 'Waiting to upload' }), h('dd', { text: st.kind === 'guest' ? 'Not applicable' : plural(st.pending, 'change') }),
-      h('dt', { text: 'Contents' }), h('dd', { text: `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}` }))), btn && row('Sync now', 'Upload waiting changes and fetch the latest from your account.', btn));
+      h('dt', { text: 'Contents' }), h('dd', { text: `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}` }))));
   };
   render();
   return box;
@@ -137,5 +138,5 @@ function recycleBin(ctx) {
 }
 
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, developer, account, sync, worker, importData, exportData, recycleBin })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin })[name]?.(ctx) ?? h('div');
 }

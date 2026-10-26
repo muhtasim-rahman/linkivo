@@ -63,3 +63,8 @@
   .art-foot a { color: var(--sub); text-decoration: underline; text-underline-offset: 3px; }
 }
 @media (min-width: 900px) and (max-height: 780px) { .art-list li:nth-child(n + 5) { display: none; } .art-lead { display: none; } }
+
+/* v2.2.2: /auth/action (password reset, verification): same panel, a quiet success state */
+.act-panel { align-content: start; padding-top: var(--s6); }
+.alert.is-ok { display: flex; align-items: center; gap: var(--s2); padding: var(--s3); border-radius: var(--r-control); background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--text); }
+.alert.is-ok svg { color: var(--success); }

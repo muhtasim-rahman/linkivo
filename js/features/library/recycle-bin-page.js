@@ -5,6 +5,7 @@
  * v2.2.1: the selection bar is a dock (always fixed at the bottom), keyboard shortcuts (Ctrl+A, Esc, Delete, R, / and ?), a refresh icon on wide screens.
  * Page module: mount(container, ctx) -> unmount
  */
+import { selBarContent } from '../../ui/sel-bar.js';   // v2.2.2
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { toast } from '../../ui/toast.js';
@@ -74,9 +75,13 @@ export async function mount(container, ctx) {
   };
   function paintBar() {
     const n = st.sel.size; bar.hidden = n === 0; page.classList.toggle('has-dock', n > 0); if (!n) return;
-    bar.replaceChildren(h('span', { class: 'selcount', text: `${n} selected` }), h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => { st.sel = new Set(st.rows.filter((r) => r.kind).map((r) => r.id)); paintBar(); vl?.refresh(); } } }, 'Select all'),
-      h('button', { type: 'button', class: 'btn btn-sm btn-primary', on: { click: restore } }, icon('restore', { size: 16 }), 'Restore'), h('button', { type: 'button', class: 'btn btn-sm btn-danger', on: { click: () => purge(false) } }, icon('trash', { size: 16 }), 'Delete forever'),
-      h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Clear selection', on: { click: () => { st.sel.clear(); paintBar(); vl?.refresh(); } } }, icon('close', { size: 20 })));
+    const pickable = st.rows.filter((r) => r.kind), allOn = pickable.length > 0 && pickable.length === st.sel.size;
+    // v2.2.2: icon based like the folder page (ui/sel-bar.js): count pill in the corner, select all as an icon, Restore and Delete forever as icons
+    bar.replaceChildren(...selBarContent({
+      count: n, allOn, closeLabel: 'Clear selection', onClose: () => { st.sel.clear(); paintBar(); vl?.refresh(); },
+      onAll: () => { st.sel = new Set(allOn ? [] : pickable.map((r) => r.id)); paintBar(); vl?.refresh(); },
+      actions: [{ icon: 'restore', label: 'Restore', onClick: restore }, { icon: 'trash', label: 'Delete forever', danger: true, onClick: () => purge(false) }]
+    }));
   }
   function update() {
     const all = binItems(engine), q = st.q.trim().toLowerCase(), shown = all.filter((r) => !q || r.name.toLowerCase().includes(q) || (r.rec.url || '').toLowerCase().includes(q));

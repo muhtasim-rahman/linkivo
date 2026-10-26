@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.2.1';
+const VERSION = '2.2.2';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -64,14 +64,18 @@ const PRECACHE = [
   '/js/core/app-info.js',
   '/js/core/appearance.js',
   '/js/core/back-logic.js',
+  '/js/core/clipboard-watch.js',
   '/js/core/config.js',
   '/js/core/css-loader.js',
+  '/js/core/device-info.js',
+  '/js/core/devices.js',
   '/js/core/dom.js',
   '/js/core/events.js',
   '/js/core/extract.js',
   '/js/core/firebase-loader.js',
   '/js/core/flags.js',
   '/js/core/format.js',
+  '/js/core/import-log.js',
   '/js/core/input-guards.js',
   '/js/core/install.js',
   '/js/core/keyboard-safe.js',
@@ -103,6 +107,7 @@ const PRECACHE = [
   '/js/engine/rtdb-adapter.js',
   '/js/engine/schema.js',
   '/js/features/auth/account-status.js',
+  '/js/features/auth/action-page.js',
   '/js/features/auth/auth-service.js',
   '/js/features/auth/login-page.js',
   '/js/features/export/export-engine.js',
@@ -122,6 +127,7 @@ const PRECACHE = [
   '/js/features/export/formats/xlsx.js',
   '/js/features/export/native-format.js',
   '/js/features/export/zip-writer.js',
+  '/js/features/import/clipboard-suggest.js',
   '/js/features/import/import-backup.js',
   '/js/features/import/import-form.js',
   '/js/features/import/import-job.js',
@@ -146,12 +152,16 @@ const PRECACHE = [
   '/js/features/library/quick-add.js',
   '/js/features/library/recycle-bin-page.js',
   '/js/features/settings/about-card.js',
+  '/js/features/settings/account-card.js',
+  '/js/features/settings/account-dialogs.js',
   '/js/features/settings/advanced-tools.js',
   '/js/features/settings/catalog.js',
   '/js/features/settings/controls.js',
   '/js/features/settings/custom-rows.js',
+  '/js/features/settings/devices-sheet.js',
   '/js/features/settings/metadata-tester.js',
   '/js/features/settings/settings-page.js',
+  '/js/features/shell/bin-card.js',
   '/js/features/shell/install-banner.js',
   '/js/features/shell/install-card.js',
   '/js/features/shell/pages/menu-page.js',
@@ -175,6 +185,7 @@ const PRECACHE = [
   '/js/ui/refresh-button.js',
   '/js/ui/scroll-fade.js',
   '/js/ui/scroll-row.js',
+  '/js/ui/sel-bar.js',
   '/js/ui/select.js',
   '/js/ui/sheet.js',
   '/js/ui/shortcut-help.js',

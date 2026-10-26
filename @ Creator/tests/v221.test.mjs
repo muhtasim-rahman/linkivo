@@ -95,8 +95,9 @@ const { dragDelta, shouldDrag, attachScrollRow } = await imp('js/ui/scroll-row.j
 test('scroll row: mouse drag maths, a few pixels is still a click, arrows appear only where there is more to see', () => {
   assert.equal(dragDelta(100, 60, 200), 240); assert.equal(dragDelta(100, 160, 200), 140); assert.equal(shouldDrag(3), false); assert.equal(shouldDrag(-9), true);
   const host = document.createElement('div'); const row = document.createElement('div'); row.className = 'fade-x'; host.appendChild(row); document.body.appendChild(host);
-  Object.defineProperty(row, 'scrollWidth', { value: 600 }); Object.defineProperty(row, 'clientWidth', { value: 300 }); const off = attachScrollRow(row);
-  const [prev, next] = host.querySelectorAll('.srow-btn'); assert.ok(prev.hidden && !next.hidden, 'at the left edge only "next" shows'); off(); assert.equal(host.querySelectorAll('.srow-btn').length, 0);
+  Object.defineProperty(row, 'scrollWidth', { value: 600 }); Object.defineProperty(row, 'clientWidth', { value: 300 }); Object.defineProperty(host, 'clientWidth', { value: 400 }); const off = attachScrollRow(row);
+  // v2.2.2: the buttons are columns beside the row (host is a flex row) and a button that has nothing to do is dimmed (is-off), not removed
+  const [prev, next] = host.querySelectorAll('.srow-btn'); assert.ok(host.classList.contains('srow') && host.classList.contains('has-arrows'), 'the row overflows: arrows are reserved'); assert.ok(prev.classList.contains('is-off') && !next.classList.contains('is-off'), 'at the left edge only "next" is active'); assert.ok(host.firstElementChild === prev && host.lastElementChild === next, 'prev and next are separate columns around the row'); off(); assert.equal(host.querySelectorAll('.srow-btn').length, 0);
 });
 const { matchKey, describeKeys } = await imp('js/core/shortcuts.js');
 test('shortcuts: modifiers and symbols match exactly, labels are readable', () => {
@@ -134,7 +135,7 @@ test('page export: escapes everything, drops non-http links, carries the waterma
   assert.equal(hrefOf('javascript:alert(1)'), null); assert.equal(hrefOf('https://x.test'), 'https://x.test');
   const o = { ...defaultOptions(getFormat('webpage')), show: ['icon', 'url', 'desc', 'tags', 'added', 'num'] };
   const html = await renderPage(ITEMS, o, { mode: 'web', label: 'news', now: Date.UTC(2026, 9, 24) });
-  assert.ok(!html.includes('<script>alert'), 'title is escaped'); assert.match(html, /&lt;script&gt;/); assert.ok(!/href="javascript:/.test(html)); assert.match(html, /name="generator" content="Linkivo 2\.2\.1"/); assert.match(html, /<!-- Exported by Linkivo 2\.2\.1/);
+  assert.ok(!html.includes('<script>alert'), 'title is escaped'); assert.match(html, /&lt;script&gt;/); assert.ok(!/href="javascript:/.test(html)); assert.match(html, /name="generator" content="Linkivo 2\.2\.\d+"/); assert.match(html, /<!-- Exported by Linkivo 2\.2\.\d+/);
   assert.match(html, /class="top"/); assert.match(html, /Developed by <a href="https:\/\/mdturzo\.web\.app">Muhtasim Rahman/); assert.match(html, /linkivo\.web\.app/); assert.match(html, /<h2>.*News.*<small>2<\/small>/); assert.match(html, /3 links/);
   assert.ok(!/<script/i.test(html.replace(/&lt;script&gt;/g, '')), 'no script in the file');
   const table = await renderPage(ITEMS, { ...o, layout: 'table' }, { mode: 'web' }); assert.match(table, /<table class="tb">/); const cards = await renderPage(ITEMS, { ...o, layout: 'cards', group: 'none' }, { mode: 'web' }); assert.match(cards, /class="cards"/); assert.ok(!/<h2>/.test(cards));

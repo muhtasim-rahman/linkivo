@@ -116,7 +116,9 @@ export function mountShell({ router }) {
   root.addEventListener('scroll', () => {
     const y = root.scrollTop, d = y - last;
     if (Math.abs(d) < 8) return;
-    bar.classList.toggle('is-hidden', d > 0 && y > 80 && prefs.get('ui.hideBar', true));
+    const hide = d > 0 && y > 80 && prefs.get('ui.hideBar', true);
+    bar.classList.toggle('is-hidden', hide);
+    document.documentElement.classList.toggle('bar-hidden', hide);   // v2.2.2: fixed action bars (docks) slide down with the bottom bar
     last = y;
   }, { passive: true });
 
@@ -136,7 +138,7 @@ export function mountShell({ router }) {
     }
     const idx = BAR.findIndex((b) => b.tab === route.tab);
     moveMarker(idx);
-    bar.classList.remove('is-hidden'); last = 0;
+    bar.classList.remove('is-hidden'); document.documentElement.classList.remove('bar-hidden'); last = 0;
   });
 
   return {

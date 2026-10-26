@@ -94,3 +94,14 @@
 .ex-toggle { display: inline-flex; align-items: center; gap: var(--s2); min-height: 36px; cursor: pointer; } .ex-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 .ex-file { display: flex; align-items: center; gap: var(--s2); color: var(--sub); } .ex-file .input { flex: 1; min-width: 0; } .ex-ext { font: var(--fs-sm) var(--font-mono); white-space: nowrap; }
 .kb-list { padding-bottom: var(--s2); }
+
+/* v2.2.2: job popup countdown beside Close, header row of Recent imports */
+.jp-count { align-self: center; margin-inline-start: var(--s2); font-size: var(--fs-xs); color: var(--sub); font-variant-numeric: tabular-nums; }
+.imp-h2-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin: var(--s6) 0 var(--s2); }
+/* v2.2.2: collapse arrow on 'Supported file types' (points down closed, up open); small left-aligned link in the restore popup */
+.imp-formats summary { list-style: none; gap: var(--s2); width: fit-content; } .imp-formats summary::-webkit-details-marker { display: none; }
+.imp-formats summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; rotate: 45deg; translate: 0 -2px; transition: rotate var(--t-micro) var(--ease), translate var(--t-micro) var(--ease); }
+.imp-formats[open] summary::after { rotate: -135deg; translate: 0 2px; }
+.imp-other { justify-self: start; align-self: start; width: fit-content; font-size: var(--fs-xs); min-height: 32px; padding: 0; }
+/* v2.2.2: the search, sort and quick buttons of the found-links toolbar share one height */
+.rv-tools .sel-btn, .rv-tools .input, .rv-tools .btn-sm { min-height: var(--ctl-h); height: var(--ctl-h); box-sizing: border-box; }

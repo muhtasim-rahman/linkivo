@@ -93,7 +93,7 @@ export async function checkForUpdates({ launch = false } = {}) {
     const tried = prefs.get('update.autoTry', null);
     const recently = tried && tried.v === latest && Date.now() - tried.t < 10 * 60 * 1000;
     // setting "Update automatically" (default on): when off, even a launch check only raises the popup
-    if (launch && !recently && prefs.get('update.auto', true)) { prefs.set('update.autoTry', { v: latest, t: Date.now() }); applyUpdate(); return 'updating'; }
+    if (launch && !recently && true /* v2.2.2: the "Update automatically" setting was removed (owner): the website always updates itself */) { prefs.set('update.autoTry', { v: latest, t: Date.now() }); applyUpdate(); return 'updating'; }
     availableFn(latest);
     return 'available';
   } catch (e) { log.warn('update', 'update check failed', e); return 'error'; }

@@ -65,7 +65,7 @@ test('pull to refresh: only the indicator moves, the ring fills, and nothing hap
   const chip = [...document.querySelectorAll('.ptr')].pop(); const y0 = chipY(chip);
   touch(scroller, 'touchstart', 100); touch(scroller, 'touchmove', 140);
   assert.equal(scroller.style.transform, '', 'the page itself never moves'); assert.ok(chipY(chip) > y0, 'the indicator came down with the finger');
-  assert.ok(parseFloat(chip.style.getPropertyValue('--p')) > 0 && !chip.classList.contains('is-ready')); assert.ok(chip.classList.contains('is-on')); assert.match(chip.style.getPropertyValue('--turn'), /deg$/, 'the icon turns with the pull');
+  assert.ok(parseFloat(chip.style.getPropertyValue('--p')) > 0 && !chip.classList.contains('is-ready')); assert.ok(chip.classList.contains('is-on')); // v2.2.2: the indicator is a bare ring now (no icon to turn)
   touch(scroller, 'touchend', 140); await tick(5);
   assert.equal(runs, 0, 'short pull: no refresh'); assert.ok(chip.classList.contains('is-leaving') && !chip.classList.contains('is-loading'));
   destroy();
@@ -80,7 +80,7 @@ test('pull to refresh: after release the icon spins WHERE IT RESTS, and slides a
   assert.ok(chip.classList.contains('is-ready'), 'ring complete past the threshold');
   touch(scroller, 'touchend', 400); await tick(5);
   assert.equal(runs, 1); assert.ok(chip.classList.contains('is-loading'), 'icon spins'); assert.ok(!chip.classList.contains('is-leaving'));
-  assert.equal(chipY(chip), REST - 40, 'it settles at its resting spot'); assert.equal(scroller.style.transform, '', 'the page never moved');
+  assert.equal(chipY(chip), REST - 30, 'it settles at its resting spot'); assert.equal(scroller.style.transform, '', 'the page never moved');
   const rest = chipY(chip); touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 300); assert.equal(chipY(chip), rest, 'a second pull while busy is ignored');
   finish(); await tick(10);
   assert.ok(!chip.classList.contains('is-loading') && chip.classList.contains('is-leaving'), 'done: it leaves');

@@ -69,3 +69,19 @@ Linkivo/
 | `assets/art/install-pattern.svg` | pattern behind the install card |
 | `@ Creator/tests/v221.test.mjs` | tests for all of the above |
 | Unused, kept | `import-review.js` openReview, `link-actions.js` editTitle, `formats/printable.js` |
+
+## Added in v2.2.2
+
+| Path | Purpose |
+|---|---|
+| `js/core/import-log.js` | Recent imports that follow the account (`users/<uid>/importLog`) |
+| `js/core/devices.js` `device-info.js` | signed-in devices list (`users/<uid>/devices`), browser parsing, remote sign-out rule |
+| `js/core/clipboard-watch.js` | permission-aware clipboard reading for the import suggestion |
+| `js/ui/sel-bar.js` | icon-based selection bar content (folder page, Recycle Bin) |
+| `js/features/import/clipboard-suggest.js` | the small suggestion card |
+| `js/features/settings/account-card.js` `account-dialogs.js` `devices-sheet.js` | Account section, its popups, the devices list |
+| `js/features/shell/bin-card.js` | Recycle Bin card (Menu and top of wide Settings) |
+| `js/features/auth/action-page.js` | `/auth/action`: password reset and email links |
+| `@ Creator/reference/email-template-reset.html` | the owner's branded reset email (for the v2.5.0 Worker mail) |
+| `@ Creator/tests/v222.test.mjs` | tests for all of the above |
+| Unused, kept | `custom-rows.js` accountOld, install, update, about, developer rows; `library-page.js` FILTERS |

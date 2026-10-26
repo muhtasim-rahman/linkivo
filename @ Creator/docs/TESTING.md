@@ -84,3 +84,11 @@ node "@ Creator/tools/gen-precache.mjs" --check
 
 What these tests can NOT prove: real browser layout and animation, real Firebase and Cloudflare network behavior, the real database rules engine, the free-service endpoints
 (Dub, JSONLink, Microlink, AllOrigins, oEmbed). Those are owner tests (see the version summary).
+
+## v2.2.2 owner checklist (short)
+1. Start an import: the progress popup shows "Closing in 10 s" after it finishes and closes; open an old import from Recent imports: it stays open. Remove one entry, then Clear all; reload and check the account list matches on a second device.
+2. Drop one file on the Import page: it is added once. Tap the arrow beside Supported file types.
+3. Folder page on a phone: open a link three-dot menu and scroll it (it must not close); pull the page slowly (thin ring); select with the favicon check box on PC; the selection bar fits without sideways scrolling.
+4. Settings on PC: install card and Recycle Bin card on top; a choice (for example Density) is a dropdown on the right; on a phone it is a full-width control. App shows the app details card.
+5. Account: View profile, sync icon, verified tick, link Google or a password, change password (wrong old password shows an error), forgot step needs the account email, change email (link arrives at the NEW address), Logged-in devices (this device listed; sign another device out and open the app there).
+6. Clipboard: allow clipboard access in Chrome, copy two links, return to Linkivo: a suggestion card appears; Import opens the page with the text filled in.

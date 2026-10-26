@@ -1,9 +1,11 @@
 /**
- * Linkivo — js/features/library/library-page.js  (v2.2.0)
+ * Linkivo — js/features/library/library-page.js  (v2.2.0, v2.2.1, v2.2.2)
  * Purpose: /library — every folder as a grid or list: search, filter, sort, the virtual Favourites folder, pin, and the three-dot menu with
  *          rename, color and icon, import here, export, duplicate, merge and delete. Works the same for guests and accounts (the engine hides the difference).
  * v2.2.1: flat minimal folder cards (css/pages/library.css), the shared dropdown for filter and sort, keyboard shortcuts (press ? to list them) and a refresh
  *          icon on wide screens.
+ * v2.2.2 (owner request): the filter dropdown (all, pinned, with links, empty) is gone, Sort is an icon beside the search field on phones, and the
+ *          "Add a link" button left the header (quick add stays in the folder page and on the key a).
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
 import { h } from '../../core/dom.js';
@@ -48,15 +50,15 @@ export async function mount(container, ctx) {
   const sub = h('p', { class: 'page-sub lib-sub', 'aria-live': 'polite' });
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search folders', 'aria-label': 'Search folders', autocomplete: 'off' });
   const pairs = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
-  const filterSel = createSelect({ options: pairs(FILTERS), value: st.filter, label: 'Filter folders', small: true, onChange: (v) => { st.filter = v; update(); } });
-  const sortSel = createSelect({ options: pairs(SORTS), value: st.sort, label: 'Sort folders', small: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.sort, v); update(); } });
+  // ! Unused since v2.2.2: the folder filter dropdown was removed (owner request). `filterFolders` and FILTERS stay because tests and a later search use them.
+  const sortSel = createSelect({ options: pairs(SORTS), value: st.sort, label: 'Sort folders', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.sort, v); update(); } });
   const viewBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Switch view' });
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Add a link', 'data-tip': 'Add a link', on: { click: () => openQuickAdd({ engine, queue }) } }, icon('link', { size: 20 })), viewBtn,
+      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn,
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
-    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), filterSel, sortSel), body);
+    h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 
   function card(f, wide) {
     const virtual = f.id === FAV_ID;
@@ -78,7 +80,7 @@ export async function mount(container, ctx) {
     const showFav = (!st.q.trim() || 'favourites'.includes(st.q.trim().toLowerCase())) && st.filter === 'all';
     const wide = st.view === 'list';
     const nodes = [...(showFav ? [card(favouritesFolder(favCount), wide)] : []), ...list.map((f) => card(f, wide))];
-    if (!list.length && !showFav) { body.replaceChildren(emptyState({ art: 'search', title: 'No folder matches', text: 'Try another name or clear the filter.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.filter = 'all'; filterSel.setValue('all'); search.value = ''; update(); } }] })); return; }
+    if (!list.length && !showFav) { body.replaceChildren(emptyState({ art: 'search', title: 'No folder matches', text: 'Try another name or clear the filter.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.filter = 'all'; search.value = ''; update(); } }] })); return; }
     body.replaceChildren(h('div', { class: ['lib-grid', wide && 'is-list'], role: 'list' }, nodes.map((n) => { n.setAttribute('role', 'listitem'); return n; })));
   }
 

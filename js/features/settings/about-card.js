@@ -1,11 +1,14 @@
 /**
- * Linkivo — js/features/settings/about-card.js  (v2.1.3)
+ * Linkivo — js/features/settings/about-card.js  (v2.1.3, v2.2.2)
  * Purpose: the "About" layout used by Settings > App and the mobile Menu page: app header with version, highlights and useful links.
  *          v2.1.3: the developer is NOT part of this card any more (owner request). developerCard() is its own compact section placed
  *          after the About card: the badge (photo in a gradient ring), name, role and three small link buttons.
  *          v2.2.1: appInfoCard() is the Menu page's SINGLE card (header, short description, highlighted features and the developer badge inside it) and
  *          appLinkButtons() the row of link buttons under it. aboutCard() and developerCard() stay for Settings > App.
- * API: aboutCard() -> Element     developerCard() -> Element     appInfoCard() -> Element     appLinkButtons() -> Element
+ *          v2.2.2 (owner): the developer block is TWO columns (photo | name, caption and the three round links below them); the link buttons end with
+ *          "Report a problem" as the fifth, full-width one; Settings > App on wide screens shows the same card with the links as rows with short captions
+ *          (appDetails()). aboutCard() and developerCard() are no longer used by the catalog but stay for older callers.
+ * API: appDetails() -> Element[]     aboutCard() -> Element     developerCard() -> Element     appInfoCard() -> Element     appLinkButtons() -> Element
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -70,16 +73,30 @@ export function appInfoCard() {
     h('p', { class: 'about-lead', text: 'A fast, private link manager for people with hundreds or thousands of links. Free, with no ads.' }),
     h('ul', { class: 'infocard-feats' }, FEATURES.map(([ic, text]) => h('li', null, h('span', { class: 'hl-ic' }, icon(ic, { size: 16 })), h('span', { text })))),
     h('div', { class: 'infocard-dev' }, developerBadge(),
-      h('div', { class: 'dev-info' }, h('strong', { text: app.developer }), h('span', { class: 'muted', text: 'Developer of Linkivo' })),
-      h('div', { class: 'dev-rounds' }, roundLink(app.site, 'Website', 'globe', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(app.github, 'GitHub', 'code', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(mailto(), 'Email the developer', 'mail'))));
+      h('div', { class: 'dev-info' }, h('strong', { text: app.developer }), h('span', { class: 'muted', text: 'Developer of Linkivo' }),
+        h('div', { class: 'dev-rounds' }, roundLink(app.site, 'Website', 'globe', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(app.github, 'GitHub', 'code', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(mailto(), 'Email the developer', 'mail')))));
 }
 
 export function appLinkButtons() {
-  const btn = (ic, label, props) => h('a', { class: 'alink', ...props }, icon(ic, { size: 18 }), h('span', { text: label }));
+  const btn = (ic, label, { class: extra = '', ...props }) => h('a', { class: ['alink', extra], ...props }, icon(ic, { size: 18 }), h('span', { text: label }));
   return h('nav', { class: 'alinks', 'aria-label': 'About links' },
     btn('code', 'Source code', { href: app.repo, target: '_blank', rel: 'noopener', 'data-native': '' }),
-    btn('mail', 'Report a problem', { href: mailto() }),
     btn('book', 'Documentation', { href: '/docs' }),
     btn('shield', 'Privacy policy', { href: '/privacy' }),
-    btn('bookmark', 'Terms', { href: '/terms' }));
+    btn('bookmark', 'Terms', { href: '/terms' }),
+    btn('mail', 'Report a problem', { href: mailto(), class: 'is-wide' }));   // fifth and full width on phones
+}
+
+// ---- v2.2.2: Settings > App on wide screens ---------------------------------------------------------------------------------
+/** The same card as the Menu page, then the links as rows with a short caption each (wide screens have the room for them). */
+export function appDetails() {
+  return [
+    appInfoCard(),
+    h('div', { class: 'about-links app-links' },
+      linkRow('code', 'Source code', 'The project on GitHub', { href: app.repo, target: '_blank', rel: 'noopener', 'data-native': '' }),
+      linkRow('book', 'Documentation', 'A guide to every feature', { href: '/docs' }),
+      linkRow('shield', 'Privacy policy', 'What is stored and who can see it', { href: '/privacy' }),
+      linkRow('bookmark', 'Terms', 'The rules of using Linkivo', { href: '/terms' }),
+      linkRow('mail', 'Report a problem', 'Tell the developer, or suggest something', { href: mailto() }))
+  ];
 }

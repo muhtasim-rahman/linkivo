@@ -59,13 +59,20 @@ a.row:hover, button.row:hover { background: var(--surface-2); text-decoration: n
 
 /* Pull-to-refresh indicator (v2.2.1). Only this round chip moves (js/ui/pull-refresh.js sets its transform); the page stays still.
    --p (0 to 1) = pull progress, --turn = how far the icon has turned. The ring is a conic gradient, so it needs no SVG. */
-.ptr { --p: 0; --turn: 0deg; position: fixed; left: 50%; top: 0; width: 40px; height: 40px; margin-left: -20px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%;
-  background: var(--surface); box-shadow: var(--shadow-float), 0 0 0 1px var(--line); color: var(--accent-text); pointer-events: none; opacity: 0; will-change: transform; }
+.ptr { --p: 0; position: fixed; left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px; z-index: var(--z-pop); display: grid; place-items: center; border-radius: 50%;
+  background: var(--surface); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--line); pointer-events: none; opacity: 0; will-change: transform; }   /* v2.2.2: smaller, no icon: just a thin ring */
 .ptr.is-on, .ptr.is-loading { opacity: 1; }
 .ptr.is-leaving { opacity: 0; }
-.ptr-ring { position: absolute; inset: 3px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 360deg), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
-.ptr-glyph { position: relative; display: grid; place-items: center; transform: rotate(var(--turn)); }
-.ptr.is-ready .ptr-glyph { color: var(--accent-strong); animation: ptr-pop 220ms var(--spring); }
-.ptr.is-loading .ptr-ring { --p: 0.3; animation: lk-spin 760ms linear infinite; opacity: 0.35; }
-.ptr.is-loading .ptr-glyph { animation: lk-spin 900ms linear infinite; }
+.ptr-ring { position: absolute; inset: 4px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 360deg), color-mix(in srgb, var(--accent) 16%, transparent) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px)); transition: scale var(--t-micro) var(--ease); }
+.ptr.is-ready .ptr-ring { scale: 1.12; }
+.ptr.is-loading .ptr-ring { --p: 0.28; animation: lk-spin 760ms linear infinite; scale: 1; }
 @keyframes ptr-pop { 0% { scale: 0.8; } 60% { scale: 1.18; } 100% { scale: 1; } }
+
+/* v2.2.2: clipboard suggestion card (features/import/clipboard-suggest.js): one side of the screen, above the bottom bar on phones */
+.clip-card { position: fixed; z-index: calc(var(--z-bar) + 2); right: var(--s4); bottom: var(--s4); display: flex; align-items: center; gap: var(--s3); width: min(380px, calc(100vw - var(--s4) * 2)); padding: var(--s3); border: 1px solid var(--line-strong); border-radius: var(--r-group); background: var(--surface); box-shadow: var(--shadow-float); opacity: 0; translate: 0 12px; transition: opacity var(--t-std) var(--ease), translate var(--t-std) var(--ease); }
+.clip-card.is-in { opacity: 1; translate: 0 0; }
+.clip-ic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); }
+.clip-text { display: grid; gap: 1px; min-width: 0; flex: 1; font-size: var(--fs-sm); } .clip-text span { color: var(--sub); font-size: var(--fs-xs); }
+.clip-actions { display: flex; align-items: center; gap: var(--s1); flex: none; }
+@media (max-width: 899px) { .clip-card { right: var(--s3); left: var(--s3); width: auto; bottom: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + var(--s3)); } }
+@media (prefers-reduced-motion: reduce) { .clip-card { transition: none; } }

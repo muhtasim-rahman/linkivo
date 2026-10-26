@@ -1,9 +1,9 @@
 /**
- * Linkivo — js/engine/schema.js  (v2.1.0)
+ * Linkivo — js/engine/schema.js  (v2.1.0, v2.2.2 adds IMPORT_LOG and DEVICE)
  * Purpose: ONE description of every stored record (field type + limits). It drives (a) the sanitizers used by the engines
  *          and (b) the database-rules generator in "@ Creator/tools/gen-rules.mjs", so the client and the rules can not drift.
  * Types: 's' string {min,max}  'n' number {min,max}  'b' boolean (stored only when true)  'ts' timestamp (rules: not in the far future)
- * API: FOLDER, LINK, LINK_META, HISTORY, ACTIVITY (specs: {fields, required})   sanitizeFolder(input, now)   sanitizeLink(input, now)
+ * API: FOLDER, LINK, LINK_META, HISTORY, ACTIVITY, IMPORT_LOG, DEVICE (specs: {fields, required})   sanitizeFolder(input, now)   sanitizeLink(input, now)
  *      sanitizePatch(spec, patch) -> {set, unset}   CLOCK_SKEW_MS
  */
 export const CLOCK_SKEW_MS = 60000;
@@ -33,6 +33,10 @@ export const LINK_META = {
 };
 
 export const HISTORY = { required: ['lid', 'ts'], fields: { lid: s(40, 1), url: s(2048), title: s(300), host: s(253), fid: s(40), src: s(10), ts: ts() } };
+/** v2.2.2: one finished import / title fetch / restore, kept in the account so every device lists the same Recent imports (users/<uid>/importLog/<id>). */
+export const IMPORT_LOG = { required: ['ty', 'ts'], fields: { ty: s(10, 1), title: s(120), st: s(10), total: n(0, 1e7), done: n(0, 1e7), failed: n(0, 1e7), saved: n(0, 1e7), skipped: n(0, 1e7), invalid: n(0, 1e7), fid: s(40), imp: s(40), ts: ts() } };
+/** v2.2.2: one signed-in device (users/<uid>/devices/<deviceId>): what the Account page lists. `rv` = another device asked it to sign out. No full IP address is stored (D-093). */
+export const DEVICE = { required: ['ts', 'seen'], fields: { name: s(60), br: s(40), os: s(40), kind: s(10), ip: s(40), city: s(60), reg: s(60), cc: s(2), tz: s(60), via: s(16), ts: ts(), seen: ts(), rv: ts() } };
 export const ACTIVITY = { required: ['type', 'ts'], fields: { type: s(24, 1), info: s(200), ts: ts() } };
 
 /** Cleans one field value; returns undefined when the value must not be stored. */

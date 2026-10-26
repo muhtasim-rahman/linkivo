@@ -1,9 +1,10 @@
 /**
- * Linkivo — js/ui/select.js  (v2.2.1)
+ * Linkivo — js/ui/select.js  (v2.2.1, v2.2.2)
  * Purpose: THE dropdown of the app (owner request): one design everywhere, replacing the browser's own <select>. A button that shows the current
  *          choice and opens the shared anchored list (ui/popover.js), with a check mark on the chosen row. `multi` keeps the list open and
  *          lets several rows be ticked. Keyboard and screen reader behavior come from the popover (arrows, Enter, Escape, aria-checked).
- * API: createSelect({ options:[{ value, label, hint? }], value, onChange(value), label, multi, placeholder, align, block, small }) -> Element (a <button>)
+ * v2.2.2: `lead` (icon name) + `compact`: on phones the button shrinks to that icon alone (the text and caret hide, the list still checks the chosen row).
+ * API: createSelect({ options:[{ value, label, hint? }], value, onChange(value), label, multi, placeholder, align, block, small, lead, compact }) -> Element (a <button>)
  *        el.getValue()  el.setValue(v)  el.setOptions(options)       value is a string, or an array of strings when `multi`
  *      selectSummary(options, value, multi, placeholder) -> string (pure, tested)
  */
@@ -18,10 +19,10 @@ export function selectSummary(options, value, multi = false, placeholder = 'Sele
   return on.length <= 2 ? on.map((o) => o.label).join(', ') : `${on.length} selected`;
 }
 
-export function createSelect({ options = [], value = null, onChange = () => {}, label = 'Choose', multi = false, placeholder = 'Select', align = 'start', block = false, small = false } = {}) {
+export function createSelect({ options = [], value = null, onChange = () => {}, label = 'Choose', multi = false, placeholder = 'Select', align = 'start', block = false, small = false, lead = '', compact = false } = {}) {
   let opts = options, cur = multi ? [...(value || [])] : value, handle = null;
   const text = h('span', { class: 'sel-text' });
-  const btn = h('button', { type: 'button', class: ['sel-btn', block && 'is-block', small && 'is-small'], 'aria-haspopup': 'menu', 'aria-label': label }, text, icon('chevron-down', { size: 16 }));
+  const btn = h('button', { type: 'button', class: ['sel-btn', block && 'is-block', small && 'is-small', compact && 'is-compact'], 'aria-haspopup': 'menu', 'aria-label': label }, lead && icon(lead, { size: 18, cls: 'sel-lead' }), text, icon('chevron-down', { size: 16, cls: 'sel-caret' }));
   const paint = () => { text.textContent = selectSummary(opts, cur, multi, placeholder); btn.title = ''; };
   btn.addEventListener('click', () => {
     if (handle?.isOpen()) { handle.close(); return; }

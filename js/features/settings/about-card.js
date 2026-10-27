@@ -8,6 +8,8 @@
  *          v2.2.2 (owner): the developer block is TWO columns (photo | name, caption and the three round links below them); the link buttons end with
  *          "Report a problem" as the fifth, full-width one; Settings > App on wide screens shows the same card with the links as rows with short captions
  *          (appDetails()). aboutCard() and developerCard() are no longer used by the catalog but stay for older callers.
+ *          v2.2.3 (owner): the developer block is redesigned (dotted accent pattern and a faint </> icon), wider badge on phones, and THREE columns on
+ *          wide screens with icon + text buttons for Website and GitHub and an icon for Email.
  * API: appDetails() -> Element[]     aboutCard() -> Element     developerCard() -> Element     appInfoCard() -> Element     appLinkButtons() -> Element
  */
 import { h } from '../../core/dom.js';
@@ -74,7 +76,9 @@ export function appInfoCard() {
     h('ul', { class: 'infocard-feats' }, FEATURES.map(([ic, text]) => h('li', null, h('span', { class: 'hl-ic' }, icon(ic, { size: 16 })), h('span', { text })))),
     h('div', { class: 'infocard-dev' }, developerBadge(),
       h('div', { class: 'dev-info' }, h('strong', { text: app.developer }), h('span', { class: 'muted', text: 'Developer of Linkivo' }),
-        h('div', { class: 'dev-rounds' }, roundLink(app.site, 'Website', 'globe', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(app.github, 'GitHub', 'code', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(mailto(), 'Email the developer', 'mail')))));
+        h('div', { class: 'dev-rounds' }, roundLink(app.site, 'Website', 'globe', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(app.github, 'GitHub', 'code', { target: '_blank', rel: 'noopener', 'data-native': '' }), roundLink(mailto(), 'Email the developer', 'mail'))),
+      // wide screens (v2.2.3): Website and GitHub as icon + text buttons, Email as an icon only
+      h('div', { class: 'dev-btns' }, ext(app.site, 'Website', 'globe'), ext(app.github, 'GitHub', 'code'), roundLink(mailto(), 'Email the developer', 'mail'))));
 }
 
 export function appLinkButtons() {

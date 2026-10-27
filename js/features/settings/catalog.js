@@ -19,6 +19,7 @@ export const SECTIONS = [
   { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
   { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
   { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
+  { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
   { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log, reset', icon: 'terminal' }
 ];
 export const findSection = (id) => SECTIONS.find((s) => s.id === id) || null;
@@ -61,6 +62,8 @@ export const CATALOG = [
   { id: 'impDedupe', section: 'data', type: 'switch', key: 'import.dedupe', label: 'Skip links that are already saved', default: true, keywords: ['import', 'duplicates'], since: '2.2.0' },
   { id: 'impClean', section: 'data', type: 'switch', key: 'import.clean', label: 'Remove tracking parameters', desc: 'Drops utm_*, fbclid, gclid and similar from imported addresses.', default: false, keywords: ['import', 'utm', 'tracking', 'privacy'], since: '2.2.0' },
   { id: 'impEnrich', section: 'data', type: 'switch', key: 'import.enrich', label: 'Fetch titles after importing', desc: 'Reads each page title and description in the background through the metadata service.', default: true, keywords: ['import', 'metadata', 'title'], since: '2.2.0' },
+  { id: 'impAutoClear', section: 'data', type: 'switch', key: 'import.autoClear', label: 'Auto delete recent imports', desc: 'Removes entries of the Recent imports list that are older than 7 days. Your imported links are never touched.', default: false, keywords: ['import', 'history', 'recent', 'log', 'clear', 'delete', '7 days'], since: '2.2.3' },
+  { id: 'metaBrowser', section: 'data', type: 'switch', key: 'meta.browserFallback', label: 'Use extra metadata services from this device', desc: 'When the Worker cannot read a page, this device asks free public services itself (Dub, Jina Reader, AllOrigins, Microlink). They see the link, so turn this off if that matters to you.', default: true, keywords: ['metadata', 'fallback', 'privacy', 'title', 'favicon'], since: '2.1.3' },   // v2.2.3: moved out of Advanced (that section will be removed)
   { id: 'impSpeed', section: 'data', type: 'seg', key: 'import.speed', label: 'Import speed', desc: 'Fast writes more groups of 100 links at once. Gentle is kinder to a weak connection.', default: 'normal', options: opt(['gentle', 'Gentle'], ['normal', 'Normal'], ['fast', 'Fast']), keywords: ['import', 'speed', 'parallel'], since: '2.2.0' },
   { id: 'exportData', section: 'data', type: 'custom', custom: 'exportData', label: 'Export library', keywords: ['export', 'backup', 'download', 'json', 'csv', 'excel'], since: '2.2.0' },
   { id: 'recycleBin', section: 'data', type: 'custom', custom: 'recycleBin', top: true, label: 'Recycle Bin', keywords: ['deleted', 'restore', 'trash', 'bin'], since: '2.2.0' },
@@ -76,11 +79,13 @@ export const CATALOG = [
 
   // ---- Advanced
   { id: 'worker', section: 'advanced', type: 'custom', custom: 'worker', label: 'Metadata service', keywords: ['worker', 'cloudflare', 'status'], since: '2.1.0' },
-  { id: 'metaBrowser', section: 'advanced', type: 'switch', key: 'meta.browserFallback', label: 'Use extra metadata services from this device', desc: 'When the Worker cannot read a page, this device asks free public services itself (Dub, Jina Reader, AllOrigins, Microlink). They see the link, so turn this off if that matters to you.', default: true, keywords: ['metadata', 'fallback', 'privacy', 'title', 'favicon'], since: '2.1.3' },
   { id: 'tester', section: 'advanced', type: 'custom', custom: 'tester', label: 'Metadata tester', keywords: ['metadata', 'title', 'favicon', 'test urls'], since: '2.1.0' },
-  { id: 'clearCache', section: 'advanced', type: 'custom', custom: 'clearCache', label: 'Clear app cache', keywords: ['cache', 'reload', 'stale', 'fix'], since: '2.1.2' },
   { id: 'debugLog', section: 'advanced', type: 'custom', custom: 'debug', label: 'Debug log', keywords: ['logs', 'errors'], since: '2.1.0' },
-  { id: 'reset', section: 'advanced', type: 'custom', custom: 'reset', label: 'Reset settings', sensitive: true, keywords: ['defaults', 'restore'], since: '2.1.0' }
+  // ---- Danger zone (v2.2.3, owner request): the important actions live here because the Advanced section will be removed later
+  { id: 'clearCache', section: 'danger', type: 'custom', custom: 'clearCache', label: 'Clear app cache', keywords: ['cache', 'reload', 'stale', 'fix'], since: '2.1.2' },
+  { id: 'reset', section: 'danger', type: 'custom', custom: 'reset', label: 'Reset all settings', sensitive: true, keywords: ['defaults', 'restore'], since: '2.1.0' },
+  { id: 'logout', section: 'danger', type: 'custom', custom: 'logout', label: 'Log out', keywords: ['sign out', 'leave', 'guest'], since: '2.2.3' },
+  { id: 'clearLocal', section: 'danger', type: 'custom', custom: 'clearLocal', label: 'Clear local storage data', sensitive: true, keywords: ['erase', 'wipe', 'storage', 'cache', 'cookies', 'log out', 'local data', 'reset app'], since: '2.2.3' }
 ];
 
 export const entriesFor = (sectionId) => CATALOG.filter((e) => e.section === sectionId);

@@ -16,7 +16,8 @@ import { prefs } from '../../core/local-prefs.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { maskEmail } from '../../core/mask.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
-import { mountInstallBanner } from './install-banner.js';
+// ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
+// import { mountInstallBanner } from './install-banner.js';
 
 // Import links uses the plus icon on purpose (it is the "add" action), in the bar and in the sidebar.
 const SIDE = [
@@ -40,9 +41,7 @@ export function mountShell({ router }) {
   const sidebar = document.getElementById('sidebar');
   const bar = document.getElementById('bar');
   const root = document.getElementById('page-root');
-  const bannerHost = h('div', { class: 'banner-host' });
-  root.parentElement.insertBefore(bannerHost, root);
-  mountInstallBanner(bannerHost);
+  // ! Unused since v2.2.3: the install banner host (banner-host + mountInstallBanner) was removed here, see the import note above.
 
   // ---- sidebar -------------------------------------------------------------------------------------------------------
   const setCollapsed = (v) => {

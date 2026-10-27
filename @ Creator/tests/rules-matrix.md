@@ -109,3 +109,12 @@ No new database paths or fields. Import, restore, Recycle Bin and export use `/u
 | M5 | owner | same with `cc` of 3 letters, or without `ts` and `seen` | write | deny |
 | M6 | owner | `users/u1/devices/d1` with `rv` (a time) | write | allow (a sign-out request is written by another device of the same user) |
 Rules Playground (owner): simulate write at `/users/<uid>/devices/test1` with `{"ts":1,"seen":1,"name":"x"}` as you: allowed; as another uid: denied.
+
+## v2.2.3 additions (field `users/<uid>/devices/<id>/out`)
+| # | Who | Path / data | Operation | Expected |
+|---|---|---|---|---|
+| N1 | owner | `users/u1/devices/d1/out` = a time (not in the future by more than 1 min) | write | allow (a device marks itself signed out; its record stays) |
+| N2 | owner | `users/u1/devices/d1/out` = a text | write | deny (must be a number) |
+| N3 | other user or anonymous | `users/u1/devices/d1/out` | write | deny |
+Owner: rules changed (one new field), so `firebase deploy --only database` is needed again.
+

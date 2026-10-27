@@ -13,9 +13,23 @@
 .auth-theme:hover { color: var(--text); }
 
 .auth-panel { position: relative; z-index: 1; width: 100%; max-width: 400px; margin: 0 auto; padding: var(--s3) var(--pad) calc(var(--s5) + var(--safe-b)); display: grid; gap: var(--s3); align-content: center; }
-.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
-.auth-tabs button { min-height: 44px; font-weight: 600; color: var(--sub); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
-.auth-tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--accent); }
+.auth-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+.auth-tabs button { min-height: 44px; font-weight: 600; color: var(--sub); transition: color var(--t-std) var(--ease); }
+.auth-tabs button[aria-selected='true'] { color: var(--text); }
+/* v2.2.3: one underline that glides between the two tabs (it used to jump) */
+.auth-tabs::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 50%; height: 2px; border-radius: 2px; background: var(--accent); transition: transform 280ms var(--ease); }
+.auth-tabs[data-tab='register']::after { transform: translateX(100%); }
+.auth-body { display: grid; gap: var(--s3); }
+.auth-body.slide-right { animation: auth-in-right 280ms var(--ease) both; }
+.auth-body.slide-left { animation: auth-in-left 280ms var(--ease) both; }
+@keyframes auth-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes auth-in-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .auth-body.slide-right, .auth-body.slide-left { animation: none; } .auth-tabs::after { transition: none; } }
+/* v2.2.3: the main button and a smaller "Visit as guest" on its right */
+.auth-actions { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--s2); }
+.auth-actions .btn { min-height: 46px; }
+.auth-guestbtn { font-weight: 600; }
+.auth-guesthelp { text-align: center; margin: 0; }
 .auth-title { font: 650 var(--fs-xl) / 1.15 var(--font-brand); letter-spacing: -0.01em; margin-top: var(--s2); }
 .auth-sub { color: var(--sub); margin-top: 2px; }
 .auth-or { display: flex; align-items: center; gap: var(--s3); color: var(--sub); font-size: var(--fs-sm); }

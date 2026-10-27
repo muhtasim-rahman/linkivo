@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.2.2';
+const VERSION = '2.2.3';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -64,6 +64,7 @@ const PRECACHE = [
   '/js/core/app-info.js',
   '/js/core/appearance.js',
   '/js/core/back-logic.js',
+  '/js/core/clear-local.js',
   '/js/core/clipboard-watch.js',
   '/js/core/config.js',
   '/js/core/css-loader.js',

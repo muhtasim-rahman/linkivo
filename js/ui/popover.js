@@ -11,14 +11,25 @@
  *   v2.2.2: a long menu (the link menu) is capped (css .pop max-height) and scrolls inside itself with a thin scrollbar. On phones the address bar
  *           shrinks and grows while you scroll, which fires \"resize\": that used to close the menu in the middle of a scroll. Only a change of WIDTH
  *           (rotation, window resize) closes it now; a change of height just places it again.
+ *   v2.2.3 (owner request): (1) on phones and touch screens a transparent backdrop sits behind the menu. A tap outside only CLOSES the menu: it used to
+ *           close it and then also press the button underneath (the click went through). The backdrop closes on `click`, after it has swallowed the
+ *           tap. (2) Opening a menu on an anchor that already has an open menu CLOSES it (a second press on the same three-dot button toggles; the
+ *           selection bar's button used to stack a second menu on the first).
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
 import { icon } from './icons.js';
 
+const OPEN = new WeakMap();   // anchor -> handle of the menu that is open on it (v2.2.3: pressing the anchor again closes it)
+const touchLike = () => typeof matchMedia === 'function' && matchMedia('(max-width: 899px), (pointer: coarse)').matches;
+
 export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 } = {}) {
+  const already = OPEN.get(anchor);
+  if (already && already.isOpen()) { already.close(); return { close() {}, isOpen: () => false }; }
   const returnTo = document.activeElement;
   let layer;
+  // v2.2.3: transparent catcher behind the menu (touch only). It is part of the menu's lifetime: removed in close().
+  const backdrop = touchLike() ? h('div', { class: 'pop-backdrop', 'aria-hidden': 'true', on: { click: (e) => { e.preventDefault(); e.stopPropagation(); close(); } } }) : null;
   const build = (it) => {
     if (it.separator) return h('div', { class: 'pop-sep', role: 'separator' });
     if (it.heading) return h('div', { class: 'pop-head', role: 'presentation', text: it.heading });
@@ -49,7 +60,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
     top = Math.max(8, Math.min(top, vh - mh - 8));          // never off screen; the CSS max-height scrolls the rare menu that is taller than the screen
     menu.style.left = left + 'px'; menu.style.top = top + 'px'; menu.style.setProperty('--ox', origin);
   }
-  function onDown(e) { if (!menu.contains(e.target) && !anchor.contains(e.target)) close(); }
+  function onDown(e) { if (backdrop) return; if (!menu.contains(e.target) && !anchor.contains(e.target)) close(); }   // with a backdrop the catcher closes the menu on click
   function onKey(e) {
     const btns = [...menu.querySelectorAll('.pop-item:not(:disabled)')];
     const i = btns.indexOf(document.activeElement);
@@ -67,7 +78,8 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
   function close() {
     if (!menu.isConnected) return;
     layer?.remove();
-    menu.remove();
+    menu.remove(); backdrop?.remove();
+    if (OPEN.get(anchor) === handle) OPEN.delete(anchor);
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
     removeEventListener('resize', onResize);
@@ -75,6 +87,9 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
     if (returnTo && returnTo.isConnected && returnTo.focus) returnTo.focus({ preventScroll: true });
     if (onClose) onClose();
   }
+  const handle = { close, isOpen: () => menu.isConnected };
+  OPEN.set(anchor, handle);
+  if (backdrop) document.body.appendChild(backdrop);
   document.body.appendChild(menu);
   place();
   document.addEventListener('pointerdown', onDown, true);
@@ -83,5 +98,5 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
   document.addEventListener('scroll', onScroll, true);
   layer = pushLayer(() => { layer = null; close(); });
   (menu.querySelector('.pop-item[aria-checked="true"]') || menu.querySelector('.pop-item'))?.focus({ preventScroll: true });
-  return { close, isOpen: () => menu.isConnected };
+  return handle;
 }

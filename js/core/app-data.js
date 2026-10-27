@@ -30,7 +30,8 @@ export async function initData(session) {
     registerImportJobs({ queue, engine, fetchMeta }); // v2.2.0: import and title-fetch handlers must exist before start() resumes interrupted jobs
     await queue.start();
     pruneJobs(queue).catch(() => {});
-    importLog = createImportLog({ adapter: session.mode === 'account' ? engine.adapter : null, uid: session.mode === 'account' ? session.user.uid : null, queue }); // v2.2.2: Recent imports follow the account
+    importLog = createImportLog({ adapter: session.mode === 'account' ? engine.adapter : null, uid: session.mode === 'account' ? session.user.uid : null, queue, autoDays: () => (prefs.get('import.autoClear', false) ? 7 : 0) }); // v2.2.2: Recent imports follow the account
+    prefs.onChange('import.autoClear', (v) => { if (v) importLog?.purgeOld().catch(() => {}); });   // v2.2.3: turning the setting on cleans the list at once
     engine.purgeExpired().catch((e) => log.warn('data', 'recycle bin purge failed', e)); // v2.2.0: items deleted more than 15 days ago go for good
     scope = wanted;
     if (session.mode === 'account') { startSettingsSync(session.user.uid); startDevices(session.user.uid); } // v2.2.1: the account's settings follow the user across devices

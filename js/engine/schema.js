@@ -36,7 +36,7 @@ export const HISTORY = { required: ['lid', 'ts'], fields: { lid: s(40, 1), url: 
 /** v2.2.2: one finished import / title fetch / restore, kept in the account so every device lists the same Recent imports (users/<uid>/importLog/<id>). */
 export const IMPORT_LOG = { required: ['ty', 'ts'], fields: { ty: s(10, 1), title: s(120), st: s(10), total: n(0, 1e7), done: n(0, 1e7), failed: n(0, 1e7), saved: n(0, 1e7), skipped: n(0, 1e7), invalid: n(0, 1e7), fid: s(40), imp: s(40), ts: ts() } };
 /** v2.2.2: one signed-in device (users/<uid>/devices/<deviceId>): what the Account page lists. `rv` = another device asked it to sign out. No full IP address is stored (D-093). */
-export const DEVICE = { required: ['ts', 'seen'], fields: { name: s(60), br: s(40), os: s(40), kind: s(10), ip: s(40), city: s(60), reg: s(60), cc: s(2), tz: s(60), via: s(16), ts: ts(), seen: ts(), rv: ts() } };
+export const DEVICE = { required: ['ts', 'seen'], fields: { name: s(60), br: s(40), os: s(40), kind: s(10), ip: s(40), city: s(60), reg: s(60), cc: s(2), tz: s(60), via: s(16), ts: ts(), seen: ts(), rv: ts(), out: ts() } };   // v2.2.3: `out` = the time this device signed out (its record stays, grey, until someone removes it)
 export const ACTIVITY = { required: ['type', 'ts'], fields: { type: s(24, 1), info: s(200), ts: ts() } };
 
 /** Cleans one field value; returns undefined when the value must not be stored. */

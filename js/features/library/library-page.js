@@ -6,6 +6,7 @@
  *          icon on wide screens.
  * v2.2.2 (owner request): the filter dropdown (all, pinned, with links, empty) is gone, Sort is an icon beside the search field on phones, and the
  *          "Add a link" button left the header (quick add stays in the folder page and on the key a).
+ *          v2.2.3: the install suggestion (a floating card above the bottom bar) lives on this page only.
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
 import { h } from '../../core/dom.js';
@@ -26,6 +27,8 @@ import { folderMenuItems } from './folder-actions.js';
 import { openFolderForm } from './pickers.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
+import { mountDock } from '../../ui/dock.js';
+import { mountInstallSuggest } from '../shell/install-card.js';
 
 const SORTS = { manual: 'Default order', name: 'Name A to Z', recent: 'Recently changed', links: 'Most links', new: 'Newest first', old: 'Oldest first' };
 const FILTERS = { all: 'All folders', pinned: 'Pinned', filled: 'With links', empty: 'Empty' };
@@ -100,7 +103,9 @@ export async function mount(container, ctx) {
   const offKeys = registerShortcuts(keys);
   search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; st.q = ''; search.blur(); update(); } });
   update();
-  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); };
+  // v2.2.3 (owner): the install suggestion shows HERE only (not on other pages), as a dock that follows the bottom bar
+  const suggest = mountInstallSuggest({ mountDock, page });
+  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

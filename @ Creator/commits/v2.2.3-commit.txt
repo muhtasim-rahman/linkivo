@@ -1,0 +1,17 @@
+feat(v2.2.3): owner feedback round (install cards, login, Danger zone, sync fixes)
+
+- Install card redesigned: compact, responsive, accent-coloured logo; login page (under the buttons on phones, under the highlights on wide screens), Library-only floating suggestion that follows the bottom bar, Menu card with honest installed status
+- Login: sliding Sign in / Create account switch, smaller Visit as guest on the right of the main button
+- Account: Google unlink popup, Change email under the sign-in methods, password change signs out, Google picture used when the account has none
+- Export starts with all folders selected (folder chips)
+- Import: Close (10) countdown inside the button, Recent imports sync fix, auto delete setting (7 days, off), stuck drop highlight fixed
+- Menus: transparent backdrop on touch screens, second press on the same button closes the menu; select mode shows every check box
+- Devices: Signing out (yellow) and Signed out (grey, removed only by the cross); database rules gain devices/<id>/out
+- Developer card redesigned (3 columns on wide screens); splash shows the version
+- Danger zone section: reset all settings, clear app cache, log out, clear local storage data; metaBrowser moved to Data
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database (rules changed), then --only hosting; hard reload

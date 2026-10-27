@@ -39,3 +39,7 @@
 .splash[data-mode='short'] #sp-lring-g, .splash[data-mode='still'] #sp-lring-g { transform: scale(1); }
 .splash[data-mode='short'] .sp-expand, .splash[data-mode='still'] .sp-expand { clip-path: circle(150vmax at 50% 50%); }
 .splash[data-mode='short'] .splash-stage { animation: lk-fade 520ms var(--ease) both; }
+
+/* v2.2.3: short version badge at the bottom of the splash (text is set by splash.js) */
+.splash-ver { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 22px); translate: -50% 0; z-index: 2; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--sub); font: 600 11px/1.4 var(--font-mono); letter-spacing: 0.02em; }
+.splash-ver:empty, .splash[data-mode='pending'] .splash-ver { display: none; }

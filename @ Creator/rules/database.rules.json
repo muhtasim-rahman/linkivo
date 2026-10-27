@@ -123,6 +123,9 @@
             "rv": {
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
             },
+            "out": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
             "$other": {
               ".validate": false
             }

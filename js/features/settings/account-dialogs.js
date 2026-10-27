@@ -12,7 +12,8 @@ import { openSheet } from '../../ui/sheet.js';
 import { maskEmail } from '../../core/mask.js';
 import { sendAllowed, recordSend, friendlyWait } from '../../core/send-limit.js';
 import { requireSensitive } from '../../core/sensitive.js';
-import { changePassword, linkPassword, changeEmail, sendReset, friendlyAuthError } from '../auth/auth-service.js';
+import { changePassword, linkPassword, changeEmail, sendReset, friendlyAuthError, signOutUser } from '../auth/auth-service.js';
+import { log } from '../../core/logger.js';
 
 const MIN = 6;
 /** Pure: the first problem with a new password, or '' (Firebase needs 6 characters; same wording as the sign-up form). */
@@ -46,7 +47,12 @@ export async function openChangePassword({ user }) {
     const p = passwordProblem(nw.input.value, again.input.value, old.input.value); if (p) { err.textContent = p; return; }
     if (!(await requireSensitive('password-change'))) return;
     setBusy(true);
-    try { await changePassword(old.input.value, nw.input.value); toast('Password changed.'); sheet.close(true); }
+    try {
+      await changePassword(old.input.value, nw.input.value);
+      // v2.2.3 (owner): after a successful change the user is signed out and signs in again with the new password
+      toast('Password changed. Sign in again with your new password.', { duration: 5000 }); sheet.close(true);
+      try { await signOutUser(); } catch (e2) { log.warn('account', 'sign-out after password change failed', e2); }
+    }
     catch (e) { err.textContent = friendlyAuthError(e) || ''; }
     setBusy(false);
   }

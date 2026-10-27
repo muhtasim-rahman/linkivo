@@ -5,6 +5,8 @@
  *          order, filter) built from the option lists in formats/*.js: segmented icon choices, color dots, chips, switches and the shared dropdown.
  *          The designed formats (Web page, Print) show a live miniature of the page; the others a short text preview. Last format and options are remembered.
  *          Opened from the Library menu (whole library), a folder menu (that folder), the selection bar (selected links) and Settings.
+ * v2.2.3 (owner): when the whole library is exported (Settings, Library menu) a row of folder chips shows every folder SELECTED; tap a chip to leave a
+ *          folder out (the scope becomes those folders), the first chip selects or clears all.
  * API: openExport({ engine, scope, title? }) -> Promise<void>      downloadBlob(blob, name)
  */
 import { h } from '../../core/dom.js';
@@ -58,8 +60,10 @@ function control(opt, value, set) {
 }
 
 export async function openExport({ engine, scope = { type: 'all' }, title = 'Export' }) {
-  await loadCss('/css/pages/data.css');
-  const { links, folders } = collect(engine, scope);
+  await Promise.all([loadCss('/css/pages/data.css'), loadCss('/css/pages/library.css')]);   // library.css: the chip look
+  let { links, folders } = collect(engine, scope);
+  const allFolders = scope.type === 'all' ? engine.listFolders() : [];   // v2.2.3: the folder chips exist only when the whole library is the scope
+  const picked = new Set(allFolders.map((f) => f.id));
   if (!links.length && scope.type !== 'folders' && scope.type !== 'all') { toast('There are no links to export.'); return; }
   const all = [NATIVE, ...FORMATS];
   let fmtId = all.some((f) => f.id === pref(LIB.exportFormat)) ? pref(LIB.exportFormat) : NATIVE_ID;
@@ -73,7 +77,22 @@ export async function openExport({ engine, scope = { type: 'all' }, title = 'Exp
   const optsBox = h('div', { class: 'ex-opts' });
   const fileInput = h('input', { class: 'input', type: 'text', placeholder: 'linkivo-{scope}-{date}', 'aria-label': 'File name', maxlength: '80', on: { input: (e) => { fileName = e.target.value; } } });
   const go = h('button', { type: 'button', class: 'btn btn-primary' });
-  const scopeRow = h('div', { class: 'ex-scope' }, h('span', { class: 'ex-chip' }, icon('folder', { size: 16 }), plural(folders.length, 'folder')), h('span', { class: 'ex-chip' }, icon('link', { size: 16 }), plural(links.length, 'link')));
+  const scopeRow = h('div', { class: 'ex-scope' });
+  const folderBox = h('div', { class: 'ex-folders', role: 'group', 'aria-label': 'Folders to export', hidden: allFolders.length < 2 });
+  const paintScope = () => scopeRow.replaceChildren(h('span', { class: 'ex-chip' }, icon('folder', { size: 16 }), plural(folders.length, 'folder')), h('span', { class: 'ex-chip' }, icon('link', { size: 16 }), plural(links.length, 'link')));
+  /** Pure-ish: every folder selected = the whole library; fewer = just those folders. */
+  function recollect() {
+    scope = picked.size === allFolders.length ? { type: 'all' } : { type: 'folders', fids: [...picked] };
+    ({ links, folders } = collect(engine, scope));
+    paintScope(); paintFolders();
+    go.textContent = `Export ${plural(links.length, 'link')}`; go.disabled = !links.length && fmtId !== NATIVE_ID; preview();
+  }
+  function paintFolders() {
+    const allOn = picked.size === allFolders.length;
+    const chip = (label, on, fn, n) => h('button', { type: 'button', class: ['chip', on && 'is-on'], 'aria-pressed': String(on), on: { click: fn } }, label, n != null && h('span', { class: 'chip-n', text: String(n) }));
+    folderBox.replaceChildren(chip(allOn ? 'All folders' : 'Select all', allOn, () => { if (allOn) picked.clear(); else for (const f of allFolders) picked.add(f.id); recollect(); }),
+      ...allFolders.map((f) => chip(f.name, picked.has(f.id), () => { if (picked.has(f.id)) picked.delete(f.id); else picked.add(f.id); recollect(); }, f.lc || 0)));
+  }
 
   function pick(id) { fmtId = id; setPref(LIB.exportFormat, id); paint(); }
   let timer = 0, token = 0;
@@ -115,7 +134,8 @@ export async function openExport({ engine, scope = { type: 'all' }, title = 'Exp
       toast(`Exported ${plural(r.count, 'link')} (${formatBytes(r.size)}).`); sheet.close();
     } catch (e) { toast('The export failed. Try another format.', { type: 'error' }); go.disabled = false; go.textContent = `Export ${plural(links.length, 'link')}`; }
   });
-  const body = h('div', { class: 'form ex' }, scopeRow, nativeTile, grid, previewBox, optsBox, h('div', { class: 'imp-foot' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet.close() } }, 'Cancel'), go));
+  const body = h('div', { class: 'form ex' }, scopeRow, folderBox, nativeTile, grid, previewBox, optsBox, h('div', { class: 'imp-foot' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet.close() } }, 'Cancel'), go));
   const sheet = openSheet({ title, wide: true, body, actions: [] });
+  paintScope(); if (allFolders.length > 1) paintFolders();
   paint();
 }

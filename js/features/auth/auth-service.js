@@ -5,6 +5,7 @@
  * API: initAuth() -> Promise<void>   (resolves when the first session state is known)
  *      signInWithGoogle() signInWithEmail(email, password) registerWithEmail(email, password) sendReset(email)
  *      resendVerification() signOutUser() enterGuest() leaveGuest() getIdToken() reauthenticate(password?)
+ *      v2.2.3: unlinkGoogle() (a new Google account can be linked afterwards); the picture falls back to the linked Google picture
  *      v2.2.2: refreshUser() linkGoogle() linkPassword(password) changePassword(old, next) changeEmail(newEmail, password?) providerEmails(user)
  *              (all of them re-prove who you are first where Firebase needs it; the Account card in Settings uses them)
  *      friendlyAuthError(error) -> string|null (null = user cancelled, show nothing)
@@ -22,8 +23,10 @@ let fb = null;
 const userInfo = (u) => ({
   uid: u.uid, email: u.email || '', name: u.displayName || (u.email ? u.email.split('@')[0] : 'Account'),
   emailVerified: !!u.emailVerified, providers: (u.providerData || []).map((p) => p.providerId), googleEmail: ((u.providerData || []).find((p) => p.providerId === 'google.com') || {}).email || '',
-  photo: /^https:\/\//.test(u.photoURL || '') ? u.photoURL : '' // Google profile picture, shown read-only (uploading one stays out of scope, D-028)
+  photo: safePhoto(u.photoURL) || safePhoto(((u.providerData || []).find((p) => p.providerId === 'google.com') || {}).photoURL) // the account's own picture, else the linked Google picture (v2.2.3); read-only until the owner adds uploads (D-028)
 });
+/** Only https pictures are shown. */
+function safePhoto(url) { return /^https:\/\//.test(url || '') ? url : ''; }
 
 export async function initAuth() {
   if (prefs.get('mode') === 'guest') { setSession({ mode: 'guest', user: null, status: 'active', ready: true }); return; }
@@ -101,6 +104,12 @@ export async function refreshUser() {
 export async function linkGoogle() {
   const { auth, mods } = await sdk(); if (!auth.currentUser) throw new Error('Not signed in');
   await mods.auth.linkWithPopup(auth.currentUser, new mods.auth.GoogleAuthProvider());
+  await refreshUser();
+}
+/** v2.2.3: removes the Google sign-in from this account (the account, its links and folders stay). Needs another way to sign in: the caller checks. */
+export async function unlinkGoogle() {
+  const { auth, mods } = await sdk(); if (!auth.currentUser) throw new Error('Not signed in');
+  await mods.auth.unlink(auth.currentUser, 'google.com');
   await refreshUser();
 }
 /** Adds email-and-password sign-in to an account that so far has only Google. The email is the account's own email. */

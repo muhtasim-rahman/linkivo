@@ -196,7 +196,8 @@ test('login page: tabs, validation, guest notice enters guest mode', async () =>
   $$('.auth-tabs button', container)[1].click(); assert.equal($('.auth-title').textContent, 'Create your account'); assert.equal($('button[type=submit]').textContent, 'Create account');
   $('form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await tick(5);
   assert.match($('.alert.is-error:not([hidden])').textContent, /email/i);
-  const guestBtn = $$('.auth-guest button')[0]; guestBtn.click(); await tick(5);
+  const guestBtn = $('.auth-guestbtn'); // v2.2.3: the guest button sits on the right of the main button
+  guestBtn.click(); await tick(5);
   assert.match($('.sheet').textContent, /Nothing is stored online/);
   $$('.sheet-foot button').find((b) => b.textContent === 'Continue as guest').click(); await tick(200);
   assert.equal(getSession().mode, 'guest'); assert.equal(prefs.get('mode'), 'guest'); prefs.remove('mode');
@@ -209,14 +210,14 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   setSession({ mode: 'guest', user: null, status: 'active' });
   const router = mk({ routes: ROUTES, container, getSession }); await router.start();
   await router.navigate('/settings'); await tick(5);
-  assert.equal($$('.set-nav .set-nav-item').length, 7, 'category list'); assert.equal($$('.set-sec').length, 7, 'one page, one section per category');
+  assert.equal($$('.set-nav .set-nav-item').length, 8, 'category list (v2.2.3: + Danger zone)'); assert.equal($$('.set-sec').length, 8, 'one page, one section per category');
   assert.equal($('.page-head.is-stack .page-title').textContent, 'Settings'); assert.ok($('.page-head.is-stack .page-sub'), 'title and subtitle on separate lines');
   await router.navigate('/settings/appearance'); await tick(5);
   $$('[data-setting="theme"] button').find((b) => b.textContent === 'Dark').click(); assert.equal(prefs.get('ui.theme'), 'dark'); assert.equal(document.documentElement.dataset.theme, 'dark');
   $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet');
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
-  assert.equal($$('.set-sec').length, 7, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
+  assert.equal($$('.set-sec').length, 8, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
   const resetRow = $('.row.is-danger'); resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);

@@ -4,6 +4,7 @@
  *          View profile and a sync icon), email verification (green tick when verified), the email address with Change, the sign-in methods (email and Google
  *          icons: a tick on the linked ones, a tap binds the other one to the SAME account), a short warning when the account email and the linked Google email
  *          differ, Change password (or Add a password), Logged-in devices and Log out. Guests keep their short explanation.
+ *          v2.2.3 (owner): order = profile, verification, sign-in methods, Change email, password; the linked Google icon opens an Unlink popup.
  * API: accountRows({ router }) -> Element[]
  */
 import { h } from '../../core/dom.js';
@@ -13,7 +14,8 @@ import { getSession } from '../../core/session.js';
 import { maskEmail } from '../../core/mask.js';
 import { getEngine } from '../../core/app-data.js';
 import { confirmDialog } from '../../ui/confirm.js';
-import { resendVerification, linkGoogle, friendlyAuthError, hasPassword, emailsDiffer } from '../auth/auth-service.js';
+import { resendVerification, linkGoogle, unlinkGoogle, friendlyAuthError, hasPassword, emailsDiffer } from '../auth/auth-service.js';
+import { requireSensitive } from '../../core/sensitive.js';
 import { logOut, avatar } from '../shell/shell-parts.js';
 import { openChangePassword, openSetPassword, openChangeEmail } from './account-dialogs.js';
 
@@ -60,19 +62,28 @@ export function accountRows({ router, rerender = () => {} }) {
 
   // 4. sign-in methods: ticks, tap to bind the missing one to this same account
   const m = methodState(u);
-  const chip = (linked, label, glyph, fn) => h('button', { type: 'button', class: ['acc-method', linked && 'is-linked'], 'aria-label': linked ? `${label}: linked` : `Link ${label}`, 'data-tip': linked ? `${label} is linked` : `Link ${label} to this account`, disabled: linked, on: { click: fn } },
+  // v2.2.3: a linked Google icon is tappable too: it opens the Unlink popup (then another Google account can be linked). Email and password stays fixed.
+  const chip = (linked, label, glyph, fn, { canTap = !linked, tip } = {}) => h('button', { type: 'button', class: ['acc-method', linked && 'is-linked'], 'aria-label': linked ? `${label}: linked${canTap ? ', tap to unlink' : ''}` : `Link ${label}`, 'data-tip': tip || (linked ? `${label} is linked` : `Link ${label} to this account`), disabled: !canTap, on: { click: fn } },
     glyph, linked && h('span', { class: 'acc-tick', 'aria-hidden': 'true' }, icon('check', { size: 10 })));
-  const methods = row('Sign-in methods', `${[m.password && 'Email and password', m.google && 'Google'].filter(Boolean).join(' and ') || 'Unknown'} linked. Tap an icon to link the other one to this account.`,
+  const methods = row('Sign-in methods', `${[m.password && 'Email and password', m.google && 'Google'].filter(Boolean).join(' and ') || 'Unknown'} linked. Tap an icon to link the other one to this account, or the Google icon to unlink it.`,
     h('span', { class: 'acc-methods' },
       chip(m.password, 'Email and password', icon('mail', { size: 20 }), () => openSetPassword({ user: u }).then(rerender)),
       chip(m.google, 'Google', googleMark(20), async () => {
+        if (m.google) {   // linked: offer to unlink
+          if (!m.password) { toast('Add a password first, so you can still sign in after unlinking Google.', { duration: 5000 }); return; }
+          const who = u.googleEmail ? ` (${maskEmail(u.googleEmail)})` : '';
+          if (!(await confirmDialog({ title: 'Unlink this Google account?', message: `Google${who} will no longer open this Linkivo account. Your account, folders and links stay exactly as they are, and you will sign in with your email and password. You can link a different Google account afterwards.`, confirmLabel: 'Unlink Google', danger: true }))) return;
+          if (!(await requireSensitive('google-unlink'))) return;
+          try { await unlinkGoogle(); toast('Google unlinked. You can link another Google account now.'); rerender(); } catch (e) { const t = friendlyAuthError(e); toast(t || 'Could not unlink Google. Try again.', { type: 'error' }); }
+          return;
+        }
         if (!(await confirmDialog({ title: 'Link your Google account?', message: 'A Google sign-in window opens. Afterwards you can use Google or your password to reach this same account.', confirmLabel: 'Link Google' }))) return;
         try { await linkGoogle(); toast('Google linked.'); rerender(); } catch (e) { const t = friendlyAuthError(e); if (t) toast(t, { type: 'error' }); }
-      })));
+      }, { canTap: true, tip: m.google ? 'Google is linked. Tap to unlink it.' : 'Link Google to this account' })));
   const warn = emailsDiffer(u) ? h('div', { class: 'acc-warn', role: 'note' }, icon('alert', { size: 18 }), h('span', { text: `Your Google email (${maskEmail(u.googleEmail)}) is different from this account's email (${maskEmail(u.email)}). Both open this same Linkivo account.` })) : null;
 
   return [
-    head, verifyRow, emailRow, methods, warn,
+    head, verifyRow, methods, warn, emailRow,   // v2.2.3 (owner): Change email sits after the sign-in methods and before the password row
     hasPassword(u) ? actionRow('lock', 'Change password', 'Type your old and new password. Forgot it? You can ask for a reset link there.', () => openChangePassword({ user: u }))
       : actionRow('lock', 'Add a password', 'Also sign in with your email and a password.', () => openSetPassword({ user: u }).then(rerender)),
     actionRow('monitor', 'Logged-in devices', 'See where you are signed in, and sign a device out.', () => import('./devices-sheet.js').then((d) => d.openDevices())),

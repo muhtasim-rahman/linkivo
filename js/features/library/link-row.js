@@ -6,6 +6,7 @@
  *          has a fixed size so it can not leave the card. List rows get an "open in new tab" icon on mouse screens (it left the link menu).
  * v2.2.2 (owner request): there is no separate checkbox column any more. The check box is always in the row, laid over the favicon: on mouse screens it
  *          shows when the pointer is on the favicon (a click starts selecting), selected rows keep it, unselected rows show their favicon again until hovered.
+ * v2.2.3 (owner): while select mode is ON every row shows its check box (no hover needed), on mouse screens too. Outside select mode only hover shows it.
  *          On touch screens it shows on every row while selecting.
  * API: createLinkRow(link, { card, selecting, selected, show: { url, points, added } }) -> Element      ROW_HEIGHT  CARD_HEIGHT  CARD_MIN_WIDTH
  */

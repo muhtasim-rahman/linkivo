@@ -105,3 +105,12 @@
 .dev-list { display: grid; gap: 0; } .dev-row { border-radius: var(--r-control); } .dev-note { margin: 0 0 var(--s2); }
 .app-links { margin-top: var(--s3); }
 @media (max-width: 599px) { .acc-head { flex-wrap: wrap; } .acc-head .row-end { width: 100%; justify-content: flex-end; } }
+
+/* v2.2.3: logged-in devices: the row is a div (main button + optional cross), badges for Signing out (yellow) and Signed out (grey) */
+.dev-row { gap: var(--s1); padding-inline: 0; }
+.dev-main { display: flex; align-items: center; gap: var(--s3); flex: 1; min-width: 0; min-height: var(--row-h); padding: 6px var(--s4); text-align: left; color: inherit; border-radius: var(--r-control); }
+.dev-main:hover { background: var(--surface-2); }
+.dev-row.is-out .row-label, .dev-row.is-out .row-ic { opacity: 0.6; }
+.dev-row.is-out > .btn-icon { margin-right: var(--s2); }
+.tag.is-warn { background: color-mix(in srgb, var(--warning) 20%, transparent); color: color-mix(in srgb, var(--warning) 70%, var(--text)); }
+.tag.is-muted { background: var(--surface-2); color: var(--sub); border: 1px solid var(--line); }

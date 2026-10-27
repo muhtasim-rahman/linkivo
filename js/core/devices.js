@@ -6,7 +6,9 @@
  *            this is APP-LEVEL sign-out. The other device gets `rv` (a time) written on its record and signs itself out as soon as it sees it (at once if the app
  *            is open, otherwise the next time it is opened). The login token that device already holds is NOT revoked: that needs the Firebase Admin SDK
  *            (service account), which arrives with v2.5.0. The page says so.
- *          A device record is replaced whole at every deliberate sign-in, which also clears an old `rv`.
+ *          A device record is replaced whole at every deliberate sign-in, which also clears an old `rv` and `out`.
+ *          v2.2.3 (owner): a device that signed out (on request, or by its own user) does NOT delete its record any more: it writes `out` (the time) and
+ *          the list shows it grey as "Signed out" until a person removes it with the cross icon. `rv` without `out` = "Signing out" (yellow).
  * API: createDeviceService({ adapter, uid, store, ua, via, where?, now, signOut }) -> { start(), stop(), list(), signOutDevice(id), forget(id), id }
  *      list() -> Promise<[{ id, ...record, current }]> newest activity first
  */
@@ -37,7 +39,7 @@ export function createDeviceService({ adapter, uid, store, ua = '', via = 'web',
   async function handleRv(rv) {
     if (stopped || !signOutRequested(rv, store.get('device.login', 0))) return;
     stopped = true; off?.(); clearInterval(timer);   // nothing more to watch or write after this
-    try { await adapter.update({ [`${base}/${id}`]: null }); } catch { /* the record is removed with the sign-out anyway */ }
+    try { await adapter.update({ [`${base}/${id}/out`]: now() }); } catch { /* the sign-out goes on; the row then stays yellow until the device opens again */ }
     await signOut();
   }
 
@@ -62,7 +64,7 @@ export function createDeviceService({ adapter, uid, store, ua = '', via = 'web',
     /** Asks another device to sign out. The record stays (marked) until that device removes it or someone forgets it. */
     async signOutDevice(otherId) { await adapter.update({ [`${base}/${otherId}/rv`]: now() }); },
     /** Removes a record from the list (a device that was reset and will never come back). */
-    async forgetSelf() { try { await adapter.update({ [`${base}/${id}`]: null }); } catch { /* signing out goes on */ } },
+    async forgetSelf() { try { await adapter.update({ [`${base}/${id}/out`]: now() }); } catch { /* signing out goes on */ } },   // v2.2.3: marked, not deleted
     async forget(otherId) { await adapter.update({ [`${base}/${otherId}`]: null }); }
   };
 }

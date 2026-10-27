@@ -20,7 +20,7 @@ import { installCard } from '../shell/install-card.js';
 import { binCard } from '../shell/bin-card.js';
 import { renderAdvanced } from './advanced-tools.js';
 
-const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache']);
+const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache', 'logout', 'clearLocal']);   // v2.2.3: logout and clearLocal belong to the Danger zone
 
 /** Pure: which section is "current" given each section's distance from the top of the scroller (negative = already passed). */
 export function activeSection(tops, atBottom, offset = 120) {
@@ -50,7 +50,7 @@ export async function mount(container, ctx) {
       const group = h('div', { class: 'group' });
       for (const e of entriesFor(s.id)) {
         if (e.top) continue;   // v2.2.2: drawn as a card at the top of the page (wide screens)
-        const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: renderSections }) : renderCustom(e.custom, { router: ctx.router, rerender: renderSections })) : renderControl(e);
+        const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: renderSections, router: ctx.router }) : renderCustom(e.custom, { router: ctx.router, rerender: renderSections })) : renderControl(e);
         if (Array.isArray(node)) group.append(...node); else group.appendChild(node);
       }
       return h('section', { class: 'set-sec', id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },

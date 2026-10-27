@@ -32,3 +32,6 @@
 .pop-item.is-danger:hover { background: var(--danger-soft); }
 .pop-sep { height: 1px; background: var(--line); margin: 4px 6px; }
 @media (pointer: fine) { .pop-item { min-height: 38px; } }
+
+/* v2.2.3: transparent catcher behind a menu on touch screens: a tap outside closes the menu and nothing else (js/ui/popover.js) */
+.pop-backdrop { position: fixed; inset: 0; z-index: calc(var(--z-pop) - 1); background: transparent; touch-action: none; -webkit-tap-highlight-color: transparent; }

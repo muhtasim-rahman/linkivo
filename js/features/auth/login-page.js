@@ -3,6 +3,9 @@
  * Purpose: the sign-in page: Google, email and password (sign in / create account), reset password, and "Visit as guest" with its
  *          notice. Creating an account needs the Terms and Privacy agreement. Wide screens: art-and-overview column + form column;
  *          phones: one compact column. A theme switch is always at hand.
+ *          v2.2.3 (owner): the Sign in / Create account switch slides (the underline glides, the content slides in from the side it moves toward), "Visit as
+ *          guest" is a smaller button on the RIGHT of the main button, and the install card sits under the buttons on phones and under the highlights of
+ *          the left column on wide screens (never as a banner at the top). It shows only while the app is not installed.
  * Page module: mount(container, ctx)
  */
 import { h } from '../../core/dom.js';
@@ -17,6 +20,7 @@ import { signInWithGoogle, signInWithEmail, registerWithEmail, sendReset, enterG
 import { friendlyWait } from '../../core/send-limit.js';
 import { log } from '../../core/logger.js';
 import app from '../../core/app-info.js';
+import { loginInstallCard } from '../shell/install-card.js';
 
 const HIGHLIGHTS = [
   ['upload', 'Import in bulk', 'Paste text or drop files and every link is picked out, in seconds.'],
@@ -61,7 +65,11 @@ export async function mount(container) {
   }
   function setBusy(b, which) { busy = b; for (const el of [submit, google]) el.disabled = b; (which === 'google' ? google : submit).classList.toggle('is-loading', b); }
   function setTab(t) {
+    const moved = t !== tab && body.isConnected;   // false on the first call: no animation while the page is being built
+    const dir = t === 'register' ? 'right' : 'left';
     tab = t; showError(''); agreeRow.classList.remove('is-error');
+    tabs.dataset.tab = t;
+    if (moved) { body.classList.remove('slide-left', 'slide-right'); void body.offsetWidth; body.classList.add('slide-' + dir); }
     for (const b of tabs.children) b.setAttribute('aria-selected', String(b.id === 'tab-' + t));
     title.textContent = t === 'signin' ? 'Welcome back' : 'Create your account';
     sub.textContent = t === 'signin' ? 'Your links, private and in one place.' : 'Free, and it works on every device you use.';
@@ -121,27 +129,29 @@ export async function mount(container) {
   renderTheme();
 
   const offline = session.error === 'offline';
+  // the part that slides when the tab changes (title, buttons, form); the tab bar stays still
+  const actions = h('div', { class: 'auth-actions' }, submit, h('button', { type: 'button', class: 'btn auth-guestbtn', on: { click: openGuestNotice } }, h('span', { text: 'Visit as guest' })));
   const form = h('form', { class: 'auth-form', novalidate: true, on: { submit: onSubmit } },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'auth-email', text: 'Email' }), email),
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'auth-pass', text: 'Password' }), h('div', { class: 'input-wrap' }, pass, eye), passHelp),
-    h('div', { class: 'auth-links' }, forgot), agreeRow, alertBox, submit);
-
-  container.appendChild(h('div', { class: 'auth' },
-    h('aside', { class: 'auth-art', 'aria-label': 'About Linkivo' },
-      brand(),
-      h('div', { class: 'art-mid' },
-        h('h2', { class: 'art-head', text: 'Every link you save, one search away.' }),
-        h('p', { class: 'art-lead', text: 'Linkivo is a fast, private home for hundreds or thousands of links. Here is what you get:' }),
-        h('ul', { class: 'art-list' }, HIGHLIGHTS.map(([ic, t, d]) => h('li', null, h('span', { class: 'art-ic' }, icon(ic, { size: 20 })), h('div', null, h('strong', { text: t }), h('span', { class: 't', text: d })))))),
-      h('p', { class: 'art-foot' }, `Version ${app.version}. Open source on `, h('a', { href: app.repo, target: '_blank', rel: 'noopener', 'data-native': '' }, 'GitHub'), '.')),
-    h('div', { class: 'auth-main' },
-      h('div', { class: 'auth-top' }, brand(), themeBtn),
-      h('section', { class: 'auth-panel', 'aria-label': 'Sign in' },
-        tabs,
-        h('div', null, title, sub),
-        offline && h('div', { class: 'alert is-error', role: 'alert' }, icon('wifi-off', { size: 18 }), h('span', { text: 'Sign-in could not load. Check your connection and reload. Guest mode still works.' })),
-        google, legal, h('div', { class: 'auth-or', text: 'or use email' }), form,
-        h('div', { class: 'auth-guest' }, h('button', { type: 'button', class: 'btn', on: { click: openGuestNotice } }, icon('user', { size: 18 }), h('span', { text: 'Visit as guest' })), h('p', { class: 'help', text: 'No account needed. Your data stays on this device.' }))))));
+    h('div', { class: 'auth-links' }, forgot), agreeRow, alertBox, actions);
+  const body = h('div', { class: 'auth-body' },
+    h('div', null, title, sub),
+    offline && h('div', { class: 'alert is-error', role: 'alert' }, icon('wifi-off', { size: 18 }), h('span', { text: 'Sign-in could not load. Check your connection and reload. Guest mode still works.' })),
+    google, legal, h('div', { class: 'auth-or', text: 'or use email' }), form,
+    h('p', { class: 'help auth-guesthelp', text: 'No account needed to look around: guest data stays on this device.' }),
+    h('div', { class: 'auth-install is-phone' }, loginInstallCard()));
+  const highlight = ([ic, t, d]) => h('li', null, h('span', { class: 'art-ic' }, icon(ic, { size: 20 })), h('div', null, h('strong', { text: t }), h('span', { class: 't', text: d })));
+  const art = h('aside', { class: 'auth-art', 'aria-label': 'About Linkivo' },
+    brand(),
+    h('div', { class: 'art-mid' },
+      h('h2', { class: 'art-head', text: 'Every link you save, one search away.' }),
+      h('p', { class: 'art-lead', text: 'Linkivo is a fast, private home for hundreds or thousands of links. Here is what you get:' }),
+      h('ul', { class: 'art-list' }, HIGHLIGHTS.map(highlight)),
+      h('div', { class: 'auth-install is-wide' }, loginInstallCard())),   // v2.2.3: wide screens, under the highlights
+    h('p', { class: 'art-foot' }, `Version ${app.version}. Open source on `, h('a', { href: app.repo, target: '_blank', rel: 'noopener', 'data-native': '' }, 'GitHub'), '.'));
+  const main = h('div', { class: 'auth-main' }, h('div', { class: 'auth-top' }, brand(), themeBtn), h('section', { class: 'auth-panel', 'aria-label': 'Sign in' }, tabs, body));
+  container.appendChild(h('div', { class: 'auth' }, art, main));
   setTab('signin');
   if (session.redirectError) showError(friendlyAuthError({ code: session.redirectError }));
   if (offline) for (const el of [google, submit]) el.disabled = true;

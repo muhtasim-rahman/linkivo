@@ -13,6 +13,7 @@
  */
 import { prefs } from '../../core/local-prefs.js';
 import { sleep } from '../../core/utils.js';
+import app from '../../core/app-info.js';   // v2.2.3: tiny module with no imports, so the splash module graph stays small
 
 const MIN_MS = { full: 3200, short: 600, still: 300 };
 const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
@@ -99,6 +100,7 @@ export function startSplash() {
   // a browser that can not run the Web Animations API still gets the finished logo
   if (mode === 'full' && typeof el.animate !== 'function') mode = 'short';
   el.dataset.mode = mode;
+  const ver = $('sp-ver'); if (ver) ver.textContent = `v${app.version}`;   // v2.2.3 (owner): a short version badge at the bottom of the splash
   startedAt = performance.now();
   if (mode === 'full') timeline = runFull();
   setTimeout(() => { if (!ended) $('splash-dots')?.classList.add('show'); }, MIN_MS[mode] + 80);

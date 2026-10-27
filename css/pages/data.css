@@ -96,7 +96,8 @@
 .kb-list { padding-bottom: var(--s2); }
 
 /* v2.2.2: job popup countdown beside Close, header row of Recent imports */
-.jp-count { align-self: center; margin-inline-start: var(--s2); font-size: var(--fs-xs); color: var(--sub); font-variant-numeric: tabular-nums; }
+.jp-count { margin-inline-start: 6px; font-variant-numeric: tabular-nums; opacity: 0.8; }   /* v2.2.3: sits inside the Close button, "Close (10)" */
+.jp-count:empty { display: none; }
 .imp-h2-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin: var(--s6) 0 var(--s2); }
 /* v2.2.2: collapse arrow on 'Supported file types' (points down closed, up open); small left-aligned link in the restore popup */
 .imp-formats summary { list-style: none; gap: var(--s2); width: fit-content; } .imp-formats summary::-webkit-details-marker { display: none; }
@@ -105,3 +106,7 @@
 .imp-other { justify-self: start; align-self: start; width: fit-content; font-size: var(--fs-xs); min-height: 32px; padding: 0; }
 /* v2.2.2: the search, sort and quick buttons of the found-links toolbar share one height */
 .rv-tools .sel-btn, .rv-tools .input, .rv-tools .btn-sm { min-height: var(--ctl-h); height: var(--ctl-h); box-sizing: border-box; }
+
+/* v2.2.3: folder chips of the export popup (all selected by default) */
+.ex-folders { display: flex; flex-wrap: wrap; gap: var(--s1); max-height: 112px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 2px; }
+.ex-folders .chip { max-width: 100%; }

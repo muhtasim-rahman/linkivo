@@ -56,6 +56,8 @@
 .lcheck { position: absolute; left: var(--s1); top: 50%; translate: 0 -50%; z-index: 1; width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--line-strong); display: grid; place-items: center; color: transparent; background: var(--surface); opacity: 0; transition: opacity var(--t-micro) var(--ease); }
 .lcheck::after { content: ''; position: absolute; inset: -6px; } /* 44px touch target */
 .lcheck:hover, .lcheck:focus-visible, .lrow.is-selected .lcheck { opacity: 1; }
+/* v2.2.3 (owner): once select mode is on (the select icon, the keyboard, a click on one favicon) EVERY favicon is a check box, on mouse screens too, no hover needed */
+.lrow.is-selecting .lcheck { opacity: 1; }
 .lrow.is-selected .lcheck { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 @media (hover: none) { .lcheck { pointer-events: none; } .lrow.is-selecting .lcheck { pointer-events: auto; opacity: 1; } }
 .vlist.is-grid .lrow.is-card { display: flex; align-items: flex-start; gap: var(--s2); border: 1px solid var(--line); border-radius: var(--r-group); padding: var(--s3) var(--s1) var(--s3) var(--s3); background: var(--surface); overflow: hidden; }

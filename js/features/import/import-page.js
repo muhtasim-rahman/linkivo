@@ -52,11 +52,15 @@ export async function mount(container, ctx) {
   }
   const offJob = queue.subscribe(() => renderJobs()), offRem = queue.onRemoved(() => renderJobs()), offLog = ilog?.subscribe(() => renderJobs());
   renderJobs();
+  ilog?.purgeOld?.().catch(() => {});   // v2.2.3: "Auto delete recent imports" (setting, off by default)
 
   const over = (e) => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); page.classList.add('is-over'); } };
   const leave = () => page.classList.remove('is-over');
   const drop = (e) => { if (e.dataTransfer?.files?.length) { e.preventDefault(); leave(); form.addFiles(e.dataTransfer.files); } };
   page.addEventListener('dragover', over); page.addEventListener('dragleave', leave); page.addEventListener('drop', drop);
+  // v2.2.3 (owner): the form's own drop zone stops the event, so the page never saw the drop and kept its highlight (accent tint on the input card)
+  // for good. A capture listener sees every drop first, and a drag that ends elsewhere clears it too.
+  page.addEventListener('drop', leave, true); window.addEventListener('dragend', leave); window.addEventListener('drop', leave);
   setTimeout(() => form.focus(), 80);
-  return () => { offJob(); offRem?.(); offLog?.(); removeDock(); form.destroy(); };
+  return () => { offJob(); offRem?.(); offLog?.(); removeDock(); form.destroy(); window.removeEventListener('dragend', leave); window.removeEventListener('drop', leave); };
 }

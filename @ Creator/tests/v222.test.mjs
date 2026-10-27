@@ -72,7 +72,7 @@ test('devices: registers itself, lists newest first, signs out when another devi
   await A.start(); t += 10; await B.start();
   const list = await A.list(); assert.equal(list.length, 2); assert.equal(list[0].current, true); assert.equal(list[0].id, A.id); assert.equal(list[1].city, 'B');
   t += 10; await A.signOutDevice(B.id); await tick(5);
-  assert.deepEqual(out, ['B'], 'B signed itself out'); assert.equal(await db.get(`users/u1/devices/${B.id}`), null, 'and removed its record');
+  assert.deepEqual(out, ['B'], 'B signed itself out'); assert.ok(await db.get(`users/u1/devices/${B.id}/out`), 'v2.2.3: its record STAYS, marked with the time it signed out'); assert.ok(await db.get(`users/u1/devices/${B.id}`), 'not removed');
   // B opens later with an OLD request still on a record: a deliberate sign-in after it wins
   await db.update({ [`users/u1/devices/${B.id}`]: { name: 'x', ts: 1, seen: 1, rv: 2000 } }); sb.set('device.login', 3000); out.length = 0;
   const B2 = createDeviceService({ adapter: db, uid: 'u1', store: sb, ua: '', now: () => t, signOut: async () => out.push('B2') }); await B2.start();
@@ -119,8 +119,8 @@ test('import form: the same file is added once; a countdown starts only after th
     const queue = { get: () => job, list: () => [job], subscribe: (fn) => bus.on('job', fn), onRemoved: () => () => {}, pause() {}, stop() {}, resume() {}, retry() {}, remove() {} };
     const api = openJobDetails({ queue, engine: {}, jobId: 'j', autoClose: true }); await tick(5);
     assert.equal(tickFn, null, 'no countdown while it runs'); job.status = 'done'; job.done = 10; bus.emit('job', job); await tick(5);
-    assert.ok(tickFn, 'countdown running'); assert.match(document.body.textContent, /Closing in 10 s/);
-    for (let i = 0; i < AUTO_CLOSE_S - 1; i++) tickFn(); assert.match(document.body.textContent, /Closing in 1 s/); tickFn(); await tick(300); assert.ok(!document.querySelector('.sheet'), 'closed by itself'); void api;
+    assert.ok(tickFn, 'countdown running'); assert.match(document.body.textContent, /Close\s*\(10\)/, 'v2.2.3: the countdown is inside the Close button');
+    for (let i = 0; i < AUTO_CLOSE_S - 1; i++) tickFn(); assert.match(document.body.textContent, /Close\s*\(1\)/); tickFn(); await tick(300); assert.ok(!document.querySelector('.sheet'), 'closed by itself'); void api;
     // opened later on a finished job (from the history list): never closes by itself
     tickFn = null; const old = { ...job }; const queue2 = { ...queue, get: () => old, list: () => [old], subscribe: (fn) => createEmitter().on('job', fn) };
     openJobDetails({ queue: queue2, engine: {}, jobId: 'j', autoClose: false }); await tick(5); assert.equal(tickFn, null); document.querySelector('.sheet-close, [aria-label="Close"]')?.click();
@@ -190,11 +190,11 @@ test('account card: profile line, verified tick, method icons, differing-email w
   const both = draw({ uid: 'u1', name: 'Turzo', email: 'mdturzo.dev@gmail.com', emailVerified: true, providers: ['password', 'google.com'], googleEmail: 'other.person@gmail.com', photo: '' });
   assert.ok(both.querySelector('.acc-head .avatar'), 'round profile picture or initial'); assert.match(both.querySelector('.acc-head').textContent, /View profile/); assert.ok(!/mdturzo\.dev@/.test(both.textContent), 'the email is masked everywhere');
   both.querySelector('.acc-head .btn').click(); assert.deepEqual(routed, ['/profile']);
-  assert.ok(both.querySelector('.acc-ok'), 'green verified tick'); const chips = [...both.querySelectorAll('.acc-method')]; assert.equal(chips.length, 2); assert.ok(chips.every((c) => c.classList.contains('is-linked') && c.disabled && c.querySelector('.acc-tick')), 'both linked: ticks');
+  assert.ok(both.querySelector('.acc-ok'), 'green verified tick'); const chips = [...both.querySelectorAll('.acc-method')]; assert.equal(chips.length, 2); assert.ok(chips.every((c) => c.classList.contains('is-linked') && c.querySelector('.acc-tick')), 'both linked: ticks'); assert.equal(chips.filter((c) => c.disabled).length, 1, 'v2.2.3: Google (linked) is tappable to unlink, the password icon is fixed');
   assert.ok(both.querySelector('.acc-warn'), 'Google email differs: warning'); assert.match(both.textContent, /Change password/); assert.match(both.textContent, /Change email/); assert.match(both.textContent, /Logged-in devices/); assert.ok(!/Reset password/.test(both.textContent), 'Reset password became Change password');
   both.remove();
   const g = draw({ uid: 'u2', name: 'G', email: 'g@gmail.com', emailVerified: false, providers: ['google.com'], googleEmail: 'g@gmail.com' });
   assert.ok(!g.querySelector('.acc-warn'), 'same email: no warning'); assert.ok(!g.querySelector('.acc-ok') && /Resend email/.test(g.textContent), 'not verified: resend button');
-  const [mail, goog] = [...g.querySelectorAll('.acc-method')]; assert.ok(!mail.disabled && !mail.classList.contains('is-linked'), 'email sign-in can be linked'); assert.ok(goog.disabled && goog.classList.contains('is-linked'));
+  const [mail, goog] = [...g.querySelectorAll('.acc-method')]; assert.ok(!mail.disabled && !mail.classList.contains('is-linked'), 'email sign-in can be linked'); assert.ok(!goog.disabled && goog.classList.contains('is-linked'), 'v2.2.3: linked Google is tappable (unlink popup)');
   assert.match(g.textContent, /Add a password/); assert.ok(!/Change email/.test(g.textContent), 'a Google-only account first adds a password'); g.remove();
 });

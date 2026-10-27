@@ -4,7 +4,7 @@
  *          saved right now, Pause / Resume / Stop / Retry, Minimize (the task chip keeps showing it), and after an import: Undo and Open folder.
  *          The task chip calls openJobDetails() when tapped.
  * v2.2.2: when the popup is opened right after an import starts (autoClose: true) and the job finishes while it is open, a 10 second
- *          countdown sits beside the Close button and the popup closes by itself. A popup opened later from the list of recent imports never closes alone.
+ *          countdown sits inside the Close button as "Close (10)" and the popup closes by itself. A popup opened later from the list of recent imports never closes alone.
  * API: openJobDetails({ queue, engine, router?, jobId, autoClose? }) -> sheet api | null      etaText(done, total, startedAt, now) -> string      AUTO_CLOSE_S
  */
 import { h } from '../../core/dom.js';
@@ -33,10 +33,11 @@ export function openJobDetails({ queue, engine, router = null, jobId, autoClose 
   let sawWork = false, timer = 0, left = 0;
   const countdown = h('span', { class: 'jp-count', 'aria-live': 'off' });
   const stopCount = () => { clearInterval(timer); timer = 0; left = 0; countdown.textContent = ''; };
+  const tick = () => { countdown.textContent = `(${left})`; };   // v2.2.3 (owner): the number lives INSIDE the Close button, no separate text
   function startCount() {
     if (!autoClose || timer) return;
-    left = AUTO_CLOSE_S; countdown.textContent = `Closing in ${left} s`;
-    timer = setInterval(() => { left--; if (left <= 0) { stopCount(); sheet.close(); } else countdown.textContent = `Closing in ${left} s`; }, 1000);
+    left = AUTO_CLOSE_S; tick();
+    timer = setInterval(() => { left--; if (left <= 0) { stopCount(); sheet.close(); } else tick(); }, 1000);
   }
 
   function render(j) {
@@ -58,8 +59,7 @@ export function openJobDetails({ queue, engine, router = null, jobId, autoClose 
       if ((j.status === 'failed' || j.status === 'stopped') && j.type !== 'enrich') items.push(b('Retry', () => queue.retry(j.id), 'btn-primary'));
       if (j.type === 'import' && (j.status === 'done' || j.status === 'stopped' || j.status === 'failed') && j.params?.imp && engine.linksOfImport(j.params.imp).length) items.push(b('Undo import', async () => { const n = await undoImport(engine, j.params.imp); toast(`Moved ${plural(n, 'link')} to the Recycle Bin.`); sheet.close(); }));
       if (j.status === 'done' && j.params?.fid && router && engine.getFolder(j.params.fid)) items.push(b('Open folder', () => { sheet.close(); router.navigate(`/folder/${j.params.fid}`); }, 'btn-primary'));
-      items.push(b('Close', () => sheet.close()));
-      if (timer) items.push(countdown);   // beside the Close button
+      items.push(h('button', { type: 'button', class: 'btn jp-close', on: { click: () => sheet.close() } }, 'Close', countdown));   // v2.2.3: "Close (10)"
     }
     btns.replaceChildren(...items);
   }

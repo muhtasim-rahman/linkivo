@@ -17,18 +17,6 @@
 
 /* ---- v2.2.1: Menu page ---- */
 .menu-list { gap: var(--s4); }
-.icard { position: relative; display: grid; gap: var(--s3); padding: var(--s4); border-radius: var(--r-sheet); overflow: hidden; color: var(--accent-fg);
-  background: url(/assets/art/install-pattern.svg) right -20px top -10px / 260px auto no-repeat, linear-gradient(135deg, var(--accent-strong), color-mix(in srgb, var(--brand-b) 70%, var(--accent-strong))); box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 30%, transparent); }
-.icard-top { display: flex; align-items: center; gap: var(--s3); }
-.icard-tile { width: 52px; height: 52px; border-radius: 15px; flex: none; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.35); }
-.icard-text { display: grid; gap: 1px; min-width: 0; } .icard-text strong { font: 700 var(--fs-lg) / 1.2 var(--font-brand); } .icard-text span { font-size: var(--fs-sm); opacity: 0.88; }
-.icard-perks { display: flex; flex-wrap: wrap; gap: var(--s2); }
-.icard-perks li { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border-radius: 999px; background: rgb(255 255 255 / 0.18); font-size: var(--fs-sm); font-weight: 560; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-.icard-btn { justify-self: start; border: 0; background: #fff; color: #0c1629; font-weight: 650; }
-.icard-btn:hover { background: #fff; filter: brightness(0.96); }
-.icard.is-done { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-group); box-shadow: none; }
-.icard.is-done .icard-text strong { font: 650 var(--fs) var(--font-ui); } .icard.is-done .icard-text span { color: var(--sub); opacity: 1; }
-.icard-tick { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--success); color: #fff; flex: none; }
 .qs-row { flex-wrap: wrap; } .qs-theme { width: 100%; } .qs-theme button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 @media (min-width: 480px) { .qs-theme { width: auto; } }
 .binrow { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); color: inherit; }
@@ -39,7 +27,8 @@
 .infocard-feats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
 .infocard-feats li { display: flex; align-items: center; gap: var(--s2); min-height: 40px; padding: 0 var(--s3); border-radius: var(--r-control); background: var(--surface-2); font-size: var(--fs-sm); font-weight: 560; }
 .infocard-feats .hl-ic { color: var(--accent-text); display: grid; flex: none; }
-.infocard-dev { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border-radius: var(--r-group); background: linear-gradient(135deg, var(--accent-soft), transparent 70%); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); }
+/* ! Replaced in v2.2.3 by the developer card rules at the end of this file (.infocard-dev is now a dotted card with a code icon). */
+.infocard-dev { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border-radius: var(--r-group); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); }
 .infocard-dev .dev-info { flex: 1; min-width: 0; } .dev-rounds { display: flex; gap: var(--s1); flex: none; }
 .dev-round { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); color: var(--text); }
 .dev-round:hover { background: var(--accent-soft); text-decoration: none; }
@@ -53,3 +42,24 @@
 .infocard-dev { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
 .infocard-dev .dev-rounds { margin-top: var(--s2); }
 .alink.is-wide { grid-column: 1 / -1; }
+
+/* ---- v2.2.3: developer card, redesigned (owner). A dotted pattern that fades toward the left, a big low-opacity </> in the bottom right corner (both in the
+   accent colour). Phones: two columns (badge 10px wider than before, the right column compact, round links under the name). Wide screens: THREE columns
+   (badge | name | Website and GitHub as icon + text buttons, Email as an icon). ---- */
+.infocard-dev { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: 66px minmax(0, 1fr); align-items: center; gap: var(--s3); padding: var(--s3); border-radius: var(--r-group);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: linear-gradient(135deg, var(--accent-soft), transparent 74%), var(--surface); }
+.infocard-dev::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--accent) 38%, transparent) 1px, transparent 1.6px) 0 0 / 13px 13px; -webkit-mask: linear-gradient(100deg, transparent 28%, #000 100%); mask: linear-gradient(100deg, transparent 28%, #000 100%); opacity: 0.5; }
+.infocard-dev::after { content: ''; position: absolute; right: -4px; bottom: -12px; width: 118px; height: 79px; z-index: -1; pointer-events: none; opacity: 0.13; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-mask: url(/assets/art/dev-code.svg) center / contain no-repeat; mask: url(/assets/art/dev-code.svg) center / contain no-repeat; }
+.infocard-dev .dev-badge { width: 66px; height: 66px; }
+.infocard-dev .dev-photo { font-size: 22px; }
+.infocard-dev .dev-info { gap: 0; } .infocard-dev .dev-info .muted { font-size: var(--fs-sm); line-height: 1.25; }
+.infocard-dev .dev-rounds { margin-top: 6px; gap: var(--s1); }
+.infocard-dev .dev-round { width: 32px; height: 32px; }
+.dev-btns { display: none; }
+@media (min-width: 900px) {
+  .infocard-dev { grid-template-columns: 66px minmax(0, 1fr) auto; gap: var(--s4); padding: var(--s3) var(--s4); }
+  .infocard-dev .dev-rounds { display: none; }
+  .dev-btns { display: flex; align-items: center; gap: var(--s2); position: relative; z-index: 1; }
+  .dev-btns .btn { background: var(--surface); }
+  .dev-btns .dev-round { width: 36px; height: 36px; }
+}

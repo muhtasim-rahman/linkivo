@@ -188,3 +188,15 @@ Owner actions: pending: extract the zip (delete nothing), `firebase deploy --onl
 Known issues: another device's sign-out still depends on the app being open (until v2.5.0); all new icon names were checked to exist in icons.js.
 Next: answer on delete account and the cut-off message; then v2.3.0 Preview and search.
 
+## v2.2.4 Quick fixes (2026-10-26) Status: COMPLETE (Node and jsdom tests incl. 5 new; NOT opened in a real browser or on a phone; native Back, the install detection and the request email need the owner checklist)
+Summary: version at the end of the splash caption; browser note for devices that have the app (Library suggestion and Menu card, bold "Install it again" link; detection also asks `getInstalledRelatedApps`, manifest gained `related_applications`); Menu page: gear icon in the header, View all settings as its own card, icon-only theme buttons in the right column, red Log out card; tighter accent swatches on phones; wide login install card as one compact row and shorter left column on short windows; three-dot menus in the folder page close on a second press; NATIVE browser history (old parent-chain back rules switched off); Log out removed from Account; devices remember who asked a sign-out and show normal sign-outs; Last synced row; Danger zone titles red, order log out, reset, cache, local data, delete account; Delete account = verify (password with Forgot link, or Google), summary, type DELETE ACCOUNT, ready request email to mdturzo.dev@gmail.com (must be sent from the account email); import popup closes after 9 s.
+Files added: js/features/settings/delete-account.js; @ Creator/tests/v224.test.mjs; commit file.
+Changed: router.js, install.js, install-card.js, menu-page.js, login CSS, folder-page.js, cloud-engine.js (lastSync), custom-rows.js, account-card.js, devices.js, devices-sheet.js, schema.js (DEVICE.by), rules and snapshot v2.2.4, auth-service.js (accountFacts), advanced-tools.js, catalog.js, settings-page.js, splash.js, import-progress.js, manifest.webmanifest, CSS.
+Unused, kept on purpose: back-logic.js, router `parentOf` and `rearm` (the old back rules), install-banner.js, index.html `#sp-ver`.
+Decisions: D-107 native history (owner: remove the custom back; a sheet open while Back is pressed is closed by the page change). D-108 delete account is a manual request (no automation until the Worker/service account exists), safeguards: fresh re-sign-in, summary tick, typed phrase, request id, same-email rule. D-109 the installed flag can only be set by detection and cleared by an install prompt.
+Verified facts: none. [verify] `related_applications` url assumes hosting at https://linkivo.web.app (change in manifest.webmanifest if the real domain differs); getInstalledRelatedApps works only in Chromium browsers.
+Assumptions awaiting owner confirmation: "10 sec" countdown read as 9 s; delete-account email text is English.
+Owner actions: pending: extract the zip, `firebase deploy --only database` (field `by`) and `--only hosting`, hard reload.
+Known issues: native Back no longer closes an open sheet first; a Google-only user sees a Google popup to verify.
+Next: v2.3.0 Preview and search.
+

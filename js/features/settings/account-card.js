@@ -86,7 +86,6 @@ export function accountRows({ router, rerender = () => {} }) {
     head, verifyRow, methods, warn, emailRow,   // v2.2.3 (owner): Change email sits after the sign-in methods and before the password row
     hasPassword(u) ? actionRow('lock', 'Change password', 'Type your old and new password. Forgot it? You can ask for a reset link there.', () => openChangePassword({ user: u }))
       : actionRow('lock', 'Add a password', 'Also sign in with your email and a password.', () => openSetPassword({ user: u }).then(rerender)),
-    actionRow('monitor', 'Logged-in devices', 'See where you are signed in, and sign a device out.', () => import('./devices-sheet.js').then((d) => d.openDevices())),
-    h('button', { type: 'button', class: 'row is-danger', on: { click: () => logOut(router) } }, h('span', { class: 'row-ic' }, icon('logout')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Log out' })))
+    actionRow('monitor', 'Logged-in devices', 'See where you are signed in, and sign a device out.', () => import('./devices-sheet.js').then((d) => d.openDevices()))   // ! v2.2.4 (owner): the Log out row moved to the Danger zone only
   ].filter(Boolean);
 }

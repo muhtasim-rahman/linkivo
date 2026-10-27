@@ -112,14 +112,14 @@ test('account helpers: password rules, differing emails, sign-in method state, a
 // ---------------------------------------------------------------- import form and popup
 test('import form: the same file is added once; a countdown starts only after the job finished while the popup was open', async () => {
   const { fileSig } = await imp('js/features/import/import-form.js'); assert.equal(fileSig({ name: 'a.txt', size: 3, lastModified: 9 }), fileSig({ name: 'a.txt', size: 3, lastModified: 9 })); assert.notEqual(fileSig({ name: 'a.txt', size: 3, lastModified: 9 }), fileSig({ name: 'a.txt', size: 4, lastModified: 9 }));
-  const { openJobDetails, AUTO_CLOSE_S } = await imp('js/features/import/import-progress.js'); assert.equal(AUTO_CLOSE_S, 10);
+  const { openJobDetails, AUTO_CLOSE_S } = await imp('js/features/import/import-progress.js'); assert.equal(AUTO_CLOSE_S, 9);
   const realSet = globalThis.setInterval, realClear = globalThis.clearInterval; let tickFn = null; globalThis.setInterval = (fn) => { tickFn = fn; return 7; }; globalThis.clearInterval = () => { tickFn = null; };
   try {
     const bus = createEmitter(); const job = { id: 'j', type: 'import', status: 'running', title: 'Import', total: 10, done: 4, failed: 0, createdAt: 1, stats: {}, params: {} };
     const queue = { get: () => job, list: () => [job], subscribe: (fn) => bus.on('job', fn), onRemoved: () => () => {}, pause() {}, stop() {}, resume() {}, retry() {}, remove() {} };
     const api = openJobDetails({ queue, engine: {}, jobId: 'j', autoClose: true }); await tick(5);
     assert.equal(tickFn, null, 'no countdown while it runs'); job.status = 'done'; job.done = 10; bus.emit('job', job); await tick(5);
-    assert.ok(tickFn, 'countdown running'); assert.match(document.body.textContent, /Close\s*\(10\)/, 'v2.2.3: the countdown is inside the Close button');
+    assert.ok(tickFn, 'countdown running'); assert.match(document.body.textContent, /Close\s*\(9\)/, 'v2.2.3: the countdown is inside the Close button');
     for (let i = 0; i < AUTO_CLOSE_S - 1; i++) tickFn(); assert.match(document.body.textContent, /Close\s*\(1\)/); tickFn(); await tick(300); assert.ok(!document.querySelector('.sheet'), 'closed by itself'); void api;
     // opened later on a finished job (from the history list): never closes by itself
     tickFn = null; const old = { ...job }; const queue2 = { ...queue, get: () => old, list: () => [old], subscribe: (fn) => createEmitter().on('job', fn) };

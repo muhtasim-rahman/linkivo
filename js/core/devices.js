@@ -3,7 +3,7 @@
  * Purpose: the list of signed-in devices (users/<uid>/devices/<deviceId>, schema DEVICE). Firebase Auth has no such list, so every signed-in device writes
  *          one small record about itself: browser, system, kind, first and last time seen and the approximate place (from the Worker's /whoami).
  *          Signing a device out from another device:
- *            this is APP-LEVEL sign-out. The other device gets `rv` (a time) written on its record and signs itself out as soon as it sees it (at once if the app
+ *            this is APP-LEVEL sign-out. The other device gets `rv` (a time, plus `by` = the asking device's name) written on its record and signs itself out as soon as it sees it (at once if the app
  *            is open, otherwise the next time it is opened). The login token that device already holds is NOT revoked: that needs the Firebase Admin SDK
  *            (service account), which arrives with v2.5.0. The page says so.
  *          A device record is replaced whole at every deliberate sign-in, which also clears an old `rv` and `out`.
@@ -12,7 +12,7 @@
  * API: createDeviceService({ adapter, uid, store, ua, via, where?, now, signOut }) -> { start(), stop(), list(), signOutDevice(id), forget(id), id }
  *      list() -> Promise<[{ id, ...record, current }]> newest activity first
  */
-import { newDeviceId, buildDeviceRecord, signOutRequested } from './device-info.js';
+import { newDeviceId, buildDeviceRecord, signOutRequested, parseUserAgent, deviceName } from './device-info.js';
 import { log } from './logger.js';
 
 const BEAT_MS = 10 * 60 * 1000;
@@ -62,7 +62,7 @@ export function createDeviceService({ adapter, uid, store, ua = '', via = 'web',
       return Object.entries(all).filter(([, r]) => r && typeof r === 'object').map(([k, r]) => ({ id: k, ...r, current: k === id })).sort((a, b) => (b.current ? 1 : 0) - (a.current ? 1 : 0) || (b.seen || 0) - (a.seen || 0));
     },
     /** Asks another device to sign out. The record stays (marked) until that device removes it or someone forgets it. */
-    async signOutDevice(otherId) { await adapter.update({ [`${base}/${otherId}/rv`]: now() }); },
+    async signOutDevice(otherId) { await adapter.update({ [`${base}/${otherId}/rv`]: now(), [`${base}/${otherId}/by`]: deviceName(parseUserAgent(ua)).slice(0, 60) }); },   // v2.2.4: remember WHICH device asked
     /** Removes a record from the list (a device that was reset and will never come back). */
     async forgetSelf() { try { await adapter.update({ [`${base}/${id}/out`]: now() }); } catch { /* signing out goes on */ } },   // v2.2.3: marked, not deleted
     async forget(otherId) { await adapter.update({ [`${base}/${otherId}`]: null }); }

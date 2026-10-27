@@ -104,3 +104,9 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .auth-install { margin-top: var(--s1); } .auth-install .icard-host[hidden] { display: none; }
 .auth-install.is-wide { display: none; max-width: 460px; }
 @media (min-width: 900px) { .auth-install.is-phone { display: none; } .auth-install.is-wide { display: block; } }
+
+/* v2.2.4: "Install it again" link in the browser note, and the note as a floating suggestion (light surface, so the link can use the primary colour) */
+.icard-link { display: inline; padding: 0; font-weight: 700; color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+.icard.is-done .icard-text span { line-height: 1.35; }
+.icard.is-done.is-suggest { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'logo text x'; display: grid; box-shadow: var(--shadow-float); }
+.icard.is-done.is-suggest .icard-note-ic { grid-area: logo; } .icard.is-done.is-suggest .icard-x { background: var(--surface-2); color: var(--sub); }

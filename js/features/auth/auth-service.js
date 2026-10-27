@@ -106,6 +106,11 @@ export async function linkGoogle() {
   await mods.auth.linkWithPopup(auth.currentUser, new mods.auth.GoogleAuthProvider());
   await refreshUser();
 }
+/** v2.2.4: facts about the signed-in account for the delete-account summary and request (no secrets). */
+export async function accountFacts() {
+  const { auth } = await sdk(); const u = auth.currentUser; if (!u) throw new Error('Not signed in');
+  return { uid: u.uid, email: u.email || '', name: u.displayName || '', verified: !!u.emailVerified, providers: (u.providerData || []).map((p) => p.providerId), created: Number(u.metadata?.createdAt) || Date.parse(u.metadata?.creationTime) || 0, lastLogin: Number(u.metadata?.lastLoginAt) || Date.parse(u.metadata?.lastSignInTime) || 0 };
+}
 /** v2.2.3: removes the Google sign-in from this account (the account, its links and folders stay). Needs another way to sign in: the caller checks. */
 export async function unlinkGoogle() {
   const { auth, mods } = await sdk(); if (!auth.currentUser) throw new Error('Not signed in');

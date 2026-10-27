@@ -153,7 +153,6 @@ export async function mount(container, ctx) {
     viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); });
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
   moreBtn.addEventListener('click', () => {
-    if (moreBtn._m?.isOpen()) return;
     const f = folder();
     const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
     const pick = phone ? [{ label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
@@ -164,7 +163,7 @@ export async function mount(container, ctx) {
   body.addEventListener('click', (e) => {
     const row = e.target.closest('.lrow'); if (!row) return;
     const id = row.dataset.id, act = e.target.closest('[data-act]')?.dataset.act, l = engine.getLink(id); if (!l) return;
-    if (act === 'menu') { const a = e.target.closest('[data-act]'); if (a._m?.isOpen()) return; a._m = openMenu(a, linkMenuItems({ engine, link: l })); return; }
+    if (act === 'menu') { const a = e.target.closest('[data-act]'); a._m = openMenu(a, linkMenuItems({ engine, link: l })); return; }
     if (act === 'toggle' && !st.selecting) {   // v2.2.2: the favicon turned into a checkbox on hover: a click on it starts selecting
       e.preventDefault(); setSelecting(true); st.selected.add(id); st.last = st.rows.findIndex((x) => x.id === id); paintBar(); vl?.refresh(); return;
     }

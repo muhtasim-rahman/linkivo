@@ -9,7 +9,8 @@ import { icon } from '../../ui/icons.js';
 import { toast } from '../../ui/toast.js';
 import { getSession } from '../../core/session.js';
 import { maskEmail } from '../../core/mask.js';
-import { relativeTime, plural } from '../../core/format.js';
+import { relativeTime, dateTime, plural } from '../../core/format.js';
+import { prefs } from '../../core/local-prefs.js';
 import { installState, installStatus, promptInstall } from '../../core/install.js';
 import { checkForUpdates, updateState } from '../../core/update.js';
 import { health, EXPECTED_WORKER, isWorkerOutdated } from '../../core/worker-client.js';
@@ -100,9 +101,11 @@ function sync() {
     const st = e.status(), c = e.counts();
     const where = st.kind === 'guest' ? 'On this device only (IndexedDB).' : 'In your account, cached on this device (IndexedDB).';
     const state = st.kind === 'guest' ? (st.persistent ? 'Saved' : 'Not saved: this browser blocks storage') : { idle: 'In sync', syncing: 'Syncing', offline: 'Offline, changes are queued', error: 'Sync problem, will retry' }[st.state];
+    const last = st.lastSync || prefs.get('sync.last', 0); if (st.lastSync) prefs.set('sync.last', st.lastSync);
     // v2.2.2 (owner): the separate "Sync now" row is gone; the sync icon sits beside View profile in the Account card.
     box.replaceChildren(h('div', { class: 'row is-stack' }, h('dl', { class: 'kv', style: { width: '100%' } },
       h('dt', { text: 'Location' }), h('dd', { text: where }), h('dt', { text: 'Status' }), h('dd', { text: state }),
+      st.kind === 'guest' ? null : h('dt', { text: 'Last synced' }), st.kind === 'guest' ? null : h('dd', { text: last ? `${dateTime(last)} (${relativeTime(last)})` : 'Not yet in this session' }),   // v2.2.4 (owner)
       h('dt', { text: 'Waiting to upload' }), h('dd', { text: st.kind === 'guest' ? 'Not applicable' : plural(st.pending, 'change') }),
       h('dt', { text: 'Contents' }), h('dd', { text: `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}` }))));
   };

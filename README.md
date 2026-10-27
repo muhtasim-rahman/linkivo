@@ -5,7 +5,7 @@ A fast, private link manager (PWA). Plain JavaScript, Firebase and a Cloudflare 
 - App: https://linkivo.web.app
 - Developer: Muhtasim Rahman, https://mdturzo.web.app
 
-**Status:** v2.2.3 (owner feedback round: install cards, login, Danger zone, developer card, recent imports sync): folders, links, bulk actions with Undo, a full Import page (paste or files, domain switches, favicon filter), Recycle Bin, a redesigned Export (Linkivo backup, Web page, Print, Excel, CSV, JSON, text, Markdown, bookmarks, OPML), a rebuilt Menu page and account-synced settings are in place on top of the v2.1 foundation. Preview, search, Random, security and the full README arrive in v2.3.0 to v2.6.0.
+**Status:** v2.2.4 (quick fixes: native back button, delete-account request flow, install detection, menu page): folders, links, bulk actions with Undo, a full Import page (paste or files, domain switches, favicon filter), Recycle Bin, a redesigned Export (Linkivo backup, Web page, Print, Excel, CSV, JSON, text, Markdown, bookmarks, OPML), a rebuilt Menu page and account-synced settings are in place on top of the v2.1 foundation. Preview, search, Random, security and the full README arrive in v2.3.0 to v2.6.0.
 
 ## Repository layout
 

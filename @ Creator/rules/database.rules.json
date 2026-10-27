@@ -126,6 +126,9 @@
             "out": {
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
             },
+            "by": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
             "$other": {
               ".validate": false
             }

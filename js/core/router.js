@@ -3,6 +3,8 @@
  * Purpose: path-based SPA router. ONE page is mounted at a time: the previous page is unmounted and its container is
  *          cleared before the next one mounts (the v1.4.x "pages overlap" bug can not happen).
  *          Back button = overlay layers first, then the route's parent chain, then the root exit rule (ARCHITECTURE s.7).
+ * v2.2.4: Back/Forward are the browser's own (history entries are pushed per page). The old parent-chain back logic (back-logic.js, parentOf, rearm)
+ *          is NOT used any more; it stays in the file for now (owner asked to switch it off first).
  * Route:   { id, pattern:'/folder/:fid', title: string|fn(params), parent: string|null|fn(params, env, state),
  *            guard: 'auth'|'public'|'open', redirect?: fn(session), tab?: string, shell?: boolean, load: () => import() }
  * Page module contract: export async function mount(container, ctx) -> unmount() | void
@@ -84,7 +86,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     if (c && c.unmount) { try { const r = c.unmount(); if (r && r.catch) r.catch((e) => log.warn('router', 'unmount failed', e)); } catch (e) { log.warn('router', 'unmount failed', e); } }
   }
 
-  async function go(raw, { from = null, force = false, depth = 0 } = {}) {
+  async function go(raw, { from = null, force = false, depth = 0, pop = false } = {}) {
     const url = new URL(raw, location.origin);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const match = compiled.match(path);
@@ -109,9 +111,13 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     container.replaceChildren();
     resetScroll();
     applyPageMeta(pageMeta(route, params));
-    current = { route, params, path, search: url.search, from, unmount: null, mod: null };
-    history.replaceState({ lk: 'top', from }, '', path + url.search + url.hash);
+    // v2.2.4 (owner): NATIVE history. A new page is a new history entry (pushState), so the browser's own Back and Forward buttons behave as in any website.
+    //   Replace only for the first page, a reload of the same page, or when the browser itself moved (pop).
+    const same = current && current.path === path && current.search === url.search;
+    const hist = { lk: 'page', from };
+    if (pop || !current || same) history.replaceState(hist, '', path + url.search + url.hash); else history.pushState(hist, '', path + url.search + url.hash);
     const query = Object.fromEntries(url.searchParams);
+    current = { route, params, path, search: url.search, from, unmount: null, mod: null };
     bus.emit('route', { route, params, path, query });
 
     try {
@@ -132,16 +138,8 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     }
   }
 
-  function onPop(e) {
-    const st = e.state;
-    if (st && st.lk === 'top') return;
-    if (!st || st.lk !== 'base') { go(location.pathname + location.search); return; } // entry we did not create
-    const d = resolveBack({ layerCount: layerCount(), parent: parentPath(), now: Date.now(), lastRootBackAt });
-    if (d.type === 'close-layer') { closeTopLayer(); rearm(); }
-    else if (d.type === 'navigate') { lastRootBackAt = 0; rearm(); go(d.to, { from: null }); }
-    else if (d.type === 'root-first') { lastRootBackAt = Date.now(); onHint('Press back again to exit'); rearm(); }
-    else { lastRootBackAt = 0; history.back(); setTimeout(() => rearm(), 350); } // if we are still here, the app is the first history entry
-  }
+  /** v2.2.4: the browser moved through its history (Back, Forward, swipe): just show the page of the address bar. No custom back rules any more. */
+  function onPop() { go(location.pathname + location.search, { from: null, pop: true }); }
 
   function onClick(e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -158,8 +156,6 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
       document.addEventListener('click', onClick);
       window.addEventListener('popstate', onPop);
       const first = location.pathname + location.search;
-      history.replaceState({ lk: 'base' }, '', first);
-      history.pushState({ lk: 'top', from: null }, '', first);
       return go(first);
     },
     navigate(path, opts = {}) { return go(path, { from: current ? current.path : null, ...opts }); },

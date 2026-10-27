@@ -24,6 +24,9 @@ export function initInstall() {
   if (standalone) prefs.set('install.installed', true);
   installState.set({ standalone, installedFlag: prefs.get('install.installed', false), ios: detectIos() });
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; prefs.set('install.installed', false); installState.set({ canPrompt: true, installedFlag: false }); });   // v2.2.3: a prompt means not installed (any more)
+  // v2.2.4: ask the browser whether the app is installed (Chrome and Edge on Android and desktop; needs `related_applications` in the manifest). An empty answer proves
+  // nothing (many browsers answer [] for everything), so it can only SET the flag; a fresh install prompt clears it again.
+  try { navigator.getInstalledRelatedApps?.().then((apps) => { if (apps && apps.length && !installState.get().canPrompt) { prefs.set('install.installed', true); installState.set({ installedFlag: true }); } }).catch(() => {}); } catch { /* not supported */ }
   window.addEventListener('appinstalled', () => { deferred = null; prefs.set('install.installed', true); installState.set({ canPrompt: false, installedFlag: true }); });
 }
 
@@ -42,6 +45,9 @@ export function shouldShowBanner() {
   if (Date.now() < prefs.get('install.hideUntil', 0)) return false;
   return s.canPrompt || s.ios;
 }
+/** v2.2.4: a browser tab on a device where the app was installed once: show the note (until it is hidden for 7 days). */
+export function shouldShowInstalledNote() { const s = installState.get(); return !s.standalone && s.installedFlag && Date.now() >= prefs.get('install.noteHideUntil', 0); }
+export const dismissNote = () => prefs.set('install.noteHideUntil', Date.now() + HIDE_MS);
 export const dismissBanner = () => prefs.set('install.hideUntil', Date.now() + HIDE_MS);
 
 export function installStatus() {

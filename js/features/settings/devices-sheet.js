@@ -29,7 +29,7 @@ export function deviceDetails(r) {
     ['Device', na(r.name)], ['Browser', na(r.br)], ['System', na(r.os)], ['Type', KIND[r.kind] || 'Not available'], ['Opened as', r.via === 'pwa' ? 'Installed app' : 'Web browser'],
     ['Place (approximate)', locationText(r)], ['IP address (end hidden)', na(r.ip)], ['Time zone', na(r.tz)],
     ['First signed in', r.ts ? dateTime(r.ts) : 'Not available'], ['Last active', r.seen ? `${dateTime(r.seen)} (${relativeTime(r.seen)})` : 'Not available'],
-    ...(r.out ? [['Signed out', dateTime(r.out)]] : [])
+    ...(r.out ? [['Signed out', dateTime(r.out)], ['Signed out by', r.by ? `Requested from ${r.by}` : 'Normal sign out on the device itself']] : r.rv && r.by ? [['Sign-out requested from', r.by]] : [])
   ];
 }
 

@@ -63,3 +63,10 @@
   .dev-btns .btn { background: var(--surface); }
   .dev-btns .dev-round { width: 36px; height: 36px; }
 }
+
+/* ---- v2.2.4 ---- */
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.menu-logout { display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; width: 100%; border-radius: var(--r-group); border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line)); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); color: var(--danger); font-weight: 650; }
+.menu-logout:hover { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); }
+.qs-row { flex-wrap: nowrap; } .qs-theme { width: auto; flex: none; } .qs-theme button { min-width: 40px; }
+@media (max-width: 899px) { .swatches { gap: 4px; } }

@@ -28,6 +28,7 @@ test('leaving guest mode tears the data layer down and routes to /login; enterin
   leaveGuest();
   await waitFor(() => location.pathname === '/login');
   assert.equal(location.pathname, '/login'); assert.equal($('#app').dataset.chrome, 'none'); assert.equal(getEngine(), null);
+  await waitFor(() => $('.auth-panel'));   // v2.2.4: the address changes before the page has finished mounting
   assert.ok($('.auth-panel'));
   enterGuest();
   await waitFor(() => location.pathname === '/library' && getEngine());

@@ -32,8 +32,8 @@ export class CloudEngine extends Engine {
     this._onOnline = () => this.flush();
   }
 
-  status() { return { kind: 'cloud', persistent: !!this.db.persistent, state: this.syncState, pending: this.pending }; }
-  _setState(state) { if (state !== this.syncState) { this.syncState = state; this.bus.emit('event', { type: 'sync', state, pending: this.pending }); } }
+  status() { return { kind: 'cloud', persistent: !!this.db.persistent, state: this.syncState, pending: this.pending, lastSync: this.lastSync || 0 }; }   // v2.2.4: lastSync = when a sync last finished
+  _setState(state) { if (state !== this.syncState) { if (state === 'idle' && this.syncState === 'syncing') this.lastSync = Date.now(); this.syncState = state; this.bus.emit('event', { type: 'sync', state, pending: this.pending }); } }
 
   async _afterLoad() {
     const metas = await this.db.getAll('meta');

@@ -118,3 +118,9 @@ Rules Playground (owner): simulate write at `/users/<uid>/devices/test1` with `{
 | N3 | other user or anonymous | `users/u1/devices/d1/out` | write | deny |
 Owner: rules changed (one new field), so `firebase deploy --only database` is needed again.
 
+
+## v2.2.4 additions (field `users/<uid>/devices/<id>/by`, text up to 60)
+| # | Who | Path / data | Operation | Expected |
+|---|---|---|---|---|
+| P1 | owner | `users/u1/devices/d1/by` = "Chrome on Windows" | write | allow (another device records who asked for the sign-out) |
+| P2 | owner | `users/u1/devices/d1/by` = a number or 61+ characters | write | deny |

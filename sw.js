@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.2.3';
+const VERSION = '2.2.4';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -159,6 +159,7 @@ const PRECACHE = [
   '/js/features/settings/catalog.js',
   '/js/features/settings/controls.js',
   '/js/features/settings/custom-rows.js',
+  '/js/features/settings/delete-account.js',
   '/js/features/settings/devices-sheet.js',
   '/js/features/settings/metadata-tester.js',
   '/js/features/settings/settings-page.js',

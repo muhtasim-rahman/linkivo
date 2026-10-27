@@ -82,3 +82,9 @@
 .act-panel { align-content: start; padding-top: var(--s6); }
 .alert.is-ok { display: flex; align-items: center; gap: var(--s2); padding: var(--s3); border-radius: var(--r-control); background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--text); }
 .alert.is-ok svg { color: var(--success); }
+
+/* v2.2.4: wide login page: the install card is one compact row (no perks), and a short window hides the long texts of the left column instead of pushing them down */
+.auth-install.is-wide .icard { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'logo text act'; padding: var(--s3); }
+.auth-install.is-wide .icard-perks { display: none; }
+@media (min-width: 900px) and (max-height: 900px) { .art-lead { display: none; } .art-list li:nth-child(n+5) { display: none; } }
+@media (min-width: 900px) and (max-height: 720px) { .art-list li:nth-child(n+4) { display: none; } }

@@ -11,7 +11,7 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openSheet } from '../../ui/sheet.js';
-import { installState, installStatus, promptInstall, shouldShowBanner, dismissBanner } from '../../core/install.js';
+import { installState, installStatus, promptInstall, shouldShowBanner, dismissBanner, shouldShowInstalledNote, dismissNote } from '../../core/install.js';
 
 const PERKS = [['zap', 'Faster start'], ['wifi-off', 'Works offline'], ['install', 'Own app icon']];
 
@@ -26,6 +26,12 @@ export function installAction({ onDone = () => {}, label = 'Install' } = {}) {
 /** The accent logo tile (white square, logo painted in the brand gradient = the accent colour). */
 export const logoTile = (size = 44) => h('span', { class: 'icard-logo', style: { '--ts': size + 'px' }, 'aria-hidden': 'true' }, h('span', { class: 'logo-mark', style: { '--w': Math.round(size * 0.6) + 'px' } }));
 
+/** v2.2.4: "Install it again" (bold, primary colour): the installed-but-in-a-browser note ends with it. Uses the browser prompt, or the how-to sheet. */
+function installAgainLink() {
+  return h('button', { type: 'button', class: 'icard-link', on: { click: async () => { const r = await promptInstall(); if (r === 'unavailable') openSheet({ title: 'Install Linkivo', body: installStatus().text, actions: [{ label: 'Done', variant: 'primary' }] }); } } }, 'Install it again');
+}
+export const browserNote = () => h('span', {}, 'Linkivo is already installed on this device. You are using the browser now; open the app for the best experience. ', installAgainLink());
+
 export function installCard() {
   const box = h('section', { class: 'icard-host', 'aria-label': 'Install Linkivo' });
   let wasIn = false;
@@ -38,7 +44,7 @@ export function installCard() {
     }
     if (st.kind === 'installed') {   // a browser tab on a device that has the app
       box.replaceChildren(h('div', { class: 'icard is-done is-note' }, h('span', { class: 'icard-note-ic' }, icon('monitor', { size: 16 })),
-        h('div', { class: 'icard-text' }, h('strong', { text: 'Using the browser' }), h('span', { text: 'The app is probably installed on this device. Open it from your app list.' }))));
+        h('div', { class: 'icard-text' }, h('strong', { text: 'Using the browser' }), browserNote())));
       return;
     }
     box.replaceChildren(h('div', { class: 'icard' },
@@ -83,9 +89,12 @@ export function mountInstallSuggest({ mountDock, page }) {
   let removeDock = null;
   const el = h('div', { class: 'install-dock', role: 'region', 'aria-label': 'Install Linkivo' });
   const render = () => {
-    const show = shouldShowBanner();
-    if (!show) { if (removeDock) { removeDock(); removeDock = null; page?.classList.remove('has-suggest'); } return; }
-    el.replaceChildren(h('div', { class: 'icard is-suggest' }, logoTile(40),
+    const show = shouldShowBanner(), note = shouldShowInstalledNote();
+    if (!show && !note) { if (removeDock) { removeDock(); removeDock = null; page?.classList.remove('has-suggest'); } return; }
+    if (note && !show) {   // v2.2.4: installed on this device, but this is a browser tab: say so right away
+      el.replaceChildren(h('div', { class: 'icard is-done is-note is-suggest' }, h('span', { class: 'icard-note-ic' }, icon('monitor', { size: 16 })), h('div', { class: 'icard-text' }, browserNote()),
+        h('button', { type: 'button', class: 'icard-x', 'aria-label': 'Hide', 'data-tip': 'Hide this for 7 days', on: { click: () => { dismissNote(); render(); } } }, icon('close', { size: 16 }))));
+    } else el.replaceChildren(h('div', { class: 'icard is-suggest' }, logoTile(40),
       h('div', { class: 'icard-text' }, h('strong', { text: 'Install Linkivo' }), h('span', { text: 'Faster start, works offline.' })),
       installAction({ onDone: render }),
       h('button', { type: 'button', class: 'icard-x', 'aria-label': 'Not now', 'data-tip': 'Hide this for 7 days', on: { click: () => { dismissBanner(); render(); } } }, icon('close', { size: 16 }))));

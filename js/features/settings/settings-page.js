@@ -20,7 +20,7 @@ import { installCard } from '../shell/install-card.js';
 import { binCard } from '../shell/bin-card.js';
 import { renderAdvanced } from './advanced-tools.js';
 
-const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache', 'logout', 'clearLocal']);   // v2.2.3: logout and clearLocal belong to the Danger zone
+const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache', 'logout', 'clearLocal', 'deleteAccount']);   // v2.2.3: logout and clearLocal belong to the Danger zone
 
 /** Pure: which section is "current" given each section's distance from the top of the scroller (negative = already passed). */
 export function activeSection(tops, atBottom, offset = 120) {

@@ -20,7 +20,7 @@ export function etaText(done, total, startedAt, now = Date.now()) {
   const rate = done / s, left = Math.ceil((total - done) / rate);
   return `${Math.round(rate)} links/s  \u00b7  about ${left < 60 ? left + ' s' : Math.ceil(left / 60) + ' min'} left`;
 }
-export const AUTO_CLOSE_S = 10;
+export const AUTO_CLOSE_S = 9;   // v2.2.4 (owner): 9 seconds
 const LABEL = { queued: 'Waiting to start', running: 'Working', paused: 'Paused', stopped: 'Stopped', failed: 'Stopped by an error', done: 'Finished' };
 
 export function openJobDetails({ queue, engine, router = null, jobId, autoClose = false }) {

@@ -13,7 +13,7 @@ import { maskEmail } from '../../../core/mask.js';
 import { loadCss } from '../../../core/css-loader.js';
 import { prefs } from '../../../core/local-prefs.js';
 import { KEYS } from '../../../core/appearance.js';
-import { avatar } from '../shell-parts.js';
+import { avatar, logOut } from '../shell-parts.js';
 import { installCard } from '../install-card.js';
 import { binCard } from '../bin-card.js';
 import { appInfoCard, appLinkButtons } from '../../settings/about-card.js';
@@ -26,28 +26,32 @@ const THEMES = [['system', 'monitor', 'System'], ['light', 'sun', 'Light'], ['da
 
 function themeRow() {
   const cur = () => prefs.get(KEYS.theme, 'system');
-  const seg = h('div', { class: 'seg qs-theme', role: 'radiogroup', 'aria-label': 'Theme' }, THEMES.map(([v, ic, label]) => h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-label': label, on: { click: () => { prefs.set(KEYS.theme, v); sync(); } } }, icon(ic, { size: 18 }), h('span', { text: label }))));
+  // v2.2.4 (owner): icon-only buttons (no text), kept in the right column of the row
+  const seg = h('div', { class: 'seg qs-theme', role: 'radiogroup', 'aria-label': 'Theme' }, THEMES.map(([v, ic, label]) => h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-label': label, 'data-tip': label, on: { click: () => { prefs.set(KEYS.theme, v); sync(); } } }, icon(ic, { size: 18 }))));
   const sync = () => seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === cur())));
   sync();
   return h('div', { class: 'row qs-row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Theme' })), seg);
 }
 const linkRow = (ic, label, desc, href) => h('a', { class: 'row', href }, h('span', { class: 'row-ic' }, icon(ic)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), h('span', { class: 'row-end' }, icon('chevron-right')));
 
-export async function mount(container) {
+export async function mount(container, ctx = {}) {
   await Promise.all([loadCss('/css/pages/pages.css'), loadCss('/css/pages/settings.css')]);
   const s = getSession();
   const name = s.mode === 'guest' ? 'Guest' : s.user.name;
   const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
   const hide = findEntry('hideBar');
   container.appendChild(h('div', { class: 'page page-enter' },
-    h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Menu' })),
+    h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 }))),   // v2.2.4: gear = all settings
     h('div', { class: 'menu-list' },
       h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right'))),
       installCard(),
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),
-        h('div', { class: 'group' }, themeRow(), hide && renderControl(hide), linkRow('database', 'Import and export', 'Backup, restore, export formats', '/settings/data'), linkRow('settings', 'View all settings', null, '/settings'))),
+        h('div', { class: 'group' }, themeRow(), hide && renderControl(hide), linkRow('database', 'Import and export', 'Backup, restore, export formats', '/settings/data'))),
+      h('div', { class: 'group' }, linkRow('settings', 'View all settings', 'Every option in one place', '/settings')),   // v2.2.4: its own card
       binCard(),
       appInfoCard(),
-      appLinkButtons())));
+      appLinkButtons(),
+      // v2.2.4 (owner): red logout card at the bottom of the Menu
+      h('button', { type: 'button', class: 'menu-logout', on: { click: () => logOut(ctx.router) } }, icon('logout', { size: 20 }), h('span', { text: s.mode === 'guest' ? 'Leave guest mode' : 'Log out' })))));
 }

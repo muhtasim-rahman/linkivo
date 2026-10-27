@@ -100,7 +100,7 @@ export function startSplash() {
   // a browser that can not run the Web Animations API still gets the finished logo
   if (mode === 'full' && typeof el.animate !== 'function') mode = 'short';
   el.dataset.mode = mode;
-  const ver = $('sp-ver'); if (ver) ver.textContent = `v${app.version}`;   // v2.2.3 (owner): a short version badge at the bottom of the splash
+  const tag = $('sp-tag'); if (tag) tag.textContent = `${tag.textContent} \u00b7 v${app.version}`;   // v2.2.4 (owner): the version at the end of the caption (was a badge at the bottom)
   startedAt = performance.now();
   if (mode === 'full') timeline = runFull();
   setTimeout(() => { if (!ended) $('splash-dots')?.classList.add('show'); }, MIN_MS[mode] + 80);

@@ -1,0 +1,15 @@
+fix(v2.2.4): quick fixes (native back, delete-account request, install detection, menu page)
+
+- Native browser history instead of the custom back rules
+- Delete account: verify, summary, typed phrase, request email to the developer
+- Browser note for devices that have the app; Install it again link; installed detection
+- Menu page: gear icon, settings card, icon-only theme, red log out card; accent swatch gap
+- Danger zone order and red titles; Log out removed from Account; Last synced row
+- Devices remember who requested a sign-out; wide login install card; folder three-dot toggle
+- Splash version in the caption; import popup closes after 9 s
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database, then --only hosting; hard reload

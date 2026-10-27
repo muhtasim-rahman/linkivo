@@ -52,24 +52,20 @@ test('router: one page at a time, guards redirect, title updates', async () => {
   router.destroy();
 });
 
-test('router: Back follows overlay layers, then the parent chain, then the exit rule', async () => {
+test('router: Back and Forward are the browser\'s own (v2.2.4): each page is a history entry', async () => {
   setSession({ mode: 'guest', status: 'active' }); resetLayers();
-  const log = []; const hints = []; const container = $('#page-root');
-  const router = createRouter({ routes: pageRoutes(log), container, getSession, onHint: (m) => hints.push(m) });
+  const log = []; const container = $('#page-root');
+  const router = createRouter({ routes: pageRoutes(log), container, getSession });
+  history.replaceState({}, '', '/library');                 // earlier tests leave their own address in the shared jsdom history
   await router.start();                                    // lands on /library (guest)
-  await router.navigate('/folder/f1');
-  let closed = 0; pushLayer(() => { closed++; });
-  history.back(); await waitFor(() => closed === 1); await tick(40);
-  assert.equal(closed, 1, 'overlay closed first'); assert.equal(router.current().path, '/folder/f1', 'page did not change');
+  await router.navigate('/folder/f1'); await router.navigate('/random');
+  assert.equal(router.current().path, '/random');
+  history.back(); await waitFor(() => router.current().path === '/folder/f1');
+  assert.equal(router.current().path, '/folder/f1', 'back = the page we came from');
   history.back(); await waitFor(() => router.current().path === '/library');
-  assert.equal(router.current().path, '/library', 'parent chain');
-  await tick(40); history.back(); await waitFor(() => hints.length === 1);
-  assert.equal(hints.length, 1, 'first back at the root only hints');
   assert.equal(router.current().path, '/library');
-  await router.navigate('/link/9', { from: '/random' });
-  await tick(40); history.back(); await waitFor(() => router.current().path === '/random');
-  assert.equal(router.current().path, '/random', 'link goes back to where it was opened from');
-  assert.equal(layerCount(), 0);
+  history.forward(); await waitFor(() => router.current().path === '/folder/f1');
+  assert.equal(router.current().path, '/folder/f1', 'forward works too');
   router.destroy();
 });
 
@@ -77,7 +73,7 @@ test('router: in-app links are intercepted, external and data-native links are n
   setSession({ mode: 'guest', status: 'active' });
   const log = []; const container = $('#page-root');
   const router = createRouter({ routes: pageRoutes(log), container, getSession });
-  await router.start();
+  history.replaceState({}, '', '/library'); await router.start();
   const a = document.createElement('a'); a.href = '/random'; container.appendChild(a);
   const ev = new w.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
   a.dispatchEvent(ev); await waitFor(() => router.current().path === '/random');
@@ -218,8 +214,8 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
   assert.equal($$('.set-sec').length, 8, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
-  const resetRow = $('.row.is-danger'); resetRow.click(); await tick(10);
-  $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings').click(); await tick(250);
+  const resetRow = $$('.row.is-danger').find((r) => /Reset all settings/.test(r.textContent)); resetRow.click(); await tick(10);
+  $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings' || b.textContent === 'Reset all settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
   await router.navigate('/settings/app'); await tick(5); const { default: appInfo } = await import('../../js/core/app-info.js'); // not hard-coded: it broke on every version bump
   assert.ok(container.textContent.includes('v' + appInfo.version), 'App details show the current version');

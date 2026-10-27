@@ -114,3 +114,11 @@
 .dev-row.is-out > .btn-icon { margin-right: var(--s2); }
 .tag.is-warn { background: color-mix(in srgb, var(--warning) 20%, transparent); color: color-mix(in srgb, var(--warning) 70%, var(--text)); }
 .tag.is-muted { background: var(--surface-2); color: var(--sub); border: 1px solid var(--line); }
+
+/* v2.2.4: Danger zone titles in red; delete-account steps */
+#sec-danger .set-h, #sec-danger .row-label { color: var(--danger); }
+.da { gap: var(--s3); } .da-list { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--sub); }
+.da-phrase { font: 700 var(--fs-lg) var(--font-mono); letter-spacing: 0.04em; text-align: center; padding: var(--s3); border: 1px dashed var(--danger); border-radius: var(--r-control); color: var(--danger); user-select: all; }
+.da-warn { color: var(--text); background: var(--danger-soft); padding: var(--s2) var(--s3); border-radius: var(--r-control); }
+.da-mail { border: 1px solid var(--line); border-radius: var(--r-control); padding: var(--s3); max-height: 36dvh; overflow: auto; } .da-mail pre { white-space: pre-wrap; word-break: break-word; font: 400 var(--fs-xs) / 1.5 var(--font-mono); margin: var(--s2) 0 0; }
+.da-actions { display: flex; flex-wrap: wrap; gap: var(--s2); }

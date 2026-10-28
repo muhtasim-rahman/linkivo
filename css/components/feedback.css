@@ -55,9 +55,9 @@ a.row:hover, button.row:hover { background: var(--surface-2); text-decoration: n
 .row.is-danger .row-label { color: var(--danger); }
 /* v2.3.0 (owner): Danger zone tones. Icons sit on a soft tile with a faint glow: red for danger, yellow-orange for caution (readable in light and dark). */
 .row.is-danger .row-ic, .row.is-caution .row-ic { border-radius: 9px; }
-.row.is-danger .row-ic { color: var(--danger); background: var(--danger-soft); box-shadow: 0 0 14px color-mix(in srgb, var(--danger) 30%, transparent); }
+.row.is-danger .row-ic { color: var(--danger); }   /* v2.3.1 (owner): no tinted box and no glow behind the icon, only its color */
 .row.is-caution .row-label { color: var(--caution); }
-.row.is-caution .row-ic { color: var(--caution); background: var(--caution-soft); box-shadow: 0 0 14px color-mix(in srgb, var(--caution) 32%, transparent); }
+.row.is-caution .row-ic { color: var(--caution); }
 .row.is-danger:hover { background: var(--danger-soft); } .row.is-caution:hover { background: var(--caution-soft); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px var(--s4); font-size: var(--fs-sm); }
 .kv dt { color: var(--sub); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }

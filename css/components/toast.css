@@ -8,3 +8,7 @@
 @media (min-width: 900px) { .toast-host { bottom: calc(var(--dock-b) + 8px); } }
 @media (prefers-reduced-motion: reduce) { .toast-host { transition: none; } }
 /* v2.3.0 (owner): --dock-b (kit.css) is the height of the bottom bar when it shows, the safe area when it is hidden and the keyboard gap when the keyboard is open, so toasts slide down and up WITH the bar. */
+
+/* v2.3.1: the new points value after a point action (diamond icon + number) */
+.toast-pts { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 2px 8px 2px 6px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 18%, transparent); font-weight: 650; font-variant-numeric: tabular-nums; }
+.toast.is-error .toast-pts { background: rgba(255,255,255,.2); }

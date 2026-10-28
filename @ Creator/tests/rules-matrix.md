@@ -125,3 +125,12 @@ Owner: rules changed (one new field), so `firebase deploy --only database` is ne
 |---|---|---|---|---|
 | P1 | owner | `users/u1/devices/d1/by` = "Chrome on Windows" | write | allow (another device records who asked for the sign-out) |
 | P2 | owner | `users/u1/devices/d1/by` = a number or 61+ characters | write | deny |
+
+## v2.3.1 additions
+| Path | Who | Action | Expected |
+|---|---|---|---|
+| users/$uid/linkMeta/$lid/audio | owner, address up to 2048 characters | write | allow |
+| users/$uid/linkMeta/$lid/audio | owner, 2049 characters | write | deny |
+| admins/$uid | signed-in user with the same uid | read | allow (value true or null) |
+| admins/$uid | another user | read | deny |
+| admins/$uid | any client, including the admin | write | deny (only the console) |

@@ -17,6 +17,8 @@ export const SECTIONS = [
   { id: 'behavior', label: 'Behavior', desc: 'How pages and lists respond', icon: 'zap' },
   { id: 'library', label: 'Library and links', desc: 'How folders and link lists look and behave', icon: 'library' },
   { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
+  { id: 'search', label: 'Search', desc: 'What global search looks through and remembers', icon: 'search' },
+  { id: 'preview', label: 'Preview', desc: 'The link preview: tabs, related links, metadata and screenshot services', icon: 'globe' },
   { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
   { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
   { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
@@ -29,8 +31,8 @@ const opt = (...pairs) => pairs.map(([value, label]) => ({ value, label }));
 
 export const CATALOG = [
   // ---- Appearance
-  { id: 'theme', section: 'appearance', type: 'seg', key: KEYS.theme, label: 'Theme', desc: 'System follows your device.', default: 'system', options: opt(['system', 'System'], ['light', 'Light'], ['dark', 'Dark']), tips: { system: 'Follow the theme of your device', light: 'Always use the light theme', dark: 'Always use the dark theme' }, keywords: ['dark mode', 'light mode', 'night'], since: '2.1.0' },
-  { id: 'accent', section: 'appearance', type: 'swatch', key: KEYS.accent, label: 'Accent color', desc: 'Colors the active marker, buttons, focus rings and the Linkivo logo and name.', default: 'blue', options: Object.entries(ACCENTS).map(([value, color]) => ({ value, label: value[0].toUpperCase() + value.slice(1), color })), keywords: ['color', 'colour', 'highlight', 'logo'], since: '2.1.0' },
+  { id: 'theme', local: true, section: 'appearance', type: 'seg', key: KEYS.theme, label: 'Theme', desc: 'System follows your device.', default: 'system', options: opt(['system', 'System'], ['light', 'Light'], ['dark', 'Dark']), tips: { system: 'Follow the theme of your device', light: 'Always use the light theme', dark: 'Always use the dark theme' }, keywords: ['dark mode', 'light mode', 'night'], since: '2.1.0' },
+  { id: 'accent', local: true, section: 'appearance', type: 'swatch', key: KEYS.accent, label: 'Accent color', desc: 'Colors the active marker, buttons, focus rings and the Linkivo logo and name.', default: 'blue', options: Object.entries(ACCENTS).map(([value, color]) => ({ value, label: value[0].toUpperCase() + value.slice(1), color })), keywords: ['color', 'colour', 'highlight', 'logo'], since: '2.1.0' },
   { id: 'fontSize', section: 'appearance', type: 'seg', key: KEYS.fontSize, label: 'Text size', default: 'medium', options: opt(['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']), tips: { small: '13 px text', medium: '14 px text', large: '16 px text' }, keywords: ['font', 'bigger', 'smaller', 'zoom'], since: '2.1.0' },
   { id: 'density', section: 'appearance', type: 'seg', key: KEYS.density, label: 'Density', desc: 'Comfortable adds space around rows.', default: 'compact', options: opt(['compact', 'Compact'], ['comfortable', 'Comfortable']), keywords: ['spacing', 'padding', 'rows'], since: '2.1.0' },
   { id: 'reduceMotion', section: 'appearance', type: 'seg', key: KEYS.motion, label: 'Motion', desc: 'Reduce turns animations off, including the start screen.', default: 'system', options: opt(['system', 'System'], ['reduce', 'Reduce']), keywords: ['animation', 'accessibility'], since: '2.1.0' },
@@ -40,7 +42,7 @@ export const CATALOG = [
   // v2.1.3: "Pull down to refresh" and "Block right-click and long-press menus" were removed (owner): both are fixed behavior now. The section keeps
   // one real setting; v2.2.0 onward adds the library and import behavior settings here.
   // v2.2.2 (owner): "Collapse the sidebar" moved here from Appearance, it is about behavior.
-  { id: 'sidebarCollapsed', section: 'behavior', type: 'switch', key: 'ui.sidebarCollapsed', label: 'Collapse the sidebar', desc: 'Wide screens only.', default: false, keywords: ['navigation', 'sidebar'], since: '2.1.0' },
+  { id: 'sidebarCollapsed', local: true, section: 'behavior', type: 'switch', key: 'ui.sidebarCollapsed', label: 'Collapse the sidebar', desc: 'Wide screens only.', default: false, keywords: ['navigation', 'sidebar'], since: '2.1.0' },
   { id: 'hideBar', section: 'behavior', type: 'switch', key: 'ui.hideBar', label: 'Hide bottom bar on scroll', desc: 'Phones only. The bar returns when you scroll up.', default: true, keywords: ['navigation', 'bottom bar', 'scroll'], since: '2.1.0' },
 
   // ---- Library and links (v2.2.0)
@@ -53,6 +55,16 @@ export const CATALOG = [
   { id: 'showPoints', section: 'library', type: 'switch', key: 'lib.showPoints', label: 'Show points on links', desc: 'The weight Random Discover uses. Useful while you tune it.', default: false, keywords: ['points', 'score', 'random'], since: '2.2.0' },
   { id: 'confirmDelete', section: 'library', type: 'switch', key: 'lib.confirmDelete', label: 'Type the name to delete a folder with links', desc: 'Off asks a simple yes or no. Deleted folders stay in the Recycle Bin for 15 days either way.', default: true, keywords: ['delete', 'confirm', 'safety'], since: '2.2.0' },
   { id: 'clipboard', section: 'library', type: 'switch', key: 'lib.clipboard', onOn: 'clipboard', label: 'Look in the clipboard for links', desc: 'Once your browser allows clipboard access, links you copied are suggested for import when the app opens, and fill the Add link field. Works in Chrome and Edge; other browsers cannot read the clipboard quietly.', default: true, keywords: ['paste', 'clipboard', 'quick add', 'import', 'suggestion'], since: '2.2.0' },
+
+  // ---- Search and Preview (v2.3.1, owner: the v2.3.0 pages had no settings of their own)
+  { id: 'searchRecent', section: 'search', type: 'switch', key: 'search.recent', label: 'Remember recent searches', desc: 'The last 50 searches are listed when the field is empty. Off keeps no list.', default: true, keywords: ['history', 'recent', 'privacy'], since: '2.3.1' },
+  { id: 'searchPages', section: 'search', type: 'switch', key: 'search.pages', label: 'Find app pages and settings', desc: 'Search also lists pages such as Library or Recycle Bin and single settings.', default: true, keywords: ['pages', 'settings', 'menu'], since: '2.3.1' },
+  { id: 'pvTab', section: 'preview', type: 'seg', key: 'preview.defaultTab', label: 'Tab that opens first', desc: 'Last used remembers your choice per device. A tab that does not exist for a link is skipped.', default: 'last', options: opt(['last', 'Last used'], ['page', 'Page'], ['photo', 'Thumbnail'], ['shot', 'Screenshot'], ['details', 'Details']), keywords: ['preview', 'default', 'tab', 'page', 'screenshot'], since: '2.3.1' },
+  { id: 'pvRelated', section: 'preview', type: 'switch', key: 'preview.related', label: 'Show related links', desc: 'Wide screens only. Up to 20 links from the same folder, site or with the same tags.', default: true, keywords: ['preview', 'related', 'side', 'list'], since: '2.3.1' },
+  { id: 'pvMicrolink', section: 'preview', type: 'switch', key: 'meta.microlink', label: 'Use Microlink first', desc: 'Reads the widest range of pages, plus video and audio. Each device gets a small free allowance every day; when it is used up the normal services take over.', default: true, keywords: ['microlink', 'metadata', 'api', 'limit', 'video', 'audio'], since: '2.3.1' },
+  { id: 'pvMlLeft', section: 'preview', type: 'custom', custom: 'mlQuota', label: 'Microlink allowance today', keywords: ['microlink', 'limit', 'left', 'quota'], since: '2.3.1' },
+  { id: 'pvThum', section: 'preview', type: 'switch', key: 'preview.thum', label: 'Use thum.io for screenshots', desc: 'Normal accounts get 10 thum.io screenshots a day, then WordPress mShots is used.', default: true, keywords: ['screenshot', 'thum', 'thumbnail', 'image'], since: '2.3.1' },
+  { id: 'pvAdmin', section: 'preview', type: 'custom', custom: 'adminView', label: 'View the app as', keywords: ['admin', 'normal user', 'test', 'limits'], since: '2.3.1' },
 
   // ---- Import, export and data (v2.2.0)
   { id: 'importData', section: 'data', type: 'custom', custom: 'importData', label: 'Import links', keywords: ['import', 'paste', 'files', 'bookmarks', 'restore'], since: '2.2.0' },
@@ -71,6 +83,7 @@ export const CATALOG = [
 
   // ---- Account and sync
   { id: 'accountInfo', section: 'account', type: 'custom', custom: 'account', label: 'Account', keywords: ['sign in', 'log in', 'log out', 'email', 'guest', 'password', 'verification'], since: '2.1.0' },
+  { id: 'syncPick', section: 'account', type: 'custom', custom: 'syncPick', label: 'Select which settings to sync', keywords: ['sync', 'settings', 'account', 'device', 'local'], since: '2.3.1' },
   { id: 'sync', section: 'account', type: 'custom', custom: 'sync', label: 'Data and sync', keywords: ['database', 'cache', 'indexeddb', 'sync status', 'sync now', 'storage'], since: '2.1.0' },
 
   // ---- App

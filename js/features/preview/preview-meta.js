@@ -6,12 +6,20 @@
  *          extra data. Every answer writes `checkedAt`, so the next open is instant and never asks again. A network failure writes nothing, so it is retried.
  * API: ensureMeta(engine, linkId, { force?, fetch? }) -> Promise<{ ok, cached?, error? }>   (one request per link at a time)
  */
-import { fetchMeta as defaultFetch } from '../../core/worker-client.js';
+import { fetchMeta as workerFetch } from '../../core/worker-client.js';
+import { microlinkMeta } from '../../core/microlink.js';
 import { metaPatch, metaExtras } from '../import/import-job.js';
 import { packLog } from './preview-model.js';
 import { log } from '../../core/logger.js';
 
 const inflight = new Map();
+
+/** v2.3.1: Microlink first (this device's own daily allowance, switch in Settings), then the Worker chain. Microlink never throws; null means "use the next one". */
+async function defaultFetch(urls) {
+  const url = urls[0], ml = await microlinkMeta(url);
+  if (ml) return new Map([[url, ml]]);
+  return workerFetch(urls);
+}
 
 export function ensureMeta(engine, lid, { force = false, fetch = defaultFetch } = {}) {
   if (inflight.has(lid)) return inflight.get(lid);

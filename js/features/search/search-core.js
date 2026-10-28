@@ -4,7 +4,8 @@
  *          somewhere, so "react hooks" finds a link with react in the title and hooks in the tags), folders by name, settings by label, caption and keywords.
  *          The index keeps one lowercase text record per link and only rebuilds a record when that link changed, so a search over 5000 links stays instant.
  *          Vault links will never reach this index: the vault lives outside engine.listLinks() (v2.5.0).
- * API: createIndex() -> { search(links, query, limit?) -> [{ link, score }], size() }     searchFolders(folders, query, limit?)     searchSettings(entries, sections, query, limit?)
+ *          v2.3.1: searchPages() finds the app's own pages (search-pages.js) and searchSettings() results carry the entry id so the click can scroll to that row.
+ * API: createIndex() -> { search(links, query, limit?) -> [{ link, score }], size() }     searchFolders(folders, query, limit?)     searchSettings(entries, sections, query, limit?)     searchPages(pages, query, limit?)
  *      tokens(query) -> string[]     highlightParts(text, words) -> [{ text, hit }]
  *      History: readHistory(store) pushHistory(store, q) removeHistory(store, q) clearHistory(store)   (store = { get(), set(list) }, max HISTORY_MAX)
  */
@@ -67,6 +68,15 @@ export function searchSettings(entries, sections, query, limit = 50) {
     const l = strip(e.label), d = strip(e.desc), k = strip((e.keywords || []).join(' ')); let s = 0;
     for (const w of ws) { const v = l.startsWith(w) ? 100 : l.includes(w) ? 80 : k.includes(w) ? 50 : d.includes(w) ? 25 : 0; if (!v) return null; s += v; }
     return { entry: e, section: e.section, sectionLabel: label.get(e.section) || '', score: s };
+  }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+export function searchPages(pages, query, limit = 6) {
+  const ws = tokens(query); if (!ws.length) return [];
+  return pages.map((p) => {
+    const l = strip(p.label), d = strip(p.desc), k = strip((p.keywords || []).join(' ')); let s = 0;
+    for (const w of ws) { const v = l.startsWith(w) ? 100 : l.includes(' ' + w) ? 90 : l.includes(w) ? 75 : k.includes(w) ? 45 : d.includes(w) ? 20 : 0; if (!v) return null; s += v; }
+    return { page: p, score: s };
   }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, limit);
 }
 

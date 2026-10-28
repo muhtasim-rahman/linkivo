@@ -120,7 +120,7 @@ export async function mount(container, ctx) {
       onAll: () => { st.selected = new Set(allOn ? [] : st.rows.map((l) => l.id)); paintBar(); vl?.refresh(); },
       actions: [
         { icon: 'folder', label: 'Move', onClick: () => done(bulk.move(engine, ids())) },
-        { icon: 'star', label: 'Favourite', onClick: () => done(bulk.favourite(engine, ids())) },
+        { icon: 'heart', label: 'Favourite', onClick: () => done(bulk.favourite(engine, ids())) },
         { icon: 'trash', label: 'Delete', danger: true, onClick: () => done(bulk.remove(engine, ids())) }],
       more: () => [
         { label: 'Check links', icon: 'refresh', onSelect: () => { runCheck({ engine, queue, router, ids: ids() }); } },

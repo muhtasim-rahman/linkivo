@@ -37,7 +37,7 @@ test('availableTabs: fixed order, only tabs that can work; a site that refuses f
   const l = { url: 'https://example.com/a', host: 'example.com' };
   assert.deepEqual(M.availableTabs(l, null), ['page', 'shot', 'details']);
   assert.deepEqual(M.availableTabs(l, { image: 'https://x.test/i.jpg', nf: true }), ['photo', 'shot', 'details'], 'blocked frame: straight to a working tab');
-  assert.deepEqual(M.availableTabs({ url: 'https://youtu.be/dQw4w9WgXcQ' }, { image: 'https://i.test/a.png', frameable: true }), ['page', 'video', 'photo', 'shot', 'details']);
+  assert.deepEqual(M.availableTabs({ url: 'https://youtu.be/dQw4w9WgXcQ' }, { image: 'https://i.test/a.png', frameable: true }), ['page', 'photo', 'shot', 'video', 'details']);
   assert.deepEqual(M.availableTabs({ url: 'ftp://x/y' }, null), ['details']);
   assert.equal(M.frameState({ frameable: true }), true); assert.equal(M.frameState({ nf: true }), false); assert.equal(M.frameState({}), null);
 });
@@ -80,7 +80,7 @@ test('Preview page: opens from the cache, shows only the working tabs, remembers
   const container = $('#page-root'); container.replaceChildren(); prefs.remove('preview.tab'); prefs.remove('preview.tabUse');
   const router = createRouter({ routes: ROUTES, container, getSession }); await router.start();
   await router.navigate('/link/' + ids[0]); await waitFor(() => $('.pv-tab'));
-  assert.deepEqual($$('.pv-tab').map((b) => b.dataset.tab), ['photo', 'shot', 'details'], 'framing refused: no Page tab, Photo first');
+  assert.deepEqual($$('.pv-tab[data-tab]').map((b) => b.dataset.tab), ['photo', 'shot', 'details'], 'framing refused: no Page tab, Photo first');
   assert.equal($('.pv-tab[aria-selected="true"]').dataset.tab, 'photo'); assert.ok($('.pv-img'));
   assert.equal(document.getElementById('app').dataset.nobar, undefined);   // the shell is not mounted in this test; the route flag is checked below
   assert.equal(ROUTES.find((r) => r.id === 'link').nobar, true);

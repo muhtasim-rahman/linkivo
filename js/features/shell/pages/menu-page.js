@@ -38,7 +38,7 @@ export async function mount(container, ctx = {}) {
   container.appendChild(h('div', { class: 'page page-enter' },
     h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 }))),   // v2.2.4: gear = all settings
     h('div', { class: 'menu-list' },
-      profileCard(),   // v2.3.0: shared with the wide Settings page
+      profileCard(ctx.router),   // v2.3.0: shared with the wide Settings page
       installCard(),
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),

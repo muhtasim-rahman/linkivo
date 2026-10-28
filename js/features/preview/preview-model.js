@@ -11,9 +11,9 @@ import { safeHref } from '../library/folder-style.js';
 import { hostOf } from '../../core/url-tools.js';
 import { dateTime } from '../../core/format.js';
 
-export const TABS = ['page', 'video', 'photo', 'shot', 'details'];
-export const TAB_LABELS = { page: 'Page', video: 'Video', photo: 'Photo', shot: 'Screenshot', details: 'Details' };
-export const TAB_ICONS = { page: 'globe', video: 'video', photo: 'image', shot: 'monitor', details: 'info' };
+export const TABS = ['page', 'photo', 'shot', 'video', 'audio', 'pdf', 'details'];   // v2.3.1: Audio and PDF added (owner list: Page, Thumbnail/Screenshot, Video, Audio, PDF, Details)
+export const TAB_LABELS = { page: 'Page', video: 'Video', audio: 'Audio', pdf: 'PDF', photo: 'Thumbnail', shot: 'Screenshot', details: 'Details' };
+export const TAB_ICONS = { page: 'globe', video: 'video', audio: 'music', pdf: 'file', photo: 'image', shot: 'monitor', details: 'info' };
 
 const FILE_VIDEO = /\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i;
 
@@ -44,16 +44,25 @@ export function embedFor(raw) {
   return null;
 }
 
-/** Screenshot service (A-012): WordPress mShots needs no key. The width keeps the image sharp on wide panels. */
-export const shotUrl = (url, width = 1200) => `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=${width}`;
+/** Screenshot services. v2.3.1: thum.io first (no key; its free allowance is 1000 hits a month for the whole site, see CONTEXT), WordPress mShots as the second. */
+export const mshotUrl = (url, width = 1200) => `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=${width}`;
+export const thumUrl = (url, width = 1200) => `https://image.thum.io/get/width/${width}/${url}`;
+export const shotUrl = mshotUrl;   // kept: older callers (and tests) ask for the plain mShots address
+
+const FILE_AUDIO = /\.(mp3|m4a|aac|wav|oga|ogg|opus|flac)(\?|#|$)/i, FILE_PDF = /\.pdf(\?|#|$)/i;
+/** v2.3.1: an audio address (Microlink found one, or the link itself is an audio file) and a PDF address (the link is a PDF). */
+export function audioSource(link, meta) { for (const raw of [meta && meta.audio, link && link.url]) { if (raw && /^https?:\/\//i.test(raw) && FILE_AUDIO.test(raw)) return raw; } return (meta && meta.audio && /^https?:\/\//i.test(meta.audio)) ? meta.audio : null; }
+export const pdfSource = (link) => (link && link.url && /^https?:\/\//i.test(link.url) && FILE_PDF.test(link.url) ? link.url : null);
 
 export function availableTabs(link, meta) {
   const m = meta || {}, out = [];
   const web = safeHref(link && link.url) !== '#';
-  if (web && frameState(m) !== false) out.push('page');
-  if (videoSource(link, m)) out.push('video');
+  if (web && frameState(m) !== false && !pdfSource(link)) out.push('page');
   if (m.image && /^https?:\/\//i.test(m.image)) out.push('photo');
   if (web) out.push('shot');
+  if (videoSource(link, m)) out.push('video');
+  if (audioSource(link, m)) out.push('audio');
+  if (pdfSource(link)) out.push('pdf');
   out.push('details');
   return out;
 }
@@ -88,10 +97,31 @@ export function detailsRows(link, meta, { folder = '', now = Date.now() } = {}) 
   const rows = [
     ['Title', l.title || ''], ['Address', l.url || '', { mono: true, link: safeHref(l.url) }], ['Domain', l.host || hostOf(l.url || '')],
     ['Folder', folder], ['Description', m.long || l.desc || ''], ['Keywords', l.kw || ''], ['Tags', (l.tags || '').split(',').filter(Boolean).join(', ')],
-    ['Site name', m.site || ''], ['Author', m.author || ''], ['Language', m.lang || ''], ['Published', m.pub || ''], ['Type', m.type || ''],
+    ['Site name', m.site || ''], ['Audio', m.audio || '', { mono: true, link: m.audio ? safeHref(m.audio) : '' }], ['Logo', m.icon || '', { mono: true, link: m.icon ? safeHref(m.icon) : '' }], ['Author', m.author || ''], ['Language', m.lang || ''], ['Published', m.pub || ''], ['Type', m.type || ''],
     ['Canonical address', m.canon || '', { mono: true, link: m.canon ? safeHref(m.canon) : '' }], ['Theme color', m.theme || ''],
     ['Can be shown here', m.frameable ? 'Yes' : m.nf ? 'No, the site refuses' : ''],
     ['Added', l.ts ? dateTime(l.ts) : ''], ['Points', l.pt != null ? String(l.pt) : ''], ['Details fetched', m.checkedAt ? dateTime(m.checkedAt) : (now ? 'Not yet' : '')]
   ];
   return rows.filter(([, v]) => v !== '' && v != null).map(([label, value, o]) => ({ label, value: String(value), ...(o || {}) }));
+}
+
+/**
+ * v2.3.1: the links shown beside a preview on wide screens ("Related links", 20). Same folder counts most, then the same site, then shared tags;
+ * ties go to pinned and newer links. The link itself, deleted and blocked-from-nothing links are left out (blocked links still list: blocking only affects Random).
+ */
+export function relatedLinks(all, link, limit = 20) {
+  if (!link) return [];
+  const mine = new Set((link.tags || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean));
+  const out = [];
+  for (const x of all) {
+    if (!x || x.id === link.id || x.del) continue;
+    let score = 0;
+    if (x.fid === link.fid) score += 30;
+    if (x.host && x.host === link.host) score += 20;
+    for (const t of (x.tags || '').toLowerCase().split(',')) if (t && mine.has(t.trim())) score += 12;
+    if (!score) continue;
+    out.push({ link: x, score: score + (x.pn ? 3 : 0) });
+  }
+  out.sort((a, b) => b.score - a.score || (b.link.ts || 0) - (a.link.ts || 0));
+  return out.slice(0, limit).map((r) => r.link);
 }

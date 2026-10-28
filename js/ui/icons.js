@@ -75,6 +75,7 @@ const I = {
   bug: 'r:8,8,8,11,4|M12 8v11|M8 12H4|M16 12h4|M9 5l1.500 2|M15 5l-1.500 2|M8 16.500l-3 1.500|M16 16.500l3 1.500',
   type: 'M4 19L9.500 5h1L16 19|M6.200 14h8.600|M17 12h4|M19 12v7',
   zap: 'M13 3L5 13.500h6L10 21l8-10.500h-6z',
+  points: 'M12 3.500l7.500 8.500-7.500 8.500L4.500 12z|M12 8.500v7|M9 12h6',   // v2.3.1: a small diamond with a plus, the "points" mark in toasts
   rings: 'o:8.500,14,5.500|o:15.500,14,5.500|M8.500 8.500V6a3.500 3.500 0 0 1 7 0v2.500',
   // category icons (folder icon picker, v2.2.0)
   folder: 'M3.500 7a2 2 0 0 1 2-2h4l2 2.500h7a2 2 0 0 1 2 2V17.500a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z',

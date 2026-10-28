@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.3.0';
+const VERSION = '2.3.1';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -63,6 +63,7 @@ const PRECACHE = [
   '/css/pages/splash.css',
   '/js/boot.js',
   '/js/core/activity.js',
+  '/js/core/admin.js',
   '/js/core/app-data.js',
   '/js/core/app-info.js',
   '/js/core/appearance.js',
@@ -83,10 +84,12 @@ const PRECACHE = [
   '/js/core/input-guards.js',
   '/js/core/install.js',
   '/js/core/keyboard-safe.js',
+  '/js/core/known-accounts.js',
   '/js/core/local-prefs.js',
   '/js/core/logger.js',
   '/js/core/mask.js',
   '/js/core/meta-fallback.js',
+  '/js/core/microlink.js',
   '/js/core/nav-stack.js',
   '/js/core/page-meta.js',
   '/js/core/rate-limiter.js',
@@ -96,6 +99,7 @@ const PRECACHE = [
   '/js/core/session.js',
   '/js/core/settings-sync.js',
   '/js/core/shortcuts.js',
+  '/js/core/sync-choice.js',
   '/js/core/update.js',
   '/js/core/url-tools.js',
   '/js/core/utils.js',
@@ -147,6 +151,7 @@ const PRECACHE = [
   '/js/features/import/pdf-text.js',
   '/js/features/import/restore-popup.js',
   '/js/features/import/zip-reader.js',
+  '/js/features/library/bookmark-action.js',
   '/js/features/library/folder-actions.js',
   '/js/features/library/folder-page.js',
   '/js/features/library/folder-style.js',
@@ -163,6 +168,7 @@ const PRECACHE = [
   '/js/features/preview/preview-tabs.js',
   '/js/features/search/search-core.js',
   '/js/features/search/search-page.js',
+  '/js/features/search/search-pages.js',
   '/js/features/search/search-store.js',
   '/js/features/settings/about-card.js',
   '/js/features/settings/account-card.js',
@@ -175,6 +181,7 @@ const PRECACHE = [
   '/js/features/settings/devices-sheet.js',
   '/js/features/settings/metadata-tester.js',
   '/js/features/settings/settings-page.js',
+  '/js/features/settings/sync-picker.js',
   '/js/features/share/share-model.js',
   '/js/features/share/share-page.js',
   '/js/features/shell/bin-card.js',
@@ -187,6 +194,7 @@ const PRECACHE = [
   '/js/features/shell/routes.js',
   '/js/features/shell/shell-parts.js',
   '/js/features/shell/shell.js',
+  '/js/features/shell/switch-account.js',
   '/js/features/shell/update-prompt.js',
   '/js/features/splash/splash-start.js',
   '/js/features/splash/splash.js',
@@ -196,6 +204,7 @@ const PRECACHE = [
   '/js/ui/empty-state.js',
   '/js/ui/icons.js',
   '/js/ui/image-menu.js',
+  '/js/ui/motion.js',
   '/js/ui/popover.js',
   '/js/ui/pull-refresh.js',
   '/js/ui/refresh-button.js',

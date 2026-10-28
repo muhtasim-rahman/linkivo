@@ -1,7 +1,8 @@
 /**
  * Linkivo — js/features/library/link-actions.js  (v2.2.0)
  * Purpose: every action on one link or on a selection of links, with Undo. The folder page, the link menu and the bulk bar all call these.
- *          Points follow the fixed owner rules in engine/points.js (normal preview context: like and dislike once a week per link).
+ *          Points follow the owner rules in engine/points.js (v2.3.1: like 50, 30, 20, then +10 each time; dislike -20; favourite +-100; read later +-200).
+ *          v2.3.1: toasts of one link show the new points; "Add to bookmarks" in the menu.
  * API: linkMenuItems({ engine, link }) -> menu items       bulk = { ... }  each (engine, ids) -> Promise
  *      openLink(link)  copyText(text)  patchWithUndo(engine, ids, patchOf, message)  normalizeTags(text)
  */
@@ -43,15 +44,23 @@ export async function patchWithUndo(engine, ids, patchOf, message) {
   }
   if (!patches.size) return 0;
   await engine.updateLinks([...patches.keys()], (l) => patches.get(l.id) || {});
-  toast(message(patches.size), { duration: 6000, action: { label: 'Undo', onClick: () => engine.updateLinks([...prev.keys()], (l) => prev.get(l.id) || {}) } });
+  // v2.3.1: one link whose points changed shows its new points in the toast (diamond icon + number)
+  const only = patches.size === 1 ? [...patches.values()][0] : null;
+  toast(message(patches.size), { duration: 6000, points: only && typeof only.pt === 'number' ? only.pt : null, action: { label: 'Undo', onClick: () => engine.updateLinks([...prev.keys()], (l) => prev.get(l.id) || {}) } });
   return patches.size;
 }
 
-const LIMIT_MSG = 'Points can change once a week for each link.';
+/** Why a point action changed nothing: a blocked link keeps 0, or the number is already at the cap or the floor. */
+function noChange(engine, ids, dir) {
+  const l = engine.getLink(ids[0]);
+  if (l && l.bl) return 'A blocked link does not get points.';
+  return dir === 'up' ? `Already at the highest points (${P.MAX}).` : 'Already at the lowest points.';
+}
 export const bulk = {
   async favourite(engine, ids) { const all = ids.every((i) => engine.getLink(i)?.fv); return patchWithUndo(engine, ids, (l) => (all ? P.unfavourite(l) : P.favourite(l)), (n) => `${all ? 'Removed from' : 'Added to'} favourites: ${plural(n, 'link')}.`); },
   async block(engine, ids) { const all = ids.every((i) => engine.getLink(i)?.bl); return patchWithUndo(engine, ids, (l) => (all ? P.unblock(l) : P.block(l)), (n) => `${all ? 'Unblocked' : 'Blocked from Random'}: ${plural(n, 'link')}.`); },
-  async readLater(engine, ids) { const all = ids.every((i) => engine.getLink(i)?.rl); return patchWithUndo(engine, ids, (l) => ({ rl: all ? null : true }), (n) => `${all ? 'Removed from' : 'Added to'} read later: ${plural(n, 'link')}.`); },
+  // v2.3.1: read later gives +200 points (taking it away gives them back) so such links come up more often in Random
+  async readLater(engine, ids) { const all = ids.every((i) => engine.getLink(i)?.rl); return patchWithUndo(engine, ids, (l) => (all ? P.unreadLater(l) : P.readLater(l)), (n) => `${all ? 'Removed from' : 'Added to'} read later: ${plural(n, 'link')}.`); },
   async pin(engine, ids) { const all = ids.every((i) => engine.getLink(i)?.pn); return patchWithUndo(engine, ids, () => ({ pn: all ? null : true }), (n) => `${all ? 'Unpinned' : 'Pinned'}: ${plural(n, 'link')}.`); },
   async addTags(engine, ids) {
     const text = await openTextPrompt({ title: ids.length > 1 ? `Add tags to ${plural(ids.length, 'link')}` : 'Add tags', label: 'Tags', placeholder: 'work, read, idea', help: 'Separate tags with commas.', confirmLabel: 'Add tags' });
@@ -102,8 +111,8 @@ export const bulk = {
       setTimeout(() => title.focus(), 60);
     });
   },
-  async like(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.like(l, { random: false, now: engine.now() }), (c) => `Points raised for ${plural(c, 'link')}.`); if (!n) toast(LIMIT_MSG); return n; },
-  async dislike(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.dislike(l, { random: false, now: engine.now() }), (c) => `Points lowered for ${plural(c, 'link')}.`); if (!n) toast(LIMIT_MSG); return n; },
+  async like(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.like(l), (c) => (c === 1 ? 'Points up.' : `Points raised for ${plural(c, 'link')}.`)); if (!n) toast(noChange(engine, ids, 'up')); return n; },
+  async dislike(engine, ids) { const n = await patchWithUndo(engine, ids, (l) => P.dislike(l), (c) => (c === 1 ? 'Points down.' : `Points lowered for ${plural(c, 'link')}.`)); if (!n) toast(noChange(engine, ids, 'down')); return n; },
   async move(engine, ids) {
     const from = new Map(ids.map((i) => [i, engine.getLink(i)?.fid]));
     const fid = await openFolderPicker({ engine, title: `Move ${plural(ids.length, 'link')} to`, exclude: ids.length === 1 ? [from.get(ids[0])] : [] });
@@ -133,17 +142,18 @@ export const bulk = {
 /** v2.2.1: shorter menu in four groups (v2.2.2: separated by plain rules, no group names). "Open in new tab" moved next to the three dots (and the row itself opens the link) and "Select" left the
  *  menu because the folder page has a select button. Edit title and Edit tags became Edit link plus Tags. */
 export function linkMenuItems({ engine, link: l }) {
-  const ids = [l.id], now = engine.now();
+  const ids = [l.id];
   return [
     { label: 'Edit link', icon: 'edit', onSelect: () => bulk.editLink(engine, ids) },
     { label: l.tags ? 'Edit tags' : 'Add tags', icon: 'tag', onSelect: () => bulk.editTags(engine, ids) },
     { label: 'Copy URL', icon: 'copy', onSelect: () => copyText(l.url, 'Link copied.') },
+    { label: 'Add to bookmarks', icon: 'star', onSelect: () => import('./bookmark-action.js').then((m) => m.addToBookmarks(l)) },   // v2.3.1: the browser's own bookmarks (star icon; the heart is for favourites)
     { separator: true },
     { label: l.pn ? 'Unpin' : 'Pin to top', icon: 'pin', onSelect: () => bulk.pin(engine, ids) },
-    { label: l.fv ? 'Remove from favourites' : 'Add to favourites', icon: 'star', onSelect: () => bulk.favourite(engine, ids) },
+    { label: l.fv ? 'Remove from favourites' : 'Add to favourites', icon: 'heart', onSelect: () => bulk.favourite(engine, ids) },
     { label: l.rl ? 'Remove from read later' : 'Read later', icon: 'clock', onSelect: () => bulk.readLater(engine, ids) },
-    { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l, { random: false, now }), onSelect: () => bulk.like(engine, ids) },
-    { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l, { random: false, now }), onSelect: () => bulk.dislike(engine, ids) },
+    { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l), onSelect: () => bulk.like(engine, ids) },
+    { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l), onSelect: () => bulk.dislike(engine, ids) },
     { label: l.bl ? 'Unblock from Random' : 'Block from Random', icon: 'block', onSelect: () => bulk.block(engine, ids) },
     { label: l.dd ? 'Check link again' : 'Check link', icon: 'refresh', onSelect: () => import('../check/check-sheet.js').then((m) => import('../../core/app-data.js').then((d) => m.runCheck({ engine, queue: d.getQueue(), router: null, ids }))) },   // v2.3.0
     { separator: true },

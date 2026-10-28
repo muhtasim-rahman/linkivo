@@ -37,7 +37,7 @@ export async function initData(session) {
     prefs.onChange('import.autoClear', (v) => { if (v) importLog?.purgeOld().catch(() => {}); });   // v2.2.3: turning the setting on cleans the list at once
     engine.purgeExpired().catch((e) => log.warn('data', 'recycle bin purge failed', e)); // v2.2.0: items deleted more than 15 days ago go for good
     scope = wanted;
-    if (session.mode === 'account') { startSettingsSync(session.user.uid); startDevices(session.user.uid); } // v2.2.1: the account's settings follow the user across devices
+    if (session.mode === 'account') { startSettingsSync(session.user.uid); startDevices(session.user.uid); startAdmin(session.user.uid); } // v2.2.1: the account's settings follow the user across devices
     if (typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__linkivo = { engine, queue }; // development only
   } catch (e) { log.error('data', 'data layer failed to start', e); engine = null; queue = null; scope = null; throw e; }
 }
@@ -46,7 +46,8 @@ export async function initData(session) {
 async function startSettingsSync(uid) {
   try {
     const { CATALOG } = await import('../features/settings/catalog.js');
-    const entries = CATALOG.filter((e) => e.key && !e.device);                 // `device: true` on a catalog entry keeps it on this device only
+    const { syncedEntries } = await import('./sync-choice.js');
+    const entries = syncedEntries(CATALOG, prefs);   // v2.3.1: the person's choice (Settings > Account > Select which settings to sync); `device: true` and `local: true` settings start off
     const defaults = Object.fromEntries(entries.map((e) => [e.key, e.default]));
     if (!engine || scope !== uid || !engine.adapter) return;
     settingsSync = createSettingsSync({ adapter: engine.adapter, uid, store: prefs, keys: entries.map((e) => e.key), defaults });
@@ -63,10 +64,21 @@ async function startDevices(uid) {
     await devices.start();
   } catch (e) { log.warn('data', 'device list did not start', e); }
 }
+/** v2.3.1: is this account in the `admins` list? One read; a failure just means a normal user. */
+async function startAdmin(uid) {
+  try { const { loadAdmin } = await import('./admin.js'); if (engine && scope === uid && engine.adapter) await loadAdmin(engine.adapter, uid); } catch (e) { log.warn('data', 'admin check did not run', e); }
+}
+/** v2.3.1: the sync choice changed: stop the running sync and start it again with the new list of keys. */
+export async function restartSettingsSync() {
+  const uid = scope; if (!uid || uid === 'test') return;
+  try { settingsSync?.dispose(); } catch { /* ignore */ }
+  settingsSync = null; await startSettingsSync(uid);
+}
 export const getSettingsSync = () => settingsSync;
 export const getDevices = () => devices;
 
 export async function teardownData() {
+  try { (await import('./admin.js')).clearAdmin(); } catch { /* ignore */ }
   try { settingsSync?.dispose(); } catch { /* ignore */ }
   settingsSync = null;
   try { devices?.stop(); } catch { /* ignore */ }

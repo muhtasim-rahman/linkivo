@@ -70,3 +70,16 @@
 .menu-logout:hover { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); }
 .qs-row { flex-wrap: nowrap; } .qs-theme { width: auto; flex: none; } .qs-theme button { min-width: 40px; }
 @media (max-width: 899px) { .swatches { gap: 4px; } }
+
+/* ---- v2.3.1: profile card with the switch icon, and the Switch account popup ---- */
+.menu-hero-row { display: flex; align-items: stretch; gap: var(--s2); } .menu-hero-row .menu-hero { flex: 1; min-width: 0; }
+.menu-hero-row .swa-btn { align-self: center; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-group); min-width: 48px; min-height: 48px; }
+.swa { display: grid; gap: var(--s3); }
+.swa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.swa-row { display: flex; align-items: center; gap: var(--s1); border-radius: 12px; transition: background var(--t-micro) var(--ease); } .swa-row:hover { background: var(--surface-2); } .swa-row.is-cur { background: var(--accent-soft); }
+.swa-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: 6px var(--s3); text-align: left; color: inherit; border-radius: 12px; } .swa-main:disabled { opacity: 1; cursor: default; }
+.swa-tx { display: grid; min-width: 0; flex: 1; } .swa-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .swa-mail { font-size: var(--fs-xs); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.swa-cur { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text); }
+.swa-add { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 6px var(--s3); border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--text); font-weight: 560; transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease); } .swa-add:hover { background: var(--surface-2); border-color: var(--accent); }
+.swa-add-ic { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--accent-text); }
+.swa-empty { padding: var(--s4); text-align: center; color: var(--sub); font-size: var(--fs-sm); }

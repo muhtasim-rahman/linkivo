@@ -27,7 +27,7 @@ function favicon(l) {
 export function createLinkRow(l, { card = false, selecting = false, selected = false, show = {} } = {}) {
   const flags = h('span', { class: 'lflags' },
     l.pn && h('span', { class: 'lflag', 'data-tip': 'Pinned' }, icon('pin', { size: 14, label: 'Pinned' })),
-    l.fv && h('span', { class: 'lflag is-fav', 'data-tip': 'Favourite' }, icon('star', { size: 14, label: 'Favourite' })),
+    l.fv && h('span', { class: 'lflag is-fav', 'data-tip': 'Favourite' }, icon('heart', { size: 14, label: 'Favourite' })),
     l.rl && h('span', { class: 'lflag', 'data-tip': 'Read later' }, icon('clock', { size: 14, label: 'Read later' })),
     l.dd && h('span', { class: 'lflag is-dead', 'data-tip': 'Dead link: the site says this page is gone' }, icon('x-circle', { size: 14, label: 'Dead link' })),   // v2.3.0
     l.bl && h('span', { class: 'lflag is-block', 'data-tip': 'Blocked from Random' }, icon('block', { size: 14, label: 'Blocked from Random' })));

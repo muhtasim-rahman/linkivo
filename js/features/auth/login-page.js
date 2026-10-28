@@ -16,6 +16,8 @@ import { loadCss } from '../../core/css-loader.js';
 import { getSession } from '../../core/session.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { toggleTheme } from '../shell/shell-parts.js';
+import { takePrefill } from '../../core/known-accounts.js';
+import { prefs } from '../../core/local-prefs.js';
 import { signInWithGoogle, signInWithEmail, registerWithEmail, sendReset, enterGuest, friendlyAuthError } from './auth-service.js';
 import { friendlyWait } from '../../core/send-limit.js';
 import { log } from '../../core/logger.js';
@@ -38,11 +40,13 @@ export async function mount(container) {
   let tab = 'signin';
   let busy = false;
   const session = getSession();
+  const prefill = takePrefill(prefs);   // v2.3.1: Switch account hands over the address of the account to sign in as (one time, never in the URL)
 
   const title = h('h1', { class: 'auth-title' });
   const sub = h('p', { class: 'auth-sub' });
   const alertBox = h('div', { class: 'alert is-error', role: 'alert', hidden: true });
   const email = h('input', { class: 'input', id: 'auth-email', type: 'email', name: 'email', autocomplete: 'email', inputmode: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: 'you@example.com', required: true });
+  if (prefill && prefill.email) email.value = prefill.email;   // v2.3.1
   const pass = h('input', { class: 'input', id: 'auth-pass', type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'Password', required: true });
   const eye = h('button', { type: 'button', class: 'btn btn-icon', 'aria-label': 'Show password', on: { click: () => { const show = pass.type === 'password'; pass.type = show ? 'text' : 'password'; eye.replaceChildren(icon(show ? 'eye-off' : 'eye')); eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); } } }, icon('eye'));
   const passHelp = h('p', { class: 'help', hidden: true, text: 'At least 6 characters. A verification email is sent after you sign up.' });
@@ -51,7 +55,7 @@ export async function mount(container) {
     h('span', null, 'I agree to the ', h('a', { href: '/terms', target: '_blank', rel: 'noopener' }, 'Terms'), ' and the ', h('a', { href: '/privacy', target: '_blank', rel: 'noopener' }, 'Privacy Policy'), '.'));
   const legal = h('p', { class: 'auth-legal' }, 'By continuing you agree to the ', h('a', { href: '/terms', target: '_blank', rel: 'noopener' }, 'Terms'), ' and ', h('a', { href: '/privacy', target: '_blank', rel: 'noopener' }, 'Privacy Policy'), '.');
   const submit = h('button', { type: 'submit', class: 'btn btn-primary btn-block' });
-  const google = h('button', { type: 'button', class: 'btn btn-block', on: { click: () => { if (!agreedOk()) return; run(() => signInWithGoogle(), 'google'); } } }, googleMark(18), h('span', { text: 'Continue with Google' }));
+  const google = h('button', { type: 'button', class: 'btn btn-block', on: { click: () => { if (!agreedOk()) return; run(() => signInWithGoogle(prefill && prefill.email ? prefill.email : ''), 'google'); } } }, googleMark(18), h('span', { text: 'Continue with Google' }));
   const forgot = h('button', { type: 'button', class: 'link-btn', text: 'Forgot password?', on: { click: openReset } });
   const tabBtn = (id, label) => h('button', { type: 'button', role: 'tab', 'aria-selected': 'false', id: 'tab-' + id, text: label, on: { click: () => setTab(id) } });
   const tabs = h('div', { class: 'auth-tabs', role: 'tablist', 'aria-label': 'Sign in or create account' }, tabBtn('signin', 'Sign in'), tabBtn('register', 'Create account'));

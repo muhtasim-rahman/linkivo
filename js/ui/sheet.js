@@ -5,7 +5,8 @@
  *          v2.2.1: on phones the sheet follows the finger when its top bar (grab handle or title row) is dragged down and closes when released low
  *          enough or flicked; a shorter drag springs back. It is never full height (CSS caps it at 82% of the screen; the body scrolls).
  *          `beforeClose` (async, returns false to keep it open) guards Escape, the scrim, the close button, the drag and Back: used when typed input would be lost.
- * API: openSheet({ title, body, actions, wide, dismissible, beforeClose, onClose, role }) -> { el, close(result), requestClose(), setBusy(bool), body }
+ *          v2.3.1: `scrimClose: false` keeps the close button, Escape and Back but ignores a click on the dark area outside (risky popups such as Delete account).
+ * API: openSheet({ title, body, actions, wide, dismissible, scrimClose, beforeClose, onClose, role }) -> { el, close(result), requestClose(), setBusy(bool), body }
  *      dragOutcome(dy, dt, height) -> 'close'|'back' (pure, tested)
  *   body: Node | string | (api) => Node          actions: [{ label, variant:'primary'|'danger'|'quiet', onClick(api), closes=true }]
  *   While any sheet is open the page behind it is inert (not focusable, hidden from screen readers).
@@ -20,7 +21,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 /** Release rule of the drag: far enough down (a quarter of the sheet, at least 80px) or a quick flick closes it. */
 export const dragOutcome = (dy, dt, height) => (dy > Math.max(80, height * 0.25) || (dy > 24 && dy / Math.max(1, dt) > 0.6) ? 'close' : 'back');
 
-export function openSheet({ title = '', body = null, actions = [], wide = false, dismissible = true, beforeClose = null, onClose = null, role = 'dialog' } = {}) {
+export function openSheet({ title = '', body = null, actions = [], wide = false, dismissible = true, scrimClose = true, beforeClose = null, onClose = null, role = 'dialog' } = {}) {
   const returnTo = document.activeElement;
   const app = document.getElementById('app');
   let closed = false;
@@ -59,7 +60,7 @@ export function openSheet({ title = '', body = null, actions = [], wide = false,
       h('h2', { class: 'sheet-title', id: titleId, text: title }),
       dismissible && h('button', { type: 'button', class: 'btn btn-icon', 'aria-label': 'Close', on: { click: () => api.requestClose() } }, icon('close'))),
     bodyEl, foot);
-  const overlay = h('div', { class: 'overlay', on: { mousedown: (e) => { if (e.target === overlay && dismissible) api.requestClose(); } } }, sheet);
+  const overlay = h('div', { class: 'overlay', on: { mousedown: (e) => { if (e.target === overlay && dismissible && scrimClose) api.requestClose(); } } }, sheet);
   api.el = sheet; api.body = bodyEl;
 
   function onKey(e) {

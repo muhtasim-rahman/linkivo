@@ -9,7 +9,7 @@ import { icon } from '../../ui/icons.js';
 export const FOLDER_COLORS = [['#2563eb', 'Blue'], ['#0ea5e9', 'Sky'], ['#14b8a6', 'Teal'], ['#16a34a', 'Green'], ['#84cc16', 'Lime'], ['#eab308', 'Amber'], ['#f97316', 'Orange'], ['#ef4444', 'Red'], ['#ec4899', 'Pink'], ['#a855f7', 'Purple'], ['#6366f1', 'Indigo'], ['#64748b', 'Slate']];
 export const DEFAULT_COLOR = '#2563eb';
 export const FAV_ID = 'favourites';
-export const favouritesFolder = (count = 0) => ({ id: FAV_ID, name: 'Favourites', color: '#eab308', icon: 'star', lc: count, virtual: true });
+export const favouritesFolder = (count = 0) => ({ id: FAV_ID, name: 'Favourites', color: '#eab308', icon: 'heart', lc: count, virtual: true });
 export const colorOf = (f) => (f && /^#[0-9a-f]{3,8}$/i.test(f.color || '') ? f.color : DEFAULT_COLOR);
 
 /** The rounded colored square with the folder icon (pure CSS variables, so the theme and accent never clash with it). */

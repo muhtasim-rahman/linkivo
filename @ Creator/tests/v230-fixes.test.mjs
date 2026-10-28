@@ -37,7 +37,7 @@ test('settings: danger rows have the owner tones, each ends with an arrow, only 
   const tone = (re) => rows.find((r) => re.test(r.textContent));
   for (const re of [/Leave guest mode/, /Clear app cache/]) { const r = tone(re); assert.ok(!r.classList.contains('is-danger') && !r.classList.contains('is-caution'), `${re} stays the normal text color`); }
   assert.ok(tone(/Reset all settings/).classList.contains('is-caution'), 'reset is yellow-orange');
-  assert.ok(tone(/Clear local storage data/).classList.contains('is-danger'), 'clear local data is red');
+  assert.ok(tone(/Clear local storage data/).classList.contains('is-caution'), 'clear local data is yellow (v2.3.1, owner)');
   assert.deepEqual(rows.map((r) => /Leave guest|Clear app cache|Reset all|Clear local/.exec(r.textContent)[0]), ['Leave guest', 'Clear app cache', 'Reset all', 'Clear local']);
   for (const r of rows) assert.ok($('.row-end svg', r), 'right arrow on ' + r.textContent.slice(0, 20));
   const css = read('css/components/feedback.css'); assert.match(css, /\.row\.is-caution \.row-label \{ color: var\(--caution\)/);

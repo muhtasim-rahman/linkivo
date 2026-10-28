@@ -8,6 +8,9 @@
  *      v2.2.3 (owner): "Installed" is claimed ONLY when the app is running as the installed app (kind 'running'). A normal browser tab that merely knows the app
  *      was installed once says so in a small note (kind 'installed', title 'In the browser'), and a fresh install prompt (beforeinstallprompt, which
  *      browsers send only when the app is NOT installed) clears that old flag, so an uninstalled app is offered again.
+ *      v2.3.1 (owner: the banner changed only after a reload): desktop Chrome and Edge MOVE the open tab into the app window when the install finishes, with no
+ *      reload and no event except a change of the (display-mode: standalone) media query. That query is now watched, an accepted prompt marks the app
+ *      installed at once (the `appinstalled` event can arrive late), and the state is re-read when the tab becomes visible again.
  */
 import { createStore } from './events.js';
 import { prefs } from './local-prefs.js';
@@ -27,7 +30,20 @@ export function initInstall() {
   // v2.2.4: ask the browser whether the app is installed (Chrome and Edge on Android and desktop; needs `related_applications` in the manifest). An empty answer proves
   // nothing (many browsers answer [] for everything), so it can only SET the flag; a fresh install prompt clears it again.
   try { navigator.getInstalledRelatedApps?.().then((apps) => { if (apps && apps.length && !installState.get().canPrompt) { prefs.set('install.installed', true); installState.set({ installedFlag: true }); } }).catch(() => {}); } catch { /* not supported */ }
-  window.addEventListener('appinstalled', () => { deferred = null; prefs.set('install.installed', true); installState.set({ canPrompt: false, installedFlag: true }); });
+  window.addEventListener('appinstalled', () => { deferred = null; prefs.set('install.installed', true); installState.set({ canPrompt: false, installedFlag: true, standalone: detectStandalone() }); });
+  // v2.3.1: the tab was moved into the app window (or the app window was closed back into a tab): no reload, only this query changes
+  try {
+    const mq = matchMedia('(display-mode: standalone)'), onMode = () => refreshMode();
+    if (mq.addEventListener) mq.addEventListener('change', onMode); else if (mq.addListener) mq.addListener(onMode);
+  } catch { /* no matchMedia: the next visibility change re-reads it */ }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshMode(); });
+}
+
+/** Re-read whether this page runs as the installed app. A standalone page is an installed app by definition, so the flag is raised with it. */
+export function refreshMode() {
+  const standalone = detectStandalone();
+  if (standalone) prefs.set('install.installed', true);
+  installState.set(standalone ? { standalone, installedFlag: true, canPrompt: false } : { standalone });
 }
 
 export async function promptInstall() {
@@ -35,8 +51,10 @@ export async function promptInstall() {
   deferred.prompt();
   const choice = await deferred.userChoice.catch(() => ({ outcome: 'dismissed' }));
   deferred = null;
-  installState.set({ canPrompt: false });
-  return choice.outcome === 'accepted' ? 'accepted' : 'dismissed';
+  const accepted = choice.outcome === 'accepted';
+  if (accepted) prefs.set('install.installed', true);   // v2.3.1: do not wait for `appinstalled`, it can arrive late
+  installState.set(accepted ? { canPrompt: false, installedFlag: true, standalone: detectStandalone() } : { canPrompt: false });
+  return accepted ? 'accepted' : 'dismissed';
 }
 
 export function shouldShowBanner() {

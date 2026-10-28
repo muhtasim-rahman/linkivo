@@ -76,6 +76,7 @@ export function mountShell({ router }) {
     menuHandle = openMenu(more, [
       { label: 'Profile', icon: 'user', onSelect: () => router.navigate('/profile') },
       { label: 'Settings', icon: 'settings', onSelect: () => router.navigate('/settings') },
+      ...(getSession().mode === 'account' ? [{ label: 'Switch account', icon: 'users', onSelect: () => import('./switch-account.js').then((m) => m.openSwitchAccount(router)) }] : []),   // v2.3.1
       { separator: true },
       { label: 'Log out', icon: 'logout', danger: true, onSelect: () => logOut(router) }
     ], { align: 'start' });

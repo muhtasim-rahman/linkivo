@@ -1,0 +1,22 @@
+feat(v2.3.1): owner fix round (install, Back, points, search, preview, Microlink, admin, switch account)
+
+- Install state flips live when the tab moves into the app window; automatic update tracker switched off (AUTO_UPDATE flag)
+- Back closes open menus, sheets and dialogs first (history-backed overlay stack)
+- Points: like 50, 30, 20 then +10 without limit, dislike -20, favourite +-100, read later +-200; toasts show the new points
+- Add to bookmarks (open and press Ctrl+D, or download a bookmark file); heart icon for favourites
+- Delete account popup: quieter design, animated steps, no close on outside click
+- Search: app pages, deep link to a setting row with a flash, sticky header gap and fade, rise animation, bottom bar no longer lifts above the keyboard
+- Danger zone icon highlight removed, Clear local storage data is yellow
+- Settings: Select which settings to sync popup, Search and Preview sections, Microlink and thum.io switches, Admin/Normal view
+- Switch account popup (remembered accounts, Add another account, forgot password, log out, remove)
+- Preview: phone bottom bar (heart, point up, point down, copy, open, more), Open in new tab strip in the tab row, wide two-column layout with 20 related links, Audio and PDF tabs
+- Microlink first (per-user daily count, stored once per link), thum.io screenshots (10 a day, admins unlimited), mShots fallback, admins list
+- Rules: linkMeta field audio
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database, firebase deploy --only hosting
+- Realtime Database console: admins/<uid> = true for the two admin uids
+- hard reload, run the checklist

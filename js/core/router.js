@@ -15,7 +15,7 @@
  *   router: start() navigate(path, {from}) back() reevaluate() refreshCurrent() canRefresh() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
 import { resolveBack } from './back-logic.js';
-import { closeTopLayer, layerCount, resetLayers } from './nav-stack.js';
+import { closeTopLayer, layerCount, resetLayers, handlePop } from './nav-stack.js';   // v2.3.1: handlePop lets Back close an open overlay first
 import { createEmitter } from './events.js';
 import { pageMeta, applyPageMeta } from './page-meta.js';
 import { log } from './logger.js';
@@ -139,7 +139,8 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
   }
 
   /** v2.2.4: the browser moved through its history (Back, Forward, swipe): just show the page of the address bar. No custom back rules any more. */
-  function onPop() { go(location.pathname + location.search, { from: null, pop: true }); }
+  // v2.3.1: an open menu, sheet or dialog owns one history entry: Back closes it (and nothing else changes)
+  function onPop() { if (handlePop()) return; go(location.pathname + location.search, { from: null, pop: true }); }
 
   function onClick(e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

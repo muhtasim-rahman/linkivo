@@ -12,6 +12,7 @@
  *      v2.1.3: sendReset and resendVerification refuse to send again too soon (core/send-limit.js) and throw an error with code 'lk/cooldown' and waitMs.
  */
 import { loadFirebase } from '../../core/firebase-loader.js';
+import { rememberAccount } from '../../core/known-accounts.js';
 import { prefs } from '../../core/local-prefs.js';
 import { setSession, getSession } from '../../core/session.js';
 import { setTokenProvider } from '../../core/worker-client.js';
@@ -38,7 +39,7 @@ export async function initAuth() {
   await new Promise((resolve) => {
     let first = true;
     mods.auth.onAuthStateChanged(auth, (user) => {
-      if (user) setSession({ mode: 'account', user: userInfo(user), ready: true });
+      if (user) { const info = userInfo(user); rememberAccount(info, prefs); setSession({ mode: 'account', user: info, ready: true }); }   // v2.3.1: remembered for the Switch account popup
       else if (getSession().mode === 'account') setSession({ mode: 'none', user: null, status: 'active', ready: true });
       else setSession({ mode: 'none', user: null, ready: true });
       if (first) { first = false; resolve(); }
@@ -48,10 +49,10 @@ export async function initAuth() {
 
 async function sdk() { if (!fb) fb = await loadFirebase(); return fb; }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(hint = '') {
   const { auth, mods } = await sdk();
   const provider = new mods.auth.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
+  provider.setCustomParameters(hint ? { prompt: 'select_account', login_hint: hint } : { prompt: 'select_account' });   // v2.3.1: Switch account passes the address as a hint
   try { await mods.auth.signInWithPopup(auth, provider); markLogin(); }
   catch (e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') { await mods.auth.signInWithRedirect(auth, provider); return; }

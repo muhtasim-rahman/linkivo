@@ -33,23 +33,34 @@
 .pv-log li { display: flex; align-items: center; gap: var(--s2); min-height: 36px; padding: 0 var(--s3); font-size: var(--fs-sm); } .pv-log li + li { border-top: 1px solid var(--line); }
 .pv-log .is-ok svg { color: var(--success); } .pv-log .is-bad svg { color: var(--danger); } .pv-log-e { font-family: var(--font-mono); font-size: var(--fs-xs); } .pv-log-m { margin-left: auto; color: var(--sub); font-size: var(--fs-xs); text-align: right; }
 .pv-det-actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
-.pv-bar { display: grid; grid-template-columns: repeat(5, 1fr); flex: none; padding: 4px var(--s2) calc(var(--safe-b) + 4px); border-top: 1px solid var(--line); background: var(--surface); }
+.pv-bar { display: grid; grid-template-columns: repeat(6, 1fr); flex: none; padding: 4px var(--s2) calc(var(--safe-b) + 4px); border-top: 1px solid var(--line); background: var(--surface); }
 .pv-act { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 52px; border-radius: 12px; color: var(--sub); }
 .pv-act:hover { background: var(--surface-2); } .pv-act.is-on { color: var(--warning); } .pv-act.is-on svg { fill: currentColor; fill-opacity: 0.2; }
 .pv-act-l { font-size: 11px; line-height: 1; }
 .pv-side { display: none; }
+.pv-tab-open { margin-left: auto; border-color: var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 700; text-decoration: none; }
+.pv-tab-open:hover { filter: brightness(1.06); text-decoration: none; }
+.pv-audiobody { align-items: center; justify-content: center; text-align: center; gap: var(--s3); padding-block: var(--s6, 40px); }
+.pv-audio-ic { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 22px; background: var(--accent-soft); color: var(--accent-text); }
+.pv-audio-t { max-width: 40ch; line-height: 1.3; } .pv-audio { width: min(100%, 460px); }
+/* ---- wide screens (v2.3.1, owner): centred, two columns. Left: the preview, never shorter than 520px even on a short window. Right: 20 related links. ---- */
 @media (min-width: 900px) {
-  .pv { padding: var(--s4) var(--s5) var(--s4) 0; }
-  .pv-wrap { width: min(100%, 78%); min-width: min(100%, 780px); margin-left: auto; border: 1px solid var(--line); border-radius: var(--r-sheet); overflow: hidden; box-shadow: var(--shadow-float); }
+  .pv { padding: var(--s4) var(--s5); height: auto; min-height: 100%; }
+  .pv-wrap { width: min(100%, 1320px); margin: 0 auto; min-height: max(640px, calc(100dvh - var(--s4) * 2 - 8px)); border: 1px solid var(--line); border-radius: var(--r-sheet); overflow: hidden; box-shadow: var(--shadow-float); }
   .pv-head { padding-top: 8px; } .pv-bar { padding-bottom: 6px; } .pv-act { grid-auto-flow: column; gap: 8px; } .pv-act-l { font-size: var(--fs-sm); }
+  .pv-main { grid-template-columns: minmax(0, 1fr) 340px; }
+  .pv-stage { min-height: 520px; }
   .pv-stage.is-full, .pv-stage:fullscreen { padding-top: 0; }
-}
-@media (min-width: 1240px) {
-  .pv-main { grid-template-columns: minmax(0, 1fr) 280px; }
   .pv-side { display: block; overflow-y: auto; padding: var(--s3); border-left: 1px solid var(--line); background: var(--surface); }
-  .pv-side-h { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font: 650 var(--fs-md) / 1.3 var(--font-brand); }
+  .pv-side-h { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); padding: 0 var(--s2); font: 650 var(--fs-md) / 1.3 var(--font-brand); }
+  .pv-side-n { padding: 1px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); font-size: var(--fs-xs); font-weight: 600; color: var(--sub); }
   .pv-side-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-  .pv-side-item { display: grid; gap: 0; padding: 8px var(--s2); border-radius: 10px; color: inherit; } .pv-side-item:hover { background: var(--surface-2); text-decoration: none; }
-  .pv-side-t { font-weight: 560; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .pv-side-u { font: 400 var(--fs-xs) var(--font-mono); color: var(--sub); }
+  .pv-side-item { display: flex; align-items: center; gap: var(--s3); min-height: 48px; padding: 6px var(--s2); border-radius: 10px; color: inherit; transition: background var(--t-micro) var(--ease); } .pv-side-item:hover { background: var(--surface-2); text-decoration: none; }
+  .pv-side-fav { position: relative; width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; font: 700 12px var(--font-brand); color: var(--sub); }
+  .pv-side-fav img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: var(--surface); }
+  .pv-side-tx { display: grid; min-width: 0; }
+  .pv-side-t { font-weight: 560; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .pv-side-u { font: 400 var(--fs-xs) var(--font-mono); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+@media (max-width: 899px) { .pv-tab-open span { display: inline; } }
 @media (max-width: 380px) { .pv-act-l { display: none; } }
+@media (min-width: 900px) { .pv.no-side .pv-main { grid-template-columns: minmax(0, 1fr); } }

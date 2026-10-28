@@ -8,6 +8,7 @@
  *            4 Request email: a ready email (subject, message, account details, a request id) to the developer, opened in the person's mail app (or Gmail on
  *              the web, or copied). It must be sent FROM the account's own email address, otherwise it is rejected.
  *          Nothing is deleted by this flow. API: openDeleteAccount({ router? }) -> Promise<void>     buildRequest(facts, counts, id, now) -> { subject, body }  (pure, tested)
+ *          v2.3.1 (owner): quieter design (no glowing icon box, red only where it matters), smooth step changes, and a tap outside no longer closes it.
  *          v2.3.0 (owner): redesigned. All four steps live in ONE popup (the content swaps, the popup never closes between steps) with a red theme (the sheet
  *          overrides the accent variables, see css/pages/settings.css `.da-sheet`), a red step bar, big folder and link counts on the review step and a live
  *          check on the typed phrase. On narrow phones every button is icon-only (the text stays as aria-label and tooltip).
@@ -16,6 +17,7 @@ import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
 import { icon } from '../../ui/icons.js';
 import { openSheet } from '../../ui/sheet.js';
+import { swapContent } from '../../ui/motion.js';
 import { toast } from '../../ui/toast.js';
 import { getEngine } from '../../core/app-data.js';
 import { maskEmail } from '../../core/mask.js';
@@ -56,14 +58,23 @@ export async function openDeleteAccount() {
   const btn = (ic, label, fn, { primary = false, tag = 'button', attrs = {} } = {}) => h(tag, { type: tag === 'button' ? 'button' : null, class: ['btn', 'da-btn', primary && 'btn-primary'], 'aria-label': label, 'data-tip': label, on: fn ? { click: fn } : null, ...attrs }, icon(ic, { size: 18 }), h('span', { class: 'da-bt', text: label }));
   const foot = (left, right) => h('div', { class: 'da-foot' }, left || h('span'), right);
 
-  /** The shared frame of every step: red hero, step bar, the step's own content, then the footer. Swapping it re-runs the small fade-in. */
-  function frame(n, title, lead, kids, footer) {
+  /** The shared frame of every step (v2.3.1, owner: less "AI look", smoother). The title block and the 4-part progress bar stay in place and only change
+   *  (the bar fills with a transition); the step's own content and footer are swapped inside `view` with a slide and a height change (ui/motion.js),
+   *  forward steps come in from the right, Back comes in from the left. */
+  let shown = 0;
+  const lead = h('p', { class: 'da-lead' }), ttl = h('h3', { class: 'da-title' }), no = h('span', { class: 'da-no' });
+  const bar = h('ol', { class: 'da-steps' }, STEP_NAMES.map((name) => h('li', null, h('i'), h('span', { text: name }))));
+  const view = h('div', { class: 'da-view' });
+  body.append(h('div', { class: 'da-head' }, no, ttl, lead), bar, view);
+  function frame(n, title, leadText, kids, footer) {
     err.textContent = '';
-    const bar = h('ol', { class: 'da-steps', 'aria-label': `Step ${n} of 4: ${STEP_NAMES[n - 1]}` }, STEP_NAMES.map((name, i) => h('li', { class: [i + 1 < n && 'is-done', i + 1 === n && 'is-now'], 'aria-current': i + 1 === n ? 'step' : null }, h('i'), h('span', { text: name }))));
-    body.replaceChildren(
-      h('div', { class: 'da-hero' }, h('span', { class: 'da-hero-ic' }, icon('alert', { size: 24 })), h('div', { class: 'da-hero-text' }, h('strong', { text: title }), h('span', { text: lead })), h('span', { class: 'da-count', text: `${n}/4` })),
-      bar, h('div', { class: 'da-step' }, ...kids, err), footer);
-    body.classList.remove('is-in'); void body.offsetWidth; body.classList.add('is-in');
+    const dir = n >= shown ? 1 : -1, first = shown === 0; shown = n;
+    no.textContent = `Step ${n} of 4`;
+    ttl.textContent = title; lead.textContent = leadText;
+    bar.setAttribute('aria-label', `Step ${n} of 4: ${STEP_NAMES[n - 1]}`);
+    [...bar.children].forEach((li, i) => { li.classList.toggle('is-done', i + 1 < n); li.classList.toggle('is-now', i + 1 === n); if (i + 1 === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); });
+    const render = () => view.replaceChildren(h('div', { class: 'da-step' }, ...kids, err), footer);
+    if (first) render(); else swapContent(view, render, { dir });
   }
 
   function stepVerify() {
@@ -125,7 +136,7 @@ export async function openDeleteAccount() {
       foot(btn('arrow-left', 'Back', () => stepType(c)), btn('check', 'Done', () => sheet.close(true), { primary: true })));
   }
 
-  sheet = openSheet({ title: 'Delete account', body, actions: [], wide: true });
+  sheet = openSheet({ title: 'Delete account', body, actions: [], wide: true, scrimClose: false });   // v2.3.1: a tap outside must never close it
   sheet.el.classList.add('da-sheet');   // red theme (settings.css)
   stepVerify();
 }

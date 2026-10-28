@@ -6,6 +6,7 @@
  *          the current category centred.
  *          v2.2.1: the bar sits on a fully opaque background (a wrapper), the fade is drawn on the chips only, and the mouse can drag it.
  *          /settings/:section opens the page scrolled to that category (deep link).
+ *          v2.3.1: /settings/:section?focus=<setting id> (from Search) scrolls to that one row and marks it with a calm outline for a few seconds.
  * Routes: /settings  and  /settings/:section
  * Page module: mount(container, ctx)
  */
@@ -20,6 +21,7 @@ import { installCard } from '../shell/install-card.js';
 import { profileCard, logoutButton } from '../shell/shell-parts.js';
 import { binCard } from '../shell/bin-card.js';
 import { renderAdvanced } from './advanced-tools.js';
+import { flashRow } from '../../ui/motion.js';
 
 const ADVANCED = new Set(['debug', 'reset', 'tester', 'clearCache', 'logout', 'clearLocal', 'deleteAccount']);   // v2.2.3: logout and clearLocal belong to the Danger zone
 
@@ -45,13 +47,15 @@ export async function mount(container, ctx) {
   }));
 
   // v2.2.2 (owner): on wide screens the install card and a Recycle Bin card sit at the very top (phones have both in the Menu page)
-  const topCards = h('div', { class: 'set-top' }, profileCard(), installCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
+  const topCards = h('div', { class: 'set-top' }, profileCard(ctx.router), installCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
   function renderSections() {
     body.replaceChildren(topCards, ...SECTIONS.map((s) => {
       const group = h('div', { class: 'group' });
       for (const e of entriesFor(s.id)) {
         if (e.top) continue;   // v2.2.2: drawn as a card at the top of the page (wide screens)
         const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: renderSections, router: ctx.router }) : renderCustom(e.custom, { router: ctx.router, rerender: renderSections })) : renderControl(e);
+        const first = Array.isArray(node) ? node[0] : node;   // v2.3.1: every row can be found by its setting id (Search deep link)
+        if (first && first.dataset && !first.dataset.setting) first.dataset.setting = e.id;
         if (Array.isArray(node)) group.append(...node); else group.appendChild(node);
       }
       return h('section', { class: ['set-sec', s.id === 'danger' && 'is-danger'], id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },
@@ -93,6 +97,15 @@ export async function mount(container, ctx) {
 
   const detachFade = attachScrollRow(nav, { arrows: false });   // v2.2.1: edge fades, touch scroll and mouse drag
   spy();
-  if (target) requestAnimationFrame(() => { scrollTo(target.id, false); spy(); });
+  /** v2.3.1: bring one setting into the middle of the page and flash it (a setting found in Search). Falls back to the category heading. */
+  function focusSetting(id) {
+    const row = id && body.querySelector(`[data-setting="${String(id).replace(/[^\w-]/g, '')}"]`);
+    if (!row) return false;
+    const top = row.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - Math.max(80, container.clientHeight / 3);
+    if (typeof container.scrollTo === 'function') container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); else container.scrollTop = Math.max(0, top);
+    setTimeout(() => flashRow(row), 260);   // after the scroll has mostly arrived, so the flash is seen
+    return true;
+  }
+  if (target) requestAnimationFrame(() => { if (!(ctx.query && ctx.query.focus && focusSetting(ctx.query.focus))) scrollTo(target.id, false); spy(); });
   return () => { container.removeEventListener('scroll', onScroll); detachFade(); if (frame) cancelAnimationFrame(frame); };
 }

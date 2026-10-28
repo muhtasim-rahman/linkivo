@@ -69,7 +69,7 @@ test('Search page: categories, See more, history (5 shown), clear on logout, res
   await router.navigate('/search'); await tick(10);
   assert.match(container.textContent, /Search everything/, 'empty state first');
   const input = $('.sp-input'); input.value = 'theme'; input.dispatchEvent(new w.Event('input', { bubbles: true })); await waitFor(() => $('.sp-group'));
-  const titles = $$('.sp-h').map((x) => x.firstChild.textContent); assert.deepEqual(titles, ['Settings', 'Folders', 'Links']);
+  const titles = $$('.sp-h').map((x) => x.firstChild.textContent); assert.deepEqual(titles, ['Pages', 'Settings', 'Folders', 'Links']);
   assert.equal($$('section[aria-label="Links"] .sp-item').length, 8, 'links start with 8'); assert.ok($('mark'), 'matches are marked');
   $('section[aria-label="Links"] .sp-more').click(); await tick(5); assert.equal($$('section[aria-label="Links"] .sp-item').length, 18, 'See more adds 10');
   const first = $('section[aria-label="Links"] .sp-item'); assert.match(first.getAttribute('href'), /^\/link\//);

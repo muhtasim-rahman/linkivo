@@ -45,11 +45,15 @@ export async function logOut(router, { guest = false } = {}) {
 }
 
 /** The profile card: avatar, name, masked email, arrow. Opens the Profile page. Used first on the Menu page and first on the wide Settings page (owner, v2.3.0). */
-export function profileCard() {
+export function profileCard(router = null) {
   const s = getSession();
   const name = s.mode === 'guest' ? 'Guest' : s.user.name;
   const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
-  return h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right')));
+  const card = h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right')));
+  // v2.3.1 (owner): a switch-account icon beside the badge (accounts only); the wrapper keeps the card itself a plain link
+  if (s.mode !== 'account') return card;
+  const row = h('div', { class: 'menu-hero-row' }, card); import('./switch-account.js').then((m) => row.appendChild(m.switchButton(router)));
+  return row;
 }
 
 /** The red Log out button (guests: Leave guest mode). One function so the Menu page and the bottom of Settings can never differ. */

@@ -206,14 +206,14 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   setSession({ mode: 'guest', user: null, status: 'active' });
   const router = mk({ routes: ROUTES, container, getSession }); await router.start();
   await router.navigate('/settings'); await tick(5);
-  assert.equal($$('.set-nav .set-nav-item').length, 8, 'category list (v2.2.3: + Danger zone)'); assert.equal($$('.set-sec').length, 8, 'one page, one section per category');
+  assert.equal($$('.set-nav .set-nav-item').length, 10, 'category list (v2.2.3: + Danger zone, v2.3.1: + Search, Preview)'); assert.equal($$('.set-sec').length, 10, 'one page, one section per category');
   assert.equal($('.page-head.is-stack .page-title').textContent, 'Settings'); assert.ok($('.page-head.is-stack .page-sub'), 'title and subtitle on separate lines');
   await router.navigate('/settings/appearance'); await tick(5);
   $$('[data-setting="theme"] button').find((b) => b.textContent === 'Dark').click(); assert.equal(prefs.get('ui.theme'), 'dark'); assert.equal(document.documentElement.dataset.theme, 'dark');
   $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet');
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
-  assert.equal($$('.set-sec').length, 8, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
+  assert.equal($$('.set-sec').length, 10, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
   const resetRow = $$('.row.is-caution').find((r) => /Reset all settings/.test(r.textContent))   /* v2.3.0: reset is yellow-orange (is-caution), no longer red */; resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings' || b.textContent === 'Reset all settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);

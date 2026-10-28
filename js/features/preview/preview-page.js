@@ -5,6 +5,9 @@
  *          Screenshot, Details (only the ones that can work), a compact action bar at the bottom and a three-dot menu with everything else.
  *          It opens from the cached data at once. A link that was never looked up is fetched ONCE through the Worker (title, description, image, frameable,
  *          engine log) and the page updates in place. The tab used last (or most) opens first. A site that refuses framing never gets a Page tab.
+ *          v2.3.1 (owner): phones get a bottom bar of Favourite (heart), Point up, Point down, Copy link, Open in new tab and a three-dot menu with the rest;
+ *          "Open in new tab" also sits in the tab row as a bold primary strip. Wide screens: two columns, the preview on the left (minimum height 520px) and 20
+ *          related links with favicons on the right; the whole page is centred.
  * Page module: mount(container, ctx)      Pure logic: preview-model.js     Tabs: preview-tabs.js
  */
 import { h } from '../../core/dom.js';
@@ -16,13 +19,15 @@ import { openMenu } from '../../ui/popover.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
 import { toast } from '../../ui/toast.js';
-import { faviconUrl, linkTitle, safeHref, folderTile } from '../library/folder-style.js';
+import { faviconUrl, linkTitle, safeHref } from '../library/folder-style.js';
 import { bulk, linkMenuItems, copyText } from '../library/link-actions.js';
-import { TABS, TAB_LABELS, TAB_ICONS, availableTabs, pickTab, needsFetch } from './preview-model.js';
+import { TABS, TAB_LABELS, TAB_ICONS, availableTabs, pickTab, needsFetch, relatedLinks } from './preview-model.js';
 import { buildPanel } from './preview-tabs.js';
 import { ensureMeta } from './preview-meta.js';
 
-const K_LAST = 'preview.tab', K_USE = 'preview.tabUse';
+const K_LAST = 'preview.tab', K_USE = 'preview.tabUse', K_DEF = 'preview.defaultTab';
+/** v2.3.1: the tab that opens first: the setting "Tab that opens first" when it is not "Last used" and exists for this link, else the old rule (last used, most used, first). */
+const firstTab = (a) => { const d = prefs.get(K_DEF, 'last'); return d !== 'last' && a.includes(d) ? d : pickTab(a, prefs.get(K_LAST, null), prefs.get(K_USE, {})); };
 
 export async function mount(container, ctx) {
   const engine = getEngine(), router = ctx.router;
@@ -38,7 +43,7 @@ export async function mount(container, ctx) {
   let meta = await engine.getLinkMeta(lid), tab = null, panelNode = null, full = false, disposed = false;
   const stage = h('section', { class: 'pv-stage' }), tabsEl = h('div', { class: 'pv-tabs fade-x', role: 'tablist', 'aria-label': 'Preview views' }), panel = h('div', { class: 'pv-panel', role: 'tabpanel' });
   const head = h('header', { class: 'pv-head' }), bar = h('footer', { class: 'pv-bar', role: 'toolbar', 'aria-label': 'Link actions' });
-  const side = h('aside', { class: 'pv-side', 'aria-label': 'More links in this folder' });
+  const side = h('aside', { class: 'pv-side', 'aria-label': 'Related links' });
   const root = h('div', { class: 'pv page-enter' }, h('div', { class: 'pv-wrap' }, head, h('div', { class: 'pv-main' }, h('div', { class: 'pv-col' }, stage, bar), side)));
   container.appendChild(root);
   stage.append(tabsEl, panel);
@@ -54,7 +59,7 @@ export async function mount(container, ctx) {
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back', 'data-tip': 'Back', on: { click: back } }, icon('arrow-left', { size: 22 })),
       fav,
       h('div', { class: 'pv-id' }, h('h1', { class: 'pv-title', text: linkTitle(l) }), h('p', { class: 'pv-url', text: l.url })),
-      h('div', { class: 'pv-head-actions' }, fsBtn, h('a', { class: 'btn-icon', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in a new tab', 'data-tip': 'Open in new tab' }, icon('external', { size: 20 }))));
+      h('div', { class: 'pv-head-actions' }, fsBtn));   // v2.3.1: Open in new tab moved to the bottom bar and the tab row
     document.title = `${linkTitle(l)} | Linkivo`;
   }
 
@@ -63,16 +68,22 @@ export async function mount(container, ctx) {
     const l = link(); if (!l) return;
     const b = (ic, label, fn, on = false) => h('button', { type: 'button', class: ['pv-act', on && 'is-on'], 'aria-label': label, 'aria-pressed': on ? 'true' : null, 'data-tip': label, on: { click: fn } }, icon(ic, { size: 22 }), h('span', { class: 'pv-act-l', text: label }));
     const more = h('button', { type: 'button', class: 'pv-act', 'aria-label': 'More actions', 'aria-haspopup': 'menu', 'data-tip': 'More' }, icon('more-h', { size: 22 }), h('span', { class: 'pv-act-l', text: 'More' }));
-    more.addEventListener('click', () => { more._m = openMenu(more, linkMenuItems({ engine, link: link() })); });
-    bar.replaceChildren(b('star', l.fv ? 'Favourited' : 'Favourite', () => bulk.favourite(engine, [lid]), !!l.fv), b('copy', 'Copy link', () => copyText(l.url, 'Link copied.')),
-      b('edit', 'Edit', () => bulk.editLink(engine, [lid])), b('tag', 'Tags', () => bulk.editTags(engine, [lid])), more);
+    // the three-dot menu keeps everything the bar does not show (owner): the five bar actions are left out of it
+    const SHOWN = new Set(['Add to favourites', 'Remove from favourites', 'Point up', 'Point down', 'Copy URL']);
+    more.addEventListener('click', () => { more._m = openMenu(more, tidy(linkMenuItems({ engine, link: link() }).filter((it) => !SHOWN.has(it.label)))); });
+    const open = h('a', { class: 'pv-act', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in a new tab', 'data-tip': 'Open in new tab' }, icon('external', { size: 22 }), h('span', { class: 'pv-act-l', text: 'Open' }));
+    bar.replaceChildren(b('heart', l.fv ? 'Favourited' : 'Favourite', () => bulk.favourite(engine, [lid]), !!l.fv), b('thumb-up', 'Point up', () => bulk.like(engine, [lid])), b('thumb-down', 'Point down', () => bulk.dislike(engine, [lid])),
+      b('copy', 'Copy link', () => copyText(l.url, 'Link copied.')), open, more);
   }
+  /** Removing items can leave two separators in a row, or one at the start or end of the menu. */
+  const tidy = (items) => items.filter((it, i, a) => !(it.separator && (i === 0 || i === a.length - 1 || a[i - 1].separator)));
 
   // ---- tabs ---------------------------------------------------------------------------------------------------------
   const avail = () => availableTabs(link(), meta);
   function paintTabs() {
     const a = avail();
-    tabsEl.replaceChildren(...TABS.filter((t) => a.includes(t)).map((t) => h('button', { type: 'button', role: 'tab', class: 'pv-tab', 'aria-selected': String(t === tab), 'data-tab': t, on: { click: () => choose(t, true) } }, icon(TAB_ICONS[t], { size: 18 }), h('span', { text: TAB_LABELS[t] }))));
+    const l = link();
+    tabsEl.replaceChildren(...TABS.filter((t) => a.includes(t)).map((t) => h('button', { type: 'button', role: 'tab', class: 'pv-tab', 'aria-selected': String(t === tab), 'data-tab': t, on: { click: () => choose(t, true) } }, icon(TAB_ICONS[t], { size: 18 }), h('span', { text: TAB_LABELS[t] }))), h('a', { class: 'pv-tab pv-tab-open', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer' }, icon('external', { size: 16 }), h('span', { text: 'Open in new tab' })));   // v2.3.1: a bold primary strip, not a button above the frame
   }
   function choose(t, user) {
     if (user) { prefs.set(K_LAST, t); const use = { ...(prefs.get(K_USE, {}) || {}) }; use[t] = (use[t] || 0) + 1; prefs.set(K_USE, use); }
@@ -95,11 +106,15 @@ export async function mount(container, ctx) {
 
   // ---- the other links of the folder (wide screens) ----------------------------------------------------------------------------------------
   function paintSide() {
-    const l = link(); if (!l) return; const f = engine.getFolder(l.fid);
-    const others = engine.listLinks({ fid: l.fid }).filter((x) => x.id !== lid).sort((a, b) => (b.pn ? 1 : 0) - (a.pn ? 1 : 0) || b.ts - a.ts).slice(0, 24);
-    side.replaceChildren(
-      h('h2', { class: 'pv-side-h' }, f ? folderTile(f, 24) : null, h('span', { text: f ? `More in ${f.name}` : 'More links' })),
-      others.length ? h('ul', { class: 'pv-side-list' }, others.map((x) => h('li', null, h('a', { href: `/link/${encodeURIComponent(x.id)}`, class: 'pv-side-item' }, h('span', { class: 'pv-side-t', text: linkTitle(x) }), h('span', { class: 'pv-side-u', text: x.host || '' }))))) : h('p', { class: 'muted', text: 'No other links in this folder.' }));
+    const l = link(); if (!l) return;
+    const showRel = prefs.get('preview.related', true) !== false;   // v2.3.1: setting "Show related links"
+    side.hidden = !showRel; root.classList.toggle('no-side', !showRel); if (!showRel) return;
+    const rel = relatedLinks(engine.listLinks(), l, 20);
+    const item = (x) => { const fav = h('span', { class: 'pv-side-fav', 'aria-hidden': 'true' }, h('span', { text: (x.host || '?').replace(/^www\./, '').charAt(0).toUpperCase() }));
+      const im = h('img', { src: faviconUrl(x.host), alt: '', width: '20', height: '20', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => im.remove(), { once: true }); fav.appendChild(im);
+      return h('li', null, h('a', { href: `/link/${encodeURIComponent(x.id)}`, class: 'pv-side-item' }, fav, h('span', { class: 'pv-side-tx' }, h('span', { class: 'pv-side-t', text: linkTitle(x) }), h('span', { class: 'pv-side-u', text: x.host || '' })))); };
+    side.replaceChildren(h('h2', { class: 'pv-side-h' }, h('span', { text: 'Related links' }), h('span', { class: 'pv-side-n', text: String(rel.length) })),
+      rel.length ? h('ul', { class: 'pv-side-list' }, rel.map(item)) : h('p', { class: 'muted', text: 'Nothing related yet. Links from the same folder, site or with the same tags show up here.' }));
   }
 
   // ---- metadata: opened from the cache, fetched once when the link was never looked up ------------------------------------------------------
@@ -110,13 +125,13 @@ export async function mount(container, ctx) {
     if (res.error) { toast(res.error, { type: 'error' }); panelNode?.update?.({ link: link(), meta, error: res.error }); return; }
     meta = await engine.getLinkMeta(lid);
     paintHead(); paintTabs();
-    if (!avail().includes(tab)) choose(pickTab(avail(), prefs.get(K_LAST, null), prefs.get(K_USE, {})), false);
+    if (!avail().includes(tab)) choose(firstTab(avail()), false);
     else if (tab === 'details' || tab === 'photo' || tab === 'video' || tab === 'page') choose(tab, false);   // new data for the open tab
   }
 
   // ---- first paint ------------------------------------------------------------------------------------------------------------------------------
   paintHead(); paintBar(); paintSide();
-  choose(pickTab(avail(), prefs.get(K_LAST, null), prefs.get(K_USE, {})), false);
+  choose(firstTab(avail()), false);
   const off = engine.subscribe((e) => { if (e.type === 'change' && (e.links || []).includes(lid)) { if (!link() || link().del) { back(); return; } paintHead(); paintBar(); } });
   load();
 

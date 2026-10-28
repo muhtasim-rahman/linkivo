@@ -23,6 +23,10 @@ import { aboutCard, developerCard, appDetails as appDetailsNodes } from './about
 import { accountRows } from './account-card.js';
 import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
+import { syncRow } from './sync-picker.js';
+import { quota as mlQuota, mlEnabled, subscribeQuota } from '../../core/microlink.js';
+import { isAdminAccount, subscribeAdmin } from '../../core/admin.js';
+import { createSelect } from '../../ui/select.js';
 
 const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
 
@@ -140,6 +144,30 @@ function recycleBin(ctx) {
   return row('Recycle Bin', `Deleted folders and links stay for 15 days. Now: ${plural(c.deletedFolders, 'folder')}, ${plural(c.deletedLinks, 'link')}.`, h('button', { type: 'button', class: 'btn btn-sm', text: 'Open', on: { click: () => ctx.router.navigate('/settings/recycle-bin') } }));
 }
 
+// ---- v2.3.1: sync choice, Microlink allowance, admin view --------------------------------------------------------------------
+function syncPick() { return syncRow(); }
+function mlQuotaRow() {
+  const box = h('div');
+  const render = () => {
+    const q = mlQuota(), on = mlEnabled();
+    const info = h('button', { type: 'button', class: 'btn-icon ml-info', 'aria-label': 'About the Microlink allowance', 'data-tip': 'Microlink gives every device a small free number of lookups a day. A link is looked up once and its details are stored, so opening it again costs nothing. When the allowance is used up, or Microlink fails, the other services answer.', on: { click: (e) => e.currentTarget.dispatchEvent(new Event('mouseenter')) } }, icon('info', { size: 18 }));
+    box.replaceChildren(row('Microlink allowance today', on ? `${q.left} of ${q.limit} lookups left. Resets at midnight UTC.` : 'Switched off. Turn it on above.', info));
+  };
+  subscribeQuota(() => { if (box.isConnected) render(); });
+  render(); return box;
+}
+function adminViewRow() {
+  const box = h('div');
+  const render = () => {
+    if (!isAdminAccount()) { box.replaceChildren(); box.hidden = true; return; }
+    box.hidden = false;
+    const cur = prefs.get('admin.view', 'admin');
+    const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'Normal user' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { prefs.set('admin.view', v); toast(v === 'admin' ? 'Admin limits are on.' : 'Showing the app as a normal user.'); render(); } });
+    box.replaceChildren(row('View the app as', 'For testing. Normal user applies the daily limits an ordinary account gets. This can only lower your access.', sel));
+  };
+  subscribeAdmin(render); render(); return box;
+}
+
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin, syncPick, mlQuota: mlQuotaRow, adminView: adminViewRow })[name]?.(ctx) ?? h('div');
 }

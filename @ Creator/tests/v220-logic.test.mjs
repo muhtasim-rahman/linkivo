@@ -42,29 +42,26 @@ test('extract: international domains and ports', () => {
   assert.equal(extractLinks('see http://localhost.test:8080/a')[0].url, 'http://localhost.test:8080/a');
 });
 
-// ---- points -------------------------------------------------------------------------------------------------------------
-test('points: random open -10, like 50/20/10 then disabled, dislike once per random open', () => {
-  let l = { pt: 100 }; const apply = (p) => { l = { ...l }; for (const [k, v] of Object.entries(p)) { if (v === null) delete l[k]; else l[k] = v; } };
-  apply(P.onRandomOpen(l, 1)); assert.equal(l.pt, 90); assert.equal(l.oc, 1);
-  apply(P.like(l, { random: true })); assert.equal(l.pt, 140);
-  apply(P.like(l, { random: true })); assert.equal(l.pt, 160);
-  apply(P.like(l, { random: true })); assert.equal(l.pt, 170);
-  assert.equal(P.like(l, { random: true }), null); assert.equal(P.canLike(l, { random: true }), false);
-  apply(P.dislike(l, { random: true })); assert.equal(l.pt, 120); assert.equal(P.dislike(l, { random: true }), null);
-  apply(P.onRandomOpen(l, 2)); assert.equal(l.pt, 110); assert.ok(P.canLike(l, { random: true }) && P.canDislike(l, { random: true }));
+// ---- points (rules changed in v2.3.1) ------------------------------------------------------------------------------------
+const run = (l, p) => { const o = { ...l }; for (const [k, v] of Object.entries(p)) { if (v === null) delete o[k]; else o[k] = v; } return o; };
+test('points v2.3.1: like 50, 30, 20 then +10 every time (no limit), dislike -20 every time', () => {
+  let l = { pt: 100 }; const seen = [];
+  for (let i = 0; i < 6; i++) { l = run(l, P.like(l)); seen.push(l.pt); }
+  assert.deepEqual(seen, [150, 180, 200, 210, 220, 230]);
+  l = run(l, P.dislike(l)); assert.equal(l.pt, 210); l = run(l, P.dislike(l)); assert.equal(l.pt, 190);
+  l = run(l, P.onRandomOpen(l, 1)); assert.equal(l.pt, 180); l = run(l, P.like(l)); assert.equal(l.pt, 230, 'a random open starts the like steps again at +50');
 });
-test('points: favourite +100, unfavourite -120, block 0 and restore, floor 1, cap 1000, weekly limit in the normal preview', () => {
-  let l = { pt: 100 }; const apply = (p) => { l = { ...l }; for (const [k, v] of Object.entries(p)) { if (v === null) delete l[k]; else l[k] = v; } };
-  apply(P.favourite(l)); assert.equal(l.pt, 200); assert.ok(l.fv); assert.equal(P.favourite(l), null);
-  apply(P.unfavourite(l)); assert.equal(l.pt, 80); assert.ok(!l.fv);
-  apply(P.block(l)); assert.equal(l.pt, 0); assert.equal(l.pb, 80); assert.equal(P.like(l, { random: true }), null);
-  apply(P.unblock(l)); assert.equal(l.pt, 80); assert.ok(!l.bl);
-  assert.equal(P.clampPoints(-50), 1); assert.equal(P.clampPoints(5000), 1000);
-  const now = 1e12; let m = { pt: 100 };
-  const p1 = P.like(m, { random: false, now }); assert.equal(p1.pt, 150); m = { ...m, ...p1 };
-  assert.equal(P.like(m, { random: false, now: now + 1000 }), null); assert.equal(P.dislike(m, { random: false, now: now + 1000 }), null);
-  assert.ok(P.like(m, { random: false, now: now + P.WEEK_MS + 1 }));
-  assert.equal(P.unfavourite({ fv: true, pt: 50 }).pt, 1);
+test('points v2.3.1: cap, floor, blocked, favourite +-100, read later +-200, block and restore', () => {
+  assert.equal(P.like({ pt: 1000 }), null); assert.equal(P.dislike({ pt: 1 }), null); assert.equal(P.like({ pt: 0, bl: true }), null);
+  assert.equal(P.like({ pt: 990 }).pt, 1000);
+  let l = { pt: 100 };
+  l = run(l, P.favourite(l)); assert.equal(l.pt, 200); assert.ok(l.fv); assert.equal(P.favourite(l), null);
+  l = run(l, P.unfavourite(l)); assert.equal(l.pt, 100); assert.ok(!l.fv); assert.equal(P.unfavourite(l), null);
+  l = run(l, P.readLater(l)); assert.equal(l.pt, 300); assert.ok(l.rl); assert.equal(P.readLater(l), null);
+  l = run(l, P.unreadLater(l)); assert.equal(l.pt, 100); assert.ok(!l.rl);
+  l = run(l, P.block(l)); assert.equal(l.pt, 0); assert.equal(l.pb, 100);
+  assert.equal(P.favourite(l).pt, 0, 'a blocked link keeps 0'); l = run(l, P.unblock(l)); assert.equal(l.pt, 100);
+  assert.equal(P.clampPoints(-50), 1); assert.equal(P.clampPoints(5000), 1000); assert.equal(P.unfavourite({ fv: true, pt: 50 }).pt, 1);
 });
 
 // ---- parsers ------------------------------------------------------------------------------------------------------------

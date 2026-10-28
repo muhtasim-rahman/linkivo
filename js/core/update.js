@@ -8,6 +8,9 @@
  *  - At LAUNCH a newer version is applied automatically (nothing is on screen worth protecting yet). While the app is in use, a newer
  *    version raises onAvailable() so the UI can offer an "Update now" popup; a running background job defers the reload.
  *  - applyUpdate(): ask the worker to update; if the page is still old after a few seconds, clear the app caches and hard reload.
+ * v2.3.1 (owner): the automatic update tracker is OFF. It reloaded the app a second time after an update had already been applied, so it is parked until a
+ *      better logic is designed (AUTO_UPDATE below). The service worker is still registered (it is network-first and skips waiting, so the next normal load gets
+ *      the new files), but nothing here reloads the page, applies an update or opens the popup by itself. Manual helpers (clearCachesAndReload) still work.
  * API: initUpdates({ isBusy, onReady, onAvailable }) -> void     checkForUpdates({ launch }) -> Promise<'updating'|'available'|'current'|'unsupported'|'error'>
  *      applyUpdate() -> Promise<void>     clearCachesAndReload() -> Promise<void>     compareVersions(a, b) -> -1|0|1     updateState (store: { ready, checking, lastCheck, available })
  */
@@ -15,6 +18,9 @@ import { createStore } from './events.js';
 import { prefs } from './local-prefs.js';
 import { log } from './logger.js';
 import app from './app-info.js';
+
+/** ! v2.3.1: set to true to bring the automatic update tracker back (launch apply, popup, controllerchange reload, periodic checks). Off on purpose. */
+export const AUTO_UPDATE = false;
 
 export const updateState = createStore({ ready: false, checking: false, lastCheck: prefs.get('update.lastCheck', 0), available: null });
 let registration = null;
@@ -45,6 +51,7 @@ async function fetchLatestVersion() {
 function reloadNow() { log.info('update', 'new version active, reloading'); location.reload(); }
 
 function onNewVersion() {
+  if (!AUTO_UPDATE) return;   // v2.3.1: no automatic reload
   if (!busyFn()) { reloadNow(); return; }
   if (waiting) return;
   updateState.set({ ready: true });
@@ -74,6 +81,7 @@ export async function clearCachesAndReload() {
 
 export async function checkForUpdates({ launch = false } = {}) {
   if (!('serviceWorker' in navigator)) return 'unsupported';
+  if (!AUTO_UPDATE) return 'current';   // v2.3.1: the tracker is off (see the header)
   updateState.set({ checking: true });
   try {
     registration = registration || (await navigator.serviceWorker.getRegistration());
@@ -111,7 +119,8 @@ export function initUpdates({ isBusy = () => false, onReady = () => {}, onAvaila
   // The version beacon runs even when the worker could not register (private mode, blocked storage): the app can still tell the user.
   navigator.serviceWorker.register('/sw.js').then((reg) => { registration = reg; })
     .catch((e) => log.warn('update', 'service worker registration failed', e))
-    .finally(() => checkForUpdates({ launch: true }));
+    .finally(() => { if (AUTO_UPDATE) checkForUpdates({ launch: true }); });
+  if (!AUTO_UPDATE) return;   // ! v2.3.1: the listeners below belong to the parked tracker
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdates(); });
   window.addEventListener('pageshow', (e) => { if (e.persisted) checkForUpdates({ launch: true }); }); // restored from the back-forward cache
   setInterval(checkForUpdates, 30 * 60 * 1000);

@@ -110,3 +110,8 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .icard.is-done .icard-text span { line-height: 1.35; }
 .icard.is-done.is-suggest { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'logo text x'; display: grid; box-shadow: var(--shadow-float); }
 .icard.is-done.is-suggest .icard-note-ic { grid-area: logo; } .icard.is-done.is-suggest .icard-x { background: var(--surface-2); color: var(--sub); }
+
+/* ---- v2.3.1: "this is the row you were sent to" (Search > a setting): a calm inner outline that fades out after about 2.6 s ---- */
+@keyframes lk-flash { 0%, 65% { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); } 100% { box-shadow: inset 0 0 0 2px transparent; background: transparent; } }
+.is-flash { animation: lk-flash 2600ms var(--ease) both; border-radius: var(--r-control); }
+@media (prefers-reduced-motion: reduce) { .is-flash { animation: none; box-shadow: inset 0 0 0 2px var(--accent); } }

@@ -289,6 +289,9 @@
           "video": {
             ".validate": "newData.isString() && newData.val().length <= 2048"
           },
+          "audio": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
           "shot": {
             ".validate": "newData.isString() && newData.val().length <= 2048"
           },
@@ -535,6 +538,9 @@
               ".validate": "newData.isString() && newData.val().length <= 2048"
             },
             "video": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "audio": {
               ".validate": "newData.isString() && newData.val().length <= 2048"
             },
             "shot": {

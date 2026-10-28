@@ -53,6 +53,13 @@ export class CloudEngine extends Engine {
     super.dispose();
   }
 
+  /** v2.3.0: extra page data is not synced down with the lists (it is heavy): read it from the database when this device has none, then keep it locally. */
+  async getLinkMeta(id) {
+    const local = await super.getLinkMeta(id); if (local) return local;
+    if (!this.links.has(id) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return null;
+    try { const v = await this.adapter.get(`linkMeta/${this.uid}/${id}`); if (!v || typeof v !== 'object') return null; const rec = { id, ...v }; await this.db.put('linkMeta', rec).catch(() => {}); return rec; } catch { return null; }
+  }
+
   // ---- writes ------------------------------------------------------------------------------------------------------
   async _persistChunk(entries) {
     await super._persistChunk(entries); // local cache first: a reload right now must not lose anything

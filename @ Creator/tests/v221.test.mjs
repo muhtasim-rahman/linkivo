@@ -135,7 +135,7 @@ test('page export: escapes everything, drops non-http links, carries the waterma
   assert.equal(hrefOf('javascript:alert(1)'), null); assert.equal(hrefOf('https://x.test'), 'https://x.test');
   const o = { ...defaultOptions(getFormat('webpage')), show: ['icon', 'url', 'desc', 'tags', 'added', 'num'] };
   const html = await renderPage(ITEMS, o, { mode: 'web', label: 'news', now: Date.UTC(2026, 9, 24) });
-  assert.ok(!html.includes('<script>alert'), 'title is escaped'); assert.match(html, /&lt;script&gt;/); assert.ok(!/href="javascript:/.test(html)); assert.match(html, /name="generator" content="Linkivo 2\.2\.\d+"/); assert.match(html, /<!-- Exported by Linkivo 2\.2\.\d+/);
+  assert.ok(!html.includes('<script>alert'), 'title is escaped'); assert.match(html, /&lt;script&gt;/); assert.ok(!/href="javascript:/.test(html)); assert.match(html, /name="generator" content="Linkivo \d+\.\d+\.\d+"/); assert.match(html, /<!-- Exported by Linkivo \d+\.\d+\.\d+/);
   assert.match(html, /class="top"/); assert.match(html, /Developed by <a href="https:\/\/mdturzo\.web\.app">Muhtasim Rahman/); assert.match(html, /linkivo\.web\.app/); assert.match(html, /<h2>.*News.*<small>2<\/small>/); assert.match(html, /3 links/);
   assert.ok(!/<script/i.test(html.replace(/&lt;script&gt;/g, '')), 'no script in the file');
   const table = await renderPage(ITEMS, { ...o, layout: 'table' }, { mode: 'web' }); assert.match(table, /<table class="tb">/); const cards = await renderPage(ITEMS, { ...o, layout: 'cards', group: 'none' }, { mode: 'web' }); assert.match(cards, /class="cards"/); assert.ok(!/<h2>/.test(cards));

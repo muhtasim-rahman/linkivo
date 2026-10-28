@@ -92,3 +92,12 @@ What these tests can NOT prove: real browser layout and animation, real Firebase
 4. Settings on PC: install card and Recycle Bin card on top; a choice (for example Density) is a dropdown on the right; on a phone it is a full-width control. App shows the app details card.
 5. Account: View profile, sync icon, verified tick, link Google or a password, change password (wrong old password shows an error), forgot step needs the account email, change email (link arrives at the NEW address), Logged-in devices (this device listed; sign another device out and open the app there).
 6. Clipboard: allow clipboard access in Chrome, copy two links, return to Linkivo: a suggestion card appears; Import opens the page with the text filled in.
+
+
+## 7. v2.3.0 additions (Preview, search, dead-link checker, Share Target)
+
+Automated (Node and jsdom, 246 tests in total, 43 new): `v230-fixes` (Danger zone, toggle rows, captions, toast and bar, install note, delete-account popup, profile card, Log out, Edit link),
+`v230-preview` (tabs, embeds, log, fetch once, page), `v230-search` (ranking, 5000-link speed, history, page), `v230-worker-check` (`/check` with a mocked fetch),
+`v230-check` (job, client batching, result sheet), `v230-share` (model, manifest, page).
+Not automated, owner must run: the real network `/check` (a live 404 page, a made-up domain, a site that blocks robots), iframe behaviour of real sites, YouTube and Vimeo players,
+the mShots screenshot service, the Android share sheet after installing the app, the Fullscreen button on a phone, the toast following the hidden bottom bar, and every layout at 360px and 1280px in light and dark.

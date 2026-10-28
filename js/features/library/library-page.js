@@ -29,6 +29,8 @@ import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
 import { mountDock } from '../../ui/dock.js';
 import { mountInstallSuggest } from '../shell/install-card.js';
+import { isFresh as isFreshShare } from '../share/share-model.js';
+import { prefs as prefsStore } from '../../core/local-prefs.js';
 
 const SORTS = { manual: 'Default order', name: 'Name A to Z', recent: 'Recently changed', links: 'Most links', new: 'Newest first', old: 'Oldest first' };
 const FILTERS = { all: 'All folders', pinned: 'Pinned', filled: 'With links', empty: 'Empty' };
@@ -44,6 +46,8 @@ export function filterFolders(list, { q = '', filter = 'all' }) {
 
 export async function mount(container, ctx) {
   if (!getEngine()) { container.appendChild(h('div', { class: 'page' }, emptyState({ art: 'lost', title: 'Your data is not ready', text: 'Wait a moment and try again, or reload the app.', actions: [{ label: 'Open library', href: '/library', primary: true }] }))); return () => {}; }
+  // v2.3.0: a page shared to the app before login waits in local prefs; right after login the Library hands it to the Save to Linkivo page
+  if (isFreshShare(prefsStore.get('share.pending', null))) { ctx.router.navigate('/share', { replace: true }); return; }
   await loadCss('/css/pages/library.css');
   const engine = getEngine(), queue = getQueue(), router = ctx.router;
   const st = { q: '', filter: 'all', sort: pref(LIB.sort), view: pref(LIB.view) };

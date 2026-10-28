@@ -61,3 +61,10 @@ Where: Cloudflare > Workers & Pages > `linkivo` > Settings > Variables and Secre
 ## G. Email links on Linkivo's own page (optional, v2.2.2; skipped by the owner for now, the console refuses the address)
 Firebase Console > Authentication > Templates > (Password reset) > edit > Customize action URL: `https://linkivo.web.app/auth/action`. Save. The app already has the page.
 If the console answers "An error occurred updating action URL", check Authentication > Settings > Authorized domains (it must list `linkivo.web.app`) and type the address exactly; if it still fails, contact Firebase Support (the cause is not known). Nothing breaks without this step: Firebase's own page is used. A fully branded email arrives with v2.5.0 (Worker sends it).
+
+
+## H. v2.3.0 deploy steps (owner)
+1. Extract the zip into the project folder (delete nothing; no files were removed).
+2. `firebase deploy --only database` (the rules gained one field, `linkMeta/<uid>/<id>/nf`) and `firebase deploy --only hosting`.
+3. Cloudflare dashboard > Workers & Pages > your Worker > Edit code: replace everything with `@ Creator/worker/worker.js` (Worker 2.3.0 adds `POST /check`), then Deploy. Open `<worker-url>/health`: it must show `"version":"2.3.0"`. Without this step Preview and Search work, but "Check links" shows "The Cloudflare Worker is out of date".
+4. Hard reload the app once (Ctrl+Shift+R) so the new service worker takes over. On Android, open the installed app once; the Share sheet lists Linkivo after the manifest refreshes (this can take a few minutes or a reinstall).

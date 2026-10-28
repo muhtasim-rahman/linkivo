@@ -17,6 +17,7 @@ import { SECTIONS, findSection, entriesFor } from './catalog.js';
 import { renderControl } from './controls.js';
 import { renderCustom } from './custom-rows.js';
 import { installCard } from '../shell/install-card.js';
+import { profileCard, logoutButton } from '../shell/shell-parts.js';
 import { binCard } from '../shell/bin-card.js';
 import { renderAdvanced } from './advanced-tools.js';
 
@@ -44,7 +45,7 @@ export async function mount(container, ctx) {
   }));
 
   // v2.2.2 (owner): on wide screens the install card and a Recycle Bin card sit at the very top (phones have both in the Menu page)
-  const topCards = h('div', { class: 'set-top' }, installCard(), binCard());
+  const topCards = h('div', { class: 'set-top' }, profileCard(), installCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
   function renderSections() {
     body.replaceChildren(topCards, ...SECTIONS.map((s) => {
       const group = h('div', { class: 'group' });
@@ -53,9 +54,9 @@ export async function mount(container, ctx) {
         const node = e.type === 'custom' ? (ADVANCED.has(e.custom) ? renderAdvanced(e.custom, { refresh: renderSections, router: ctx.router }) : renderCustom(e.custom, { router: ctx.router, rerender: renderSections })) : renderControl(e);
         if (Array.isArray(node)) group.append(...node); else group.appendChild(node);
       }
-      return h('section', { class: 'set-sec', id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },
+      return h('section', { class: ['set-sec', s.id === 'danger' && 'is-danger'], id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },
         h('header', { class: 'set-sec-head' }, h('h2', { class: 'set-h', id: 'h-' + s.id }, h('span', { class: 'set-h-ic' }, icon(s.icon, { size: 20 })), s.label), h('p', { class: 'set-sub', text: s.desc })), group);
-    }));
+    }), h('div', { class: 'set-logout' }, logoutButton(ctx.router)));   // v2.3.0 (owner): the same Log out button as the bottom of the Menu page
   }
   renderSections();
 

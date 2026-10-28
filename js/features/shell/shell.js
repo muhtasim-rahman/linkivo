@@ -16,6 +16,7 @@ import { prefs } from '../../core/local-prefs.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { maskEmail } from '../../core/mask.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
+import { registerShortcuts } from '../../core/shortcuts.js';
 // ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
 // import { mountInstallBanner } from './install-banner.js';
 
@@ -129,9 +130,13 @@ export function mountShell({ router }) {
   // the Appearance setting "Collapse the sidebar" writes the same pref: follow it live
   prefs.onChange('ui.sidebarCollapsed', (v) => { if (String(!!v) !== app.dataset.collapsed) setCollapsed(!!v); });
 
+  // v2.3.0: Ctrl or Cmd + K opens global search from anywhere (the Search page itself focuses its field)
+  registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { const cur = router.current(); if (cur && cur.route.id === 'search') return; if (document.documentElement.dataset.mode === 'none') return; e.preventDefault(); router.navigate('/search'); } }]);
+
   router.on('route', ({ route }) => {
     const chrome = route.shell !== false;
     app.dataset.chrome = chrome ? '' : 'none';
+    app.dataset.nobar = route.nobar ? '1' : '';   // v2.3.0: Preview is full screen on phones (the sidebar of wide screens stays)
     for (const a of [...sidebar.querySelectorAll('.nav-item'), ...bar.querySelectorAll('.bar-item')]) {
       if (a.dataset.tab === route.tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     }

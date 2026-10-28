@@ -11,7 +11,7 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openSheet } from '../../ui/sheet.js';
-import { installState, installStatus, promptInstall, shouldShowBanner, dismissBanner, shouldShowInstalledNote, dismissNote } from '../../core/install.js';
+import { installState, installStatus, promptInstall, shouldShowBanner, dismissBanner, shouldShowInstalledNote, dismissNote } from '../../core/install.js';   // shouldShowInstalledNote and dismissNote: used only by the unused note branch in mountInstallSuggest (v2.3.0)
 
 const PERKS = [['zap', 'Faster start'], ['wifi-off', 'Works offline'], ['install', 'Own app icon']];
 
@@ -89,7 +89,7 @@ export function mountInstallSuggest({ mountDock, page }) {
   let removeDock = null;
   const el = h('div', { class: 'install-dock', role: 'region', 'aria-label': 'Install Linkivo' });
   const render = () => {
-    const show = shouldShowBanner(), note = shouldShowInstalledNote();
+    const show = shouldShowBanner(), note = false;   // v2.3.0 (owner): the "installed, you are in the browser" note is only in the Menu page, never a Library popup
     if (!show && !note) { if (removeDock) { removeDock(); removeDock = null; page?.classList.remove('has-suggest'); } return; }
     if (note && !show) {   // v2.2.4: installed on this device, but this is a browser tab: say so right away
       el.replaceChildren(h('div', { class: 'icard is-done is-note is-suggest' }, h('span', { class: 'icard-note-ic' }, icon('monitor', { size: 16 })), h('div', { class: 'icard-text' }, browserNote()),

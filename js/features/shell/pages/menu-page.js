@@ -8,12 +8,10 @@
  */
 import { h } from '../../../core/dom.js';
 import { icon } from '../../../ui/icons.js';
-import { getSession } from '../../../core/session.js';
-import { maskEmail } from '../../../core/mask.js';
 import { loadCss } from '../../../core/css-loader.js';
 import { prefs } from '../../../core/local-prefs.js';
 import { KEYS } from '../../../core/appearance.js';
-import { avatar, logOut } from '../shell-parts.js';
+import { profileCard, logoutButton } from '../shell-parts.js';   // v2.3.0: avatar and logOut moved into the shared profileCard and logoutButton
 import { installCard } from '../install-card.js';
 import { binCard } from '../bin-card.js';
 import { appInfoCard, appLinkButtons } from '../../settings/about-card.js';
@@ -36,14 +34,11 @@ const linkRow = (ic, label, desc, href) => h('a', { class: 'row', href }, h('spa
 
 export async function mount(container, ctx = {}) {
   await Promise.all([loadCss('/css/pages/pages.css'), loadCss('/css/pages/settings.css')]);
-  const s = getSession();
-  const name = s.mode === 'guest' ? 'Guest' : s.user.name;
-  const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
   const hide = findEntry('hideBar');
   container.appendChild(h('div', { class: 'page page-enter' },
     h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 }))),   // v2.2.4: gear = all settings
     h('div', { class: 'menu-list' },
-      h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right'))),
+      profileCard(),   // v2.3.0: shared with the wide Settings page
       installCard(),
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),
@@ -53,5 +48,5 @@ export async function mount(container, ctx = {}) {
       appInfoCard(),
       appLinkButtons(),
       // v2.2.4 (owner): red logout card at the bottom of the Menu
-      h('button', { type: 'button', class: 'menu-logout', on: { click: () => logOut(ctx.router) } }, icon('logout', { size: 20 }), h('span', { text: s.mode === 'guest' ? 'Leave guest mode' : 'Log out' })))));
+      logoutButton(ctx.router))));
 }

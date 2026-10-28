@@ -2,6 +2,8 @@
  * Linkivo — js/features/shell/shell-parts.js  (v2.1.2)
  * Purpose: small pieces shared by the shell and the pages: the ringed avatar, the log-out flow, the theme toggle.
  * API: avatar(name, large, photo?) -> Element (a round photo when the account has one, else the initial)     logOut(router, { guest }) -> Promise<void>     toggleTheme()
+ *      v2.3.0: profileCard() -> Element (the Menu page's first card, now also first on the wide-screen Settings page)     logoutButton(router) -> Element (the red Log out
+ *      button, the same one at the bottom of the Menu page and of Settings)
  */
 import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
@@ -11,6 +13,10 @@ import { confirmDialog } from '../../ui/confirm.js';
 import { toast } from '../../ui/toast.js';
 import { signOutUser, leaveGuest } from '../auth/auth-service.js';
 import { log } from '../../core/logger.js';
+import { icon } from '../../ui/icons.js';
+import { clearSearchHistory } from '../search/search-store.js';
+import { getSession } from '../../core/session.js';
+import { maskEmail } from '../../core/mask.js';
 
 export function avatar(name, large = false, photo = '') {
   const initial = ([...String(name || '?').trim()][0] || '?').toUpperCase();
@@ -34,6 +40,20 @@ export async function logOut(router, { guest = false } = {}) {
   if (!ok) return;
   if (!(await requireSensitive('logout'))) return;
   try {
-    if (leavingGuest) leaveGuest(); else await signOutUser();
+    if (leavingGuest) leaveGuest(); else { clearSearchHistory(); await signOutUser(); }   // v2.3.0: recent searches are cleared when an account logs out
   } catch (e) { log.error('auth', 'logout failed', e); toast('Could not log out. Try again.', { type: 'error' }); }
+}
+
+/** The profile card: avatar, name, masked email, arrow. Opens the Profile page. Used first on the Menu page and first on the wide Settings page (owner, v2.3.0). */
+export function profileCard() {
+  const s = getSession();
+  const name = s.mode === 'guest' ? 'Guest' : s.user.name;
+  const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
+  return h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right')));
+}
+
+/** The red Log out button (guests: Leave guest mode). One function so the Menu page and the bottom of Settings can never differ. */
+export function logoutButton(router) {
+  const guest = getSession().mode === 'guest';
+  return h('button', { type: 'button', class: 'menu-logout', on: { click: () => logOut(router) } }, icon('logout', { size: 20 }), h('span', { text: guest ? 'Leave guest mode' : 'Log out' }));
 }

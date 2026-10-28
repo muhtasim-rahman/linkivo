@@ -1,0 +1,23 @@
+/* Linkivo v2.3.0 - global search */
+.sp { display: grid; gap: var(--s4); align-content: start; }
+.sp-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s2) 0 var(--s4); min-height: 52px; border: 1px solid var(--line-strong); border-radius: 26px; background: var(--surface); box-shadow: var(--shadow-float); color: var(--sub); }
+.sp-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sp-input { flex: 1; min-width: 0; border: 0; background: transparent; box-shadow: none; padding: 0; min-height: 48px; font-size: var(--fs-md); color: var(--text); }
+.sp-input:focus { outline: none; box-shadow: none; } .sp-input::-webkit-search-cancel-button { display: none; }
+.sp-out { display: grid; gap: var(--s5); }
+.sp-group { display: grid; gap: var(--s2); }
+.sp-h { display: flex; align-items: center; gap: var(--s2); margin: 0; font: 650 var(--fs-sm) / 1.2 var(--font-brand); color: var(--sub); letter-spacing: 0.02em; text-transform: none; }
+.sp-count { padding: 1px 8px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); font-size: var(--fs-xs); font-weight: 600; }
+.sp-clearall { margin-left: auto; font-weight: 560; }
+.sp-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; }
+.sp-list > li + li { border-top: 1px solid var(--line); }
+.sp-item { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 56px; padding: 6px var(--s4); color: inherit; text-align: left; }
+.sp-item:hover { background: var(--surface-2); text-decoration: none; }
+.sp-ic, .sp-fav { width: 32px; height: 32px; display: grid; place-items: center; flex: none; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); color: var(--sub); overflow: hidden; }
+.sp-t { display: grid; gap: 1px; min-width: 0; flex: 1; }
+.sp-name { font-weight: 560; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sp-sub { font-size: var(--fs-xs); color: var(--sub); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp mark { background: color-mix(in srgb, var(--accent) 24%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.sp-more { justify-self: start; }
+.sp-recent { display: flex; align-items: center; } .sp-recent .sp-item { flex: 1; min-width: 0; } .sp-x { margin-right: var(--s2); }
+.sp-empty { display: grid; justify-items: center; gap: 6px; padding: var(--s7, 48px) var(--s4); text-align: center; color: var(--sub); } .sp-empty strong { color: var(--text); font: 650 var(--fs-md) var(--font-brand); } .sp-empty span { max-width: 38ch; line-height: 1.4; }

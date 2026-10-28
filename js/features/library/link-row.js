@@ -29,8 +29,9 @@ export function createLinkRow(l, { card = false, selecting = false, selected = f
     l.pn && h('span', { class: 'lflag', 'data-tip': 'Pinned' }, icon('pin', { size: 14, label: 'Pinned' })),
     l.fv && h('span', { class: 'lflag is-fav', 'data-tip': 'Favourite' }, icon('star', { size: 14, label: 'Favourite' })),
     l.rl && h('span', { class: 'lflag', 'data-tip': 'Read later' }, icon('clock', { size: 14, label: 'Read later' })),
+    l.dd && h('span', { class: 'lflag is-dead', 'data-tip': 'Dead link: the site says this page is gone' }, icon('x-circle', { size: 14, label: 'Dead link' })),   // v2.3.0
     l.bl && h('span', { class: 'lflag is-block', 'data-tip': 'Blocked from Random' }, icon('block', { size: 14, label: 'Blocked from Random' })));
-  const hasFlags = l.pn || l.fv || l.rl || l.bl;
+  const hasFlags = l.pn || l.fv || l.rl || l.bl || l.dd;
   const meta = [show.url !== false ? l.host : '', show.added !== false ? relativeTime(l.ts) : '', show.points ? `${l.pt ?? 100} pts` : ''].filter(Boolean).join('  \u00b7  ');
   const tags = l.tags ? h('span', { class: 'ltags' }, l.tags.split(',').slice(0, 3).map((t) => h('span', { class: 'ltag', text: t }))) : null;
   return h('div', { class: `lrow${card ? ' is-card' : ''}${selected ? ' is-selected' : ''}${selecting ? ' is-selecting' : ''}`, role: 'listitem', 'data-id': l.id },

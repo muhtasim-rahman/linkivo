@@ -2,7 +2,7 @@
  * Linkivo — js/features/shell/routes.js  (v2.1.3)
  * Purpose: the route table (ARCHITECTURE section 7). Pages load lazily; features of later versions point at a designed
  *          placeholder page until their version arrives, so every URL that will exist already works.
- * Route fields: see core/router.js. `index: true` marks a public, indexable page (SEO, see core/page-meta.js); `desc` is its meta description.  `tab` tells the shell which nav item is active.  `refresh: true` lets the page take part in pull-to-refresh (pages whose content can change: lists, history, profile); the page module may export refresh(ctx).  `since` is the version that delivers the page.
+ * Route fields: see core/router.js. `nobar: true` (v2.3.0) hides the phone bottom bar for that route. `index: true` marks a public, indexable page (SEO, see core/page-meta.js); `desc` is its meta description.  `tab` tells the shell which nav item is active.  `refresh: true` lets the page take part in pull-to-refresh (pages whose content can change: lists, history, profile); the page module may export refresh(ctx).  `since` is the version that delivers the page.
  */
 const stub = () => import('./pages/stub-page.js');
 const settings = () => import('../settings/settings-page.js');
@@ -21,8 +21,9 @@ export const ROUTES = [
   { id: 'library', pattern: '/library', title: 'Library', parent: null, guard: 'auth', tab: 'library', refresh: true, load: libraryPage },
   { id: 'folder', pattern: '/folder/:fid', title: 'Folder', parent: '/library', guard: 'auth', tab: 'library', refresh: true, load: folderPage },
   { id: 'import', pattern: '/import', title: 'Import links', parent: '/library', guard: 'auth', tab: 'import', load: importPage },
-  { id: 'link', pattern: '/link/:lid', title: 'Link', parent: (p, env, st) => st.from || '/library', guard: 'auth', tab: 'library', stub: 'link', since: '2.3.0', load: stub },
-  { id: 'search', pattern: '/search', title: 'Search', parent: '/library', guard: 'auth', tab: 'search', stub: 'search', since: '2.3.0', load: stub },
+  { id: 'link', pattern: '/link/:lid', title: 'Preview', parent: (p, env, st) => st.from || '/library', guard: 'auth', tab: 'library', nobar: true, load: () => import('../preview/preview-page.js') },   // v2.3.0: real page; nobar hides the phone bottom bar
+  { id: 'search', pattern: '/search', title: 'Search', parent: '/library', guard: 'auth', tab: 'search', load: () => import('../search/search-page.js') },   // v2.3.0
+  { id: 'share', pattern: '/share', title: 'Save to Linkivo', parent: '/library', guard: 'open', shell: false, load: () => import('../share/share-page.js') },   // v2.3.0: Web Share Target
   { id: 'random', pattern: '/random', title: 'Random Discover', parent: '/library', guard: 'auth', tab: 'random', stub: 'random', since: '2.4.0', load: stub },
   { id: 'history', pattern: '/profile/history', title: 'History', parent: '/profile', guard: 'auth', tab: 'menu', refresh: true, stub: 'history', since: '2.4.0', load: stub },
 

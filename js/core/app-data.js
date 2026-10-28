@@ -9,6 +9,8 @@ import { createCloudEngine } from '../engine/cloud-engine.js';
 import { createRtdbAdapter } from '../engine/rtdb-adapter.js';
 import { createJobQueue } from '../engine/job-queue.js';
 import { registerImportJobs, pruneJobs } from '../features/import/import-job.js';
+import { registerCheckJob } from '../features/check/check-job.js';
+import { checkLinks } from './worker-client.js';
 import { fetchMeta, whoami } from './worker-client.js';
 import { createDeviceService } from './devices.js';
 import { loadFirebase } from './firebase-loader.js';
@@ -27,6 +29,7 @@ export async function initData(session) {
     if (session.mode === 'guest') engine = await createLocalEngine();
     else { const firebase = await loadFirebase(); engine = await createCloudEngine({ uid: session.user.uid, adapter: createRtdbAdapter({ firebase }) }); }
     queue = createJobQueue({ db: engine.db, now: () => engine.now() });
+    registerCheckJob({ queue, engine, check: checkLinks }); // v2.3.0: dead-link checker (must be registered before start() resumes jobs)
     registerImportJobs({ queue, engine, fetchMeta }); // v2.2.0: import and title-fetch handlers must exist before start() resumes interrupted jobs
     await queue.start();
     pruneJobs(queue).catch(() => {});

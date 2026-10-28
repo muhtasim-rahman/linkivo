@@ -38,7 +38,7 @@ export async function boot() {
     }
     if (s.mode === 'none') checkedUid = null;
     if (s.mode === 'guest' || (s.mode === 'account' && s.status === 'active')) {
-      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
+      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => job.type === 'check' ? import('./features/check/check-sheet.js').then((m) => m.openCheckSheet({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) : import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
       catch (e) { toast('Storage could not start. Reload the page.', { type: 'error' }); }
     } else { destroyChip?.(); destroyChip = null; await teardownData(); }
     lastKey = keyOf(getSession());

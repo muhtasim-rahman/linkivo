@@ -3,7 +3,7 @@
   color-scheme: light;
   --bg: #eef2f8; --surface: #ffffff; --surface-2: #f4f7fb; --line: #d6dfed; --line-strong: #b9c7dc;
   --text: #0c1629; --sub: #566d8a; --scrim: rgba(8, 16, 32, 0.46);
-  --success: #0e9f6e; --warning: #b45309; --danger: #d92d20; --danger-soft: rgba(217, 45, 32, 0.1);
+  --success: #0e9f6e; --caution: #b8570a; --caution-soft: rgba(217, 119, 6, 0.14); --warning: #b45309; --danger: #d92d20; --danger-soft: rgba(217, 45, 32, 0.1);
   --brand-a: #3b82f6; --brand-b: #22d3ee;
   --accent: #3b82f6; --accent-strong: #2563eb; --accent-fg: #ffffff; --accent-text: #1d4fc4;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -30,7 +30,7 @@
   color-scheme: dark;
   --bg: #060d1a; --surface: #0b1730; --surface-2: #0f1f3d; --line: #17294a; --line-strong: #27406b;
   --text: #d4e6f6; --sub: #8aa6c4; --scrim: rgba(0, 4, 12, 0.66);
-  --success: #34d399; --warning: #fbbf24; --danger: #f87171; --danger-soft: rgba(248, 113, 113, 0.14);
+  --success: #34d399; --caution: #f5a524; --caution-soft: rgba(245, 165, 36, 0.16); --warning: #fbbf24; --danger: #f87171; --danger-soft: rgba(248, 113, 113, 0.14);
   --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 /* Before the script sets data-theme, follow the system so the first paint is not a flash of the wrong theme. */

@@ -8,8 +8,12 @@
  *            4 Request email: a ready email (subject, message, account details, a request id) to the developer, opened in the person's mail app (or Gmail on
  *              the web, or copied). It must be sent FROM the account's own email address, otherwise it is rejected.
  *          Nothing is deleted by this flow. API: openDeleteAccount({ router? }) -> Promise<void>     buildRequest(facts, counts, id, now) -> { subject, body }  (pure, tested)
+ *          v2.3.0 (owner): redesigned. All four steps live in ONE popup (the content swaps, the popup never closes between steps) with a red theme (the sheet
+ *          overrides the accent variables, see css/pages/settings.css `.da-sheet`), a red step bar, big folder and link counts on the review step and a live
+ *          check on the typed phrase. On narrow phones every button is icon-only (the text stays as aria-label and tooltip).
  */
 import { h } from '../../core/dom.js';
+import { loadCss } from '../../core/css-loader.js';
 import { icon } from '../../ui/icons.js';
 import { openSheet } from '../../ui/sheet.js';
 import { toast } from '../../ui/toast.js';
@@ -38,18 +42,32 @@ export function buildRequest(f, counts, id, now) {
 }
 const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 
+const STEP_NAMES = ['Verify', 'Review', 'Confirm', 'Send'];
+
 export async function openDeleteAccount() {
   const s = getSession(); if (s.mode !== 'account') return;
+  await loadCss('/css/pages/settings.css');
   const user = s.user, usesPassword = hasPassword(user);
-  const body = h('div', { class: 'form da' });
+  const body = h('div', { class: 'da' });
   let sheet = null, facts = null, verifiedAt = 0;
   const err = h('p', { class: 'help is-error', role: 'alert' });
-  const foot = (...btns) => h('div', { class: 'acc-foot' }, ...btns);
-  const btn = (label, fn, primary = true) => h('button', { type: 'button', class: ['btn', primary && 'btn-primary'], on: { click: fn } }, label);
-  const show = (...kids) => { err.textContent = ''; body.replaceChildren(...kids); };
+
+  /** A button that is text + icon on wide popups and icon only on narrow phones (CSS hides .da-bt under 480px; label stays for screen readers and the tooltip). */
+  const btn = (ic, label, fn, { primary = false, tag = 'button', attrs = {} } = {}) => h(tag, { type: tag === 'button' ? 'button' : null, class: ['btn', 'da-btn', primary && 'btn-primary'], 'aria-label': label, 'data-tip': label, on: fn ? { click: fn } : null, ...attrs }, icon(ic, { size: 18 }), h('span', { class: 'da-bt', text: label }));
+  const foot = (left, right) => h('div', { class: 'da-foot' }, left || h('span'), right);
+
+  /** The shared frame of every step: red hero, step bar, the step's own content, then the footer. Swapping it re-runs the small fade-in. */
+  function frame(n, title, lead, kids, footer) {
+    err.textContent = '';
+    const bar = h('ol', { class: 'da-steps', 'aria-label': `Step ${n} of 4: ${STEP_NAMES[n - 1]}` }, STEP_NAMES.map((name, i) => h('li', { class: [i + 1 < n && 'is-done', i + 1 === n && 'is-now'], 'aria-current': i + 1 === n ? 'step' : null }, h('i'), h('span', { text: name }))));
+    body.replaceChildren(
+      h('div', { class: 'da-hero' }, h('span', { class: 'da-hero-ic' }, icon('alert', { size: 24 })), h('div', { class: 'da-hero-text' }, h('strong', { text: title }), h('span', { text: lead })), h('span', { class: 'da-count', text: `${n}/4` })),
+      bar, h('div', { class: 'da-step' }, ...kids, err), footer);
+    body.classList.remove('is-in'); void body.offsetWidth; body.classList.add('is-in');
+  }
 
   function stepVerify() {
-    const pass = h('input', { class: 'input', type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', spellcheck: 'false' });
+    const pass = h('input', { class: 'input', type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', spellcheck: 'false', placeholder: 'Your password' });
     const run = async () => {
       err.textContent = ''; if (usesPassword && !pass.value) { err.textContent = 'Enter your password.'; return; }
       sheet.setBusy?.(true);
@@ -61,38 +79,53 @@ export async function openDeleteAccount() {
       const g = sendAllowed('reset', user.email); if (!g.ok) { err.textContent = `A link was sent recently. Try again in ${friendlyWait(g.waitMs)}.`; return; }
       try { await sendReset(user.email); toast(`Reset link sent to ${maskEmail(user.email)}.`); } catch (e) { err.textContent = friendlyAuthError(e) || ''; }
     } } });
-    show(h('p', { class: 'help', text: 'Step 1 of 4. First confirm it is you.' }),
-      usesPassword ? h('label', { class: 'acc-field' }, h('span', { class: 'acc-label', text: 'Password' }), pass) : h('p', { class: 'help', text: 'This account signs in with Google. A Google window will open to confirm it is you.' }),
-      usesPassword && forgot, err, foot(h('span'), btn(usesPassword ? 'Verify' : 'Continue with Google', run)));
+    frame(1, 'Delete your account', 'First confirm it is you.', [
+      usesPassword ? h('label', { class: 'acc-field' }, h('span', { class: 'acc-label', text: 'Password' }), pass, forgot) : h('p', { class: 'da-note', text: 'This account signs in with Google. A Google window opens to confirm it is you.' })],
+      foot(null, btn(usesPassword ? 'lock' : 'user', usesPassword ? 'Verify' : 'Continue with Google', run, { primary: true })));
     if (usesPassword) pass.focus();
   }
+
   function stepSummary() {
     const c = getEngine()?.counts?.() || { folders: 0, links: 0 };
-    const kv = [['Name', facts.name || '-'], ['Email', maskEmail(facts.email)], ['Sign-in', facts.providers.map((p) => (p === 'google.com' ? 'Google' : 'Email and password')).join(' and ')], ['Created', facts.created ? dateTime(facts.created) : '-'], ['Last sign-in', facts.lastLogin ? dateTime(facts.lastLogin) : '-'], ['Contains', `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}`]];
-    const ok = h('input', { type: 'checkbox', id: 'da-ok' }); const next = btn('Continue', () => { if (!ok.checked) { err.textContent = 'Tick the box to continue.'; return; } stepType(c); });
-    show(h('p', { class: 'help', text: 'Step 2 of 4. Check what will be deleted.' }),
-      h('dl', { class: 'kv' }, kv.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: v })])),
-      h('p', { class: 'help', text: 'Deleting the account removes:' }), h('ul', { class: 'da-list' }, WHAT.map((t) => h('li', { text: t }))),
-      h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine: getEngine(), scope: { type: 'all' }, title: 'Back up first' })) } }, icon('download', { size: 16 }), 'Back up my data first'),
-      h('label', { class: 'check-row', for: 'da-ok' }, ok, h('span', { text: 'I understand that my links and folders will be lost.' })), err, foot(btn('Back', () => stepVerify(), false), next));
+    const kv = [['Name', facts.name || '-'], ['Email', maskEmail(facts.email)], ['Sign-in', facts.providers.map((p) => (p === 'google.com' ? 'Google' : 'Email and password')).join(' and ')], ['Created', facts.created ? dateTime(facts.created) : '-'], ['Last sign-in', facts.lastLogin ? dateTime(facts.lastLogin) : '-']];
+    const ok = h('input', { type: 'checkbox', id: 'da-ok' });
+    const next = btn('chevron-right', 'Continue', () => { if (!ok.checked) { err.textContent = 'Tick the box to continue.'; return; } stepType(c); }, { primary: true });
+    frame(2, 'Check what will be deleted', 'Everything below goes when the request is approved.', [
+      h('div', { class: 'da-stats' }, h('div', {}, h('b', { text: String(c.folders) }), h('span', { text: c.folders === 1 ? 'folder' : 'folders' })), h('div', {}, h('b', { text: String(c.links) }), h('span', { text: c.links === 1 ? 'link' : 'links' }))),
+      h('dl', { class: 'kv da-kv' }, kv.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: v })])),
+      h('ul', { class: 'da-list' }, WHAT.map((t) => h('li', null, icon('x-circle', { size: 16 }), h('span', { text: t })))),
+      btn('download', 'Back up my data first', () => import('../export/export-sheet.js').then((m) => m.openExport({ engine: getEngine(), scope: { type: 'all' }, title: 'Back up first' })), { attrs: { class: 'btn btn-sm da-btn da-backup' } }),
+      h('label', { class: 'da-check', for: 'da-ok' }, ok, h('span', { text: 'I understand that my links and folders will be lost.' }))],
+      foot(btn('arrow-left', 'Back', () => stepVerify()), next));
   }
+
   function stepType(c) {
     const input = h('input', { class: 'input', type: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', placeholder: PHRASE, 'aria-label': 'Type DELETE ACCOUNT' });
-    show(h('p', { class: 'help', text: 'Step 3 of 4. Type the words below exactly to confirm.' }), h('p', { class: 'da-phrase', text: PHRASE }), input, err,
-      foot(btn('Back', () => stepSummary(), false), btn('Continue', () => { if (input.value.trim() !== PHRASE) { err.textContent = `Type ${PHRASE} exactly, in capital letters.`; return; } stepEmail(c); })));
+    const hit = h('span', { class: 'da-hit', 'aria-hidden': 'true' }, icon('check-circle', { size: 20 }));
+    const next = btn('chevron-right', 'Continue', () => { if (input.value.trim() !== PHRASE) { err.textContent = `Type ${PHRASE} exactly, in capital letters.`; return; } stepEmail(c); }, { primary: true });
+    input.addEventListener('input', () => { const ok = input.value.trim() === PHRASE; hit.classList.toggle('is-on', ok); err.textContent = ''; });
+    frame(3, 'Type to confirm', 'This stops an accidental tap.', [
+      h('p', { class: 'da-phrase', text: PHRASE }), h('div', { class: 'da-type' }, input, hit)],
+      foot(btn('arrow-left', 'Back', () => stepSummary()), next));
     input.focus();
   }
+
   function stepEmail(c) {
     const id = newId(), { subject, body: text } = buildRequest(facts, c, id, verifiedAt);
     const enc = encodeURIComponent, mailto = `mailto:${REQUEST_TO}?subject=${enc(subject)}&body=${enc(text)}`;
     const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(REQUEST_TO)}&su=${enc(subject)}&body=${enc(text)}`;
-    show(h('p', { class: 'help', text: 'Step 4 of 4. Send the request email.' }),
-      h('p', { class: 'help da-warn', text: `Send it from ${facts.email}, the email of this account. A request from any other address is rejected. The developer checks it by hand and may reply to you.` }),
-      h('div', { class: 'da-mail' }, h('strong', { text: subject }), h('pre', { text })),
-      h('div', { class: 'da-actions' }, h('a', { class: 'btn btn-primary', href: mailto, 'data-native': '' }, icon('mail', { size: 18 }), 'Open my email app'), h('a', { class: 'btn', href: gmail, target: '_blank', rel: 'noopener', 'data-native': '' }, 'Open Gmail'),
-        h('button', { type: 'button', class: 'btn', on: { click: async () => { try { await navigator.clipboard.writeText(`To: ${REQUEST_TO}\nSubject: ${subject}\n\n${text}`); toast('Copied. Paste it into an email.'); } catch { toast('Could not copy. Select the text and copy it.', { type: 'error' }); } } } }, 'Copy')),
-      foot(btn('Back', () => stepType(c), false), btn('Done', () => sheet.close(true), false)));
+    const copy = async () => { try { await navigator.clipboard.writeText(`To: ${REQUEST_TO}\nSubject: ${subject}\n\n${text}`); toast('Copied. Paste it into an email.'); } catch { toast('Could not copy. Select the text and copy it.', { type: 'error' }); } };
+    frame(4, 'Send the request', 'The developer checks every request by hand.', [
+      h('p', { class: 'da-warn' }, icon('mail', { size: 18 }), h('span', { text: `Send it from ${facts.email}, the email of this account. A request from any other address is rejected.` })),
+      h('div', { class: 'da-actions' },
+        btn('mail', 'Open my email app', null, { primary: true, tag: 'a', attrs: { href: mailto, 'data-native': '' } }),
+        btn('external', 'Open Gmail', null, { tag: 'a', attrs: { href: gmail, target: '_blank', rel: 'noopener', 'data-native': '' } }),
+        btn('copy', 'Copy', copy)),
+      h('details', { class: 'da-mail' }, h('summary', { text: 'Preview the email' }), h('strong', { text: subject }), h('pre', { text }))],
+      foot(btn('arrow-left', 'Back', () => stepType(c)), btn('check', 'Done', () => sheet.close(true), { primary: true })));
   }
+
   sheet = openSheet({ title: 'Delete account', body, actions: [], wide: true });
+  sheet.el.classList.add('da-sheet');   // red theme (settings.css)
   stepVerify();
 }

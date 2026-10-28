@@ -5,26 +5,37 @@
  *          on phones.
  *          v2.2.2 (owner): from 600px up EVERY choice is the dropdown on the right (like Folder order); on phones 2 or 3 options stay a full-width segmented
  *          control under the label, more options are the dropdown. Both exist in the row and CSS shows the right one, so rotating a tablet needs no rebuild.
- * API: renderControl(entry) -> Element
+ *          v2.3.0 (owner): a row with a switch toggles when ANY part of the row is tapped (the small switch button is still the keyboard and screen reader
+ *          target); captions get a tighter line height and the few long ones are set a little smaller (`descEl`).
+ * API: renderControl(entry) -> Element     descEl(text) -> Element     LONG_DESC (characters from which a caption counts as long)
  */
 import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
 import { createSelect } from '../../ui/select.js';
 import { askClipboard } from '../../core/clipboard-watch.js';
 
+export const LONG_DESC = 100;
+/** A row caption. Over LONG_DESC characters it gets `.is-long` (one step smaller text), so only the few big captions shrink. */
+export const descEl = (text) => h('span', { class: ['row-desc', String(text).length > LONG_DESC && 'is-long'], text });
+
 function shell(entry, control, stack = false) {
   return h('div', { class: ['row', stack && 'is-stack'], 'data-setting': entry.id },
-    h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: entry.label }), entry.desc && h('span', { class: 'row-desc', text: entry.desc })),
+    h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: entry.label }), entry.desc && descEl(entry.desc)),
     h('span', { class: 'row-end' }, control));
 }
 
 export function renderControl(entry) {
   const get = () => prefs.get(entry.key, entry.default);
   if (entry.type === 'switch') {
-    const sw = h('button', { type: 'button', class: 'switch-hit', role: 'switch', 'aria-label': entry.label, 'data-tip': entry.desc || entry.label, on: { click: () => { const next = !get(); prefs.set(entry.key, next); sync(); if (next && entry.onOn === 'clipboard') askClipboard(); } } }, h('span', { class: 'switch' }));
+    const flip = () => { const next = !get(); prefs.set(entry.key, next); sync(); if (next && entry.onOn === 'clipboard') askClipboard(); };
+    // the switch button stops its click here: the row below handles every other tap, so one tap never flips twice
+    const sw = h('button', { type: 'button', class: 'switch-hit', role: 'switch', 'aria-label': entry.label, on: { click: (e) => { e.stopPropagation(); flip(); } } }, h('span', { class: 'switch' }));
     const sync = () => { sw.setAttribute('aria-checked', String(!!get())); sw.firstChild.setAttribute('aria-checked', String(!!get())); };
     sync();
-    return shell(entry, sw);
+    const row = shell(entry, sw);
+    row.classList.add('is-toggle');   // v2.3.0 (owner): the whole row is the switch
+    row.addEventListener('click', (e) => { if (!e.target.closest('a, input, select')) flip(); });
+    return row;
   }
   if (entry.type === 'seg' && entry.options.length > 3) {
     const sel = createSelect({ options: entry.options, value: get(), label: entry.label, align: 'end', onChange: (v) => prefs.set(entry.key, v) });

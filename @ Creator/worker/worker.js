@@ -5,6 +5,7 @@
  *   GET  /health   status and version
  *   GET  /whoami   (v2.2.2) where this request comes from, for the "Logged-in devices" list: approximate city, region and country from Cloudflare's own
  *                  request data (no outside service), the time zone and the IP address with its last part hidden. Nothing is stored by the Worker.
+ *   POST /check    v2.3.0: is a link alive? Body: { "urls": [ up to 10 ] } -> results [{ url, state: ok|dead|unsure|invalid, status, ms, finalUrl?, note? }]. HEAD then GET; a made-up domain is found with a DNS lookup.
  *   POST /meta     batch metadata. Body: { "urls": ["https://..."], "shot": false }. The app sends 6 URLs per call (accounts may send 25, guests 10).
  *
  * What /meta does for each URL. Every attempt is logged; the first engine that returns a REAL title wins, weaker answers are kept and
@@ -27,7 +28,7 @@
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.2.2';
+const VERSION = '2.3.0';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -44,6 +45,7 @@ const CONFIG = {
   jinaTimeoutMs: 9000,           // Jina renders the page in a browser, so it needs longer than a plain service
   maxRedirects: 5,
   subrequestBudget: 30,          // free plan allows 50 per invocation; v2.1.0 used 45 and still hit the runtime error on 25-URL calls, so keep a wide margin
+  checkMax: 10, checkTimeoutMs: 6000,   // v2.3.0 /check: at most 10 links per call, 6 s each
   perUrlMax: 6, perUrlMin: 3,    // a URL never uses more than perUrlMax subrequests; with many URLs in one call each gets at least perUrlMin
   poolSize: 6,                   // simultaneous connections per invocation
   cacheTtlMs: 10 * 60 * 1000,
@@ -275,12 +277,12 @@ async function fetchTimeout(ctx, url, init, ms) {
 }
 
 /** GET with manual redirects: every hop is checked by the SSRF guard and counted against the subrequest budget. */
-async function guardedGet(start, ctx, { ms, accept, ua = BROWSER_UA }) {
+async function guardedGet(start, ctx, { ms, accept, ua = BROWSER_UA, method = 'GET' }) {
   let url = start;
   for (let hop = 0; hop <= CONFIG.maxRedirects; hop++) {
     if (isBlockedUrl(url)) throw err('blocked target');
     if (!ctx.budget.spend()) throw err('subrequest budget used up', { budget: true });
-    const res = await fetchTimeout(ctx, url.href, { redirect: 'manual', headers: { 'User-Agent': ua, Accept: accept, 'Accept-Language': 'en-US,en;q=0.9' } }, ms);
+    const res = await fetchTimeout(ctx, url.href, { method, redirect: 'manual', headers: { 'User-Agent': ua, Accept: accept, 'Accept-Language': 'en-US,en;q=0.9' } }, ms);
     const loc = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
     if (loc) { res.body && res.body.cancel().catch(() => {}); try { url = new URL(loc, url); } catch { throw err('bad redirect'); } continue; }
     return { res, url };
@@ -645,6 +647,66 @@ function handleWhoami(request, cors) {
   return json({ ok: true, ip: maskIp(ip), city: t(cf.city, 60), region: t(cf.region, 60), cc: t(cf.country, 2).toUpperCase(), tz: t(cf.timezone, 60) }, 200, cors);
 }
 
+/* ------------------------------------------------------------------------------------------------------------- /check (v2.3.0): is a link still alive? */
+const DEAD_STATUS = new Set([404, 410, 530]);
+const statusState = (s) => (s >= 200 && s < 400 ? 'ok' : DEAD_STATUS.has(s) ? 'dead' : 'unsure');   // 401, 403, 429 and 5xx are "unsure": the site may only be refusing a robot or be down for a moment
+
+/** NXDOMAIN (status 3) means the domain does not exist any more. Any other answer, or no answer, says nothing. */
+async function domainGone(host, ctx) {
+  if (!ctx.budget.spend()) return false;
+  try {
+    const res = await fetchTimeout(ctx, `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=A`, { headers: { Accept: 'application/dns-json' } }, 3000);
+    if (!res.ok) return false;
+    const j = await res.json(); return j && j.Status === 3;
+  } catch { return false; }
+}
+
+/** One link: HEAD first (cheap), GET when the server dislikes HEAD. Returns { url, state: ok|dead|unsure|invalid, status, ms, finalUrl?, note? }. */
+async function checkOne(input, ctx, cap) {
+  const t0 = nowMs(), target = normalizeTarget(input);
+  const out = (state, status, extra = {}) => ({ url: input, state, status, ms: nowMs() - t0, ...extra });
+  if (!target) return out('invalid', 0, { note: 'not a web address' });
+  const sub = { ...ctx, budget: createBudget(cap) };
+  try {
+    let hit = await guardedGet(target, sub, { ms: CONFIG.checkTimeoutMs, accept: '*/*', method: 'HEAD' });
+    hit.res.body && hit.res.body.cancel().catch(() => {});
+    if (statusState(hit.res.status) !== 'ok' && sub.budget.left() > 0) {   // many servers answer HEAD with 403, 404 or 405: ask again with GET
+      hit = await guardedGet(target, sub, { ms: CONFIG.checkTimeoutMs, accept: '*/*', method: 'GET' });
+      hit.res.body && hit.res.body.cancel().catch(() => {});
+    }
+    const status = hit.res.status, finalUrl = hit.url.href !== target.href ? hit.url.href : undefined;
+    return out(statusState(status), status, finalUrl ? { finalUrl } : {});
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (/blocked target/.test(msg)) return out('invalid', 0, { note: 'not allowed' });
+    if (e && e.name === 'AbortError') return out('unsure', 0, { note: 'timed out' });
+    if (/budget/.test(msg)) return out('unsure', 0, { note: 'too many links in one call' });
+    if (await domainGone(target.hostname, { ...ctx, budget: createBudget(1) })) return out('dead', 0, { note: 'the domain does not exist' });
+    return out('unsure', 0, { note: 'could not connect' });
+  }
+}
+
+async function handleCheck(request, ctx, cors) {
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  let user = null;
+  const auth = request.headers.get('authorization') || '';
+  if (auth) {
+    if (!/^Bearer\s+\S+$/i.test(auth)) return json({ ok: false, error: 'unauthorized' }, 401, cors);
+    try { user = await verifyIdToken(auth.replace(/^Bearer\s+/i, ''), ctx); } catch { return json({ ok: false, error: 'unauthorized', message: 'Sign in again' }, 401, cors); }
+  }
+  let body;
+  try { body = await readJsonBody(request); } catch (e) { return json({ ok: false, error: e.message, message: e.detail }, e.status || 400, cors); }
+  const urls = body && body.urls;
+  if (!Array.isArray(urls) || !urls.length || urls.some((s) => typeof s !== 'string' || s.length > CONFIG.maxUrlLength)) return json({ ok: false, error: 'bad_request', message: 'Send { \"urls\": [ ... ] }' }, 400, cors);
+  if (urls.length > CONFIG.checkMax) return json({ ok: false, error: 'too_many_urls', message: `At most ${CONFIG.checkMax} URLs per request`, max: CONFIG.checkMax }, 413, cors);
+  const who = user ? { key: 'u:' + user.uid, cfg: CONFIG.limits.account } : { key: 'g:' + ip, cfg: CONFIG.limits.guest };
+  const a = takeTokens(who.key, urls.length, who.cfg), b = takeTokens('ip:' + ip, urls.length, CONFIG.limits.ipAll);
+  if (!a.ok || !b.ok) { const retryAfter = Math.max(a.retryAfter || 0, b.retryAfter || 0); return json({ ok: false, error: 'rate_limited', retryAfter }, 429, { ...cors, 'Retry-After': String(retryAfter) }); }
+  const cap = Math.max(2, Math.floor((ctx.budget.max - 2) / urls.length));   // each link gets its own slice, so the whole call stays under the subrequest limit
+  const results = await mapPool(urls, CONFIG.poolSize, (u) => checkOne(u, ctx, Math.min(cap, 6)).catch(() => ({ url: u, state: 'unsure', status: 0, ms: 0, note: 'failed' })));
+  return json({ ok: true, version: VERSION, results }, 200, cors);
+}
+
 async function route(request, env, deps = {}) {
   const origin = request.headers.get('origin');
   const cors = corsHeaders(origin);
@@ -655,8 +717,9 @@ async function route(request, env, deps = {}) {
   try {
     if (url.pathname === '/health' && request.method === 'GET') return json({ ok: true, version: VERSION, time: nowMs(), project: CONFIG.firebaseProject }, 200, cors);
     if (url.pathname === '/meta' && request.method === 'POST') return await handleMeta(request, ctx, cors);
+    if (url.pathname === '/check' && request.method === 'POST') return await handleCheck(request, ctx, cors);
     if (url.pathname === '/whoami' && request.method === 'GET') return handleWhoami(request, cors);
-    if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
+    if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami' || url.pathname === '/check') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
     return json({ ok: false, error: 'not_found' }, 404, cors);
   } catch (e) {
     return json({ ok: false, error: 'internal' }, 500, cors);
@@ -666,5 +729,5 @@ async function route(request, env, deps = {}) {
 export default {
   fetch: (request, env) => route(request, env),
   // Pure functions exposed for the unit tests in @ Creator/tests/worker.test.mjs. Harmless in production.
-  __test: { maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
+  __test: { checkOne, handleCheck, statusState, maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
 };

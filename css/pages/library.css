@@ -97,3 +97,17 @@
 .picker-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .picker-sub { color: var(--sub); font-size: var(--fs-sm); }
 .qa-row { display: flex; gap: var(--s2); } .qa-row .input { flex: 1; min-width: 0; } .qa-folder { justify-content: flex-start; gap: var(--s2); } .qa-folder span { flex: 1; text-align: left; }
 .help.is-error { color: var(--danger); }
+
+/* ---- v2.3.0: dead-link checker popup and the dead flag on rows ---- */
+.chk { display: grid; gap: var(--s3); }
+.chk-prog { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; } .chk-prog i { display: block; height: 100%; background: var(--accent-strong); transition: width var(--t-std) var(--ease); }
+.chk-line, .chk-note { margin: 0; font-size: var(--fs-sm); color: var(--sub); line-height: 1.35; }
+.chk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+.chk-stat { display: grid; justify-items: center; padding: var(--s3); border-radius: var(--r-group); background: var(--surface-2); border: 1px solid var(--line); } .chk-stat b { font: 700 var(--fs-xl) / 1.1 var(--font-brand); } .chk-stat span { font-size: var(--fs-sm); color: var(--sub); }
+.chk-stat.is-ok b { color: var(--success); } .chk-stat.is-dead b { color: var(--danger); } .chk-stat.is-unsure b { color: var(--caution); }
+.chk-h { margin: var(--s2) 0 0; font: 650 var(--fs-md) var(--font-brand); }
+.chk-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-group); max-height: 34dvh; overflow-y: auto; } .chk-list li { display: flex; align-items: center; } .chk-list li + li { border-top: 1px solid var(--line); }
+.chk-item { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 8px var(--s3); color: inherit; min-height: 52px; align-content: center; } .chk-item:hover { background: var(--surface-2); text-decoration: none; }
+.chk-t { font-weight: 560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .chk-u { font: 400 var(--fs-xs) var(--font-mono); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chk-foot { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; padding-top: var(--s2); }
+.lflag.is-dead { color: var(--danger); }

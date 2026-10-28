@@ -62,6 +62,8 @@ test('validation: required fields, types, limits, unknown fields, future timesta
   assert.equal(R.update({ 'folders/u1/f1': folder(), 'links/u1/l1': link({ pt: 5000 }) }, ok({})), false, 'update is all-or-nothing');
   assert.equal(w('linkMeta/u1/l1', { image: 'https://i.example/x.png', frameable: true, checkedAt: NOW }), true);
   assert.equal(w('linkMeta/u1/l1', { image: 'x'.repeat(3000) }), false);
+  assert.equal(w('linkMeta/u1/l1', { nf: true, log: 'direct\t1\t10\t', checkedAt: NOW }), true, 'v2.3.0: nf (refuses framing) and the packed log');
+  assert.equal(w('linkMeta/u1/l1', { nf: 'yes' }), false);
   assert.equal(w('history/u1/h1', { lid: 'l1', url: 'https://a.com', src: 'random', ts: NOW }), true);
   assert.equal(w('history/u1/h1', { url: 'https://a.com', ts: NOW }), false, 'history needs lid');
   assert.equal(w('activity/u1/a1', { type: 'import', ts: NOW, info: '12 links' }), true);

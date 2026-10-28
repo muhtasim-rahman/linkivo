@@ -328,6 +328,9 @@
           "frameable": {
             ".validate": "newData.val() === true"
           },
+          "nf": {
+            ".validate": "newData.val() === true"
+          },
           "checkedAt": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
           },
@@ -571,6 +574,9 @@
               ".validate": "newData.isString() && newData.val().length <= 9"
             },
             "frameable": {
+              ".validate": "newData.val() === true"
+            },
+            "nf": {
               ".validate": "newData.val() === true"
             },
             "checkedAt": {

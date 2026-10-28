@@ -68,6 +68,20 @@
       ]
     }
   ],
-  "related_applications": [{ "platform": "webapp", "url": "https://linkivo.web.app/manifest.webmanifest" }],
-  "prefer_related_applications": false
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://linkivo.web.app/manifest.webmanifest"
+    }
+  ],
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

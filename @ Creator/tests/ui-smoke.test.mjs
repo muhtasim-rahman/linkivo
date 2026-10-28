@@ -214,7 +214,7 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
   assert.equal($$('.set-sec').length, 8, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
-  const resetRow = $$('.row.is-danger').find((r) => /Reset all settings/.test(r.textContent)); resetRow.click(); await tick(10);
+  const resetRow = $$('.row.is-caution').find((r) => /Reset all settings/.test(r.textContent))   /* v2.3.0: reset is yellow-orange (is-caution), no longer red */; resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings' || b.textContent === 'Reset all settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);
   await router.navigate('/settings/app'); await tick(5); const { default: appInfo } = await import('../../js/core/app-info.js'); // not hard-coded: it broke on every version bump

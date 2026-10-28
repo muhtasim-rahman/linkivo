@@ -15,9 +15,9 @@ test('delete account: the request email carries the account facts, an id and the
   assert.ok(!/password:/i.test(r.body)); assert.equal(REQUEST_TO, 'mdturzo.dev@gmail.com');
 });
 
-test('danger zone order: log out, reset, cache, local data, delete account; Advanced keeps no important setting', async () => {
+test('danger zone order (v2.3.0 owner): log out, clear app cache, reset, local data, delete account; Advanced keeps no important setting', async () => {
   const { entriesFor } = await imp('js/features/settings/catalog.js');
-  assert.deepEqual(entriesFor('danger').map((e) => e.id), ['logout', 'reset', 'clearCache', 'clearLocal', 'deleteAccount']);
+  assert.deepEqual(entriesFor('danger').map((e) => e.id), ['logout', 'clearCache', 'reset', 'clearLocal', 'deleteAccount']);
   assert.ok(!entriesFor('account').some((e) => /logout/i.test(e.id)));
 });
 

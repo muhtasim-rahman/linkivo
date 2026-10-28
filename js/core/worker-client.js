@@ -20,7 +20,7 @@ import { rescueMeta, isWeak } from './meta-fallback.js';
 // 6 per call (v2.1.2): every Worker call has its own budget of 50 subrequests; 25 URLs in one call starved each other and many came back empty.
 export const META_BATCH = 6;
 /** The Worker version this app build expects. A lower number means the owner has not pasted the newest worker.js yet. */
-export const EXPECTED_WORKER = '2.1.3';
+export const EXPECTED_WORKER = '2.3.0';   // v2.3.0: /check (dead-link checker) arrived in Worker 2.3.0
 const vnum = (v) => String(v || '0').split('.').map((n) => parseInt(n, 10) || 0);
 export function isWorkerOutdated(version) { const a = vnum(version), b = vnum(EXPECTED_WORKER); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); } return false; }
 let tokenProvider = async () => null;
@@ -85,5 +85,23 @@ export async function fetchMeta(urls, { onBatch } = {}) {
     // the Worker could not be reached at all for these batches: the device-side chain and the basic floor still give them a title and favicon
     return Promise.all(res.failed.map(async (f) => { for (const u of f.item) out.set(u, await rescueMeta({ url: u, ok: false, error: f.error?.message || 'failed', log: [] })); }));
   });
+  return out;
+}
+
+/** v2.3.0: the dead-link checker. Ten links per Worker call, three calls at a time. Resolves to Map url -> { state: ok|dead|unsure|invalid, status, ms, finalUrl?, note? }.
+ *  A call that fails after retries leaves its links "unsure" (never "dead"): a busy service must not mark good links. An old Worker without /check throws code 'old-worker'. */
+export const CHECK_BATCH = 10;
+export async function checkLinks(urls) {
+  const out = new Map(), unique = [...new Set(urls)];
+  const res = await runParallel(chunk(unique, CHECK_BATCH), async (batch) => {
+    try { const { data } = await call('/check', { body: { urls: batch } }); for (const r of data.results || []) out.set(r.url, r); }
+    catch (e) {
+      if (e.status === 404 || e.status === 405) { const old = new Error('The Cloudflare Worker is out of date. Paste Worker 2.3.0 to check links (Settings, Advanced).'); old.code = 'old-worker'; throw old; }
+      if (e.status === 429 && e.retryAfter) await sleep(Math.min(e.retryAfter, 10) * 1000);
+      throw e;
+    }
+  }, { concurrency: 3, min: 1, max: 3, retries: 2, backoffMs: 800 });
+  for (const f of res.failed) { if (f.error && f.error.code === 'old-worker') throw f.error; for (const u of f.item) out.set(u, { url: u, state: 'unsure', status: 0, ms: 0, note: 'the check service is busy' }); }
+  for (const u of unique) if (!out.has(u)) out.set(u, { url: u, state: 'unsure', status: 0, ms: 0, note: 'no answer' });
   return out;
 }

@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.2.4';
+const VERSION = '2.3.0';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -56,7 +56,10 @@ const PRECACHE = [
   '/css/pages/data.css',
   '/css/pages/library.css',
   '/css/pages/pages.css',
+  '/css/pages/preview.css',
+  '/css/pages/search.css',
   '/css/pages/settings.css',
+  '/css/pages/share.css',
   '/css/pages/splash.css',
   '/js/boot.js',
   '/js/core/activity.js',
@@ -111,6 +114,8 @@ const PRECACHE = [
   '/js/features/auth/action-page.js',
   '/js/features/auth/auth-service.js',
   '/js/features/auth/login-page.js',
+  '/js/features/check/check-job.js',
+  '/js/features/check/check-sheet.js',
   '/js/features/export/export-engine.js',
   '/js/features/export/export-sheet.js',
   '/js/features/export/formats/common.js',
@@ -152,6 +157,13 @@ const PRECACHE = [
   '/js/features/library/pickers.js',
   '/js/features/library/quick-add.js',
   '/js/features/library/recycle-bin-page.js',
+  '/js/features/preview/preview-meta.js',
+  '/js/features/preview/preview-model.js',
+  '/js/features/preview/preview-page.js',
+  '/js/features/preview/preview-tabs.js',
+  '/js/features/search/search-core.js',
+  '/js/features/search/search-page.js',
+  '/js/features/search/search-store.js',
   '/js/features/settings/about-card.js',
   '/js/features/settings/account-card.js',
   '/js/features/settings/account-dialogs.js',
@@ -163,6 +175,8 @@ const PRECACHE = [
   '/js/features/settings/devices-sheet.js',
   '/js/features/settings/metadata-tester.js',
   '/js/features/settings/settings-page.js',
+  '/js/features/share/share-model.js',
+  '/js/features/share/share-page.js',
   '/js/features/shell/bin-card.js',
   '/js/features/shell/install-banner.js',
   '/js/features/shell/install-card.js',

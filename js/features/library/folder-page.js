@@ -29,13 +29,14 @@ import { plural } from '../../core/format.js';
 import { isEnabled } from '../../core/flags.js';
 import { FAV_ID, favouritesFolder, colorOf, folderTile } from './folder-style.js';
 import { createLinkRow, ROW_HEIGHT, CARD_HEIGHT, CARD_MIN_WIDTH } from './link-row.js';
-import { linkMenuItems, bulk } from './link-actions.js';
+import { linkMenuItems, bulk, openInPreview } from './link-actions.js';
+import { runCheck } from '../check/check-sheet.js';
 import { folderMenuItems } from './folder-actions.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
 
 const SORTS = { new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high' };
-const SCOPES = { all: 'All links', fv: 'Favourites', rl: 'Read later', pn: 'Pinned', bl: 'Blocked' };
+const SCOPES = { all: 'All links', fv: 'Favourites', rl: 'Read later', pn: 'Pinned', bl: 'Blocked', dd: 'Dead links' };   // v2.3.0: dd = flagged by the link checker
 const text = (l) => `${l.title || ''} ${l.url} ${l.host || ''} ${l.desc || ''} ${l.tags || ''} ${l.kw || ''}`.toLowerCase();
 
 export function sortLinks(list, sort) {
@@ -122,6 +123,7 @@ export async function mount(container, ctx) {
         { icon: 'star', label: 'Favourite', onClick: () => done(bulk.favourite(engine, ids())) },
         { icon: 'trash', label: 'Delete', danger: true, onClick: () => done(bulk.remove(engine, ids())) }],
       more: () => [
+        { label: 'Check links', icon: 'refresh', onSelect: () => { runCheck({ engine, queue, router, ids: ids() }); } },
         { label: 'Add tags', icon: 'tag', onSelect: () => done(bulk.addTags(engine, ids())) },
         { label: 'Copy to folder', icon: 'copy', onSelect: () => done(bulk.copy(engine, ids())) }, { label: 'Read later', icon: 'clock', onSelect: () => done(bulk.readLater(engine, ids())) }, { label: 'Pin', icon: 'pin', onSelect: () => done(bulk.pin(engine, ids())) },
         { label: 'Block from Random', icon: 'block', onSelect: () => done(bulk.block(engine, ids())) }, { label: 'Export selection', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'links', lids: ids() }, title: `Export ${plural(n, 'link')}` })) }]
@@ -156,8 +158,8 @@ export async function mount(container, ctx) {
     const f = folder();
     const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
     const pick = phone ? [{ label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
-    const items = isFav ? [...pick, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
-      : [...pick, ...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
+    const items = isFav ? [...pick, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking favourites' }) }, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
+      : [...pick, ...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking folder' }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
     moreBtn._m = openMenu(moreBtn, items);
   });
   body.addEventListener('click', (e) => {
@@ -167,6 +169,7 @@ export async function mount(container, ctx) {
     if (act === 'toggle' && !st.selecting) {   // v2.2.2: the favicon turned into a checkbox on hover: a click on it starts selecting
       e.preventDefault(); setSelecting(true); st.selected.add(id); st.last = st.rows.findIndex((x) => x.id === id); paintBar(); vl?.refresh(); return;
     }
+    if (act === 'open' && !st.selecting && e.target.closest('.lmain') && openInPreview(e, l, router)) return;   // v2.3.0: the row opens the Preview
     if (st.selecting && act !== 'menu') {
       e.preventDefault();
       const idx = st.rows.findIndex((x) => x.id === id);

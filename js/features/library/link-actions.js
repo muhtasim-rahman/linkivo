@@ -15,7 +15,14 @@ import { logActivity } from '../../core/activity.js';
 import * as P from '../../engine/points.js';
 import { openFolderPicker, openTextPrompt } from './pickers.js';
 import { safeHref } from './folder-style.js';
+import { prefs } from '../../core/local-prefs.js';
 
+/** v2.3.0: a plain click on a link opens the Preview (setting "Open links in"); Ctrl, Cmd, Shift, a middle click or the setting "New tab" keep the normal browser link. Returns true when it handled the click. */
+export function openInPreview(e, l, router) {
+  if (e.defaultPrevented || (e.button || 0) > 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return false;
+  if (prefs.get('lib.openIn', 'preview') !== 'preview') return false;
+  e.preventDefault(); router.navigate(`/link/${encodeURIComponent(l.id)}`); return true;
+}
 export const openLink = (l) => { const href = safeHref(l.url); if (href !== '#') window.open(href, '_blank', 'noopener,noreferrer'); };
 export async function copyText(text, done = 'Copied.') {
   try { await navigator.clipboard.writeText(text); toast(done); } catch { toast('Copy is blocked by the browser.', { type: 'error' }); }
@@ -72,6 +79,9 @@ export const bulk = {
       let done = 0;
       const title = h('input', { class: 'input', value: l.title || '', placeholder: l.host || 'Title', maxlength: '300', 'aria-label': 'Title', autocomplete: 'off' });
       const url = h('input', { class: 'input', value: l.url, maxlength: '2048', inputmode: 'url', 'aria-label': 'Address', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      // v2.3.0: the same sheet now also edits the description and the tags (Preview > Details > Edit link)
+      const desc = h('textarea', { class: 'input', rows: '3', maxlength: '300', value: l.desc || '', 'aria-label': 'Description', placeholder: 'Add a short note about this link' });
+      const tags = h('input', { class: 'input', value: (l.tags || '').split(',').filter(Boolean).join(', '), maxlength: '200', 'aria-label': 'Tags', placeholder: 'work, read, idea', autocomplete: 'off' });
       const note = h('p', { class: 'help is-error', role: 'alert' });
       const save = async () => {
         const nextUrl = url.value.trim(); const parsed = parseUrl(nextUrl, { assumeHttps: true });
@@ -81,10 +91,12 @@ export const bulk = {
         const t = title.value.trim(); const patch = {};
         if (href !== l.url) { patch.url = href; patch.host = hostOf(href); }
         if (t !== (l.title || '')) { if (t) { patch.title = t; patch.tEdit = true; } else { patch.title = null; patch.tEdit = null; } }
+        const d = desc.value.trim(); if (d !== (l.desc || '')) patch.desc = d || null;
+        const tg = normalizeTags(tags.value) || null; if (tg !== (l.tags || null)) patch.tags = tg;
         if (Object.keys(patch).length) { done = await patchWithUndo(engine, ids, () => patch, () => 'Link saved.'); }
         return true;
       };
-      const sheet = openSheet({ title: 'Edit link', body: h('div', { class: 'form' }, h('label', { class: 'label', text: 'Title' }), title, h('label', { class: 'label', text: 'Address' }), url, note, h('p', { class: 'help', text: 'Your title is kept when titles are fetched again.' })),
+      const sheet = openSheet({ title: 'Edit link', body: h('div', { class: 'form' }, h('label', { class: 'label', text: 'Title' }), title, h('label', { class: 'label', text: 'Address' }), url, h('label', { class: 'label', text: 'Description' }), desc, h('label', { class: 'label', text: 'Tags' }), tags, note, h('p', { class: 'help', text: 'Your title and description are kept when details are fetched again.' })),
         actions: [{ label: 'Cancel', variant: 'quiet' }, { label: 'Save', variant: 'primary', onClick: async () => (await save()) }], onClose: () => resolve(done) });
       for (const i of [title, url]) i.addEventListener('keydown', async (e) => { if (e.key === 'Enter') { e.preventDefault(); if (await save()) sheet.close(); } });
       setTimeout(() => title.focus(), 60);
@@ -133,6 +145,7 @@ export function linkMenuItems({ engine, link: l }) {
     { label: 'Point up', icon: 'thumb-up', disabled: !P.canLike(l, { random: false, now }), onSelect: () => bulk.like(engine, ids) },
     { label: 'Point down', icon: 'thumb-down', disabled: !P.canDislike(l, { random: false, now }), onSelect: () => bulk.dislike(engine, ids) },
     { label: l.bl ? 'Unblock from Random' : 'Block from Random', icon: 'block', onSelect: () => bulk.block(engine, ids) },
+    { label: l.dd ? 'Check link again' : 'Check link', icon: 'refresh', onSelect: () => import('../check/check-sheet.js').then((m) => import('../../core/app-data.js').then((d) => m.runCheck({ engine, queue: d.getQueue(), router: null, ids }))) },   // v2.3.0
     { separator: true },
     { label: 'Move to folder', icon: 'folder', onSelect: () => bulk.move(engine, ids) },
     { label: 'Copy to folder', icon: 'copy', onSelect: () => bulk.copy(engine, ids) },

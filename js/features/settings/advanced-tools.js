@@ -2,6 +2,8 @@
  * Linkivo — js/features/settings/advanced-tools.js  (v2.1.2)
  * Purpose: Settings > Advanced rows: debug log viewer, reset settings, and the Metadata tester wrapper.
  *          v2.2.3: also the rows of the new Danger zone (reset all settings, clear app cache, log out, clear local storage data).
+ *          v2.3.0 (owner): every Danger zone row ends with a right arrow (each one opens a confirmation) and has a tone: plain (log out, clear app cache),
+ *          caution (reset all settings, yellow-orange) or danger (clear local storage data, delete account, red). The section title and icon are red.
  * API: renderAdvanced(name, ctx) -> Element     ctx = { refresh(), router }
  */
 import { h } from '../../core/dom.js';
@@ -15,6 +17,7 @@ import { requireSensitive } from '../../core/sensitive.js';
 import { applyAppearance } from '../../core/appearance.js';
 import { resettableKeys } from './catalog.js';
 import { renderTester } from './metadata-tester.js';
+import { descEl } from './controls.js';
 import { clearCachesAndReload } from '../../core/update.js';
 import { clearLocalData } from '../../core/clear-local.js';
 import { getSession } from '../../core/session.js';
@@ -57,15 +60,18 @@ async function clearLocal() {
   await clearLocalData();
 }
 
-const dangerRow = (ic, label, desc, fn, danger = true) => h('button', { type: 'button', class: ['row', danger && 'is-danger'], on: { click: fn } }, h('span', { class: 'row-ic' }, icon(ic)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), h('span', { class: 'row-desc', text: desc })));
+/** One Danger zone row. tone: 'plain' | 'caution' | 'danger'. Every row ends with a right arrow, like the other rows that open something. */
+const dangerRow = (ic, label, desc, fn, tone = 'danger') => h('button', { type: 'button', class: ['row', 'dz-row', tone === 'danger' && 'is-danger', tone === 'caution' && 'is-caution'], on: { click: fn } }, h('span', { class: 'row-ic' }, icon(ic)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), descEl(desc)), h('span', { class: 'row-end' }, icon('chevron-right')));
+// ! Unused since v2.3.0: the first version of dangerRow (red label only, no arrow). Kept for reference.
+// const dangerRow = (ic, label, desc, fn, danger = true) => h('button', { type: 'button', class: ['row', danger && 'is-danger'], on: { click: fn } }, h('span', { class: 'row-ic' }, icon(ic)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), h('span', { class: 'row-desc', text: desc })));
 
 export function renderAdvanced(name, ctx) {
-  if (name === 'logout') return dangerRow('logout', getSession().mode === 'guest' ? 'Leave guest mode' : 'Log out', getSession().mode === 'guest' ? 'Back to the login page. Your guest data stays on this device.' : 'Sign out of this device. Your data stays in your account.', () => logOut(ctx.router));
+  if (name === 'logout') return dangerRow('logout', getSession().mode === 'guest' ? 'Leave guest mode' : 'Log out', getSession().mode === 'guest' ? 'Back to the login page. Your guest data stays on this device.' : 'Sign out of this device. Your data stays in your account.', () => logOut(ctx.router), 'plain');
   if (name === 'deleteAccount') return getSession().mode !== 'account' ? h('div', { hidden: true }) : dangerRow('trash', 'Delete account', 'Ask for your account and all its data to be deleted. You verify, confirm, then send a request email that the developer checks.', () => import('./delete-account.js').then((m) => m.openDeleteAccount()));
-  if (name === 'clearLocal') return dangerRow('trash', 'Clear local storage data', 'Logs you out and erases everything this browser holds for Linkivo: settings, the saved library copy and the app cache. A guest loses all data.', clearLocal);
+  if (name === 'clearLocal') return dangerRow('trash', 'Clear local storage data', 'Logs you out and erases everything this browser holds for Linkivo: settings, the saved library copy and the app cache. A guest loses all data.', clearLocal, 'danger');
   if (name === 'debug') return h('button', { type: 'button', class: 'row', on: { click: openLog } }, h('span', { class: 'row-ic' }, icon('bug')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Debug log' }), h('span', { class: 'row-desc', text: 'The last 300 events recorded by the app. Secrets are never logged.' })), h('span', { class: 'row-end' }, icon('chevron-right')));
-  if (name === 'reset') return h('button', { type: 'button', class: 'row is-danger', on: { click: () => resetSettings(ctx) } }, h('span', { class: 'row-ic' }, icon('refresh')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Reset all settings' }), h('span', { class: 'row-desc', text: 'Return every setting to its default. Your links and folders are not touched.' })));
+  if (name === 'reset') return dangerRow('restore', 'Reset all settings', 'Return every setting to its default. Your links and folders are not touched.', () => resetSettings(ctx), 'caution');   // v2.3.0: yellow-orange
   if (name === 'tester') return renderTester();
-  if (name === 'clearCache') return h('button', { type: 'button', class: 'row', on: { click: async () => { const ok = await confirmDialog({ title: 'Clear the app cache?', message: 'The saved copy of the app files is deleted and the app reloads with fresh files. Your links, folders and settings are not touched.', confirmLabel: 'Clear and reload' }); if (ok) clearCachesAndReload(); } } }, h('span', { class: 'row-ic' }, icon('refresh')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Clear app cache' }), h('span', { class: 'row-desc', text: 'Use this if the app looks out of date or something does not load.' })), h('span', { class: 'row-end' }, icon('chevron-right')));
+  if (name === 'clearCache') return dangerRow('refresh', 'Clear app cache', 'Use this if the app looks out of date or something does not load.', async () => { const ok = await confirmDialog({ title: 'Clear the app cache?', message: 'The saved copy of the app files is deleted and the app reloads with fresh files. Your links, folders and settings are not touched.', confirmLabel: 'Clear and reload' }); if (ok) clearCachesAndReload(); }, 'plain');   // v2.3.0: plain colour, second row
   return h('div');
 }

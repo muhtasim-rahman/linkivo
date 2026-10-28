@@ -1,8 +1,10 @@
 /* Linkivo v2.1.0 - toasts: one line, bottom centre above the bar, never more than two */
-.toast-host { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + 8px); z-index: var(--z-toast); display: grid; gap: 8px; width: min(calc(100vw - 24px), 420px); pointer-events: none; }
+.toast-host { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-b, calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + 6px)) + 2px); transition: bottom var(--t-large) var(--ease); z-index: var(--z-toast); display: grid; gap: 8px; width: min(calc(100vw - 24px), 420px); pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: var(--s3); padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg); font-size: var(--fs-sm); box-shadow: var(--shadow-float); animation: lk-rise var(--t-std) var(--ease); }
 .toast.is-leaving { opacity: 0; transform: translateY(8px); transition: opacity 160ms, transform 160ms; }
 .toast-text { flex: 1; min-width: 0; }
 .toast-action { font-weight: 650; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; padding: 0 4px; }
 .toast.is-error { background: var(--danger); color: #fff; }
-@media (min-width: 900px) { .toast-host { bottom: 24px; } }
+@media (min-width: 900px) { .toast-host { bottom: calc(var(--dock-b) + 8px); } }
+@media (prefers-reduced-motion: reduce) { .toast-host { transition: none; } }
+/* v2.3.0 (owner): --dock-b (kit.css) is the height of the bottom bar when it shows, the safe area when it is hidden and the keyboard gap when the keyboard is open, so toasts slide down and up WITH the bar. */

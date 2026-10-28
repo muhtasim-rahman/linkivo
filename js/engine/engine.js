@@ -5,7 +5,7 @@
  *          sort and random later), applies changes optimistically, then persists them in chunks of 100, several in parallel.
  *          Subclasses only decide WHERE data is persisted: _persistChunk(chunk).
  * Records in memory carry their id: { id, ...fields }. The id is the database key and is stripped before writing.
- * Reads:  listFolders({deleted}) getFolder(id) listLinks({fid, deleted}) getLink(id) findByUrl(url) counts() status()
+ * Reads:  listFolders({deleted}) getFolder(id) listLinks({fid, deleted}) getLink(id) findByUrl(url) counts() status()   v2.3.0: getLinkMeta(id) patchLinkMeta(id, fields)
  * Writes: createFolder(data) updateFolder(id, patch) deleteFolders(ids) restoreFolders(ids) purgeFolders(ids)
  *         addLinks(items, {fid, imp, dedupe, keepIds, perItemFolder, recount, chained}) updateLinks(ids, patchOrFn) deleteLinks(ids) restoreLinks(ids) moveLinks(ids, fid) purgeLinks(ids)
  *         v2.2.0: updateFolders(ids, patch) duplicateFolder(id) mergeFolders(ids, targetId) recount(fids) linksOfImport(imp) copyLinks(ids, fid)
@@ -296,6 +296,10 @@ export class Engine {
     if (res.failed.length) log.warn('engine', `${res.failed.length} link-data chunk(s) could not be saved`);
     return out.length;
   }
+  /** v2.3.0: the extra page data of ONE link (Preview reads it). Local cache first; the cloud engine also asks the database when this device never saw it. */
+  async getLinkMeta(id) { try { return (await this.db.get('linkMeta', id)) || null; } catch { return null; } }
+  /** v2.3.0: merge fields into a link's extra data. saveLinkMeta writes the whole record, so this reads, merges, then writes. */
+  async patchLinkMeta(id, raw) { const cur = (await this.getLinkMeta(id)) || {}; const { id: _id, checkedAt: _c, ...rest } = cur; return this.saveLinkMeta([[id, { ...rest, ...raw }]]); }
   async _dropLinkMeta(ids) {
     if (!ids.length) return;
     await runParallel(chunk(ids.map((id) => ({ tree: 'linkMeta', id, rec: null })), CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 3, sleep: this.sleep });

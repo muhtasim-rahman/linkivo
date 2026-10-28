@@ -36,7 +36,7 @@ export function metaPatch(link, r) {
  *  and keywords still go to the link itself (metaPatch); this is everything else the Worker found in the same pass. */
 export function metaExtras(r) {
   if (!r || typeof r !== 'object') return null;
-  const o = { image: r.image, video: r.video, long: r.desc, site: r.site, author: r.author, lang: r.lang, pub: r.published, canon: r.canonical, icon: r.favicon, type: r.type, theme: r.themeColor || r.theme, frameable: r.frameable === true ? true : undefined };
+  const o = { image: r.image, video: r.video, long: r.desc, site: r.site, author: r.author, lang: r.lang, pub: r.published, canon: r.canonical, icon: r.favicon, type: r.type, theme: r.themeColor || r.theme, frameable: r.frameable === true ? true : undefined, nf: r.frameable === false ? true : undefined };   // v2.3.0: nf = refuses framing
   for (const k of Object.keys(o)) if (o[k] == null || o[k] === '' || o[k] === false) delete o[k];
   return Object.keys(o).length ? o : null;
 }

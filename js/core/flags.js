@@ -8,7 +8,7 @@ import { prefs } from './local-prefs.js';
 
 export const FLAGS = Object.freeze({
   randomFromFolder: false, // Folder view "Random from this folder" button (enabled in v2.4.0)
-  shareTarget: false,      // Web Share Target (v2.3.0)
+  shareTarget: true,       // Web Share Target (switched on in v2.3.0)
   appLock: false           // App lock and vault UI (v2.5.0)
 });
 

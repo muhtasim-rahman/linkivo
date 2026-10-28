@@ -57,6 +57,7 @@ Actors: **owner** = signed in as the uid in the path, **other** = a different si
 | V24 | `users/u1/settings/<key with space or 41 chars>` | any | deny |
 | V25 | `users/u1/settings/theme` | object / string of 201 chars | deny |
 | V25a | `users/u1/settings/ui_theme` (v2.2.1 sync: dots replaced by underscores) | string, number, boolean | allow |
+| V15b | `linkMeta/u1/l1` (v2.3.0) | `{nf: true}` (the page refuses framing) / `nf: "yes"` | allow / deny |
 | V15a | `linkMeta/u1/l1` (v2.2.1) | `{site, author, lang, pub, canon, icon, type, theme, long}` within limits / `site` of 121 chars / a field not in the schema | allow / deny / deny |
 
 ## 3. Account, app lock, vault

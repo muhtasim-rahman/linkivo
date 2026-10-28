@@ -1,0 +1,8 @@
+/* Linkivo v2.3.0 - Save to Linkivo (Web Share Target) */
+.sh { display: grid; gap: var(--s3); align-content: start; max-width: 560px; }
+.sh .page-head { margin-bottom: 0; }
+.sh-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; max-height: 44dvh; overflow-y: auto; } .sh-list > li + li { border-top: 1px solid var(--line); }
+.sh-one, .sh-pick { display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: 8px var(--s4); color: var(--sub); } .sh-pick { cursor: pointer; } .sh-pick input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.sh-url { display: grid; min-width: 0; color: var(--text); } .sh-url b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .sh-url small { color: var(--sub); font: 400 var(--fs-xs) var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-folder { border-radius: var(--r-group); }
+.sh-foot { display: flex; justify-content: flex-end; gap: var(--s2); padding-top: var(--s2); } .sh-save { min-width: 120px; }

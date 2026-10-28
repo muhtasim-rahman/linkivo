@@ -18,8 +18,8 @@ export const SECTIONS = [
   { id: 'library', label: 'Library and links', desc: 'How folders and link lists look and behave', icon: 'library' },
   { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
   { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
-  { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
   { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
+  { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
   { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log, reset', icon: 'terminal' }
 ];
 export const findSection = (id) => SECTIONS.find((s) => s.id === id) || null;
@@ -48,6 +48,7 @@ export const CATALOG = [
   { id: 'libSort', section: 'library', type: 'seg', key: 'lib.sort', label: 'Folder order', desc: 'Pinned folders always stay on top.', default: 'manual', options: opt(['manual', 'Default'], ['name', 'Name'], ['recent', 'Recent'], ['links', 'Size']), keywords: ['sort', 'order', 'folders'], since: '2.2.0' },
   { id: 'folderView', section: 'library', type: 'seg', key: 'folder.view', label: 'Link layout', desc: 'Links inside a folder as rows or as cards.', default: 'list', options: opt(['list', 'List'], ['grid', 'Grid']), keywords: ['links', 'view', 'cards', 'rows'], since: '2.2.0' },
   // v2.2.2 (owner): "Link order" was removed. Pinned links always stay on top; the order below them is the Sort control of the folder page.
+  { id: 'openIn', section: 'library', type: 'seg', key: 'lib.openIn', label: 'Open links in', desc: 'Preview shows the page, video, photo and details inside Linkivo. New tab opens the site itself.', default: 'preview', options: opt(['preview', 'Preview'], ['tab', 'New tab']), keywords: ['preview', 'open', 'new tab', 'click'], since: '2.3.0' },
   { id: 'showUrl', section: 'library', type: 'switch', key: 'lib.showUrl', label: 'Show the domain on links', desc: 'The site name under each link title.', default: true, keywords: ['domain', 'host', 'url'], since: '2.2.0' },
   { id: 'showPoints', section: 'library', type: 'switch', key: 'lib.showPoints', label: 'Show points on links', desc: 'The weight Random Discover uses. Useful while you tune it.', default: false, keywords: ['points', 'score', 'random'], since: '2.2.0' },
   { id: 'confirmDelete', section: 'library', type: 'switch', key: 'lib.confirmDelete', label: 'Type the name to delete a folder with links', desc: 'Off asks a simple yes or no. Deleted folders stay in the Recycle Bin for 15 days either way.', default: true, keywords: ['delete', 'confirm', 'safety'], since: '2.2.0' },
@@ -81,10 +82,10 @@ export const CATALOG = [
   { id: 'worker', section: 'advanced', type: 'custom', custom: 'worker', label: 'Metadata service', keywords: ['worker', 'cloudflare', 'status'], since: '2.1.0' },
   { id: 'tester', section: 'advanced', type: 'custom', custom: 'tester', label: 'Metadata tester', keywords: ['metadata', 'title', 'favicon', 'test urls'], since: '2.1.0' },
   { id: 'debugLog', section: 'advanced', type: 'custom', custom: 'debug', label: 'Debug log', keywords: ['logs', 'errors'], since: '2.1.0' },
-  // ---- Danger zone (v2.2.3, owner request): the important actions live here because the Advanced section will be removed later. v2.2.4 order: log out, reset, cache, local data, delete account
+  // ---- Danger zone (v2.2.3, owner request): the important actions live here because the Advanced section will be removed later. v2.3.0 order (owner): log out, clear app cache, reset all settings, clear local storage data, delete account
   { id: 'logout', section: 'danger', type: 'custom', custom: 'logout', label: 'Log out', keywords: ['sign out', 'leave', 'guest'], since: '2.2.3' },
-  { id: 'reset', section: 'danger', type: 'custom', custom: 'reset', label: 'Reset all settings', sensitive: true, keywords: ['defaults', 'restore'], since: '2.1.0' },
   { id: 'clearCache', section: 'danger', type: 'custom', custom: 'clearCache', label: 'Clear app cache', keywords: ['cache', 'reload', 'stale', 'fix'], since: '2.1.2' },
+  { id: 'reset', section: 'danger', type: 'custom', custom: 'reset', label: 'Reset all settings', sensitive: true, keywords: ['defaults', 'restore'], since: '2.1.0' },
   { id: 'clearLocal', section: 'danger', type: 'custom', custom: 'clearLocal', label: 'Clear local storage data', sensitive: true, keywords: ['erase', 'wipe', 'storage', 'cache', 'cookies', 'log out', 'local data', 'reset app'], since: '2.2.3' },
   { id: 'deleteAccount', section: 'danger', type: 'custom', custom: 'deleteAccount', label: 'Delete account', sensitive: true, keywords: ['remove account', 'close account', 'erase account', 'delete data'], since: '2.2.4' }
 ];

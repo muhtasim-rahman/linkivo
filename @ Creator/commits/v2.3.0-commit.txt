@@ -1,0 +1,17 @@
+feat(v2.3.0): Preview, global search, dead-link checker, Share Target and owner fix round
+
+- Preview page /link/:lid: tabs Page, Video, Photo, Screenshot, Details (only those that work), tab memory, fullscreen, compact action bar, folder side list on wide screens; metadata fetched once and cached (new engine getLinkMeta and patchLinkMeta, field linkMeta.nf)
+- Global search /search (Ctrl or Cmd + K): settings, folders and links in categories with See more, instant on 5000 links, recent searches (50 kept, 5 shown, cleared on logout)
+- Dead-link checker: Worker 2.3.0 route POST /check, persisted job, result popup, dead flag on rows, Dead links filter, Check links in link, folder and selection menus
+- Web Share Target: manifest share_target, route /share, Save to Linkivo page (folder and title), parked while signed out
+- Edit link now also edits description and tags; setting "Open links in" (Preview or New tab)
+- Owner fixes: Danger zone above App with red title and per-row tones and arrows, Log out button at the end of Settings, tap-anywhere toggle rows, smaller caption line height, toasts follow the bottom bar, no browser-note popup in the Library, one red delete-account popup with icon buttons on phones, profile card first on wide Settings
+- Rules: linkMeta nf (snapshot v2.3.0); Worker snapshot v2.3.0; 43 new tests (246 in total)
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database and --only hosting
+- paste @ Creator/worker/worker.js into the Cloudflare Worker and deploy (check /health shows 2.3.0)
+- hard reload; run the owner checklist

@@ -95,7 +95,18 @@ test('toast: never more than two, action works, auto-dismisses', async () => {
   toast('one'); toast('two'); toast('three');
   assert.equal($$('.toast', host).length, 2); assert.equal($$('.toast-text', host).map((n) => n.textContent).join(), 'two,three');
   let undone = 0; toast('deleted', { action: { label: 'Undo', onClick: () => undone++ } });
-  $$('.toast-action', host)[0].click(); assert.equal(undone, 1);
+  $$('.toast-action:not([hidden])', host)[0].click(); assert.equal(undone, 1);
+});
+
+test('toast (v2.3.2): the same message counts up in brackets with the newest points, has a close button, and the time comes from the setting', async () => {
+  const host = $('#toast-host'); host.replaceChildren();
+  toast('Points up.', { points: 150 }); toast('Points up.', { points: 160 }); toast('Points up.', { points: 170 });
+  assert.equal($$('.toast', host).length, 1, 'not three toasts'); assert.equal($('.toast-text', host).textContent, 'Points up. (3)');
+  assert.equal($('.toast-pts span:last-child', host).textContent, '170', 'the latest points');
+  toast('Other'); assert.equal($$('.toast', host).length, 2);
+  $('.toast-x', host).click(); await tick(220); assert.equal($$('.toast', host).length, 1, 'close button');
+  host.replaceChildren(); toast('Points up.'); assert.equal($('.toast-text', host).textContent, 'Points up.', 'the count starts over once the toast is gone');
+  const { toastMs } = await import('../../js/ui/toast.js'); const { prefs } = await import('../../js/core/local-prefs.js'); prefs.set('toast.duration', '4000'); assert.equal(toastMs(), 4000); prefs.set('toast.duration', 'junk'); assert.equal(toastMs(), 2500); prefs.remove('toast.duration');
 });
 
 test('sheet: focus, Escape, scrim, back layer, inert background, confirm results', async () => {

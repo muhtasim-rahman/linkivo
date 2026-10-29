@@ -81,7 +81,9 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .icard-perks li { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 28px; padding: 0 6px; border-radius: 999px; background: rgb(255 255 255 / 0.18); font-size: var(--fs-xs); font-weight: 560; white-space: nowrap; overflow: hidden; }
 .icard-perks li span { overflow: hidden; text-overflow: ellipsis; }
 .icard-perks svg { flex: none; }
-@media (min-width: 720px) {
+/* v2.3.2: the one-row layout needs 640px of the CARD's own room (a container), not of the window: with the sidebar open the card is narrower than the window */
+.icard-host { container: icard / inline-size; }
+@container icard (min-width: 640px) {
   .icard { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: 'logo text perks act'; gap: var(--s4); padding: var(--s3) var(--s4); }
   .icard-perks { display: flex; gap: var(--s2); } .icard-perks li { padding: 0 12px; font-size: var(--fs-sm); }
 }

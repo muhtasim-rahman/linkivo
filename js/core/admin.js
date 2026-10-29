@@ -15,6 +15,8 @@ import { log } from './logger.js';
 export const SHOT_DAILY = 10;
 const K_VIEW = 'admin.view', K_SHOT = 'shot.day';
 const state = createStore({ listed: false });
+// v2.3.2: the badge CSS reads <html data-admin="true"> so every avatar and card shows it without each one subscribing
+state.subscribe((v) => { try { if (v && v.listed) document.documentElement.dataset.admin = 'true'; else delete document.documentElement.dataset.admin; } catch { /* no document */ } });
 const dayOf = (now) => new Date(now).toISOString().slice(0, 10);
 
 export async function loadAdmin(adapter, uid) {
@@ -32,4 +34,4 @@ export function shotQuota(now = Date.now()) {
   return { used, limit: SHOT_DAILY, left: Math.max(0, SHOT_DAILY - used), day };
 }
 export const canUseThum = (now = Date.now()) => { const q = shotQuota(now); return q.limit === null || q.left > 0; };
-export function countThum(now = Date.now()) { const q = shotQuota(now); prefs.set(K_SHOT, { day: q.day, used: q.used + 1 }); }
+export function countThum(now = Date.now()) { const q = shotQuota(now); prefs.set(K_SHOT, { day: q.day, used: q.used + 1 }); state.set({ shotTick: now }); }   // the tick lets the counter in Settings update

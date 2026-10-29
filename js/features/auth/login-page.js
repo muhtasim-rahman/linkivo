@@ -159,5 +159,11 @@ export async function mount(container) {
   setTab('signin');
   if (session.redirectError) showError(friendlyAuthError({ code: session.redirectError }));
   if (offline) for (const el of [google, submit]) el.disabled = true;
+  // v2.3.2 (Switch account): the email is filled in (no password is ever stored). An account that signs in with Google only starts the Google sign-in at once
+  // (a popup can be blocked when too much time passed since the tap; then the Google button is simply focused); otherwise the password field is ready.
+  if (prefill && prefill.email && !offline) {
+    if (prefill.google) setTimeout(() => { google.focus(); google.click(); }, 300);
+    else setTimeout(() => pass.focus({ preventScroll: true }), 200);
+  }
   return () => themeWatch.disconnect();
 }

@@ -1,7 +1,7 @@
 /**
  * Linkivo — js/features/shell/switch-account.js  (v2.3.1)
  * Purpose: the "Switch account" popup (owner request). Lists the accounts that signed in on this device (core/known-accounts.js), the current one on top, and an
- *          "Add another account" button under the list. Each account has a three-dot menu: Forgot password (sends the reset link, rate limited), Log out (current
+ *          "Add another account" button under the list. Each account has a three-dot menu: Reset password (sends the reset link, rate limited), Log out (current
  *          account) or Remove from list (the others). Tapping another account asks once, signs out and opens the login page with that email filled in (Google
  *          accounts are offered with their address as the hint). Honest limit: Firebase keeps one signed-in user per browser, so this is a fast re-sign-in, not
  *          two live sessions; the current account's data stays safely in its own account and on this device's cache.
@@ -45,7 +45,7 @@ export async function openSwitchAccount(router) {
       const isCur = a.uid === cur;
       const more = h('button', { type: 'button', class: 'btn-icon', 'aria-label': `Options for ${a.name || maskEmail(a.email)}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 }));
       more.addEventListener('click', () => openMenu(more, [
-        { label: 'Forgot password', icon: 'lock', onSelect: () => forgot(a) },
+        { label: 'Reset password', icon: 'lock', onSelect: () => forgot(a) },
         { separator: true },
         isCur ? { label: 'Log out', icon: 'logout', danger: true, onSelect: () => { sheet?.close(); logOut(router); } } : { label: 'Remove from list', icon: 'close', onSelect: () => { forgetAccount(a.uid, prefs); paint(); } }
       ]));

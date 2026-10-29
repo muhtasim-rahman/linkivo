@@ -337,6 +337,9 @@
           "checkedAt": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
           },
+          "ml": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
           "$other": {
             ".validate": false
           }
@@ -586,6 +589,9 @@
               ".validate": "newData.val() === true"
             },
             "checkedAt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "ml": {
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
             },
             "$other": {

@@ -45,7 +45,7 @@ export function accountRows({ router, rerender = () => {} }) {
     try { await engine.flush?.(); toast('Everything is synced.'); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }
     b.classList.remove('is-loading');
   } } }, icon('refresh', { size: 18 })) : null;
-  const head = h('div', { class: 'row acc-head' }, avatar(u.name, true, u.photo),
+  const head = h('div', { class: 'row acc-head' }, avatar(u.name, true, u.photo, true),
     h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: u.name }), h('span', { class: 'row-desc', text: maskEmail(u.email) })),
     h('span', { class: 'row-end' }, h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => router.navigate('/profile') } }, 'View profile'), syncBtn));
 

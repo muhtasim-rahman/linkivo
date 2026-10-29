@@ -25,3 +25,8 @@
   .page.is-wide { --content-max: 1080px; }
   .page-title { font-size: var(--fs-2xl); }
 }
+
+/* ---- v2.3.2: overflow guards. A flex or grid child never gets narrower than its content unless it says min-width: 0, which pushed cards past the right edge. ---- */
+.page > *, .menu-list > *, .stack > *, .row-main, .pf-text, .page-head > * { min-width: 0; }
+.row-label, .row-desc, .pf-name, .pf-mail, .page-sub { overflow-wrap: anywhere; }
+img, video, canvas, iframe { max-width: 100%; }

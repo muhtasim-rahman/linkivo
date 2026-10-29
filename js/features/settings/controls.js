@@ -13,14 +13,36 @@ import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
 import { createSelect } from '../../ui/select.js';
 import { askClipboard } from '../../core/clipboard-watch.js';
+import { icon } from '../../ui/icons.js';
+import { quota as mlQuota, subscribeQuota } from '../../core/microlink.js';
+import { shotQuota, subscribeAdmin } from '../../core/admin.js';
 
 export const LONG_DESC = 100;
 /** A row caption. Over LONG_DESC characters it gets `.is-long` (one step smaller text), so only the few big captions shrink. */
 export const descEl = (text) => h('span', { class: ['row-desc', String(text).length > LONG_DESC && 'is-long'], text });
 
+/** v2.3.2: live text after a label, e.g. "(Left: 5/25)" (entry.suffix) followed by an info button that opens a short note (entry.info), on hover, tap and keyboard. */
+const SUFFIX = {
+  mlLeft: () => { const q = mlQuota(); return `(Left: ${q.left}/${q.limit})`; },
+  thumLeft: () => { const q = shotQuota(); return q.limit === null ? '(No limit)' : `(Left: ${q.left}/${q.limit})`; }
+};
+const EXTRA = {
+  mlLeft: () => { const q = mlQuota(); if (!q.reset || q.reset < Date.now()) return ''; const mins = Math.max(1, Math.round((q.reset - Date.now()) / 60000)); return `The counter resets in ${mins >= 90 ? Math.round(mins / 60) + ' h' : mins + ' min'}.`; }
+};
+function labelEl(entry) {
+  if (!entry.suffix || !SUFFIX[entry.suffix]) return h('span', { class: 'row-label', text: entry.label });
+  const suf = h('span', { class: 'row-suffix' }), note = h('span', { class: 'row-info', hidden: true, text: entry.info || '' });
+  const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); note.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
+  paint();
+  const live = () => { if (suf.isConnected) paint(); };
+  subscribeQuota(live); subscribeAdmin(live);
+  const info = entry.info ? h('button', { type: 'button', class: 'btn-icon row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', 'data-tip': entry.info, on: { click: (e) => { e.stopPropagation(); note.hidden = !note.hidden; info.setAttribute('aria-expanded', String(!note.hidden)); } } }, icon('info', { size: 16 })) : null;
+  return h('span', { class: 'row-label has-suffix' }, h('span', { text: entry.label }), ' ', suf, info, note);
+}
+
 function shell(entry, control, stack = false) {
   return h('div', { class: ['row', stack && 'is-stack'], 'data-setting': entry.id },
-    h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: entry.label }), entry.desc && descEl(entry.desc)),
+    h('span', { class: 'row-main' }, labelEl(entry), entry.desc && descEl(entry.desc)),
     h('span', { class: 'row-end' }, control));
 }
 

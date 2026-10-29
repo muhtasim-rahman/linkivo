@@ -93,7 +93,7 @@ export async function mount(container, ctx) {
 
   container.appendChild(h('div', { class: 'page is-wide' },
     h('header', { class: 'page-head is-stack' }, h('h1', { class: 'page-title', text: 'Settings' }), h('p', { class: 'page-sub', text: 'Make Linkivo look and behave the way you like.' })),
-    h('div', { class: 'settings' }, h('div', { class: 'set-navwrap' }, nav), body)));
+    h('div', { class: 'set-cq' }, h('div', { class: 'settings' }, h('div', { class: 'set-navwrap' }, nav), body))));   // v2.3.2: .set-cq is the container the layout queries
 
   const detachFade = attachScrollRow(nav, { arrows: false });   // v2.2.1: edge fades, touch scroll and mouse drag
   spy();

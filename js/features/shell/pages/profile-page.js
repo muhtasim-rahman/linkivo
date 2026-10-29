@@ -17,7 +17,7 @@ export async function mount(container, ctx) {
   const row = (iconName, label, desc, props, end) => h(props.href ? 'a' : 'button', { class: 'row', type: props.href ? null : 'button', ...props }, h('span', { class: 'row-ic' }, icon(iconName)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
   container.appendChild(h('div', { class: 'page' },
     h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Profile' })),
-    h('div', { class: 'profile-head' }, avatar(guest ? 'Guest' : s.user.name, true, s.user ? s.user.photo : ''),
+    h('div', { class: 'profile-head' }, avatar(guest ? 'Guest' : s.user.name, true, s.user ? s.user.photo : '', !guest),
       h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: guest ? 'Guest' : s.user.name }), h('span', { class: 'pf-mail', text: guest ? 'Stored only on this device' : maskEmail(s.user.email) }), h('span', null, h('span', { class: 'tag', text: guest ? 'Guest mode' : 'Account' })))),
     h('div', { class: 'group' },
       row('settings', 'Settings', null, { href: '/settings' }, icon('chevron-right')),

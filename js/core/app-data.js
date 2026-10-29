@@ -46,12 +46,17 @@ export async function initData(session) {
 async function startSettingsSync(uid) {
   try {
     const { CATALOG } = await import('../features/settings/catalog.js');
-    const { syncedEntries } = await import('./sync-choice.js');
+    const { syncedEntries, syncedKeySet, choiceKeys } = await import('./sync-choice.js');
     const entries = syncedEntries(CATALOG, prefs);   // v2.3.1: the person's choice (Settings > Account > Select which settings to sync); `device: true` and `local: true` settings start off
     const defaults = Object.fromEntries(entries.map((e) => [e.key, e.default]));
     if (!engine || scope !== uid || !engine.adapter) return;
-    settingsSync = createSettingsSync({ adapter: engine.adapter, uid, store: prefs, keys: entries.map((e) => e.key), defaults });
+    // v2.3.2: the choices themselves (sync.c.<id>) are always synced, so every device sees the same list
+    settingsSync = createSettingsSync({ adapter: engine.adapter, uid, store: prefs, keys: [...entries.map((e) => e.key), ...choiceKeys(CATALOG)], defaults });
     settingsSync.start();
+    // a choice that arrives from another device changes WHICH keys are synced here: rebuild the sync with the new list (only when the list really changed)
+    const was = syncedKeySet(CATALOG, prefs); let t = 0;
+    for (const off of choiceWatch) { try { off(); } catch { /* ignore */ } } choiceWatch = [];
+    for (const k of choiceKeys(CATALOG)) choiceWatch.push(prefs.onChange(k, () => { clearTimeout(t); t = setTimeout(() => { if (scope === uid && syncedKeySet(CATALOG, prefs) !== was) restartSettingsSync(); }, 400); }));
   } catch (e) { log.warn('data', 'settings sync did not start', e); }
 }
 /** v2.2.2: this device registers itself in users/<uid>/devices and signs out when another device asks it to. Failure never breaks the app. */
@@ -69,6 +74,7 @@ async function startAdmin(uid) {
   try { const { loadAdmin } = await import('./admin.js'); if (engine && scope === uid && engine.adapter) await loadAdmin(engine.adapter, uid); } catch (e) { log.warn('data', 'admin check did not run', e); }
 }
 /** v2.3.1: the sync choice changed: stop the running sync and start it again with the new list of keys. */
+let choiceWatch = [];
 export async function restartSettingsSync() {
   const uid = scope; if (!uid || uid === 'test') return;
   try { settingsSync?.dispose(); } catch { /* ignore */ }
@@ -80,7 +86,7 @@ export const getDevices = () => devices;
 export async function teardownData() {
   try { (await import('./admin.js')).clearAdmin(); } catch { /* ignore */ }
   try { settingsSync?.dispose(); } catch { /* ignore */ }
-  settingsSync = null;
+  settingsSync = null; for (const off of choiceWatch) { try { off(); } catch { /* ignore */ } } choiceWatch = [];
   try { devices?.stop(); } catch { /* ignore */ }
   devices = null;
   try { importLog?.dispose(); } catch { /* ignore */ }

@@ -15,6 +15,7 @@ import { openMenu } from '../../ui/popover.js';
 import { prefs } from '../../core/local-prefs.js';
 import { resolvedTheme } from '../../core/appearance.js';
 import { maskEmail } from '../../core/mask.js';
+import { getSession } from '../../core/session.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 // ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
@@ -70,7 +71,7 @@ export function mountShell({ router }) {
   const pfAvatar = h('span', { class: 'pf-avatar' }); const pfName = h('span', { class: 'pf-name' }); const pfMail = h('span', { class: 'pf-mail' });
   const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip-c': 'Profile', 'aria-label': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
   let menuHandle = null;
-  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'data-tip': 'Account menu', 'aria-haspopup': 'menu', on: { click: () => {
+  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'data-tip': 'Account menu', 'data-tip-pos': 'top', 'aria-haspopup': 'menu', on: { click: () => {
     // second press closes the menu (it used to close and re-open at once)
     if (menuHandle && menuHandle.isOpen()) { menuHandle.close(); menuHandle = null; return; }
     menuHandle = openMenu(more, [
@@ -152,7 +153,7 @@ export function mountShell({ router }) {
       const guest = s.mode === 'guest';
       const name = guest ? 'Guest' : s.user ? s.user.name : '';
       app.dataset.mode = s.mode; document.documentElement.dataset.mode = s.mode;
-      pfAvatar.replaceChildren(avatar(name, false, s.user ? s.user.photo : ''));
+      pfAvatar.replaceChildren(avatar(name, false, s.user ? s.user.photo : '', s.mode === 'account'));
       pfName.textContent = name;
       pfMail.textContent = guest ? 'This device only' : s.user ? maskEmail(s.user.email) : '';
     }

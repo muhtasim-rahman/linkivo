@@ -2,7 +2,9 @@
 .stub { display: grid; align-content: start; }
 .menu-list { display: grid; gap: var(--s3); }
 .menu-hero { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); color: inherit; }
-.menu-hero:hover { text-decoration: none; background: var(--surface-2); }
+.menu-hero-main { display: flex; align-items: center; gap: var(--s4); flex: 1; min-width: 0; color: inherit; } .menu-hero-main:hover { text-decoration: none; }
+.menu-hero-end { display: inline-flex; align-items: center; flex: none; color: var(--sub); }
+.menu-hero:has(.menu-hero-main:hover) { background: var(--surface-2); }
 .menu-hero .pf-name { font: 650 var(--fs-md) / 1.2 var(--font-brand); }
 .about { display: flex; align-items: center; gap: var(--s4); padding: var(--s4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-group); }
 .about img { width: 44px; }
@@ -72,8 +74,8 @@
 @media (max-width: 899px) { .swatches { gap: 4px; } }
 
 /* ---- v2.3.1: profile card with the switch icon, and the Switch account popup ---- */
-.menu-hero-row { display: flex; align-items: stretch; gap: var(--s2); } .menu-hero-row .menu-hero { flex: 1; min-width: 0; }
-.menu-hero-row .swa-btn { align-self: center; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-group); min-width: 48px; min-height: 48px; }
+/* v2.3.2: the switch button lives inside the profile card, on the right */
+.menu-hero .swa-btn { border-radius: 50%; min-width: 44px; min-height: 44px; color: var(--sub); } .menu-hero .swa-btn:hover { background: var(--surface-2); color: var(--text); }
 .swa { display: grid; gap: var(--s3); }
 .swa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .swa-row { display: flex; align-items: center; gap: var(--s1); border-radius: 12px; transition: background var(--t-micro) var(--ease); } .swa-row:hover { background: var(--surface-2); } .swa-row.is-cur { background: var(--accent-soft); }
@@ -83,3 +85,11 @@
 .swa-add { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 6px var(--s3); border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--text); font-weight: 560; transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease); } .swa-add:hover { background: var(--surface-2); border-color: var(--accent); }
 .swa-add-ic { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--accent-text); }
 .swa-empty { padding: var(--s4); text-align: center; color: var(--sub); font-size: var(--fs-sm); }
+
+/* ---- v2.3.2: admin badge. <html data-admin> is set by core/admin.js for accounts listed in `admins`. ---- */
+.avatar { position: relative; overflow: visible; }
+.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 18px; height: 18px; overflow: visible; border-radius: 50%; place-items: center; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
+.avatar.is-lg .avatar-admin { width: 22px; height: 22px; }
+html[data-admin='true'] .avatar .avatar-admin { display: grid; }
+.admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
+html[data-admin='true'] .admin-chip { display: inline-block; }

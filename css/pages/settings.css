@@ -18,7 +18,10 @@
 .set-nav.fade-x { -webkit-mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); mask-image: linear-gradient(to right, transparent, #000 calc(var(--fl) * 30px), #000 calc(100% - var(--fr) * 30px), transparent); }
 .set-nav-item { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 var(--s3); border-radius: 19px; border: 1px solid var(--line); background: var(--surface); color: var(--sub); font-weight: 560; font-size: var(--fs-sm); white-space: nowrap; transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
 .set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-@media (min-width: 900px) {
+/* v2.3.2 (owner: the page overflowed when the sidebar was open): the two-column layout depends on the WIDTH OF THE PAGE AREA (a container), not of the window, so an open
+   sidebar can no longer squeeze the columns. Below 760px of page width the chip bar on top is used. */
+.set-cq { container: set / inline-size; }
+@container set (min-width: 760px) {
   .settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: var(--s8); align-items: start; --set-bar-h: 0px; }
   .set-body { margin-top: 0; }
   .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
@@ -90,7 +93,7 @@
 
 /* ---- v2.2.2: top cards (wide screens only), Account section, devices, app details ---- */
 .set-top { display: none; }
-@media (min-width: 900px) { .set-top { display: grid; gap: var(--s3); margin-bottom: var(--s5); } }
+@container set (min-width: 760px) { .set-top { display: grid; gap: var(--s3); margin-bottom: var(--s5); } }
 .acc-head { gap: var(--s3); } .acc-head .row-end { gap: var(--s2); } .acc-head .avatar { flex: none; }
 .acc-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--success, #16a34a); font-weight: 600; font-size: var(--fs-sm); }
 .acc-methods { display: inline-flex; gap: var(--s2); }
@@ -170,3 +173,10 @@
 .syp-l { list-style: none; margin: 0; padding: 0; display: grid; }
 .syp-i { display: flex; align-items: center; gap: var(--s3); min-height: 40px; padding: 0 var(--s2); border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); } .syp-i:hover { background: var(--surface-2); }
 .syp-i input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+
+/* ---- v2.3.2: live suffix after a label, with the info button after the bracket ---- */
+.row-label.has-suffix { display: block; } .row-suffix { color: var(--sub); font-weight: 500; font-variant-numeric: tabular-nums; }
+.row-i { display: inline-grid; vertical-align: middle; min-width: 28px; min-height: 28px; margin-left: 2px; color: var(--sub); } .row-i:hover { color: var(--text); }
+.row-info { display: block; margin-top: 4px; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--sub); max-width: 62ch; }
+
+.set-top > *, .set-body > *, .set-sec, .group, .row { min-width: 0; }

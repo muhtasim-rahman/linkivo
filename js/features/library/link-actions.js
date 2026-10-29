@@ -2,7 +2,7 @@
  * Linkivo — js/features/library/link-actions.js  (v2.2.0)
  * Purpose: every action on one link or on a selection of links, with Undo. The folder page, the link menu and the bulk bar all call these.
  *          Points follow the owner rules in engine/points.js (v2.3.1: like 50, 30, 20, then +10 each time; dislike -20; favourite +-100; read later +-200).
- *          v2.3.1: toasts of one link show the new points; "Add to bookmarks" in the menu.
+ *          v2.3.1: toasts of one link show the new points.
  * API: linkMenuItems({ engine, link }) -> menu items       bulk = { ... }  each (engine, ids) -> Promise
  *      openLink(link)  copyText(text)  patchWithUndo(engine, ids, patchOf, message)  normalizeTags(text)
  */
@@ -147,7 +147,6 @@ export function linkMenuItems({ engine, link: l }) {
     { label: 'Edit link', icon: 'edit', onSelect: () => bulk.editLink(engine, ids) },
     { label: l.tags ? 'Edit tags' : 'Add tags', icon: 'tag', onSelect: () => bulk.editTags(engine, ids) },
     { label: 'Copy URL', icon: 'copy', onSelect: () => copyText(l.url, 'Link copied.') },
-    { label: 'Add to bookmarks', icon: 'star', onSelect: () => import('./bookmark-action.js').then((m) => m.addToBookmarks(l)) },   // v2.3.1: the browser's own bookmarks (star icon; the heart is for favourites)
     { separator: true },
     { label: l.pn ? 'Unpin' : 'Pin to top', icon: 'pin', onSelect: () => bulk.pin(engine, ids) },
     { label: l.fv ? 'Remove from favourites' : 'Add to favourites', icon: 'heart', onSelect: () => bulk.favourite(engine, ids) },

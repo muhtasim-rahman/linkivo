@@ -87,7 +87,7 @@
 
 /* collapsed: same rows, labels gone (they fade first, then the column clips them) */
 #app[data-collapsed='true'] .sb-word, #app[data-collapsed='true'] .sb-toggle, #app[data-collapsed='true'] .nav-label, #app[data-collapsed='true'] .theme-row .switch,
-#app[data-collapsed='true'] .pf-text, #app[data-collapsed='true'] .pf-more { opacity: 0; pointer-events: none; }
+#app[data-collapsed='true'] .sidebar .pf-text, #app[data-collapsed='true'] .sidebar .pf-more { opacity: 0; pointer-events: none; }
 #app[data-collapsed='true'] .sb-expandbtn { display: grid; }
 #app[data-collapsed='true'] .sb-brand { pointer-events: none; }
 #app[data-collapsed='true'] .pf-badge { border-color: transparent; }

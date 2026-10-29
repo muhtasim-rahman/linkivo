@@ -1,0 +1,22 @@
+feat(v2.3.2): fixes on v2.3.1 (sidebar menu, responsive, preview, Microlink, sync, toasts, admin badge)
+
+- Fix: sidebar profile menu did not open (missing getSession import); collapsed sidebar hid name and email in the Menu and Profile cards
+- Admin badge on the profile card, profile page and sidebar avatar for accounts in the admins list
+- Switch account button moved inside the profile card (replaces the arrow); Reset password wording; the login page fills the email or starts Google sign-in
+- Add to bookmarks removed
+- Search: field always focused on PC, only on the first visit after a reload on phones
+- Toasts: repeat count in brackets, close button, swipe to close, toast time setting, lifted above the action bar on the wide Preview
+- Folder page title: size by length, at most 2 lines with an ellipsis, more room on phones
+- Microlink: real counter from the response headers (free window is 5 without a key), reset time, live label "Use Microlink first (Left: n/5)" with an info button, toggles for Microlink and thum.io in Settings and in the Preview menu; the allowance row is gone
+- Preview: fixed card height with inner scrolling, icons-only action bar (Read later and Refresh data from 600px), Microlink starts by itself once per link, Data Fetching strip, attempt log in Details, live points, related links ranked by tags, title, description, site with variety
+- Settings sync choice is synced across devices (sync.c.<id>); Import, export and data section after Account
+- Responsive: container queries for Settings and the install card, overflow guards, Preview list from 1100px
+- Rules: linkMeta field ml
+
+Removed files:
+- js/features/library/bookmark-action.js
+
+Owner actions:
+- firebase deploy -m "v2.3.2"   (hosting and database rules)
+- Admins: firebase database:set /admins admins.json
+- Worker: no change

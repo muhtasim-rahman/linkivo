@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.3.1';
+const VERSION = '2.3.2';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -151,7 +151,6 @@ const PRECACHE = [
   '/js/features/import/pdf-text.js',
   '/js/features/import/restore-popup.js',
   '/js/features/import/zip-reader.js',
-  '/js/features/library/bookmark-action.js',
   '/js/features/library/folder-actions.js',
   '/js/features/library/folder-page.js',
   '/js/features/library/folder-style.js',

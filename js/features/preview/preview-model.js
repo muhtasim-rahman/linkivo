@@ -89,7 +89,7 @@ export function parseLog(text) {
 }
 
 /** Does opening the preview need a metadata fetch? Only when the link has never been looked up (no `checkedAt`). Asked ONCE: a fetch always writes checkedAt. */
-export const needsFetch = (link, meta) => !!link && !(meta && meta.checkedAt);
+export const needsFetch = (link, meta) => !!link && !(meta && meta.checkedAt);   // v2.3.2: preview-meta also asks Microlink once for links it never answered (wantsMicrolink)
 
 /** Everything known about the link EXCEPT image and video (FEATURES section 5), as rows for the Details tab. Empty values are left out. */
 export function detailsRows(link, meta, { folder = '', now = Date.now() } = {}) {
@@ -106,22 +106,39 @@ export function detailsRows(link, meta, { folder = '', now = Date.now() } = {}) 
 }
 
 /**
- * v2.3.1: the links shown beside a preview on wide screens ("Related links", 20). Same folder counts most, then the same site, then shared tags;
- * ties go to pinned and newer links. The link itself, deleted and blocked-from-nothing links are left out (blocked links still list: blocking only affects Random).
+ * v2.3.2 (owner): the links shown beside a preview on wide screens ("Related links", 20), from ALL links, with variety. Ranking, strongest first:
+ * shared tags, then words of the title, then words of the description, then the same site (weakest on purpose), a small bonus for the same folder.
+ * To keep variety, a first round takes the best links but at most 2 per site; when fewer than the limit are found, the rest is filled with the best of
+ * the remaining links (new sites first, pinned and newer first). The link itself and deleted links are never listed.
  */
+const STOP = new Set('the and for with from that this you your are was were has have not but all can will how what why who when into about more than then them they their its it\'s of to in on at by an as is be or a i we'.split(' '));
+const words = (t) => new Set(String(t || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3 && !STOP.has(w)));
+const tagSet = (t) => new Set(String(t || '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean));
+const overlap = (a, b) => { let n = 0; for (const x of a) if (b.has(x)) n++; return n; };
 export function relatedLinks(all, link, limit = 20) {
   if (!link) return [];
-  const mine = new Set((link.tags || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean));
-  const out = [];
+  const tg = tagSet(link.tags), tw = words(link.title), dw = words(link.desc);
+  const rows = [];
   for (const x of all) {
     if (!x || x.id === link.id || x.del) continue;
-    let score = 0;
-    if (x.fid === link.fid) score += 30;
-    if (x.host && x.host === link.host) score += 20;
-    for (const t of (x.tags || '').toLowerCase().split(',')) if (t && mine.has(t.trim())) score += 12;
-    if (!score) continue;
-    out.push({ link: x, score: score + (x.pn ? 3 : 0) });
+    const score = Math.min(3, overlap(tg, tagSet(x.tags))) * 40 + Math.min(5, overlap(tw, words(x.title))) * 10 + Math.min(8, overlap(dw, words(x.desc))) * 3
+      + (x.host && x.host === link.host ? 6 : 0) + (x.fid === link.fid ? 4 : 0);
+    rows.push({ link: x, score });
   }
-  out.sort((a, b) => b.score - a.score || (b.link.ts || 0) - (a.link.ts || 0));
-  return out.slice(0, limit).map((r) => r.link);
+  const byRank = (a, b) => b.score - a.score || ((b.link.pn ? 1 : 0) - (a.link.pn ? 1 : 0)) || (b.link.ts || 0) - (a.link.ts || 0);
+  rows.sort(byRank);
+  const out = [], seen = new Set(), perHost = new Map();
+  for (const r of rows) {                                   // round 1: related links, at most 2 per site
+    if (out.length >= limit) break; if (r.score <= 0) break;
+    const h = r.link.host || ''; if ((perHost.get(h) || 0) >= 2) continue;
+    out.push(r.link); seen.add(r.link.id); perHost.set(h, (perHost.get(h) || 0) + 1);
+  }
+  for (const r of rows) {                                   // round 2: strongest remaining related links of any site
+    if (out.length >= limit) break; if (r.score <= 0 || seen.has(r.link.id)) continue; out.push(r.link); seen.add(r.link.id); perHost.set(r.link.host || '', (perHost.get(r.link.host || '') || 0) + 1);
+  }
+  for (const r of rows) {                                   // round 3: fill up with other links, sites not shown yet first
+    if (out.length >= limit) break; if (seen.has(r.link.id) || perHost.has(r.link.host || '')) continue; out.push(r.link); seen.add(r.link.id); perHost.set(r.link.host || '', 1);
+  }
+  for (const r of rows) { if (out.length >= limit) break; if (!seen.has(r.link.id)) { out.push(r.link); seen.add(r.link.id); } }
+  return out;
 }

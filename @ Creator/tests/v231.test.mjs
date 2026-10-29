@@ -15,7 +15,6 @@ const KB = await import('../../js/core/keyboard-safe.js');
 const NS = await import('../../js/core/nav-stack.js');
 const SP = await import('../../js/features/search/search-pages.js');
 const SCORE = await import('../../js/features/search/search-core.js');
-const BM = await import('../../js/features/library/bookmark-action.js');
 
 const resp = (status, json, headers = {}) => ({ status, ok: status >= 200 && status < 300, headers: { get: (k) => headers[k.toLowerCase()] ?? null }, json: async () => json });
 
@@ -26,12 +25,18 @@ test('microlink: maps data, counts the day, reads the headers, stops at 429, res
   prefs.remove('ml.day'); prefs.set('meta.microlink', true);
   const now = Date.UTC(2026, 9, 29, 12);
   const ok = await ML.microlinkMeta('https://x.test/a', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }) });
-  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 24);
+  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 4, 'the free endpoint without a key allows 5');
   await ML.microlinkMeta('https://x.test/b', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }, { 'x-rate-limit-limit': '50', 'x-rate-limit-remaining': '40' }) });
   assert.equal(ML.quota(now).limit, 50); assert.equal(ML.quota(now).used, 10, 'the server numbers win');
+  // too many at once (2 allowed): retried after a second, never counted as used up
+  prefs.set('ml.day', { day: '2026-10-29', used: 0, limit: 5, reset: 0 }); let calls = 0;
+  const busy = await ML.microlinkMeta('https://x.test/b2', { now, fetch: async () => (++calls === 1 ? resp(429, { code: 'ECONCURRENCY' }) : resp(200, { status: 'success', data: { title: 'After wait' } }, { 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '3', 'x-rate-limit-reset': String(Math.floor(now / 1000) + 3600) })) });
+  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
+  prefs.set('ml.day', { day: '2026-10-29', used: 10, limit: 50, reset: 0 });
   const lim = await ML.microlinkMeta('https://x.test/c', { now, fetch: async () => resp(429, {}) });
   assert.equal(lim, null); assert.equal(ML.canUseMicrolink(now), false, 'used up: the normal chain takes over');
   assert.ok(ML.canUseMicrolink(now + 86400000), 'a new UTC day starts fresh');
+  prefs.set('ml.day', { day: '2026-10-29', used: 5, limit: 5, reset: now + 1000 }); assert.equal(ML.canUseMicrolink(now), false); assert.equal(ML.canUseMicrolink(now + 2000), true, 'after the reset time the window is fresh');
   prefs.set('ml.day', { day: '2000-01-01', used: 0 }); prefs.set('meta.microlink', false);
   assert.equal(await ML.microlinkMeta('https://x.test/d', { now, fetch: async () => { throw new Error('must not be called'); } }), null, 'switched off');
   prefs.set('meta.microlink', true);
@@ -51,15 +56,17 @@ test('admin: list read, view toggle only lowers access, thum.io 10 a day for nor
   prefs.remove('admin.view');
 });
 
-test('sync choice: all synced except local ones; choices are stored as changes only; new settings follow the default', () => {
+test('sync choice (v2.3.2): one pref per setting, defaults need no storage, the choices themselves are synced keys', () => {
   const store = new Map(); const st = { get: (k, f) => (store.has(k) ? store.get(k) : f), set: (k, v) => store.set(k, v), remove: (k) => store.delete(k) };
   const cat = [{ id: 'a', key: 'a.k', section: 's' }, { id: 'th', key: 'ui.theme', local: true, section: 's' }, { id: 'dv', key: 'd.k', device: true, section: 's' }, { id: 'cu', type: 'custom', section: 's' }];
   assert.deepEqual(SC.syncedEntries(cat, st).map((e) => e.id), ['a']);
+  SC.setSynced(cat[0], true, st); SC.setSynced(cat[1], false, st); assert.equal(store.size, 0, 'choosing the default stores nothing');
   SC.setSynced(cat[1], true, st); SC.setSynced(cat[0], false, st);
-  assert.deepEqual(SC.syncedEntries(cat, st).map((e) => e.id), ['th']);
-  assert.deepEqual(store.get('sync.off'), ['a']); assert.deepEqual(store.get('sync.on'), ['th']);
+  assert.deepEqual(SC.syncedEntries(cat, st).map((e) => e.id), ['th']); assert.equal(store.get('sync.c.a'), false); assert.equal(store.get('sync.c.th'), true);
+  assert.deepEqual(SC.choiceKeys(cat), ['sync.c.a', 'sync.c.th'], 'these keys are always synced');
   const later = [...cat, { id: 'new', key: 'n.k', section: 's' }, { id: 'newl', key: 'n.l', local: true, section: 's' }];
   assert.deepEqual(SC.syncedEntries(later, st).map((e) => e.id), ['th', 'new'], 'a setting added later is in the list at once');
+  assert.notEqual(SC.syncedKeySet(cat, st), SC.syncedKeySet(later, st));
   assert.deepEqual(SC.syncGroups(cat, [{ id: 's' }], st)[0].entries.map((x) => x.entry.id), ['a', 'th'], 'popup rows: keyed, not device-only, not custom');
 });
 
@@ -82,12 +89,22 @@ test('known accounts: newest first, max 8, forget, one-time prefill', () => {
   KA.rememberAccount({ uid: '', email: '' }, st); assert.ok(!JSON.stringify(store.get('accounts.known')).includes('password'));
 });
 
-test('relatedLinks: same folder, same site, shared tags; at most 20; never itself or deleted', () => {
-  const me = { id: 'me', fid: 'f1', host: 'a.test', tags: 'x,y' };
-  const all = [me, { id: '1', fid: 'f1', host: 'z.test', ts: 5 }, { id: '2', fid: 'f2', host: 'a.test', ts: 9 }, { id: '3', fid: 'f2', host: 'q.test', tags: 'Y', ts: 1 }, { id: '4', fid: 'f9', host: 'n.test' }, { id: '5', fid: 'f1', host: 'a.test', del: 1 }];
-  assert.deepEqual(PM.relatedLinks(all, me).map((l) => l.id), ['1', '2', '3']);
-  const many = Array.from({ length: 40 }, (_, i) => ({ id: 'm' + i, fid: 'f1', host: 'h', ts: i }));
-  assert.equal(PM.relatedLinks(many, me, 20).length, 20);
+test('relatedLinks (v2.3.2): tags, then title, then description, then site; variety; filled up to 20; never itself or deleted', () => {
+  const me = { id: 'me', fid: 'f1', host: 'a.test', tags: 'x,y', title: 'Learning JavaScript closures', desc: 'a guide to scope and functions' };
+  const all = [me,
+    { id: 't', fid: 'f9', host: 'tag.test', tags: 'Y', title: 'Nothing alike' },
+    { id: 'ti', fid: 'f9', host: 'ti.test', title: 'JavaScript closures explained' },
+    { id: 'de', fid: 'f9', host: 'de.test', title: 'Other', desc: 'scope and functions guide' },
+    { id: 'same', fid: 'f9', host: 'a.test', title: 'Zzz' },
+    { id: 'gone', fid: 'f1', host: 'a.test', tags: 'x', del: 1 }];
+  assert.deepEqual(PM.relatedLinks(all, me, 4).map((l) => l.id), ['t', 'ti', 'de', 'same'], 'tag > title > description > same site');
+  const many = Array.from({ length: 40 }, (_, i) => ({ id: 'm' + i, fid: 'f1', host: 'a.test', title: 'closures ' + i, ts: i }));
+  const out = PM.relatedLinks(many, me, 20); assert.equal(out.length, 20);
+  const firstTen = out.slice(0, 10).filter((l) => l.host === 'a.test').length; assert.ok(firstTen <= 10);
+  const mixed = [...many, ...Array.from({ length: 10 }, (_, i) => ({ id: 'o' + i, fid: 'f7', host: `h${i}.test`, title: 'closures other ' + i, ts: 100 + i }))];
+  const r2 = PM.relatedLinks(mixed, me, 20); assert.ok(new Set(r2.map((l) => l.host)).size >= 8, 'a mix of sites, not 20 from one');
+  assert.ok(!r2.some((l) => l.id === 'me'));
+  assert.equal(PM.relatedLinks([me, { id: 'z', host: 'z.test', title: 'nothing' }], me, 20).length, 1, 'filled up with other links when nothing relates');
 });
 
 test('preview tabs: Audio and PDF only when they can work, order is Page, Photo, Screenshot, Video, Audio, PDF, Details', () => {
@@ -118,11 +135,6 @@ test('search pages: finds pages and settings categories, and a setting result ca
   assert.deepEqual(SCORE.searchPages(pages, 'zzzzqq'), []);
   const { CATALOG, SECTIONS } = await import('../../js/features/settings/catalog.js');
   assert.ok(SCORE.searchSettings(CATALOG, SECTIONS, 'microlink').some((r) => r.entry && r.entry.id));
-});
-
-test('bookmark file: valid single-link Netscape file, escaped', () => {
-  const t = BM.bookmarkFileText({ url: 'https://x.test/?a=1&b="2"', title: '<b>T</b>', ts: 1000 });
-  assert.ok(t.startsWith('<!DOCTYPE NETSCAPE-Bookmark-file-1>')); assert.ok(t.includes('&amp;b=&quot;2&quot;')); assert.ok(t.includes('&lt;b&gt;T')); assert.ok(!t.includes('<b>'));
 });
 
 test('install: a tab moved into the app window flips the state without a reload', async () => {

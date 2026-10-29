@@ -62,6 +62,7 @@ test('detailsRows: leaves out image and video and every empty value', () => {
 });
 
 test('ensureMeta: asks once, writes checkedAt, keeps the user title, stores nf; a failed network writes nothing', async () => {
+  prefs.set('meta.microlink', false);   // v2.3.2: with Microlink on, a link it never answered for is asked once more (own test below)
   const e = await mkEngine(); const { ids } = await seed(e); let calls = 0;
   const fetch = async (urls) => { calls++; return new Map(urls.map((u) => [u, { url: u, ok: true, title: 'Fetched title', desc: 'Short', image: 'https://i.test/p.jpg', frameable: false, log: [{ engine: 'direct', ok: true, ms: 40 }] }])); };
   const a = await ensureMeta(e, ids[0], { fetch }); assert.equal(a.ok, true);
@@ -86,7 +87,7 @@ test('Preview page: opens from the cache, shows only the working tabs, remembers
   assert.equal(ROUTES.find((r) => r.id === 'link').nobar, true);
   $('.pv-tab[data-tab="details"]').click(); await tick(5); assert.ok($('.pv-kv') && $('.pv-log li.is-ok'));
   assert.equal(prefs.get('preview.tab'), 'details', 'tab memory');
-  $('.pv-act[aria-label="Favourite"]').click(); await tick(20); assert.equal(e.getLink(ids[0]).fv, true);
+  $('.pv-act[aria-label="Add to favourites"]').click(); await tick(20); assert.equal(e.getLink(ids[0]).fv, true);
   assert.ok($('.pv-act.is-on'), 'bar follows the change');
   $('.pv-head .btn-icon[aria-label="Fullscreen"]').click(); assert.ok($('.pv-stage').classList.contains('is-full'));
   await router.navigate('/link/' + ids[0]); await tick(20);
@@ -109,4 +110,23 @@ test('link click: opens the Preview by default; Ctrl-click, middle click or the 
   assert.equal(openInPreview(ev(), { id: 'L1' }, router), true); assert.deepEqual(nav, ['/link/L1']);
   assert.equal(openInPreview(ev({ ctrlKey: true }), { id: 'L1' }, router), false); assert.equal(openInPreview(ev({ button: 1 }), { id: 'L1' }, router), false);
   prefs.set('lib.openIn', 'tab'); assert.equal(openInPreview(ev(), { id: 'L1' }, router), false); prefs.remove('lib.openIn');
+});
+
+test('ensureMeta (v2.3.2): Microlink is asked by itself once for a link it never answered, the old details stay, and the attempt is logged', async () => {
+  prefs.set('meta.microlink', true); prefs.remove('ml.day');
+  const e = await mkEngine(); const { ids } = await seed(e);
+  const { fetchStatus } = await import('../../js/features/preview/preview-meta.js');
+  const seen = []; fetchStatus.subscribe((v) => seen.push(v.engine));
+  await ensureMeta(e, ids[0], { fetch: async (urls) => new Map(urls.map((u) => [u, { url: u, ok: true, title: 'First', log: [{ engine: 'direct', ok: true, ms: 5 }] }])) });
+  assert.ok((await e.getLinkMeta(ids[0])).checkedAt);
+  // looked up before, no Microlink answer: the second open asks only Microlink, via the default chain with a fake network
+  const realFetch = globalThis.fetch; let ml = 0;
+  globalThis.fetch = async (u) => { ml++; return { status: 200, ok: true, headers: { get: (k) => ({ 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '4' })[k.toLowerCase()] ?? null }, json: async () => ({ status: 'success', data: { title: 'ML title', image: { url: 'https://i.test/ml.png' }, video: { url: 'https://v.test/v.mp4' } } }) }; };
+  try {
+    const r = await ensureMeta(e, ids[0]); assert.equal(r.ok, true); assert.equal(ml, 1);
+    const meta = await e.getLinkMeta(ids[0]); assert.ok(meta.ml, 'Microlink answered, marked'); assert.equal(meta.video, 'https://v.test/v.mp4'); assert.match(meta.log, /direct/); assert.match(meta.log, /microlink/);
+    assert.equal((await ensureMeta(e, ids[0])).cached, true); assert.equal(ml, 1, 'never asked twice for the same link');
+  } finally { globalThis.fetch = realFetch; }
+  assert.ok(seen.includes('Microlink'), 'the page can say Data Fetching (Microlink)'); assert.equal(fetchStatus.get().lid, null, 'status cleared afterwards');
+  prefs.set('meta.microlink', false);
 });

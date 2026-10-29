@@ -35,6 +35,8 @@ import { folderMenuItems } from './folder-actions.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
 
+/** v2.3.2 (owner): the title's font size follows its length so a long name does not crowd the header; CSS keeps at most 2 lines with an ellipsis. */
+export const lenClass = (name) => { const n = [...String(name || '')].length; return n > 40 ? 'xs' : n > 25 ? 's' : n > 15 ? 'm' : 'l'; };
 const SORTS = { new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high' };
 const SCOPES = { all: 'All links', fv: 'Favourites', rl: 'Read later', pn: 'Pinned', bl: 'Blocked', dd: 'Dead links' };   // v2.3.0: dd = flagged by the link checker
 const text = (l) => `${l.title || ''} ${l.url} ${l.host || ''} ${l.desc || ''} ${l.tags || ''} ${l.kw || ''}`.toLowerCase();
@@ -83,7 +85,7 @@ export async function mount(container, ctx) {
     h('header', { class: 'fp-head' },
       h('button', { type: 'button', class: 'btn-icon fp-back', 'aria-label': 'Back to library', on: { click: () => router.navigate('/library') } }, icon('arrow-left', { size: 20 })),
       tile, h('div', { class: 'fp-titles' }, title, sub),
-      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), 'Add link'), refreshButton(() => refresh()), viewBtn, selBtn, moreBtn)),
+      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), viewBtn, selBtn, moreBtn)),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chipRow, info, body);
   const removeDock = mountDock(bar);
   const detachChips = attachScrollRow(chips);
@@ -91,7 +93,7 @@ export async function mount(container, ctx) {
   let vl = null;
   const paintHead = () => {
     const f = folder(); if (!f) return;
-    title.textContent = f.name; document.title = `${f.name} - Folder | Linkivo`;   // v2.2.2
+    title.textContent = f.name; title.dataset.len = lenClass(f.name); title.title = f.name; document.title = `${f.name} - Folder | Linkivo`;   // v2.2.2
     tile.replaceChildren(folderTile(f, 44)); page.style.setProperty('--fc', colorOf(f));
     sub.textContent = plural(sourceLinks().length, 'link');
     viewBtn.replaceChildren(icon(st.view === 'grid' ? 'list' : 'grid', { size: 20 })); viewBtn.setAttribute('aria-label', st.view === 'grid' ? 'Switch to list' : 'Switch to grid');

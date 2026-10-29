@@ -1,7 +1,7 @@
 /* Linkivo v2.1.0 - toasts: one line, bottom centre above the bar, never more than two */
 .toast-host { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-b, calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b) + 6px)) + 2px); transition: bottom var(--t-large) var(--ease); z-index: var(--z-toast); display: grid; gap: 8px; width: min(calc(100vw - 24px), 420px); pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: var(--s3); padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg); font-size: var(--fs-sm); box-shadow: var(--shadow-float); animation: lk-rise var(--t-std) var(--ease); }
-.toast.is-leaving { opacity: 0; transform: translateY(8px); transition: opacity 160ms, transform 160ms; }
+.toast.is-leaving { opacity: 0; translate: var(--out, 0 8px); transition: opacity 170ms, translate 170ms; }
 .toast-text { flex: 1; min-width: 0; }
 .toast-action { font-weight: 650; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; padding: 0 4px; }
 .toast.is-error { background: var(--danger); color: #fff; }
@@ -12,3 +12,10 @@
 /* v2.3.1: the new points value after a point action (diamond icon + number) */
 .toast-pts { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 2px 8px 2px 6px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 18%, transparent); font-weight: 650; font-variant-numeric: tabular-nums; }
 .toast.is-error .toast-pts { background: rgba(255,255,255,.2); }
+
+/* ---- v2.3.2: close button, swipe, repeat count, and a lift on the wide Preview page (its action bar is at the bottom of the card) ---- */
+.toast { touch-action: pan-y; user-select: none; } .toast.is-drag { transition: none; cursor: grabbing; }
+.toast-x { flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin-right: -6px; border-radius: 50%; opacity: .7; } .toast-x:hover { opacity: 1; background: color-mix(in srgb, var(--bg) 16%, transparent); }
+.toast.is-bump { animation: lk-bump 220ms var(--ease); } @keyframes lk-bump { 0% { scale: 1; } 40% { scale: 1.04; } 100% { scale: 1; } }
+@media (min-width: 900px) { html[data-pv] .toast-host { bottom: calc(var(--dock-b) + 84px); } }
+@media (prefers-reduced-motion: reduce) { .toast.is-bump { animation: none; } }

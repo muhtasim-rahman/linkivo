@@ -18,7 +18,8 @@ import { clearSearchHistory } from '../search/search-store.js';
 import { getSession } from '../../core/session.js';
 import { maskEmail } from '../../core/mask.js';
 
-export function avatar(name, large = false, photo = '') {
+/** `self: true` (the signed-in person's own avatar) adds the small admin shield, shown only while <html data-admin> is set (core/admin.js). */
+export function avatar(name, large = false, photo = '', self = false) {
   const initial = ([...String(name || '?').trim()][0] || '?').toUpperCase();
   const inner = h('span', { text: initial });
   if (photo) {
@@ -26,7 +27,7 @@ export function avatar(name, large = false, photo = '') {
     img.addEventListener('error', () => img.remove()); // a blocked photo falls back to the initial underneath
     inner.appendChild(img);
   }
-  return h('span', { class: ['avatar', large && 'is-lg'], 'aria-hidden': 'true' }, inner);
+  return h('span', { class: ['avatar', large && 'is-lg'], 'aria-hidden': 'true' }, inner, self && h('span', { class: 'avatar-admin' }, icon('shield', { size: large ? 14 : 11 })));
 }
 
 export function toggleTheme() { prefs.set(KEYS.theme, resolvedTheme() === 'dark' ? 'light' : 'dark'); }
@@ -46,14 +47,17 @@ export async function logOut(router, { guest = false } = {}) {
 
 /** The profile card: avatar, name, masked email, arrow. Opens the Profile page. Used first on the Menu page and first on the wide Settings page (owner, v2.3.0). */
 export function profileCard(router = null) {
-  const s = getSession();
-  const name = s.mode === 'guest' ? 'Guest' : s.user.name;
-  const sub = s.mode === 'guest' ? 'Stored only on this device' : maskEmail(s.user.email);
-  const card = h('a', { class: 'menu-hero', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : ''), h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: name }), h('span', { class: 'pf-mail', text: sub })), h('span', { class: 'row-end', style: { marginLeft: 'auto' } }, icon('chevron-right')));
-  // v2.3.1 (owner): a switch-account icon beside the badge (accounts only); the wrapper keeps the card itself a plain link
-  if (s.mode !== 'account') return card;
-  const row = h('div', { class: 'menu-hero-row' }, card); import('./switch-account.js').then((m) => row.appendChild(m.switchButton(router)));
-  return row;
+  const s = getSession(), account = s.mode === 'account';
+  const name = account ? s.user.name : 'Guest';
+  const sub = account ? maskEmail(s.user.email) : 'Stored only on this device';
+  // v2.3.2 (owner): the switch-account button sits INSIDE the card, on the right, where the arrow was (accounts); guests keep the arrow. The card is a div so a
+  // button can live in it; the avatar and the text are one link to the Profile page.
+  const main = h('a', { class: 'menu-hero-main', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : '', account),
+    h('div', { class: 'pf-text' }, h('span', { class: 'pf-name' }, h('span', { text: name }), h('span', { class: 'admin-chip', text: 'Admin' })), h('span', { class: 'pf-mail', text: sub })));
+  const end = h('span', { class: 'menu-hero-end' });
+  if (account) import('./switch-account.js').then((m) => end.appendChild(m.switchButton(router)));
+  else end.appendChild(icon('chevron-right', { size: 18 }));
+  return h('div', { class: 'menu-hero' }, main, end);
 }
 
 /** The red Log out button (guests: Leave guest mode). One function so the Menu page and the bottom of Settings can never differ. */

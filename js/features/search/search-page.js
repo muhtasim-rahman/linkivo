@@ -21,6 +21,7 @@ import { staggerIn } from '../../ui/motion.js';
 import { createIndex, searchFolders, searchSettings, searchPages, tokens, highlightParts, readHistory, pushHistory, removeHistory } from './search-core.js';
 import { clearSearchHistory, historyStore } from './search-store.js';
 
+let phoneFocused = false;   // lives until the page is reloaded (a module variable on purpose)
 const SHOW = { pages: 3, settings: 3, folders: 4, links: 8 }, STEP = 10, RECENT = 5;
 let lastQuery = '';   // kept while the app stays open, so Back from a result returns to the same search
 const index = createIndex();
@@ -99,6 +100,9 @@ export async function mount(container, ctx) {
   const off = registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { e.preventDefault(); input.focus(); input.select(); } }, { keys: '/', desc: 'Focus the search field', run: (e) => { e.preventDefault(); input.focus(); } }]);
   const offEngine = engine ? engine.subscribe((e) => { if (e.type === 'change' && st.q.trim()) paint(); }) : () => {};   // a data change repaints without the rise animation
   paint();
-  setTimeout(() => input.focus({ preventScroll: true }), 60);
+  // v2.3.2 (owner): on a PC the field is active every time the page opens; on a phone (touch) only the FIRST visit after a (re)load focuses it and opens the
+  // keyboard, later visits show the page quietly so the keyboard does not jump up each time.
+  const fine = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (fine || !phoneFocused) { phoneFocused = true; setTimeout(() => input.focus({ preventScroll: true }), 60); }
   return () => { clearTimeout(timer); off(); offEngine(); };
 }

@@ -36,7 +36,10 @@
 .pv-bar { display: grid; grid-template-columns: repeat(6, 1fr); flex: none; padding: 4px var(--s2) calc(var(--safe-b) + 4px); border-top: 1px solid var(--line); background: var(--surface); }
 .pv-act { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 52px; border-radius: 12px; color: var(--sub); }
 .pv-act:hover { background: var(--surface-2); } .pv-act.is-on { color: var(--warning); } .pv-act.is-on svg { fill: currentColor; fill-opacity: 0.2; }
-.pv-act-l { font-size: 11px; line-height: 1; }
+.pv-act-l { font-size: 11px; line-height: 1; }   /* ! unused since v2.3.2: the bar is icons only */
+.pv-act-wide { display: none; }
+.pv-fetch { display: flex; align-items: center; gap: var(--s2); padding: 6px var(--s3); font-size: var(--fs-xs); font-weight: 600; color: var(--accent-text); background: var(--accent-soft); border-bottom: 1px solid var(--line); flex: none; }
+@media (min-width: 600px) { .pv-bar { grid-template-columns: repeat(8, 1fr); } .pv-act-wide { display: grid; } .pv-act { min-height: 48px; } }
 .pv-side { display: none; }
 .pv-tab-open { margin-left: auto; border-color: var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 700; text-decoration: none; }
 .pv-tab-open:hover { filter: brightness(1.06); text-decoration: none; }
@@ -46,10 +49,12 @@
 /* ---- wide screens (v2.3.1, owner): centred, two columns. Left: the preview, never shorter than 520px even on a short window. Right: 20 related links. ---- */
 @media (min-width: 900px) {
   .pv { padding: var(--s4) var(--s5); height: auto; min-height: 100%; }
-  .pv-wrap { width: min(100%, 1320px); margin: 0 auto; min-height: max(640px, calc(100dvh - var(--s4) * 2 - 8px)); border: 1px solid var(--line); border-radius: var(--r-sheet); overflow: hidden; box-shadow: var(--shadow-float); }
-  .pv-head { padding-top: 8px; } .pv-bar { padding-bottom: 6px; } .pv-act { grid-auto-flow: column; gap: 8px; } .pv-act-l { font-size: var(--fs-sm); }
-  .pv-main { grid-template-columns: minmax(0, 1fr) 340px; }
-  .pv-stage { min-height: 520px; }
+  /* v2.3.2 (owner): a fixed, sensible height (between 560px and 880px, following the window); the preview and the related list each scroll INSIDE it, so a tall
+     list or a long Details tab never stretches the card */
+  .pv-wrap { width: min(100%, 1320px); margin: 0 auto; flex: none; height: clamp(560px, calc(100dvh - var(--s4) * 2 - 8px), 880px); border: 1px solid var(--line); border-radius: var(--r-sheet); overflow: hidden; box-shadow: var(--shadow-float); }
+  .pv-head { padding-top: 8px; } .pv-bar { padding-bottom: 6px; }
+  .pv-main { grid-template-columns: minmax(0, 1fr) 340px; grid-template-rows: minmax(0, 1fr); }
+  .pv-col, .pv-side { min-height: 0; }
   .pv-stage.is-full, .pv-stage:fullscreen { padding-top: 0; }
   .pv-side { display: block; overflow-y: auto; padding: var(--s3); border-left: 1px solid var(--line); background: var(--surface); }
   .pv-side-h { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); padding: 0 var(--s2); font: 650 var(--fs-md) / 1.3 var(--font-brand); }
@@ -64,3 +69,5 @@
 @media (max-width: 899px) { .pv-tab-open span { display: inline; } }
 @media (max-width: 380px) { .pv-act-l { display: none; } }
 @media (min-width: 900px) { .pv.no-side .pv-main { grid-template-columns: minmax(0, 1fr); } }
+/* v2.3.2: the related list needs room: with the sidebar open it only fits from 1100px of window width; below that (tablets) the preview takes the whole card */
+@media (min-width: 900px) and (max-width: 1099px) { .pv-main { grid-template-columns: minmax(0, 1fr); } .pv-side { display: none; } }

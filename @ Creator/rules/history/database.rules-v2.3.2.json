@@ -1,0 +1,665 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        "profile": {
+          ".read": "auth != null && auth.uid === $uid",
+          "name": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "createdAt": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "lastLogin": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "status": {
+            ".write": false,
+            ".validate": "newData.val() === 'active' || newData.val() === 'deleted'"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "settings": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          "$key": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+            ".validate": "$key.matches(/^[a-zA-Z0-9_-]{1,40}$/) && ((newData.isString() && newData.val().length <= 200) || newData.isNumber() || newData.isBoolean())"
+          }
+        },
+        "importLog": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+          "$iid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.hasChildren(['ty', 'ts'])",
+            "ty": {
+              ".validate": "newData.isString() && newData.val().length <= 10 && newData.val().length >= 1"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "st": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "total": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "done": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "failed": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "saved": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "skipped": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "invalid": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "fid": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "imp": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "devices": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+          "$did": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.hasChildren(['ts', 'seen'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "br": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "os": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "kind": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "ip": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "city": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "reg": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "cc": {
+              ".validate": "newData.isString() && newData.val().length <= 2"
+            },
+            "tz": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "via": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "seen": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "rv": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "out": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "by": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "lockState": {
+          ".read": "auth != null && auth.uid === $uid"
+        },
+        "vaultCount": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+        },
+        "meta": {
+          "purgeEpoch": {
+            ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)"
+          }
+        }
+      }
+    },
+    "folders": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+        ".indexOn": [
+          "up"
+        ],
+        "$fid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          ".validate": "newData.hasChildren(['name', 'ts', 'up'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length <= 80 && newData.val().length >= 1"
+          },
+          "color": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "icon": {
+            ".validate": "newData.isString() && newData.val().length <= 24"
+          },
+          "order": {
+            ".validate": "newData.isNumber() && newData.val() >= -1000000000 && newData.val() <= 1000000000"
+          },
+          "pinned": {
+            ".validate": "newData.val() === true"
+          },
+          "lc": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "up": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "del": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "links": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+        ".indexOn": [
+          "up"
+        ],
+        "$lid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          ".validate": "newData.hasChildren(['url', 'fid', 'ts', 'up'])",
+          "url": {
+            ".validate": "newData.isString() && newData.val().length <= 2048 && newData.val().length >= 1"
+          },
+          "host": {
+            ".validate": "newData.isString() && newData.val().length <= 253"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 300"
+          },
+          "desc": {
+            ".validate": "newData.isString() && newData.val().length <= 300"
+          },
+          "kw": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "fid": {
+            ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().length >= 1"
+          },
+          "pt": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "pb": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "oc": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+          },
+          "lo": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "ls": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3"
+          },
+          "ds": {
+            ".validate": "newData.val() === true"
+          },
+          "pw": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "pn": {
+            ".validate": "newData.val() === true"
+          },
+          "fv": {
+            ".validate": "newData.val() === true"
+          },
+          "bl": {
+            ".validate": "newData.val() === true"
+          },
+          "rl": {
+            ".validate": "newData.val() === true"
+          },
+          "dd": {
+            ".validate": "newData.val() === true"
+          },
+          "tEdit": {
+            ".validate": "newData.val() === true"
+          },
+          "tags": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "imp": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "up": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "del": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "linkMeta": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+        "$lid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          "image": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "video": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "audio": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "shot": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "long": {
+            ".validate": "newData.isString() && newData.val().length <= 2000"
+          },
+          "og": {
+            ".validate": "newData.isString() && newData.val().length <= 2000"
+          },
+          "log": {
+            ".validate": "newData.isString() && newData.val().length <= 3000"
+          },
+          "site": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "author": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "lang": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "pub": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "canon": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "icon": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "type": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "theme": {
+            ".validate": "newData.isString() && newData.val().length <= 9"
+          },
+          "frameable": {
+            ".validate": "newData.val() === true"
+          },
+          "nf": {
+            ".validate": "newData.val() === true"
+          },
+          "checkedAt": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "ml": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+        ".indexOn": [
+          "ts"
+        ],
+        "$hid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          ".validate": "newData.hasChildren(['lid', 'ts'])",
+          "lid": {
+            ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().length >= 1"
+          },
+          "url": {
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 300"
+          },
+          "host": {
+            ".validate": "newData.isString() && newData.val().length <= 253"
+          },
+          "fid": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "src": {
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "activity": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+        ".indexOn": [
+          "ts"
+        ],
+        "$aid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+          ".validate": "newData.hasChildren(['type', 'ts'])",
+          "type": {
+            ".validate": "newData.isString() && newData.val().length <= 24 && newData.val().length >= 1"
+          },
+          "info": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "vault": {
+      "$uid": {
+        "folders": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+          ".indexOn": [
+            "up"
+          ],
+          "$fid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+            ".validate": "newData.hasChildren(['name', 'ts', 'up'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 80 && newData.val().length >= 1"
+            },
+            "color": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "icon": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            },
+            "order": {
+              ".validate": "newData.isNumber() && newData.val() >= -1000000000 && newData.val() <= 1000000000"
+            },
+            "pinned": {
+              ".validate": "newData.val() === true"
+            },
+            "lc": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "up": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "del": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "links": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+          ".indexOn": [
+            "up"
+          ],
+          "$lid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+            ".validate": "newData.hasChildren(['url', 'fid', 'ts', 'up'])",
+            "url": {
+              ".validate": "newData.isString() && newData.val().length <= 2048 && newData.val().length >= 1"
+            },
+            "host": {
+              ".validate": "newData.isString() && newData.val().length <= 253"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "desc": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "kw": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "fid": {
+              ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().length >= 1"
+            },
+            "pt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+            },
+            "pb": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+            },
+            "oc": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+            },
+            "lo": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "ls": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3"
+            },
+            "ds": {
+              ".validate": "newData.val() === true"
+            },
+            "pw": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "pn": {
+              ".validate": "newData.val() === true"
+            },
+            "fv": {
+              ".validate": "newData.val() === true"
+            },
+            "bl": {
+              ".validate": "newData.val() === true"
+            },
+            "rl": {
+              ".validate": "newData.val() === true"
+            },
+            "dd": {
+              ".validate": "newData.val() === true"
+            },
+            "tEdit": {
+              ".validate": "newData.val() === true"
+            },
+            "tags": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "imp": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "up": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "del": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "linkMeta": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+          "$lid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+            "image": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "video": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "audio": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "shot": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "long": {
+              ".validate": "newData.isString() && newData.val().length <= 2000"
+            },
+            "og": {
+              ".validate": "newData.isString() && newData.val().length <= 2000"
+            },
+            "log": {
+              ".validate": "newData.isString() && newData.val().length <= 3000"
+            },
+            "site": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "author": {
+              ".validate": "newData.isString() && newData.val().length <= 120"
+            },
+            "lang": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "pub": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "canon": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "icon": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "type": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "theme": {
+              ".validate": "newData.isString() && newData.val().length <= 9"
+            },
+            "frameable": {
+              ".validate": "newData.val() === true"
+            },
+            "nf": {
+              ".validate": "newData.val() === true"
+            },
+            "checkedAt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "ml": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "history": {
+          ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+          ".indexOn": [
+            "ts"
+          ],
+          "$hid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now) && root.child('session').child($uid).child('vault').val() > now",
+            ".validate": "newData.hasChildren(['lid', 'ts'])",
+            "lid": {
+              ".validate": "newData.isString() && newData.val().length <= 40 && newData.val().length >= 1"
+            },
+            "url": {
+              ".validate": "newData.isString() && newData.val().length <= 2048"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "host": {
+              ".validate": "newData.isString() && newData.val().length <= 253"
+            },
+            "fid": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "src": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    },
+    "secure": {},
+    "session": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+    "jobs": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'"
+      }
+    },
+    "deletedAccounts": {
+      ".indexOn": [
+        "deleteAt"
+      ],
+      "$uid": {
+        "summary": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

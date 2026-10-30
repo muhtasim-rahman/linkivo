@@ -48,17 +48,18 @@ export function mountShell({ router }) {
   // ---- sidebar -------------------------------------------------------------------------------------------------------
   const setCollapsed = (v) => {
     app.dataset.collapsed = String(v); prefs.set('ui.sidebarCollapsed', v);
-    toggle.setAttribute('aria-expanded', String(!v));
-    mark.tabIndex = v ? 0 : -1; brand.tabIndex = v ? -1 : 0;
+    // v2.4.0 (owner): ONE toggle button stays in the same left slot in both states; logo, divider and name appear to its right when expanded
+    toggle.setAttribute('aria-expanded', String(!v)); toggle.setAttribute('aria-label', v ? 'Expand sidebar' : 'Collapse sidebar'); toggle.setAttribute('data-tip', v ? 'Expand sidebar' : 'Collapse sidebar');
+    brand.tabIndex = v ? -1 : 0;
     // tooltips on rows only while collapsed (expanded rows already show their name); data-tip-c holds the text meanwhile
     for (const el of sidebar.querySelectorAll('[data-tip-c]')) { if (v) el.setAttribute('data-tip', el.dataset.tipC); else el.removeAttribute('data-tip'); }
   };
-  // Collapsed: an invisible button covers the logo slot; on hover or keyboard focus the logo swaps for the expand icon (CSS).
-  // Expanded: logo and name are one link to the Library. The logo sits in the same 44px slot in both states, so it never moves.
-  const mark = h('button', { type: 'button', class: 'sb-expandbtn', 'aria-label': 'Expand sidebar', 'data-tip': 'Expand sidebar', on: { click: () => setCollapsed(false) } }, icon('panel', { size: 20 }));
+  // ! Unused since v2.4.0: the old invisible expand button over the logo slot (`.sb-expandbtn`); the toggle below now does both jobs.
+  // Expanded: [toggle] | [logo + name as one link to the Library]. Collapsed: only the toggle (the rest fades out and is clipped).
   const brand = h('a', { class: 'sb-brand', href: '/library', 'aria-label': 'Linkivo, open Library' },
     h('span', { class: 'sb-slot' }, h('span', { class: 'logo-mark', style: { '--w': '28px' } })), h('span', { class: 'wordmark sb-word' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
-  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(true) } }, icon('panel', { size: 18 }));
+  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(app.dataset.collapsed !== 'true') } }, icon('panel', { size: 20 }));
+  const divider = h('span', { class: 'sb-div', 'aria-hidden': 'true' });
 
   const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip-c': it.label },
     h('span', { class: 'nav-ic' }, icon(it.icon, { size: 20 })), h('span', { class: 'nav-label', text: it.label }));
@@ -85,7 +86,7 @@ export function mountShell({ router }) {
   const badge = h('div', { class: 'pf-badge' }, pfLink, more);
 
   sidebar.replaceChildren(
-    h('div', { class: 'sb-head' }, mark, brand, toggle),
+    h('div', { class: 'sb-head' }, toggle, divider, brand),
     h('nav', { class: 'sb-nav', 'aria-label': 'Main navigation' }, ...SIDE.map(navLink)),
     h('div', { class: 'sb-spacer' }), themeRow, badge);
 

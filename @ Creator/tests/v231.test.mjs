@@ -25,18 +25,18 @@ test('microlink: maps data, counts the day, reads the headers, stops at 429, res
   prefs.remove('ml.day'); prefs.set('meta.microlink', true);
   const now = Date.UTC(2026, 9, 29, 12);
   const ok = await ML.microlinkMeta('https://x.test/a', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }) });
-  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 4, 'the free endpoint without a key allows 5');
+  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 24, 'v2.4.0: the free plan allows 25 a day');
   await ML.microlinkMeta('https://x.test/b', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }, { 'x-rate-limit-limit': '50', 'x-rate-limit-remaining': '40' }) });
   assert.equal(ML.quota(now).limit, 50); assert.equal(ML.quota(now).used, 10, 'the server numbers win');
   // too many at once (2 allowed): retried after a second, never counted as used up
-  prefs.set('ml.day', { day: '2026-10-29', used: 0, limit: 5, reset: 0 }); let calls = 0;
+  prefs.set('ml.day', { day: '2026-10-29', used: 0, limit: 25, reset: 0 }); let calls = 0;
   const busy = await ML.microlinkMeta('https://x.test/b2', { now, fetch: async () => (++calls === 1 ? resp(429, { code: 'ECONCURRENCY' }) : resp(200, { status: 'success', data: { title: 'After wait' } }, { 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '3', 'x-rate-limit-reset': String(Math.floor(now / 1000) + 3600) })) });
-  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
+  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3, 'the server numbers win'); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
   prefs.set('ml.day', { day: '2026-10-29', used: 10, limit: 50, reset: 0 });
   const lim = await ML.microlinkMeta('https://x.test/c', { now, fetch: async () => resp(429, {}) });
-  assert.equal(lim, null); assert.equal(ML.canUseMicrolink(now), false, 'used up: the normal chain takes over');
-  assert.ok(ML.canUseMicrolink(now + 86400000), 'a new UTC day starts fresh');
-  prefs.set('ml.day', { day: '2026-10-29', used: 5, limit: 5, reset: now + 1000 }); assert.equal(ML.canUseMicrolink(now), false); assert.equal(ML.canUseMicrolink(now + 2000), true, 'after the reset time the window is fresh');
+  assert.equal(lim, null, 'a 429 gives nothing: the normal chain takes over');
+  assert.equal(ML.quota(now).left, 0); assert.equal(ML.canUseMicrolink(now), true, 'v2.4.0: the count is only a reminder, Microlink is still tried after the limit');
+  assert.ok(ML.canUseMicrolink(now + 86400000));
   prefs.set('ml.day', { day: '2000-01-01', used: 0 }); prefs.set('meta.microlink', false);
   assert.equal(await ML.microlinkMeta('https://x.test/d', { now, fetch: async () => { throw new Error('must not be called'); } }), null, 'switched off');
   prefs.set('meta.microlink', true);
@@ -51,9 +51,9 @@ test('admin: list read, view toggle only lowers access, thum.io 10 a day for nor
   assert.equal(AD.canUseThum(now), false); assert.equal(AD.shotQuota(now).left, 0);
   assert.equal(await AD.loadAdmin({ get: async (p) => (p === 'admins/u1' ? true : null) }, 'u1'), true);
   assert.equal(AD.isAdminView(), true); assert.equal(AD.shotQuota(now).limit, null); assert.ok(AD.canUseThum(now), 'admin: no limit');
-  prefs.set('admin.view', 'normal'); assert.equal(AD.isAdminView(), false); assert.equal(AD.canUseThum(now), false);
+  AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(prefs.get('admin.view', null), null, 'v2.4.0: the view is session only, nothing stored'); assert.equal(document.documentElement.dataset.admin, undefined, 'the badge hides too'); assert.equal(AD.canUseThum(now), false);
   assert.equal(await AD.loadAdmin({ get: async () => { throw new Error('denied'); } }, 'u2'), false); assert.equal(AD.isAdminAccount(), false);
-  prefs.remove('admin.view');
+  AD.setAdminView('admin');
 });
 
 test('sync choice (v2.3.2): one pref per setting, defaults need no storage, the choices themselves are synced keys', () => {

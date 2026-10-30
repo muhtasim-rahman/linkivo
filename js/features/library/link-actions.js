@@ -16,6 +16,8 @@ import { logActivity } from '../../core/activity.js';
 import * as P from '../../engine/points.js';
 import { openFolderPicker, openTextPrompt } from './pickers.js';
 import { safeHref } from './folder-style.js';
+import { record as recordHistory } from '../../core/history.js';
+import { getEngine } from '../../core/app-data.js';
 import { prefs } from '../../core/local-prefs.js';
 
 /** v2.3.0: a plain click on a link opens the Preview (setting "Open links in"); Ctrl, Cmd, Shift, a middle click or the setting "New tab" keep the normal browser link. Returns true when it handled the click. */
@@ -24,7 +26,7 @@ export function openInPreview(e, l, router) {
   if (prefs.get('lib.openIn', 'preview') !== 'preview') return false;
   e.preventDefault(); router.navigate(`/link/${encodeURIComponent(l.id)}`); return true;
 }
-export const openLink = (l) => { const href = safeHref(l.url); if (href !== '#') window.open(href, '_blank', 'noopener,noreferrer'); };
+export const openLink = (l) => { const href = safeHref(l.url); if (href !== '#') { window.open(href, '_blank', 'noopener,noreferrer'); recordHistory(getEngine(), l, 'click'); } };   // v2.4.0: opened links go to History
 export async function copyText(text, done = 'Copied.') {
   try { await navigator.clipboard.writeText(text); toast(done); } catch { toast('Copy is blocked by the browser.', { type: 'error' }); }
 }

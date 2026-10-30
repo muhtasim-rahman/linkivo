@@ -16,6 +16,7 @@ import { plural } from '../../core/format.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { faviconUrl, linkTitle, safeHref, folderTile } from '../library/folder-style.js';
 import { CATALOG, SECTIONS } from '../settings/catalog.js';
+import { isAdminAccount } from '../../core/admin.js';
 import { appPages } from './search-pages.js';
 import { staggerIn } from '../../ui/motion.js';
 import { createIndex, searchFolders, searchSettings, searchPages, tokens, highlightParts, readHistory, pushHistory, removeHistory } from './search-core.js';
@@ -63,7 +64,7 @@ export async function mount(container, ctx) {
     const pgs = withApp ? searchPages(pages, q, 12) : [];
     const links = engine ? index.search(engine.listLinks(), q, 400) : [];
     const folders = engine ? searchFolders(engine.listFolders(), q) : [];
-    const sets = withApp ? searchSettings(CATALOG, SECTIONS, q) : [];
+    const sets = withApp ? searchSettings(CATALOG.filter((e) => e.id !== 'pvAdmin' || isAdminAccount()), SECTIONS, q) : [];
     const tab = prefs.get('lib.openIn', 'preview') === 'tab';
     const nodes = [];
     if (pgs.length) nodes.push(group('Pages', pgs.length, pgs.slice(0, st.shown.pages).map((r) => li(h('a', { class: 'sp-item', href: r.page.path, on: { click: (e) => openFrom(e, q) } }, h('span', { class: 'sp-ic' }, icon(r.page.icon, { size: 18 })), h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(r.page.label, ws)), h('span', { class: 'sp-sub', text: r.page.desc }))))), 'pages', st.shown.pages));

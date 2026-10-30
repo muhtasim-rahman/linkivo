@@ -1,0 +1,27 @@
+feat(v2.4.0): Random Discover, points picker, History, and the v2.3.2 fix round
+
+- Random Discover (/random): ONE merged panel for folders (with Low/Normal/High weight) and filters, live match count, "Open a random link"; the Preview opens embedded in random mode (/link/:id?random=1) with a New random link icon, a Random filters popup and optional auto-advance; /random?folder=<id> starts with a folder
+- Picker (engine/picker.js, pure): W = points^gamma x fresh x recency x age x folderWeight, modes Balanced, Points only, Equal, Underdog, Fresh first, weighted draw without replacement, no repeats until the pool is exhausted, blocked links never picked. Numbers live in PARAMS and still wait for the owner's confirmation
+- Folder menu "Random from this folder" is on (flag randomFromFolder)
+- History (core/history.js, profile/history page): every opened link (list click in a new tab, Preview, Random) is recorded; date groups, search, three-dot actions, multi-select remove, Clear all, auto-delete setting; kept on this device
+- Settings: new section Random and history (mode, point influence, avoid recent, auto-advance, delete history after)
+- Fix: Microlink free limit is 25 a day (checked on microlink.io); the count is only a reminder, Microlink is still tried after 25 and the next engine answers on a 429
+- Fix: Back from a related link leaves straight to the folder (related links replace the entry; router `replace` now works; `from` is kept on Back)
+- Fix: Back from the Preview restores the folder's search, domain, Show filter and scroll (core/page-memory.js, ctx.pop); Library keeps search and scroll too
+- Fix: folder cards have the same height whatever the title length
+- Fix: grid/list switch of the folder header moved into the three-dot menu on phones
+- Fix: collapsed sidebar profile tooltip opens to the right like the other rows
+- Sidebar: toggle always in the left slot, thin divider, logo and name to its right when expanded
+- Admin view switch moved to Settings > Account (admins only), labels Admin / User, session only (a reload returns to Admin), hides the admin badge; no wording about admin limits for normal users
+- Microlink and thum.io captions match other rows; the (i) note opens with a small transition
+- Sync now moves "Last synced" (new engine.syncNow, live row)
+- Switch account menu: Reset password removed
+- No blue tap flash or blue selection on touch for links, cards and rows
+- Contact email is now linkivo.web@gmail.com everywhere (older history entries keep the old text)
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting (rules and Worker are unchanged)
+- hard reload; test with the checklist in the chat summary

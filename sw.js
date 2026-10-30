@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.3.2';
+const VERSION = '2.4.0';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -54,9 +54,11 @@ const PRECACHE = [
   '/css/core/tokens.css',
   '/css/pages/auth.css',
   '/css/pages/data.css',
+  '/css/pages/history.css',
   '/css/pages/library.css',
   '/css/pages/pages.css',
   '/css/pages/preview.css',
+  '/css/pages/random.css',
   '/css/pages/search.css',
   '/css/pages/settings.css',
   '/css/pages/share.css',
@@ -80,6 +82,7 @@ const PRECACHE = [
   '/js/core/firebase-loader.js',
   '/js/core/flags.js',
   '/js/core/format.js',
+  '/js/core/history.js',
   '/js/core/import-log.js',
   '/js/core/input-guards.js',
   '/js/core/install.js',
@@ -91,6 +94,7 @@ const PRECACHE = [
   '/js/core/meta-fallback.js',
   '/js/core/microlink.js',
   '/js/core/nav-stack.js',
+  '/js/core/page-memory.js',
   '/js/core/page-meta.js',
   '/js/core/rate-limiter.js',
   '/js/core/router.js',
@@ -111,6 +115,7 @@ const PRECACHE = [
   '/js/engine/idb.js',
   '/js/engine/job-queue.js',
   '/js/engine/local-engine.js',
+  '/js/engine/picker.js',
   '/js/engine/points.js',
   '/js/engine/rtdb-adapter.js',
   '/js/engine/schema.js',
@@ -137,6 +142,7 @@ const PRECACHE = [
   '/js/features/export/formats/xlsx.js',
   '/js/features/export/native-format.js',
   '/js/features/export/zip-writer.js',
+  '/js/features/history/history-page.js',
   '/js/features/import/clipboard-suggest.js',
   '/js/features/import/import-backup.js',
   '/js/features/import/import-form.js',
@@ -165,6 +171,9 @@ const PRECACHE = [
   '/js/features/preview/preview-model.js',
   '/js/features/preview/preview-page.js',
   '/js/features/preview/preview-tabs.js',
+  '/js/features/random/random-page.js',
+  '/js/features/random/random-panel.js',
+  '/js/features/random/random-session.js',
   '/js/features/search/search-core.js',
   '/js/features/search/search-page.js',
   '/js/features/search/search-pages.js',

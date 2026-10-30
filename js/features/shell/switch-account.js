@@ -45,8 +45,7 @@ export async function openSwitchAccount(router) {
       const isCur = a.uid === cur;
       const more = h('button', { type: 'button', class: 'btn-icon', 'aria-label': `Options for ${a.name || maskEmail(a.email)}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 }));
       more.addEventListener('click', () => openMenu(more, [
-        { label: 'Reset password', icon: 'lock', onSelect: () => forgot(a) },
-        { separator: true },
+        // ! Removed in v2.4.0 (owner): "Reset password" does not belong in Switch account; `forgot()` above is unused now and kept for reference
         isCur ? { label: 'Log out', icon: 'logout', danger: true, onSelect: () => { sheet?.close(); logOut(router); } } : { label: 'Remove from list', icon: 'close', onSelect: () => { forgetAccount(a.uid, prefs); paint(); } }
       ]));
       const main = h('button', { type: 'button', class: 'swa-main', disabled: isCur, 'aria-current': isCur ? 'true' : null, on: { click: () => goSignIn(a) } },

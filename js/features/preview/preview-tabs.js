@@ -64,7 +64,7 @@ function shotTab({ link }) {
   const show = (bust) => {
     const thum = prefs.get('preview.thum', true) !== false && canUseThum(); if (thum) countThum();
     const q = shotQuota(), src = thum ? thumUrl(link.url) : mshotUrl(link.url) + (bust ? `&v=${Date.now()}` : '');
-    const hint = thum ? (q.limit === null ? 'Screenshot by thum.io (admin: no daily limit).' : `Screenshot by thum.io. ${q.left} of ${q.limit} left today.`) : 'Screenshot by WordPress mShots (the thum.io allowance for today is used).';
+    const hint = thum ? (q.limit === null ? 'Screenshot by thum.io.' : `Screenshot by thum.io. ${q.left} of ${q.limit} left today.`) : 'Screenshot by WordPress mShots (the thum.io allowance for today is used).';
     const wrap = imageTab(src, `Screenshot of ${link.host || link.url}`);
     if (thum) wrap.querySelector('img')?.addEventListener('error', () => { const img = wrap.querySelector('img'); if (img && !img.dataset.fb) { img.dataset.fb = '1'; img.src = mshotUrl(link.url); } }, { once: true });
     body.replaceChildren(h('p', { class: 'pv-hint', text: hint }), wrap, h('button', { type: 'button', class: 'btn btn-sm pv-reshoot', on: { click: () => show(true) } }, icon('refresh', { size: 16 }), 'Take a new screenshot'));

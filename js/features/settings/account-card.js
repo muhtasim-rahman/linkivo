@@ -42,7 +42,7 @@ export function accountRows({ router, rerender = () => {} }) {
   // 1. profile line: photo, name, masked email, View profile, sync icon (no separate Sync now row any more)
   const syncBtn = engine && engine.status().kind !== 'guest' ? h('button', { type: 'button', class: 'btn-icon is-sm', 'aria-label': 'Sync now', 'data-tip': 'Sync now', on: { click: async (e) => {
     const b = e.currentTarget; b.classList.add('is-loading');
-    try { await engine.flush?.(); toast('Everything is synced.'); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }
+    try { const ok = engine.syncNow ? await engine.syncNow() : await engine.flush?.(); toast(ok === false ? 'Could not sync now. It will retry by itself.' : 'Everything is synced.', ok === false ? { type: 'error' } : undefined); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }
     b.classList.remove('is-loading');
   } } }, icon('refresh', { size: 18 })) : null;
   const head = h('div', { class: 'row acc-head' }, avatar(u.name, true, u.photo, true),

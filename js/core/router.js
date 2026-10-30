@@ -86,7 +86,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     if (c && c.unmount) { try { const r = c.unmount(); if (r && r.catch) r.catch((e) => log.warn('router', 'unmount failed', e)); } catch (e) { log.warn('router', 'unmount failed', e); } }
   }
 
-  async function go(raw, { from = null, force = false, depth = 0, pop = false } = {}) {
+  async function go(raw, { from = null, force = false, depth = 0, pop = false, replace = false } = {}) {
     const url = new URL(raw, location.origin);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const match = compiled.match(path);
@@ -115,14 +115,15 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     //   Replace only for the first page, a reload of the same page, or when the browser itself moved (pop).
     const same = current && current.path === path && current.search === url.search;
     const hist = { lk: 'page', from };
-    if (pop || !current || same) history.replaceState(hist, '', path + url.search + url.hash); else history.pushState(hist, '', path + url.search + url.hash);
+    // v2.4.0: `replace` was accepted by navigate() but never honoured, so every "replace" added a history entry; now it replaces the current one
+    if (pop || replace || !current || same) history.replaceState(hist, '', path + url.search + url.hash); else history.pushState(hist, '', path + url.search + url.hash);
     const query = Object.fromEntries(url.searchParams);
     current = { route, params, path, search: url.search, from, unmount: null, mod: null };
     bus.emit('route', { route, params, path, query });
 
     try {
       if (loadError) throw loadError;
-      const unmount = await mod.mount(container, { params, query, path, from, router });
+      const unmount = await mod.mount(container, { params, query, path, from, router, pop });   // v2.4.0: pop = the browser moved (Back or Forward): pages may restore their filters and scroll
       if (mySeq !== seq) { try { if (typeof unmount === 'function') unmount(); } catch { /* ignore */ } return; }
       current.unmount = typeof unmount === 'function' ? unmount : null;
       current.mod = mod;
@@ -140,7 +141,8 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
 
   /** v2.2.4: the browser moved through its history (Back, Forward, swipe): just show the page of the address bar. No custom back rules any more. */
   // v2.3.1: an open menu, sheet or dialog owns one history entry: Back closes it (and nothing else changes)
-  function onPop() { if (handlePop()) return; go(location.pathname + location.search, { from: null, pop: true }); }
+  // v2.4.0: `from` comes back from the entry itself (it was saved when the page was opened), so a page reached by Back or Forward still knows where it came from
+  function onPop() { if (handlePop()) return; const st = history.state; go(location.pathname + location.search, { from: st && st.lk === 'page' && typeof st.from === 'string' ? st.from : null, pop: true }); }
 
   function onClick(e) {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -149,6 +151,9 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     const u = new URL(a.href, location.href);
     if (u.origin !== location.origin || u.pathname.startsWith('/__/')) return;
     e.preventDefault();
+    // v2.4.0 (owner): a link marked data-replace (the Preview's related list) REPLACES the current entry and keeps where the Preview was opened from,
+    // so Back goes straight to the folder instead of walking back through every related link
+    if (a.hasAttribute('data-replace')) { go(u.pathname + u.search, { from: current ? current.from : null, replace: true }); return; }
     go(u.pathname + u.search, { from: current ? current.path : null });
   }
 

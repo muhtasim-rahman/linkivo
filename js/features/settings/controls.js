@@ -31,12 +31,13 @@ const EXTRA = {
 };
 function labelEl(entry) {
   if (!entry.suffix || !SUFFIX[entry.suffix]) return h('span', { class: 'row-label', text: entry.label });
-  const suf = h('span', { class: 'row-suffix' }), note = h('span', { class: 'row-info', hidden: true, text: entry.info || '' });
-  const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); note.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
+  // v2.4.0 (owner): the note opens with a short height + fade transition (grid 0fr -> 1fr), its text may stay small
+  const suf = h('span', { class: 'row-suffix' }), noteText = h('span', { class: 'row-info-t', text: entry.info || '' }), note = h('span', { class: 'row-info', 'aria-hidden': 'true' }, noteText);
+  const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); noteText.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
   paint();
   const live = () => { if (suf.isConnected) paint(); };
   subscribeQuota(live); subscribeAdmin(live);
-  const info = entry.info ? h('button', { type: 'button', class: 'btn-icon row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', 'data-tip': entry.info, on: { click: (e) => { e.stopPropagation(); note.hidden = !note.hidden; info.setAttribute('aria-expanded', String(!note.hidden)); } } }, icon('info', { size: 16 })) : null;
+  const info = entry.info ? h('button', { type: 'button', class: 'btn-icon row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', 'data-tip': entry.info, on: { click: (e) => { e.stopPropagation(); const open = !note.classList.contains('is-open'); note.classList.toggle('is-open', open); note.setAttribute('aria-hidden', String(!open)); info.setAttribute('aria-expanded', String(open)); } } }, icon('info', { size: 16 })) : null;
   return h('span', { class: 'row-label has-suffix' }, h('span', { text: entry.label }), ' ', suf, info, note);
 }
 

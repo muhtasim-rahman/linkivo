@@ -187,7 +187,7 @@ test('account card: profile line, verified tick, method icons, differing-email w
   const { setSession } = await imp('js/core/session.js'); const { accountRows } = await imp('js/features/settings/account-card.js');
   const routed = []; const router = { navigate: (p) => routed.push(p) };
   const draw = (user) => { setSession({ mode: 'account', user, ready: true }); const host = document.createElement('div'); host.append(...accountRows({ router })); document.body.appendChild(host); return host; };
-  const both = draw({ uid: 'u1', name: 'Turzo', email: 'mdturzo.dev@gmail.com', emailVerified: true, providers: ['password', 'google.com'], googleEmail: 'other.person@gmail.com', photo: '' });
+  const both = draw({ uid: 'u1', name: 'Turzo', email: 'linkivo.web@gmail.com', emailVerified: true, providers: ['password', 'google.com'], googleEmail: 'other.person@gmail.com', photo: '' });
   assert.ok(both.querySelector('.acc-head .avatar'), 'round profile picture or initial'); assert.match(both.querySelector('.acc-head').textContent, /View profile/); assert.ok(!/mdturzo\.dev@/.test(both.textContent), 'the email is masked everywhere');
   both.querySelector('.acc-head .btn').click(); assert.deepEqual(routed, ['/profile']);
   assert.ok(both.querySelector('.acc-ok'), 'green verified tick'); const chips = [...both.querySelectorAll('.acc-method')]; assert.equal(chips.length, 2); assert.ok(chips.every((c) => c.classList.contains('is-linked') && c.querySelector('.acc-tick')), 'both linked: ticks'); assert.equal(chips.filter((c) => c.disabled).length, 1, 'v2.2.3: Google (linked) is tappable to unlink, the password icon is fixed');

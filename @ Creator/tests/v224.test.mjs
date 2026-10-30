@@ -12,7 +12,7 @@ test('delete account: the request email carries the account facts, an id and the
   const r = buildRequest(f, { folders: 3, links: 40 }, 'AB12CD34', 1700000200000);
   assert.match(r.subject, /me@example\.com/); assert.match(r.subject, /AB12CD34/);
   for (const t of ['U123', 'me@example.com', '3 folders, 40 links', 'password, google.com', PHRASE, 'Request id: AB12CD34']) assert.ok(r.body.includes(t), t);
-  assert.ok(!/password:/i.test(r.body)); assert.equal(REQUEST_TO, 'mdturzo.dev@gmail.com');
+  assert.ok(!/password:/i.test(r.body)); assert.equal(REQUEST_TO, 'linkivo.web@gmail.com');
 });
 
 test('danger zone order (v2.3.0 owner): log out, clear app cache, reset, local data, delete account; Advanced keeps no important setting', async () => {

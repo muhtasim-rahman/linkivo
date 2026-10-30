@@ -45,14 +45,12 @@
 .sb-brand:hover { text-decoration: none; }
 .sb-slot { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
 .sb-word { font-size: 23px; padding-left: 2px; transition: opacity 140ms var(--ease); }
-.sb-toggle { position: absolute; right: 0; top: 4px; width: 36px; min-width: 36px; height: 36px; color: var(--sub); transition: opacity 140ms var(--ease); } /* v2.1.4: out of the flow: while collapsed it still took 36px of the 44px row and squeezed the logo out of sight */
+.sb-toggle { flex: none; width: 44px; min-width: 44px; height: 44px; border-radius: 12px; color: var(--sub); } /* v2.4.0 (owner): the toggle keeps ONE place, the left 44px slot, expanded or collapsed */
 .sb-toggle:hover { color: var(--text); }
-/* collapsed: an invisible button sits over the logo slot; on hover or keyboard focus the logo swaps for the expand icon */
+.sb-div { flex: none; width: 1px; height: 22px; margin: 0 6px 0 2px; background: var(--line-strong); opacity: .8; transition: opacity 140ms var(--ease); } /* the thin '|' between the toggle and the logo */
+.sb-brand { width: auto; flex: 1; }
+/* ! Unused since v2.4.0: .sb-expandbtn rules (the old hover-to-expand button over the logo); kept for reference */
 .sb-expandbtn { position: absolute; left: 0; top: 0; width: 44px; height: 44px; display: none; place-items: center; border-radius: 12px; color: var(--accent-text); }
-.sb-expandbtn svg { opacity: 0; transform: scale(0.8); transition: opacity var(--t-std) var(--ease), transform var(--t-std) var(--ease); }
-.sb-expandbtn:hover, .sb-expandbtn:focus-visible { background: var(--accent-soft); }
-.sb-expandbtn:hover svg, .sb-expandbtn:focus-visible svg { opacity: 1; transform: none; }
-.sb-expandbtn:hover ~ .sb-brand .logo-mark, .sb-expandbtn:focus-visible ~ .sb-brand .logo-mark { opacity: 0; }
 .sb-brand .logo-mark { transition: opacity var(--t-std) var(--ease); }
 .sb-nav { display: grid; gap: 4px; }
 
@@ -71,7 +69,7 @@
 
 /* profile badge: avatar + name + masked email + three-dot menu in one outlined badge. The avatar is 36px with a 4px inset, so its centre
    is on the same vertical line (34px) as every icon above it, expanded or collapsed. */
-.pf-badge { display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--line); border-radius: 14px; height: 46px; overflow: hidden; transition: border-color var(--t-std) var(--ease); }
+.pf-badge { position: relative; display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--line); border-radius: 14px; height: 46px; overflow: hidden; transition: border-color var(--t-std) var(--ease); }
 .pf-link { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border-radius: 11px; color: inherit; }
 .pf-link:hover { text-decoration: none; }
 .pf-avatar { display: block; flex: none; }
@@ -86,8 +84,11 @@
 .pf-mail { color: var(--sub); font-size: var(--fs-xs); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* collapsed: same rows, labels gone (they fade first, then the column clips them) */
-#app[data-collapsed='true'] .sb-word, #app[data-collapsed='true'] .sb-toggle, #app[data-collapsed='true'] .nav-label, #app[data-collapsed='true'] .theme-row .switch,
+#app[data-collapsed='true'] .sb-word, #app[data-collapsed='true'] .sb-div, #app[data-collapsed='true'] .sb-brand .logo-mark, #app[data-collapsed='true'] .nav-label, #app[data-collapsed='true'] .theme-row .switch,
 #app[data-collapsed='true'] .sidebar .pf-text, #app[data-collapsed='true'] .sidebar .pf-more { opacity: 0; pointer-events: none; }
-#app[data-collapsed='true'] .sb-expandbtn { display: grid; }
 #app[data-collapsed='true'] .sb-brand { pointer-events: none; }
 #app[data-collapsed='true'] .pf-badge { border-color: transparent; }
+/* v2.4.0 (owner): the hidden three-dot button still held 36px in the row, so the profile link shrank to nothing and its tooltip opened ON the avatar.
+   Out of the flow while collapsed, the link is as wide as the avatar and the tooltip opens to the right like every other row. */
+#app[data-collapsed='true'] .pf-more { position: absolute; right: 3px; top: 3px; }
+#app[data-collapsed='true'] .pf-link { flex: none; width: 36px; }

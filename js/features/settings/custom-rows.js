@@ -25,7 +25,7 @@ import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
 import { syncRow } from './sync-picker.js';
 import { quota as mlQuota, mlEnabled, subscribeQuota } from '../../core/microlink.js';
-import { isAdminAccount, subscribeAdmin } from '../../core/admin.js';
+import { isAdminAccount, subscribeAdmin, adminView, setAdminView } from '../../core/admin.js';
 import { createSelect } from '../../ui/select.js';
 
 const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
@@ -114,6 +114,9 @@ function sync() {
       h('dt', { text: 'Contents' }), h('dd', { text: `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}` }))));
   };
   render();
+  // v2.4.0 (owner): the row follows the engine, so "Last synced" changes the moment Sync now finishes (it used to be painted once)
+  const e0 = getEngine();
+  if (e0 && e0.subscribe) { const off = e0.subscribe((ev) => { if (!box.isConnected) { off(); return; } if (ev && (ev.type === 'sync' || ev.type === 'ready')) render(); }); }
   return box;
 }
 
@@ -150,8 +153,8 @@ function mlQuotaRow() {
   const box = h('div');
   const render = () => {
     const q = mlQuota(), on = mlEnabled();
-    const info = h('button', { type: 'button', class: 'btn-icon ml-info', 'aria-label': 'About the Microlink allowance', 'data-tip': 'Microlink gives every device a small free number of lookups a day. A link is looked up once and its details are stored, so opening it again costs nothing. When the allowance is used up, or Microlink fails, the other services answer.', on: { click: (e) => e.currentTarget.dispatchEvent(new Event('mouseenter')) } }, icon('info', { size: 18 }));
-    box.replaceChildren(row('Microlink allowance today', on ? `${q.left} of ${q.limit} lookups left. Resets at midnight UTC.` : 'Switched off. Turn it on above.', info));
+    const info = h('button', { type: 'button', class: 'btn-icon ml-info', 'aria-label': 'About the Microlink allowance', 'data-tip': 'Microlink gives every device 25 free lookups a day. A link is looked up once and its details are stored, so opening it again costs nothing. After 25 it is still tried; when it answers nothing the other services take over.', on: { click: (e) => e.currentTarget.dispatchEvent(new Event('mouseenter')) } }, icon('info', { size: 18 }));
+    box.replaceChildren(row('Microlink allowance today', on ? `${q.left} of ${q.limit} lookups left today. A reminder only: when it reaches 0 Microlink is still tried.` : 'Switched off. Turn it on above.', info));
   };
   subscribeQuota(() => { if (box.isConnected) render(); });
   render(); return box;
@@ -161,9 +164,9 @@ function adminViewRow() {
   const render = () => {
     if (!isAdminAccount()) { box.replaceChildren(); box.hidden = true; return; }
     box.hidden = false;
-    const cur = prefs.get('admin.view', 'admin');
-    const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'Normal user' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { prefs.set('admin.view', v); toast(v === 'admin' ? 'Admin limits are on.' : 'Showing the app as a normal user.'); render(); } });
-    box.replaceChildren(row('View the app as', 'For testing. Normal user applies the daily limits an ordinary account gets. This can only lower your access.', sel));
+    const cur = adminView();
+    const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'User' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { setAdminView(v); toast(v === 'admin' ? 'Admin view is on.' : 'Showing the app as a normal user.'); render(); } });
+    box.replaceChildren(row('View the app as', 'For testing. User shows the app exactly as an ordinary account sees it (limits and badge). It can only lower your access.', sel));
   };
   subscribeAdmin(render); render(); return box;
 }

@@ -1,14 +1,14 @@
 {
   "name": "Linkivo",
   "tagline": "Manage your links",
-  "version": "2.3.2",
-  "buildDate": "2026-10-29",
-  "stage": "library",
+  "version": "2.4.0",
+  "buildDate": "2026-10-30",
+  "stage": "random",
   "developer": {
     "name": "Muhtasim Rahman",
     "site": "https://mdturzo.web.app",
     "github": "https://github.com/muhtasim-rahman",
-    "contact": "mdturzo.dev@gmail.com",
+    "contact": "linkivo.web@gmail.com",
     "photo": "https://i.ibb.co.com/Jwt7DRN9/167641690.png"
   },
   "repo": "https://github.com/muhtasim-rahman/linkivo",

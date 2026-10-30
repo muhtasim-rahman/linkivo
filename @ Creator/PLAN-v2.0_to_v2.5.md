@@ -1,6 +1,6 @@
 # Linkivo v2: Master Plan
 
-Owner: Muhtasim Rahman (Turzo). Contact: mdturzo.dev@gmail.com. Repo: github.com/muhtasim-rahman/linkivo.
+Owner: Muhtasim Rahman (Turzo). Contact: linkivo.web@gmail.com. Repo: github.com/muhtasim-rahman/linkivo.
 This plan is the contract between the owner and every AI agent that builds a version. Read it together with `MASTER-PROMPT-v2.0_to_v2.5.md`, `RULES.md`, `CONTEXT-v2.0_to_v2.5.md` and `docs/`.
 
 ## 1. Vision

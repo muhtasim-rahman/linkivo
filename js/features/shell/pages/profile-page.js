@@ -20,9 +20,10 @@ export async function mount(container, ctx) {
     h('div', { class: 'profile-head' }, avatar(guest ? 'Guest' : s.user.name, true, s.user ? s.user.photo : '', !guest),
       h('div', { class: 'pf-text' }, h('span', { class: 'pf-name', text: guest ? 'Guest' : s.user.name }), h('span', { class: 'pf-mail', text: guest ? 'Stored only on this device' : maskEmail(s.user.email) }), h('span', null, h('span', { class: 'tag', text: guest ? 'Guest mode' : 'Account' })))),
     h('div', { class: 'group' },
+      row('history', 'History', 'Links you opened, grouped by day', { href: '/profile/history' }, icon('chevron-right')),   // v2.4.0
       row('settings', 'Settings', null, { href: '/settings' }, icon('chevron-right')),
       guest
         ? row('login', 'Log in', 'Sign in to keep your links in the cloud. Moving guest data to an account arrives in v2.5.0.', { on: { click: () => logOut(ctx.router, { guest: true }) } })
         : row('logout', 'Log out', 'You will need to sign in again.', { on: { click: () => logOut(ctx.router) } })),
-    h('p', { class: 'help', style: { marginTop: '16px' }, text: 'History, security and account tools arrive in later versions.' })));
+    h('p', { class: 'help', style: { marginTop: '16px' }, text: 'Security and account tools arrive in a later version.' })));
 }

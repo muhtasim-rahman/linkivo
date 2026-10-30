@@ -177,6 +177,9 @@
 /* ---- v2.3.2: live suffix after a label, with the info button after the bracket ---- */
 .row-label.has-suffix { display: block; } .row-suffix { color: var(--sub); font-weight: 500; font-variant-numeric: tabular-nums; }
 .row-i { display: inline-grid; vertical-align: middle; min-width: 28px; min-height: 28px; margin-left: 2px; color: var(--sub); } .row-i:hover { color: var(--text); }
-.row-info { display: block; margin-top: 4px; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--sub); max-width: 62ch; }
+.row-info { display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--sub); max-width: 62ch; transition: grid-template-rows .22s ease, opacity .22s ease, margin-top .22s ease; }
+.row-info.is-open { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }
+.row-info-t { overflow: hidden; min-height: 0; }
+@media (prefers-reduced-motion: reduce) { .row-info { transition: none; } }
 
 .set-top > *, .set-body > *, .set-sec, .group, .row { min-width: 0; }

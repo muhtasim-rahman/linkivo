@@ -24,8 +24,8 @@ export const ROUTES = [
   { id: 'link', pattern: '/link/:lid', title: 'Preview', parent: (p, env, st) => st.from || '/library', guard: 'auth', tab: 'library', nobar: true, load: () => import('../preview/preview-page.js') },   // v2.3.0: real page; nobar hides the phone bottom bar
   { id: 'search', pattern: '/search', title: 'Search', parent: '/library', guard: 'auth', tab: 'search', load: () => import('../search/search-page.js') },   // v2.3.0
   { id: 'share', pattern: '/share', title: 'Save to Linkivo', parent: '/library', guard: 'open', shell: false, load: () => import('../share/share-page.js') },   // v2.3.0: Web Share Target
-  { id: 'random', pattern: '/random', title: 'Random Discover', parent: '/library', guard: 'auth', tab: 'random', stub: 'random', since: '2.4.0', load: stub },
-  { id: 'history', pattern: '/profile/history', title: 'History', parent: '/profile', guard: 'auth', tab: 'menu', refresh: true, stub: 'history', since: '2.4.0', load: stub },
+  { id: 'random', pattern: '/random', title: 'Random Discover', parent: '/library', guard: 'auth', tab: 'random', since: '2.4.0', load: () => import('../random/random-page.js') },
+  { id: 'history', pattern: '/profile/history', title: 'History', parent: '/profile', guard: 'auth', tab: 'menu', refresh: true, since: '2.4.0', load: () => import('../history/history-page.js') },
 
   { id: 'menu', pattern: '/menu', title: 'Menu', parent: '/library', guard: 'auth', tab: 'menu', load: () => import('./pages/menu-page.js') },
   { id: 'profile', pattern: '/profile', title: 'Profile', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'menu', refresh: true, load: () => import('./pages/profile-page.js') },

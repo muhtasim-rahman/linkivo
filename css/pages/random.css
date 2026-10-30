@@ -1,0 +1,16 @@
+/* Linkivo — css/pages/random.css (v2.4.0): the merged folder + filter panel (page and popup). */
+.rp { display: grid; gap: var(--s3); max-width: 720px; }
+.rp-h { font: 650 var(--fs-sm) / 1.2 var(--font-ui); color: var(--sub); margin: var(--s3) 0 0; }
+.rp-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.rp-pair { display: inline-flex; gap: 2px; }
+.rp-w { font-size: var(--fs-xs); color: var(--sub); }
+.rp-toggles { display: grid; gap: var(--s2); }
+.rp-tg { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); width: 100%; min-height: 48px; padding: var(--s2) var(--s3); text-align: left; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
+.rp-tg-t { display: grid; gap: 1px; min-width: 0; } .rp-tg-t small { color: var(--sub); font-size: var(--fs-xs); }
+.rp-tg .switch { flex: none; } .rp-tg.is-on .switch { background: var(--accent-strong); }
+.rp-tg.is-on .switch::after { transform: translateX(18px); }
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s3); }
+.rp-f { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--sub); }
+.rp-live { color: var(--sub); font-size: var(--fs-sm); }
+.rp-start { justify-self: start; min-height: 48px; padding-inline: var(--s5); }
+.rnd .page-sub { max-width: 60ch; }

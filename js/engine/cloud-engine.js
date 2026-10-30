@@ -112,6 +112,18 @@ export class CloudEngine extends Engine {
     return true;
   }
 
+  /** v2.4.0 (owner): "Sync now" must move the "Last synced" time. Remote changes already arrive live (the delta listeners stay open), so syncing now means:
+   *  send everything waiting, and if that worked while online, stamp the time and tell the UI. Returns true when the device is fully in step. */
+  async syncNow() {
+    const ok = await this.flush();
+    if (ok && !(typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      this.lastSync = Date.now();
+      this.bus.emit('event', { type: 'sync', state: this.syncState, pending: this.pending, done: true });
+      return true;
+    }
+    return false;
+  }
+
   async _persistSetting(key, value) {
     try { await this.adapter.update({ [`users/${this.uid}/settings/${key}`]: value }); }
     catch (e) { log.warn('cloud', 'setting not synced', e); }

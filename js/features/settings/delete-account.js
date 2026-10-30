@@ -28,7 +28,7 @@ import { getSession } from '../../core/session.js';
 import app from '../../core/app-info.js';
 
 export const PHRASE = 'DELETE ACCOUNT';
-export const REQUEST_TO = 'mdturzo.dev@gmail.com';
+export const REQUEST_TO = 'linkivo.web@gmail.com';
 const WHAT = ['All your folders and links, the Recycle Bin and the vault.', 'Your settings, history and the list of logged-in devices.', 'Your sign-in (email and password, linked Google).', 'It can not be undone once the request is approved.'];
 
 /** Pure: the email text. The id lets the developer match the request; nothing secret is in it. */

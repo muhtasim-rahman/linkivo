@@ -5,6 +5,8 @@
  *          Built once; the router only swaps what is inside #page-root.
  * Sidebar rules (owner, v2.1.2 / v2.1.3): collapsed = rounded-square icons, the logo turns into an "expand" icon on hover;
  *          expanded = full rows (icon + text), logo and name open the Library, hovering the logo does nothing.
+ *          v2.4.1 (owner): ONE toggle button always sits in the first 44px slot (the logo while collapsed, the panel icon while expanded);
+ *          expanding reveals a thin divider and the logo with its name to the RIGHT of the button, collapsing hides them again.
  *          v2.1.3: every row keeps a fixed 44px icon slot, so collapsing only fades labels and nothing jumps (see css/components/nav.css).
  * Mobile bar: the active-tab ring is defined by its two edges (--l, --r): the edge facing the new tab moves first, the other follows (css/components/nav.css).
  * API: mountShell({ router }) -> { setSession(session), isWide() }
@@ -48,18 +50,20 @@ export function mountShell({ router }) {
   // ---- sidebar -------------------------------------------------------------------------------------------------------
   const setCollapsed = (v) => {
     app.dataset.collapsed = String(v); prefs.set('ui.sidebarCollapsed', v);
-    // v2.4.0 (owner): ONE toggle button stays in the same left slot in both states; logo, divider and name appear to its right when expanded
-    toggle.setAttribute('aria-expanded', String(!v)); toggle.setAttribute('aria-label', v ? 'Expand sidebar' : 'Collapse sidebar'); toggle.setAttribute('data-tip', v ? 'Expand sidebar' : 'Collapse sidebar');
+    slotBtn.setAttribute('aria-expanded', String(!v));
+    const label = v ? 'Expand sidebar' : 'Collapse sidebar';
+    slotBtn.setAttribute('aria-label', label); slotBtn.setAttribute('data-tip', label);
     brand.tabIndex = v ? -1 : 0;
     // tooltips on rows only while collapsed (expanded rows already show their name); data-tip-c holds the text meanwhile
     for (const el of sidebar.querySelectorAll('[data-tip-c]')) { if (v) el.setAttribute('data-tip', el.dataset.tipC); else el.removeAttribute('data-tip'); }
   };
-  // ! Unused since v2.4.0: the old invisible expand button over the logo slot (`.sb-expandbtn`); the toggle below now does both jobs.
-  // Expanded: [toggle] | [logo + name as one link to the Library]. Collapsed: only the toggle (the rest fades out and is clipped).
+  // v2.4.1: one button for both directions. Its slot shows the logo while collapsed (the panel icon replaces it on hover or focus) and the panel icon while
+  // expanded. The divider, logo and name sit to its right and appear only when the sidebar is open (CSS fades and clips them), so the button never moves.
+  const slotBtn = h('button', { type: 'button', class: 'sb-slotbtn', 'aria-label': 'Collapse sidebar', 'aria-expanded': 'true', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(app.dataset.collapsed !== 'true') } },
+    h('span', { class: 'logo-mark', style: { '--w': '28px' }, 'aria-hidden': 'true' }), icon('panel', { size: 20 }));
   const brand = h('a', { class: 'sb-brand', href: '/library', 'aria-label': 'Linkivo, open Library' },
     h('span', { class: 'sb-slot' }, h('span', { class: 'logo-mark', style: { '--w': '28px' } })), h('span', { class: 'wordmark sb-word' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
-  const toggle = h('button', { type: 'button', class: 'btn btn-icon sb-toggle', 'aria-label': 'Collapse sidebar', 'data-tip': 'Collapse sidebar', on: { click: () => setCollapsed(app.dataset.collapsed !== 'true') } }, icon('panel', { size: 20 }));
-  const divider = h('span', { class: 'sb-div', 'aria-hidden': 'true' });
+  const sep = h('span', { class: 'sb-sep', 'aria-hidden': 'true' });
 
   const navLink = (it) => h('a', { class: ['nav-item', it.primary && 'is-primary'], href: it.href, 'data-tab': it.tab, 'data-tip-c': it.label },
     h('span', { class: 'nav-ic' }, icon(it.icon, { size: 20 })), h('span', { class: 'nav-label', text: it.label }));
@@ -86,7 +90,7 @@ export function mountShell({ router }) {
   const badge = h('div', { class: 'pf-badge' }, pfLink, more);
 
   sidebar.replaceChildren(
-    h('div', { class: 'sb-head' }, toggle, divider, brand),
+    h('div', { class: 'sb-head' }, slotBtn, sep, brand),
     h('nav', { class: 'sb-nav', 'aria-label': 'Main navigation' }, ...SIDE.map(navLink)),
     h('div', { class: 'sb-spacer' }), themeRow, badge);
 

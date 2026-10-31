@@ -129,8 +129,10 @@ test('bar and sidebar CSS contracts: Import has an active look, ring is edge bas
   const nav = fs.readFileSync(new URL('css/components/nav.css', root), 'utf8');
   assert.match(nav, /\.bar-import\[aria-current='page'\] span \{[^}]*box-shadow/, 'active Import button differs from the inactive one');
   assert.match(nav, /\.bar-ring \{[^}]*left: calc\(var\(--l, 0\) \* 20%/); assert.doesNotMatch(nav, /bar-stretch|cubic-bezier\(0\.34, 1\.45/, 'no centre-growing ring and no overshoot spring on the ring');
-  assert.match(nav, /\.sb-toggle \{[^}]*width: 44px/, 'v2.4.0: the toggle keeps the same 44px slot on the left, expanded or collapsed');
-  assert.match(nav, /\.sb-brand \{[^}]*width: 100%/);
+  // v2.4.1: the toggle is the first item of the header (always in the 44px slot); divider and brand are clipped away while collapsed
+  assert.match(nav, /\.sb-slotbtn \{[^}]*width: 44px/, 'the toggle owns the first 44px slot');
+  assert.match(nav, /\.sb-brand \{[^}]*flex: 1/);
+  assert.match(nav, /\.pf-more \{ display: none; \}|\.pf-more \{ display: none;/, 'the hidden three-dot must not take room in the collapsed profile badge (tooltip was placed over the picture)');
 });
 
 test('collapsed sidebar: the logo slot has a full 44px (toggle out of the flow, brand fills the row)', async () => {
@@ -138,5 +140,6 @@ test('collapsed sidebar: the logo slot has a full 44px (toggle out of the flow, 
   const slot = document.querySelector('.sb-brand .sb-slot'); assert.ok(slot, 'logo slot exists in the brand link');
   assert.ok(slot.querySelector('.logo-mark'), 'logo mark is inside the slot'); void mountShell;
   const head = document.querySelector('.sb-head'); const kids = [...head.children].map((c) => c.className.split(' ')[0]);
-  assert.deepEqual(kids, ['btn', 'sb-div', 'sb-brand'], 'v2.4.0: toggle (left slot), divider, brand (logo and name)');
+  assert.deepEqual(kids, ['sb-slotbtn', 'sb-sep', 'sb-brand'], 'v2.4.1: toggle button, divider, brand (logo and name on the right of the button)');
+  assert.ok(head.querySelector('.sb-slotbtn .logo-mark'), 'the collapsed state shows the logo inside the toggle slot');
 });

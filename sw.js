@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.4.0';
+const VERSION = '2.4.1';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -94,8 +94,8 @@ const PRECACHE = [
   '/js/core/meta-fallback.js',
   '/js/core/microlink.js',
   '/js/core/nav-stack.js',
-  '/js/core/page-memory.js',
   '/js/core/page-meta.js',
+  '/js/core/page-state.js',
   '/js/core/rate-limiter.js',
   '/js/core/router.js',
   '/js/core/send-limit.js',
@@ -171,9 +171,8 @@ const PRECACHE = [
   '/js/features/preview/preview-model.js',
   '/js/features/preview/preview-page.js',
   '/js/features/preview/preview-tabs.js',
+  '/js/features/random/random-filters.js',
   '/js/features/random/random-page.js',
-  '/js/features/random/random-panel.js',
-  '/js/features/random/random-session.js',
   '/js/features/search/search-core.js',
   '/js/features/search/search-page.js',
   '/js/features/search/search-pages.js',

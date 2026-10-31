@@ -25,7 +25,8 @@ import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
 import { syncRow } from './sync-picker.js';
 import { quota as mlQuota, mlEnabled, subscribeQuota } from '../../core/microlink.js';
-import { isAdminAccount, subscribeAdmin, adminView, setAdminView } from '../../core/admin.js';
+import { isAdminAccount, isAdminView, subscribeAdmin, getAdminViewMode, setAdminView } from '../../core/admin.js';
+import { KEEP_OPTIONS } from '../../core/history.js';
 import { createSelect } from '../../ui/select.js';
 
 const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
@@ -114,9 +115,8 @@ function sync() {
       h('dt', { text: 'Contents' }), h('dd', { text: `${plural(c.folders, 'folder')}, ${plural(c.links, 'link')}` }))));
   };
   render();
-  // v2.4.0 (owner): the row follows the engine, so "Last synced" changes the moment Sync now finishes (it used to be painted once)
-  const e0 = getEngine();
-  if (e0 && e0.subscribe) { const off = e0.subscribe((ev) => { if (!box.isConnected) { off(); return; } if (ev && (ev.type === 'sync' || ev.type === 'ready')) render(); }); }
+  // v2.4.1 (owner): Last synced showed old data after Sync now: the row was painted once. It now repaints on every sync event while it is on screen.
+  const e0 = getEngine(); const off = e0 && e0.subscribe ? e0.subscribe((ev) => { if (!box.isConnected) { off(); return; } if (ev.type === 'sync' || ev.type === 'change') render(); }) : null;
   return box;
 }
 
@@ -153,24 +153,40 @@ function mlQuotaRow() {
   const box = h('div');
   const render = () => {
     const q = mlQuota(), on = mlEnabled();
-    const info = h('button', { type: 'button', class: 'btn-icon ml-info', 'aria-label': 'About the Microlink allowance', 'data-tip': 'Microlink gives every device 25 free lookups a day. A link is looked up once and its details are stored, so opening it again costs nothing. After 25 it is still tried; when it answers nothing the other services take over.', on: { click: (e) => e.currentTarget.dispatchEvent(new Event('mouseenter')) } }, icon('info', { size: 18 }));
-    box.replaceChildren(row('Microlink allowance today', on ? `${q.left} of ${q.limit} lookups left today. A reminder only: when it reaches 0 Microlink is still tried.` : 'Switched off. Turn it on above.', info));
+    const info = null;
+    box.replaceChildren(row('Microlink allowance today', on ? `${q.left} of ${q.limit} lookups left (a reminder, Microlink may still answer).` : 'Switched off. Turn it on above.'));
   };
   subscribeQuota(() => { if (box.isConnected) render(); });
   render(); return box;
+}
+/** v2.4.1: "Keep history for" is a dropdown. Admins get one extra entry, "No limit"; everyone else sees seven plain choices. */
+function historyKeepRow() {
+  const box = h('div');
+  const draw = () => {
+    const opts = KEEP_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+    if (isAdminView()) opts.push({ value: 'never', label: 'No limit' });
+    let cur = prefs.get('history.keep', '7d'); if (!opts.some((o) => o.value === cur)) cur = '7d';
+    const sel = createSelect({ options: opts, value: cur, label: 'Keep history for', align: 'end', onChange: (v) => { prefs.set('history.keep', v); toast(v === 'off' ? 'History is off. Existing entries are removed.' : 'History keep time saved.'); } });
+    box.replaceChildren(row('Keep history for', 'Older entries are removed automatically. Off stops recording and clears the list.', sel));
+  };
+  draw(); subscribeAdmin(() => { if (box.isConnected) draw(); });
+  return box;
+}
+function historyOpenRow() {
+  return h('a', { class: 'row', href: '/profile/history' }, h('span', { class: 'row-ic' }, icon('history')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Open History' }), h('span', { class: 'row-desc', text: 'See the links you opened, by day.' })), h('span', { class: 'row-end' }, icon('chevron-right')));
 }
 function adminViewRow() {
   const box = h('div');
   const render = () => {
     if (!isAdminAccount()) { box.replaceChildren(); box.hidden = true; return; }
     box.hidden = false;
-    const cur = adminView();
-    const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'User' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { setAdminView(v); toast(v === 'admin' ? 'Admin view is on.' : 'Showing the app as a normal user.'); render(); } });
-    box.replaceChildren(row('View the app as', 'For testing. User shows the app exactly as an ordinary account sees it (limits and badge). It can only lower your access.', sel));
+    const cur = getAdminViewMode();
+    const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'Normal user' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { setAdminView(v); toast(v === 'admin' ? 'Back to Admin.' : 'Showing the app as a normal user.'); render(); } });
+    box.replaceChildren(row('View the app as', 'For testing. Normal user makes the whole app behave like an ordinary account until you switch back or reload.', sel));
   };
   subscribeAdmin(render); render(); return box;
 }
 
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin, syncPick, mlQuota: mlQuotaRow, adminView: adminViewRow })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin, syncPick, mlQuota: mlQuotaRow, adminView: adminViewRow, historyKeep: historyKeepRow, historyOpen: historyOpenRow })[name]?.(ctx) ?? h('div');
 }

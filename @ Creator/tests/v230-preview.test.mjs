@@ -113,7 +113,7 @@ test('link click: opens the Preview by default; Ctrl-click, middle click or the 
 });
 
 test('ensureMeta (v2.3.2): Microlink is asked by itself once for a link it never answered, the old details stay, and the attempt is logged', async () => {
-  prefs.set('meta.microlink', true); prefs.remove('ml.day');
+  prefs.set('meta.microlink', true); prefs.remove('ml.d25');
   const e = await mkEngine(); const { ids } = await seed(e);
   const { fetchStatus } = await import('../../js/features/preview/preview-meta.js');
   const seen = []; fetchStatus.subscribe((v) => seen.push(v.engine));

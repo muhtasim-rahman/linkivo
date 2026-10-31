@@ -11,13 +11,16 @@
  *          v2.3.2 (owner): the bar is icons only on every screen size; from 600px wide it also has Read later and Refresh data (Microlink first); the three-dot
  *          menu gets Microlink and thum.io on/off lines; a slim "Data Fetching (SERVICE)" strip shows while details are being loaded; opening a link starts
  *          the fetch by itself; the Details tab updates live (points); the card has a fixed, sensible height and its two columns scroll on their own.
- * Page module: mount(container, ctx)      Pure logic: preview-model.js     Tabs: preview-tabs.js
+ * Page module: mount(container, ctx)
+ * v2.4.1: also the preview INSIDE Random Discover. The Random page calls mount(el, { params: { lid }, query: {}, router, embedded: { src: 'random', onClose(), bar() -> Element[] } }):
+ *          the related-links column is left out, Back calls onClose, `bar()` adds the Random page's own buttons (new random link, filters) to the action bar,
+ *          and the open is recorded in History with the given src (the normal page records src "preview").      Pure logic: preview-model.js     Tabs: preview-tabs.js
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
 import { prefs } from '../../core/local-prefs.js';
-import { getEngine } from '../../core/app-data.js';
+import { getEngine, recordOpen } from '../../core/app-data.js';
 import { openMenu } from '../../ui/popover.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
@@ -29,8 +32,6 @@ import { buildPanel } from './preview-tabs.js';
 import { ensureMeta, fetchStatus, wantsMicrolink } from './preview-meta.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
 import { shotQuota } from '../../core/admin.js';
-import { record as recordHistory } from '../../core/history.js';
-import { session as rndSession, nextLink, options as rndOptions } from '../random/random-session.js';
 
 const K_LAST = 'preview.tab', K_USE = 'preview.tabUse', K_DEF = 'preview.defaultTab';
 /** v2.3.1: the tab that opens first: the setting "Tab that opens first" when it is not "Last used" and exists for this link, else the old rule (last used, most used, first). */
@@ -40,11 +41,15 @@ export async function mount(container, ctx) {
   const engine = getEngine(), router = ctx.router;
   await loadCss('/css/pages/preview.css');
   const lid = ctx.params.lid;
-  const back = () => { if (ctx.from) history.back(); else router.navigate('/library', { replace: true }); };
+  const emb = ctx.embedded || null;
+  // v2.4.1 (owner): Back always lands in the folder the link lives in: the browser's own Back when we came from a page of this app (related links replace the entry,
+  // so one step is enough), otherwise (a pasted address, a reload) straight into the link's folder, and only then the Library.
+  const back = () => {
+    if (emb) { emb.onClose(); return; }
+    if (ctx.from) history.back();
+    else { const l0 = engine && engine.getLink(lid); router.navigate(l0 && l0.fid && engine.getFolder(l0.fid) ? `/folder/${encodeURIComponent(l0.fid)}` : '/library', { replace: true }); }
+  };
   const link = () => engine && engine.getLink(lid);
-  const rnd = ctx.query && ctx.query.random === '1';   // v2.4.0: embedded in Random Discover (new random link icon, filter icon, auto-advance)
-  // v2.4.0 (owner): every opening of a link in the Preview is a History entry (a random pick was already recorded by the picker; the dedupe in history.js keeps one)
-  if (engine && link() && !link().del && !rnd) recordHistory(engine, link(), 'preview');
   if (!engine || !link() || link().del) {
     container.appendChild(h('div', { class: 'page' }, emptyState({ art: 'lost', title: 'This link is not available', text: 'It may have been deleted or moved to the Recycle Bin.', actions: [{ label: 'Back to library', primary: true, onClick: () => router.navigate('/library', { replace: true }) }] })));
     return;
@@ -98,18 +103,8 @@ export async function mount(container, ctx) {
     const open = h('a', { class: 'pv-act', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Open in a new tab', 'data-tip': 'Open in new tab' }, icon('external', { size: 22 }));
     bar.replaceChildren(b('heart', l.fv ? 'Remove from favourites' : 'Add to favourites', () => bulk.favourite(engine, [lid]), !!l.fv), b('thumb-up', 'Point up', () => bulk.like(engine, [lid])), b('thumb-down', 'Point down', () => bulk.dislike(engine, [lid])),
       b('copy', 'Copy link', () => copyText(l.url, 'Link copied.')), open,
-      b('clock', l.rl ? 'Remove from read later' : 'Read later', () => bulk.readLater(engine, [lid]), !!l.rl, true), b('refresh', 'Refresh data', () => load(true), false, true),
-      ...(rnd ? [b('filter', 'Random filters', () => import('../random/random-panel.js').then((m) => m.openFilterPopup({ engine }))), b('random', 'New random link', () => newRandom())] : []), more);
+      b('clock', l.rl ? 'Remove from read later' : 'Read later', () => bulk.readLater(engine, [lid]), !!l.rl, true), b('refresh', 'Refresh data', () => load(true), false, true), more, ...(emb && emb.bar ? emb.bar() : []));
   }
-  // ---- Random Discover (v2.4.0): the next link replaces this entry, so Back still leaves for the page the session started from ----------------------------
-  let autoTimer = 0;
-  async function newRandom() {
-    clearTimeout(autoTimer);
-    const l = await nextLink(engine);
-    if (!l) { toast('No other link matches the filters.'); return; }
-    router.navigate(`/link/${encodeURIComponent(l.id)}?random=1`, { replace: true, from: ctx.from });
-  }
-  if (rnd && rndOptions().auto > 0) autoTimer = setTimeout(() => { if (document.body.contains(container)) newRandom(); }, rndOptions().auto * 1000);
   /** Removing items can leave two separators in a row, or one at the start or end of the menu. */
   const tidy = (items) => items.filter((it, i, a) => !(it.separator && (i === 0 || i === a.length - 1 || a[i - 1].separator)));
 
@@ -142,12 +137,12 @@ export async function mount(container, ctx) {
   // ---- the other links of the folder (wide screens) ----------------------------------------------------------------------------------------
   function paintSide() {
     const l = link(); if (!l) return;
-    const showRel = prefs.get('preview.related', true) !== false;   // v2.3.1: setting "Show related links"
+    const showRel = !emb && prefs.get('preview.related', true) !== false;   // v2.3.1: setting "Show related links"
     side.hidden = !showRel; root.classList.toggle('no-side', !showRel); if (!showRel) return;
     const rel = relatedLinks(engine.listLinks(), l, 20);
     const item = (x) => { const fav = h('span', { class: 'pv-side-fav', 'aria-hidden': 'true' }, h('span', { text: (x.host || '?').replace(/^www\./, '').charAt(0).toUpperCase() }));
       const im = h('img', { src: faviconUrl(x.host), alt: '', width: '20', height: '20', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => im.remove(), { once: true }); fav.appendChild(im);
-      return h('li', null, h('a', { href: `/link/${encodeURIComponent(x.id)}`, class: 'pv-side-item', 'data-replace': '' }, fav, h('span', { class: 'pv-side-tx' }, h('span', { class: 'pv-side-t', text: linkTitle(x) }), h('span', { class: 'pv-side-u', text: x.host || '' })))); };
+      return h('li', null, h('a', { href: `/link/${encodeURIComponent(x.id)}`, class: 'pv-side-item', 'data-replace': 'true' },   /* v2.4.1: swaps the entry, so Back leaves the preview for the folder */ fav, h('span', { class: 'pv-side-tx' }, h('span', { class: 'pv-side-t', text: linkTitle(x) }), h('span', { class: 'pv-side-u', text: x.host || '' })))); };
     side.replaceChildren(h('h2', { class: 'pv-side-h' }, h('span', { text: 'Related links' }), h('span', { class: 'pv-side-n', text: String(rel.length) })),
       rel.length ? h('ul', { class: 'pv-side-list' }, rel.map(item)) : h('p', { class: 'muted', text: 'Nothing related yet. Links from the same folder, site or with the same tags show up here.' }));
   }
@@ -169,8 +164,9 @@ export async function mount(container, ctx) {
   // ---- first paint ------------------------------------------------------------------------------------------------------------------------------
   paintHead(); paintBar(); paintSide();
   choose(firstTab(avail()), false);
+  recordOpen(link(), emb ? emb.src : 'preview');   // v2.4.1: every preview is one History entry (repeats within seconds count once)
   const off = engine.subscribe((e) => { if (e.type === 'change' && (e.links || []).includes(lid)) { if (!link() || link().del) { back(); return; } paintHead(); paintBar(); if (tab === 'details') panelNode?.update?.({ link: link(), meta }); } });   // v2.3.2: points and flags update live in Details
   load();
 
-  return () => { disposed = true; clearTimeout(autoTimer); off(); offFetch(); delete document.documentElement.dataset.pv; detachTabs(); document.removeEventListener('fullscreenchange', onFsChange); panelNode?.dispose?.(); if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };
+  return () => { disposed = true; off(); offFetch(); delete document.documentElement.dataset.pv; detachTabs(); document.removeEventListener('fullscreenchange', onFsChange); panelNode?.dispose?.(); if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };
 }

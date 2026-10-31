@@ -1,0 +1,29 @@
+feat(v2.4.1): Random Discover, points picker, History, Profile, and the v2.3.2 fix round
+
+- Random Discover (/random): one merged panel for folders (each Low / Normal / High) and filters (favourites, liked, never opened, skip disliked, points range, sites to include or leave out, tags) with a live count; "Surprise me" opens the normal Preview inside the page with New random link and Filters buttons in its action bar; session count, no repeats until the pool is used up, optional auto-advance countdown that stops on a touch, key N for the next link; /random?folder=<id> presets a folder and opens a link at once
+- Picker (engine/picker.js, pure, seeded RNG in tests): W = points^gamma x fresh x recency x age x folderWeight; modes Balanced, Points only, Equal chance, Low points first, Never opened first; optional drift toward 100; blocked and deleted links never picked
+- Points: each random open applies the owner's rule (-10, like steps start again); like and dislike steps unchanged since v2.3.1
+- History (core/history.js): every opened link is recorded (list click in a new tab, Preview, Random); kept on this device by default or in the account (setting), for off / 1 hour / 1, 3, 7, 14, 30 days, admins also no limit; History page /profile/history with day groups, search, source filter, three-dot actions, multi-select remove, Clear history; Profile page has a History section
+- Settings: new sections Random Discover and History; "Random from this folder" is on (flag + header button)
+- Fix: Microlink free limit is 25 a day (checked on microlink.io); the count is only a reminder, Microlink is still asked after 25 and a real 429 pauses it for a minute, then the next engine answers
+- Fix: Back from a related link goes straight to the folder (related links replace the entry; router replace works); a Preview opened without history goes to its folder
+- Fix: Back from a Preview restores the folder's search, filters, sort, view and scroll (core/page-state.js, ctx.pop)
+- Fix: all folder cards have the same height
+- Fix: grid/list switch of the folder header moved into the three-dot menu on phones
+- Fix: collapsed sidebar profile tooltip opens to the right of the badge like the other rows
+- Sidebar: one toggle button always in the first slot, a thin divider, logo and name to its right when expanded
+- Admin view switch moved to Settings > Account (admins only), Admin / Normal user, memory only (a reload returns to Admin), hides the admin badge; no wording about admin limits for normal users
+- Settings info (i) buttons are smaller, have no tooltip, open a small note on click with a short transition; all captions have one size
+- Fix: Sync now moves "Last synced" (engine.syncNow, the row repaints)
+- Switch account: Reset password removed, Remove account stays
+- No blue tap flash or selection highlight on touch for links, cards and rows
+- Contact email is linkivo.web@gmail.com everywhere (older history entries keep the old text)
+- Local database version 3 (new store `history`); rules and Worker unchanged
+- Context: v2.4.0 entry and commit file from the failed v2.4.0 build kept as history, with its decisions carried over
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting (database rules and the Worker are unchanged)
+- hard reload; test with the checklist in the chat summary

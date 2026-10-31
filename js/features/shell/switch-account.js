@@ -1,7 +1,7 @@
 /**
  * Linkivo — js/features/shell/switch-account.js  (v2.3.1)
  * Purpose: the "Switch account" popup (owner request). Lists the accounts that signed in on this device (core/known-accounts.js), the current one on top, and an
- *          "Add another account" button under the list. Each account has a three-dot menu: Reset password (sends the reset link, rate limited), Log out (current
+ *          "Add another account" button under the list. Each account has a three-dot menu: Log out (current
  *          account) or Remove from list (the others). Tapping another account asks once, signs out and opens the login page with that email filled in (Google
  *          accounts are offered with their address as the hint). Honest limit: Firebase keeps one signed-in user per browser, so this is a fast re-sign-in, not
  *          two live sessions; the current account's data stays safely in its own account and on this device's cache.
@@ -16,9 +16,8 @@ import { confirmDialog } from '../../ui/confirm.js';
 import { prefs } from '../../core/local-prefs.js';
 import { getSession } from '../../core/session.js';
 import { maskEmail } from '../../core/mask.js';
-import { sendAllowed, friendlyWait } from '../../core/send-limit.js';
 import { listAccounts, forgetAccount, stashPrefill } from '../../core/known-accounts.js';
-import { sendReset, signOutUser, friendlyAuthError } from '../auth/auth-service.js';
+import { signOutUser } from '../auth/auth-service.js';
 import { avatar, logOut } from './shell-parts.js';
 import { loadCss } from '../../core/css-loader.js';
 
@@ -35,18 +34,13 @@ export async function openSwitchAccount(router) {
     try { await signOutUser(); } catch { toast('Could not sign out. Try again.', { type: 'error' }); return; }
     router.navigate('/login', { replace: true });
   }
-  async function forgot(a) {
-    const g = sendAllowed('reset', a.email); if (!g.ok) { toast(`A link was sent recently. Try again in ${friendlyWait(g.waitMs)}.`); return; }
-    try { await sendReset(a.email); toast(`Reset link sent to ${maskEmail(a.email)}.`); } catch (e) { toast(friendlyAuthError(e) || 'Could not send the link.', { type: 'error' }); }
-  }
   function paint() {
     const accounts = listAccounts(prefs).sort((x, y) => (y.uid === cur) - (x.uid === cur));
     list.replaceChildren(...(accounts.length ? accounts.map((a) => {
       const isCur = a.uid === cur;
       const more = h('button', { type: 'button', class: 'btn-icon', 'aria-label': `Options for ${a.name || maskEmail(a.email)}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 }));
       more.addEventListener('click', () => openMenu(more, [
-        // ! Removed in v2.4.0 (owner): "Reset password" does not belong in Switch account; `forgot()` above is unused now and kept for reference
-        isCur ? { label: 'Log out', icon: 'logout', danger: true, onSelect: () => { sheet?.close(); logOut(router); } } : { label: 'Remove from list', icon: 'close', onSelect: () => { forgetAccount(a.uid, prefs); paint(); } }
+        isCur ? { label: 'Log out', icon: 'logout', danger: true, onSelect: () => { sheet?.close(); logOut(router); } } : { label: 'Remove account', icon: 'close', onSelect: () => { forgetAccount(a.uid, prefs); paint(); } }
       ]));
       const main = h('button', { type: 'button', class: 'swa-main', disabled: isCur, 'aria-current': isCur ? 'true' : null, on: { click: () => goSignIn(a) } },
         avatar(a.name || a.email, false, a.photo), h('span', { class: 'swa-tx' }, h('span', { class: 'swa-name', text: a.name || 'Account' }), h('span', { class: 'swa-mail', text: maskEmail(a.email) })),

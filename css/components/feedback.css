@@ -49,7 +49,7 @@ a.row:hover, button.row:hover { background: var(--surface-2); text-decoration: n
 .row-main { display: grid; gap: 1px; flex: 1; min-width: 0; } /* label above description (v2.1.0 left them inline) */
 .row-label { font-weight: 560; }
 .row-desc { color: var(--sub); font-size: var(--fs-sm); line-height: 1.3; }   /* v2.3.0 (owner): tighter caption lines */
-.row-desc.is-long { font-size: var(--fs-xs); line-height: 1.32; }   /* only the few long captions (over 100 characters) are a step smaller */
+.row-desc.is-long { font-size: var(--fs-sm); line-height: 1.32; }   /* v2.4.1 (owner): every caption has the same size, long ones included */
 .row.is-toggle { cursor: pointer; } .row.is-toggle:hover { background: var(--surface-2); }   /* v2.3.0: the whole row is the switch */
 .row-end { display: flex; align-items: center; gap: var(--s2); color: var(--sub); flex: none; }
 .row.is-danger .row-label { color: var(--danger); }

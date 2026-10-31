@@ -101,3 +101,8 @@ Automated (Node and jsdom, 246 tests in total, 43 new): `v230-fixes` (Danger zon
 `v230-check` (job, client batching, result sheet), `v230-share` (model, manifest, page).
 Not automated, owner must run: the real network `/check` (a live 404 page, a made-up domain, a site that blocks robots), iframe behaviour of real sites, YouTube and Vimeo players,
 the mShots screenshot service, the Android share sheet after installing the app, the Fullscreen button on a phone, the toast following the hidden bottom bar, and every layout at 360px and 1280px in light and dark.
+
+## v2.4.1 tests (`v241.test.mjs`, 21 tests)
+Automated: picker (seeded distribution, no repeats, filters, weights and modes), History service (record, repeat rule, keep time, Off, admin "no limit", account store and clear, guest), page-state, `syncNow`, admin Normal view (memory only), the small fixes (email, 25 a day, card heights, tap highlight, Switch account, info buttons), the Random page (hub, Surprise me, -10 points, History, no repeat, folder narrowing, `?folder=`), the History page (day groups, search, filter, remove, select), Profile, folder state restore on Back, router `replace`.
+Setup: jsdom **30 or newer** is needed (`Blob.text()`); install it outside the project and run `JSDOM_PATH=<dir>/node_modules node --test "@ Creator/tests/"*.test.mjs`.
+Not automated, owner must run: Back on a real phone (folder filters and scroll after a Preview, related link then Back), the sidebar header animation, the tap-highlight removal on Android and iPhone, the embedded Preview with a real site, auto-advance, History in the account on two devices, Microlink over the real network.

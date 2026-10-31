@@ -161,8 +161,9 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   handlers.route({ route: { tab: 'x', shell: false } }); assert.equal($('#app').dataset.chrome, 'none');
   assert.equal($('.pf-mail').textContent, 'tu******99@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
   $('.theme-row').click(); await tick(5); assert.equal(prefs.get('ui.theme'), 'dark'); prefs.remove('ui.theme');
-  $('.sb-toggle').click(); assert.equal($('#app').dataset.collapsed, 'true'); assert.equal(prefs.get('ui.sidebarCollapsed'), true);
-  $('.sb-toggle').click(); assert.equal($('#app').dataset.collapsed, 'false');   // v2.4.0: one toggle for both states
+  $('.sb-slotbtn').click(); assert.equal($('#app').dataset.collapsed, 'true'); assert.equal(prefs.get('ui.sidebarCollapsed'), true);   // v2.4.1: ONE button collapses and expands
+  assert.equal($('.sb-slotbtn').getAttribute('aria-label'), 'Expand sidebar');
+  $('.sb-slotbtn').click(); assert.equal($('#app').dataset.collapsed, 'false'); assert.equal($('.sb-slotbtn').getAttribute('aria-label'), 'Collapse sidebar');
 });
 
 test('route table: every route loads a real module with mount(), and every parent exists', async () => {
@@ -217,14 +218,14 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   setSession({ mode: 'guest', user: null, status: 'active' });
   const router = mk({ routes: ROUTES, container, getSession }); await router.start();
   await router.navigate('/settings'); await tick(5);
-  assert.equal($$('.set-nav .set-nav-item').length, 11, 'category list (v2.2.3: + Danger zone, v2.3.1: + Search, Preview, v2.4.0: + Random and history)'); assert.equal($$('.set-sec').length, 11, 'one page, one section per category');
+  assert.equal($$('.set-nav .set-nav-item').length, 12, 'category list (v2.2.3: + Danger zone, v2.3.1: + Search, Preview, v2.4.1: + Random Discover, History)'); assert.equal($$('.set-sec').length, 12, 'one page, one section per category');
   assert.equal($('.page-head.is-stack .page-title').textContent, 'Settings'); assert.ok($('.page-head.is-stack .page-sub'), 'title and subtitle on separate lines');
   await router.navigate('/settings/appearance'); await tick(5);
   $$('[data-setting="theme"] button').find((b) => b.textContent === 'Dark').click(); assert.equal(prefs.get('ui.theme'), 'dark'); assert.equal(document.documentElement.dataset.theme, 'dark');
   $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet');
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
-  assert.equal($$('.set-sec').length, 11, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
+  assert.equal($$('.set-sec').length, 12, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
   const resetRow = $$('.row.is-caution').find((r) => /Reset all settings/.test(r.textContent))   /* v2.3.0: reset is yellow-orange (is-caution), no longer red */; resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings' || b.textContent === 'Reset all settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);

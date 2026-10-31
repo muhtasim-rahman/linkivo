@@ -42,11 +42,10 @@ code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; }
 .wordmark { font-family: var(--font-brand); font-weight: 800; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
 .wordmark i { font-style: normal; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-/* v2.4.0 (owner): no default blue flash when a link, card or row is tapped, and no blue selection when one is held on a touch screen.
-   Only interactive things are affected: ordinary text (paragraphs, titles in details) stays selectable. */
+/* v2.4.1 (owner): no default blue flash on tap and no selection highlight or callout on press-and-hold for links, cards and rows on touch screens.
+   Text that people copy (details, code, inputs) stays selectable. */
 * { -webkit-tap-highlight-color: transparent; }
 @media (hover: none) and (pointer: coarse) {
-  a, button, [role='button'], [role='switch'], [role='menuitem'], .row, .fcard, .lrow, .nav-item, .bar-item, .pv-side-item, .chip, .swa-row, .pf-badge {
-    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-  }
+  a, button, [role='button'], [role='link'], [role='menuitem'], [tabindex], label, summary, .row, .fcard, .lrow, .card, .nav-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  input, textarea, select, [contenteditable='true'], pre, code, .selectable, .pv-details, .pv-details * { -webkit-user-select: text; user-select: text; }
 }

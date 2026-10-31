@@ -24,7 +24,7 @@ import { emptyState } from '../../ui/empty-state.js';
 import { toast } from '../../ui/toast.js';
 import { createVirtualList } from '../../ui/virtual-list.js';
 import { loadCss } from '../../core/css-loader.js';
-import { getEngine, getQueue } from '../../core/app-data.js';
+import { getEngine, getQueue, recordOpen } from '../../core/app-data.js';
 import { plural } from '../../core/format.js';
 import { isEnabled } from '../../core/flags.js';
 import { FAV_ID, favouritesFolder, colorOf, folderTile } from './folder-style.js';
@@ -34,8 +34,7 @@ import { runCheck } from '../check/check-sheet.js';
 import { folderMenuItems } from './folder-actions.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
-import { remember, recall } from '../../core/page-memory.js';
-import { record as recordHistory } from '../../core/history.js';
+import { savePageState, takePageState } from '../../core/page-state.js';   // v2.4.1: Back from a preview returns to the same filters and scroll position
 
 /** v2.3.2 (owner): the title's font size follows its length so a long name does not crowd the header; CSS keeps at most 2 lines with an ellipsis. */
 export const lenClass = (name) => { const n = [...String(name || '')].length; return n > 40 ? 'xs' : n > 25 ? 's' : n > 15 ? 'm' : 'l'; };
@@ -60,9 +59,10 @@ export async function mount(container, ctx) {
   const fid = ctx.params.fid, isFav = fid === FAV_ID;
   const scroller = document.getElementById('page-root') || document.scrollingElement;
   const st = { q: '', domain: null, scope: 'all', sort: pref(LIB.fsort) === 'folder' ? 'new' : pref(LIB.fsort), view: pref(LIB.fview), selecting: ctx.query.select === '1', selected: new Set(), last: -1, rows: [] };
-  // v2.4.0 (owner): coming BACK (from the Preview, say) restores the search, domain, show filter and scroll position; a fresh visit starts clean
-  const memKey = `folder:${fid}`, mem = ctx.pop ? recall(memKey) : null;
-  if (mem) { st.q = mem.q || ''; st.domain = mem.domain || null; st.scope = mem.scope || 'all'; }
+  // v2.4.1 (owner): after Back or Forward the folder comes back as it was left (search, domain row, scope, sort, view and scroll); a fresh visit starts clean
+  const stateKey = `folder:${isFav ? 'fav' : fid}`;
+  const saved = takePageState(stateKey, { pop: ctx.pop === true });
+  if (saved) Object.assign(st, { q: saved.q, domain: saved.domain, scope: saved.scope, sort: saved.sort, view: saved.view });
   const sourceLinks = () => (isFav ? engine.listLinks().filter((l) => l.fv) : engine.listLinks({ fid }));
   const folder = () => (isFav ? favouritesFolder(sourceLinks().length) : engine.getFolder(fid));
   const page = h('div', { class: 'page fp page-enter' });
@@ -72,15 +72,15 @@ export async function mount(container, ctx) {
 
   // ---- static parts ---------------------------------------------------------------------------------------------------
   const title = h('h1', { class: 'page-title fp-name' }), sub = h('p', { class: 'fp-sub', 'aria-live': 'polite' }), tile = h('span', { class: 'fp-tile' });
-  const search = h('input', { class: 'input', type: 'search', placeholder: 'Search in this folder', 'aria-label': 'Search in this folder', autocomplete: 'off', value: st.q });
-  const scopeSel = createSelect({ options: Object.entries(SCOPES).map(([value, label]) => ({ value, label })), value: st.scope, label: 'Show', onChange: (v) => { st.scope = v; update(); } });
-  scopeSel.classList.add('fp-scope');
+  const search = h('input', { class: 'input', type: 'search', placeholder: 'Search in this folder', 'aria-label': 'Search in this folder', autocomplete: 'off' });
+  const scopeSel = createSelect({ options: Object.entries(SCOPES).map(([value, label]) => ({ value, label })), value: 'all', label: 'Show', onChange: (v) => { st.scope = v; update(); } });
+  scopeSel.classList.add('fp-scope'); if (saved) { scopeSel.setValue(st.scope); search.value = st.q; }
   const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'new', label: 'Sort links', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.fsort, v); update(); } });
   sortBtn.classList.add('fp-sort');
   const chips = h('div', { class: 'fp-chips fade-x', role: 'toolbar', 'aria-label': 'Filter by domain' });
   const chipRow = h('div', { class: 'fp-chiprow' }, chips);
   const info = h('div', { class: 'fp-info', role: 'status' });
-  const viewBtn = h('button', { type: 'button', class: 'btn-icon fp-view', 'aria-label': 'Switch view' });
+  const viewBtn = h('button', { type: 'button', class: 'btn-icon fp-view', 'aria-label': 'Switch view' });   // v2.4.1: on phones this icon is hidden and the same action lives in the three-dot menu
   const selBtn = h('button', { type: 'button', class: 'btn-icon fp-sel', 'aria-label': 'Select links', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
   const moreBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'More actions', 'aria-haspopup': 'menu' }, icon('more-h', { size: 20 }));
   const bar = h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected links', hidden: true });
@@ -90,7 +90,7 @@ export async function mount(container, ctx) {
     h('header', { class: 'fp-head' },
       h('button', { type: 'button', class: 'btn-icon fp-back', 'aria-label': 'Back to library', on: { click: () => router.navigate('/library') } }, icon('arrow-left', { size: 20 })),
       tile, h('div', { class: 'fp-titles' }, title, sub),
-      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), viewBtn, selBtn, moreBtn)),
+      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), !isFav && isEnabled('randomFromFolder') && h('button', { type: 'button', class: 'btn-icon fp-rand', 'aria-label': 'Random from this folder', 'data-tip': 'Random from this folder', on: { click: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) } }, icon('random', { size: 20 })), viewBtn, selBtn, moreBtn)),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chipRow, info, body);
   const removeDock = mountDock(bar);
   const detachChips = attachScrollRow(chips);
@@ -159,12 +159,13 @@ export async function mount(container, ctx) {
 
   // ---- events ---------------------------------------------------------------------------------------------------------
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
-    viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); });
+  const toggleView = () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); };
+  viewBtn.addEventListener('click', toggleView);
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
   moreBtn.addEventListener('click', () => {
     const f = folder();
     const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
-    const pick = phone ? [{ label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { label: st.view === 'grid' ? 'Switch to list' : 'Switch to grid', icon: st.view === 'grid' ? 'list' : 'grid', onSelect: () => viewBtn.click() }, { separator: true }] : [];   // v2.4.0 (owner): the grid/list icon lives here on phones
+    const pick = phone ? [{ label: st.view === 'grid' ? 'List view' : 'Grid view', icon: st.view === 'grid' ? 'list' : 'grid', onSelect: toggleView }, { label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
     const items = isFav ? [...pick, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking favourites' }) }, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
       : [...pick, ...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking folder' }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
     moreBtn._m = openMenu(moreBtn, items);
@@ -176,10 +177,8 @@ export async function mount(container, ctx) {
     if (act === 'toggle' && !st.selecting) {   // v2.2.2: the favicon turned into a checkbox on hover: a click on it starts selecting
       e.preventDefault(); setSelecting(true); st.selected.add(id); st.last = st.rows.findIndex((x) => x.id === id); paintBar(); vl?.refresh(); return;
     }
-    if (act === 'open' && !st.selecting && e.target.closest('.lmain')) {
-      if (openInPreview(e, l, router)) return;   // v2.3.0: the row opens the Preview (which writes its own History entry)
-      recordHistory(engine, l, 'click');         // v2.4.0 (owner): a link opened in a new tab is a History entry too
-    }
+    if (act === 'open' && !st.selecting && e.target.closest('.lmain') && openInPreview(e, l, router)) return;   // v2.3.0: the row opens the Preview (the Preview records it)
+    if (act === 'open' && !st.selecting) recordOpen(l, 'click');   // v2.4.1 (owner): a link opened in a new tab or page goes to History too
     if (st.selecting && act !== 'menu') {
       e.preventDefault();
       const idx = st.rows.findIndex((x) => x.id === id);
@@ -208,8 +207,8 @@ export async function mount(container, ctx) {
   page.classList.toggle('is-selecting', st.selecting); page.classList.toggle('has-dock', st.selecting);
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
-  if (mem && mem.top > 0) { const put = () => { scroller.style.scrollBehavior = 'auto'; scroller.scrollTop = mem.top; }; put(); requestAnimationFrame(() => { put(); requestAnimationFrame(() => { put(); scroller.style.scrollBehavior = ''; }); }); }   // the list needs its height first: set again after layout
-  return () => { remember(memKey, { q: st.q, domain: st.domain, scope: st.scope, top: scroller.scrollTop }); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  if (saved && saved.scroll > 0) requestAnimationFrame(() => requestAnimationFrame(() => { scroller.scrollTop = saved.scroll; }));   // after the list has laid out
+  return () => { savePageState(stateKey, { q: st.q, domain: st.domain, scope: st.scope, sort: st.sort, view: st.view, scroll: scroller.scrollTop }); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

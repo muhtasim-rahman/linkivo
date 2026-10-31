@@ -176,10 +176,13 @@
 
 /* ---- v2.3.2: live suffix after a label, with the info button after the bracket ---- */
 .row-label.has-suffix { display: block; } .row-suffix { color: var(--sub); font-weight: 500; font-variant-numeric: tabular-nums; }
-.row-i { display: inline-grid; vertical-align: middle; min-width: 28px; min-height: 28px; margin-left: 2px; color: var(--sub); } .row-i:hover { color: var(--text); }
-.row-info { display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--sub); max-width: 62ch; transition: grid-template-rows .22s ease, opacity .22s ease, margin-top .22s ease; }
-.row-info.is-open { grid-template-rows: 1fr; opacity: 1; margin-top: 4px; }
-.row-info-t { overflow: hidden; min-height: 0; }
+/* v2.4.1 (owner): the info button is small and has no tooltip; a click expands a quiet note (a touch of accent colour so it reads as an aside) */
+.row-i { display: inline-grid; place-items: center; vertical-align: middle; width: 22px; height: 22px; margin-left: 4px; padding: 0; border-radius: 50%; color: var(--sub); position: relative; transition: color var(--t-micro) var(--ease), background var(--t-micro) var(--ease); }
+.row-i::after { content: ''; position: absolute; inset: -11px; }   /* the touch target stays 44px */
+.row-i:hover { color: var(--text); } .row-i.is-on { color: var(--accent-text); background: var(--accent-soft); }
+.row-info { display: grid; grid-template-rows: 0fr; margin-top: 0; max-width: 62ch; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--accent-text); opacity: 0; transition: grid-template-rows 160ms var(--ease), opacity 160ms var(--ease), margin-top 160ms var(--ease); }
+.row-info.is-open { grid-template-rows: 1fr; margin-top: 4px; opacity: 1; }
+.row-info-in { overflow: hidden; min-height: 0; }
 @media (prefers-reduced-motion: reduce) { .row-info { transition: none; } }
 
 .set-top > *, .set-body > *, .set-sec, .group, .row { min-width: 0; }

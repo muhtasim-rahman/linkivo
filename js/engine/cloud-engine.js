@@ -100,6 +100,22 @@ export class CloudEngine extends Engine {
     }
   }
 
+  /**
+   * v2.4.1 (owner: "Last synced" kept showing the old time after Sync now). Root cause: flush() returns early when nothing waits in the outbox, so no
+   * state change happened and `lastSync` was never touched; the settings row was also painted once and never again. Sync now sends what waits, proves the
+   * connection with one tiny read, stamps `lastSync` and emits a sync event so the row repaints. Returns true when the account answered.
+   */
+  async syncNow() {
+    this._setState('syncing');
+    if (!(await this.flush())) return false;   // flush() has already set offline or error
+    try { await this._withRetry(() => this.adapter.get(`users/${this.uid}/meta/purgeEpoch`)); }
+    catch (e) { this._setState(typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'error'); log.warn('cloud', 'sync now failed', { code: e && e.code }); return false; }
+    this.lastSync = Date.now();
+    if (this.syncState !== 'idle') this._setState('idle');
+    this.bus.emit('event', { type: 'sync', state: 'idle', pending: this.pending, at: this.lastSync });   // always: the page repaints even when the state did not change
+    return true;
+  }
+
   _scheduleRetry() { clearTimeout(this.retryTimer); this.retryTimer = setTimeout(() => this.flush(), RETRY_MS); }
 
   /** Sends everything waiting in the outbox, oldest first (order matters when two writes touch one record). */
@@ -110,18 +126,6 @@ export class CloudEngine extends Engine {
     this._setState('syncing');
     for (const item of items) if (!(await this._sendOutboxItem(item))) return false;
     return true;
-  }
-
-  /** v2.4.0 (owner): "Sync now" must move the "Last synced" time. Remote changes already arrive live (the delta listeners stay open), so syncing now means:
-   *  send everything waiting, and if that worked while online, stamp the time and tell the UI. Returns true when the device is fully in step. */
-  async syncNow() {
-    const ok = await this.flush();
-    if (ok && !(typeof navigator !== 'undefined' && navigator.onLine === false)) {
-      this.lastSync = Date.now();
-      this.bus.emit('event', { type: 'sync', state: this.syncState, pending: this.pending, done: true });
-      return true;
-    }
-    return false;
   }
 
   async _persistSetting(key, value) {

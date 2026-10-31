@@ -33,6 +33,7 @@ export function createFakeRtdb({ clockOffset = 0 } = {}) {
       for (const [p, v] of Object.entries(tree)) if (p.startsWith(path + '/')) { const rest = p.slice(path.length + 1).split('/'); let o = out; rest.forEach((k, i) => { if (i === rest.length - 1) o[k] = structuredClone(v); else o = (o[k] ||= {}); }); any = true; }
       return any ? out : null;
     },
+    async recent(path, child, n) { const all = (await adapter.get(path)) || {}; const top = Object.entries(all).sort((a, b) => (a[1][child] || 0) - (b[1][child] || 0)).slice(-n); return top.length ? Object.fromEntries(top) : null; },
     watchValue(path, cb) { const w = { path, cb }; watchers.push(w); if (path in tree) cb(tree[path]); return () => watchers.splice(watchers.indexOf(w), 1); },
     async shallowKeys(prefix) { return Object.keys(tree).filter((p) => p.startsWith(prefix + '/')).map((p) => p.slice(prefix.length + 1)); }
   };

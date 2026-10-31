@@ -37,7 +37,7 @@ Linkivo/
 │       library/                library-page folder-page link-row link-actions folder-actions folder-style pickers quick-add recycle-bin-page lib-prefs
 │       import/                 import-sheet import-review import-progress import-page import-job parse-client parsers pdf-text zip-reader native-import
 │       export/                 export-sheet export-engine native-format zip-writer formats/(json csv xlsx txt markdown html-bookmarks printable opml common index)
-│       preview search check share    v2.3.0 (done: preview-model/-meta/-tabs/-page, search-core/-store/-page, check-job/-sheet, share-model/-page)      random history profile    v2.4.0 (done: random-session/-panel/-page, history-page; core/history.js, core/page-memory.js, engine/picker.js)      vault account    v2.5.0      backup activity stats legal menu    v2.6.0   (folders still empty)
+│       preview search check share    v2.3.0 (done: preview-model/-meta/-tabs/-page, search-core/-store/-page, check-job/-sheet, share-model/-page)      random history profile    v2.4.1 (done: random/random-page + random-filters, history/history-page; engine/picker.js, core/history.js, core/page-state.js; css/pages/random.css, history.css)      vault account    v2.5.0      backup activity stats legal menu    v2.6.0   (folders still empty)
 │
 ├── index.html                  shell + splash markup (generated once from the logo paths)
 ├── sw.js                       update-safe service worker (precache list is generated)

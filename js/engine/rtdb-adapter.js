@@ -10,6 +10,7 @@
  *            delivers every child with up >= sinceUp, resolves when that initial load is done, then keeps streaming changes
  *   watchValue(path, cb(value)) -> unsubscribe
  *   get(path) -> Promise<value|null>   (v2.2.2: one read, used for the devices list)
+ *   recent(path, child, n) -> Promise<object|null>   (v2.4.1: the n children with the highest `child` value, newest first by the caller; History list)
  *   shallowKeys(path) -> Promise<string[]>   (REST "?shallow=true": keys only, tiny download)
  * API: createRtdbAdapter({ firebase, uid }) -> adapter   (firebase = result of loadFirebase())
  */
@@ -35,6 +36,7 @@ export function createRtdbAdapter({ firebase }) {
       return { unsubscribe: () => offs.forEach((off) => off()) };
     },
     async get(path) { const snap = await d.get(d.ref(db, path)); return snap.val(); },
+    async recent(path, child, n) { const snap = await d.get(d.query(d.ref(db, path), d.orderByChild(child), d.limitToLast(n))); return snap.val(); },
     watchValue(path, cb) { return d.onValue(d.ref(db, path), (s) => cb(s.val())); },
     async shallowKeys(path) {
       const token = await auth.currentUser.getIdToken();

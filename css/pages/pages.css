@@ -93,3 +93,9 @@
 html[data-admin='true'] .avatar .avatar-admin { display: grid; }
 .admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
+
+/* ---- v2.4.1: Profile sections and the recently opened list ---- */
+.pf-sec { margin: var(--s5) 0 var(--s2); font: 650 var(--fs-sm) / 1.2 var(--font-brand); letter-spacing: 0.02em; text-transform: uppercase; color: var(--sub); }
+.pf-rec-fav { flex: none; width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); display: grid; place-items: center; overflow: hidden; }
+.pf-rec .row-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .pf-rec .row-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-rec-empty { margin: 0; padding: var(--s3); }

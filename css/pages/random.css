@@ -1,16 +1,64 @@
-/* Linkivo — css/pages/random.css (v2.4.0): the merged folder + filter panel (page and popup). */
-.rp { display: grid; gap: var(--s3); max-width: 720px; }
-.rp-h { font: 650 var(--fs-sm) / 1.2 var(--font-ui); color: var(--sub); margin: var(--s3) 0 0; }
-.rp-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
-.rp-pair { display: inline-flex; gap: 2px; }
-.rp-w { font-size: var(--fs-xs); color: var(--sub); }
-.rp-toggles { display: grid; gap: var(--s2); }
-.rp-tg { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); width: 100%; min-height: 48px; padding: var(--s2) var(--s3); text-align: left; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
-.rp-tg-t { display: grid; gap: 1px; min-width: 0; } .rp-tg-t small { color: var(--sub); font-size: var(--fs-xs); }
-.rp-tg .switch { flex: none; } .rp-tg.is-on .switch { background: var(--accent-strong); }
-.rp-tg.is-on .switch::after { transform: translateX(18px); }
-.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s3); }
-.rp-f { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--sub); }
-.rp-live { color: var(--sub); font-size: var(--fs-sm); }
-.rp-start { justify-self: start; min-height: 48px; padding-inline: var(--s5); }
-.rnd .page-sub { max-width: 60ch; }
+/* Linkivo v2.4.1 - Random Discover: the hub (card + merged filter panel), the embedded preview and the filter popup */
+.rnd { max-width: 1180px; }
+.rnd-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.rnd-set { flex: none; }
+
+/* ---- hub: phones stack (card first), wide screens put the panel beside a sticky card ---- */
+.rnd-hub { display: grid; gap: var(--s5); align-items: start; }
+.rnd-hub[hidden] { display: none; }
+@media (min-width: 900px) { .rnd-hub { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: var(--s6); } .rnd-card { position: sticky; top: var(--s4); } }
+
+.rnd-card { position: relative; overflow: hidden; display: grid; justify-items: center; gap: var(--s3); padding: var(--s6) var(--s5) var(--s5); text-align: center; border: 1px solid var(--line); border-radius: var(--r-sheet); background: var(--surface); isolation: isolate; }
+.rnd-card::before { content: ''; position: absolute; inset: -40% -20% auto; height: 80%; z-index: -1; background: radial-gradient(60% 60% at 50% 40%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%); }
+.rnd-art { position: relative; width: 116px; height: 116px; display: grid; place-items: center; margin-bottom: var(--s1); }
+.rnd-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--accent) 34%, transparent); }
+.rnd-ring.r2 { inset: 14px; border-style: dashed; border-color: color-mix(in srgb, var(--accent) 24%, transparent); }
+.rnd-die { position: relative; width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; color: #fff; background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #7c3aed)); box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--accent) 70%, transparent); rotate: -8deg; }
+@media (prefers-reduced-motion: no-preference) { .rnd-ring.r1 { animation: rnd-spin 26s linear infinite; } .rnd-ring.r2 { animation: rnd-spin 18s linear infinite reverse; } }
+@keyframes rnd-spin { to { rotate: 360deg; } }
+.rnd-title { margin: 0; font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
+.rnd-pool { margin: 0; color: var(--sub); } .rnd-pool strong { color: var(--text); font-size: var(--fs-md); }
+.rnd-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.rnd-chip { padding: 3px 10px; border-radius: 999px; font-size: var(--fs-xs); background: var(--accent-soft); color: var(--accent-text); } .rnd-chip.is-quiet { background: var(--surface-2); color: var(--sub); }
+.rnd-go { min-height: 48px; width: 100%; max-width: 280px; margin-top: var(--s2); font-size: var(--fs-md); gap: var(--s2); }
+.rnd-mode { margin: 0; display: flex; gap: var(--s2); align-items: center; font-size: var(--fs-sm); color: var(--sub); } .rnd-mode a { font-weight: 600; }
+.rnd-warn { margin: 0; font-size: var(--fs-sm); color: var(--warning); max-width: 30ch; }
+.rnd-panel-h { margin: 0 0 var(--s3); font: 650 var(--fs-md) / 1.2 var(--font-brand); }
+
+/* ---- filter panel (also inside the popup) ---- */
+.rf { display: grid; gap: var(--s5); }
+.rf-sec { display: grid; gap: var(--s3); align-content: start; }
+.rf-h { margin: 0; font: 650 var(--fs-sm) / 1.2 var(--font-brand); letter-spacing: 0.02em; text-transform: uppercase; color: var(--sub); }
+.rf-help { margin: -4px 0 0; font-size: var(--fs-sm); color: var(--sub); }
+.rf-count { display: flex; gap: 4px; align-items: baseline; font-size: var(--fs-sm); color: var(--sub); } .rf-count strong { color: var(--text); } .rf-count.is-zero strong { color: var(--warning); }
+.rf-folders { display: grid; gap: 6px; }
+@media (min-width: 600px) { .rf-folders { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .rf-all { grid-column: 1 / -1; } }
+.rf-all, .rf-folder { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: 44px; padding: 6px var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); text-align: left; color: var(--text); transition: border-color var(--t-micro) var(--ease), background var(--t-micro) var(--ease); }
+.rf-all:hover, .rf-folder:hover { border-color: var(--line-strong); }
+.rf-all.is-on, .rf-folder.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.rf-fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.rf-n { color: var(--sub); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.rf-tick { width: 18px; display: grid; place-items: center; color: var(--accent-text); }
+.rf-frow { display: grid; gap: 6px; } .rf-frow.is-on { grid-column: 1 / -1; padding-bottom: 4px; }
+.rf-weight { width: 100%; } .rf-weight button { flex: 1; min-height: 36px; }
+.rf-group .row { min-height: 52px; }
+.rf-field { display: grid; gap: 6px; } .rf-label { display: grid; gap: 6px; } .rf-label > span, .rf-label-t { font-size: var(--fs-sm); font-weight: 600; }
+.rf-range { display: flex; align-items: center; gap: var(--s2); } .rf-num { width: 96px; min-height: 44px; } .rf-to { color: var(--sub); font-size: var(--fs-sm); }
+.rf-chips { display: flex; flex-wrap: wrap; gap: 6px; } .rf-chips:empty { display: none; }
+.rf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: var(--fs-sm); }
+.rf-x { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--sub); position: relative; } .rf-x::after { content: ''; position: absolute; inset: -11px; } .rf-x:hover { color: var(--text); background: var(--line); }
+
+/* ---- playing: the embedded preview fills the page, the bottom bar steps aside ---- */
+.rnd-stage { height: calc(100dvh - 40px); min-height: 420px; }
+.rnd-stage[hidden], .rnd-strip[hidden] { display: none; }
+html[data-rnd] .rnd { padding: 0; max-width: none; }
+html[data-rnd] .rnd-head { display: none; }
+.rnd-strip { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 6px var(--s3); min-height: 40px; border-bottom: 1px solid var(--line); background: var(--surface-2); font-size: var(--fs-sm); color: var(--sub); }
+.rnd-s-n { display: inline-flex; align-items: center; gap: 6px; } .rnd-s-auto { display: inline-flex; align-items: center; gap: var(--s2); color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.rnd-stop { min-height: 32px; padding: 0 var(--s3); border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.pv-act-new { color: var(--accent-text); } .pv-act-new:hover { background: var(--accent-soft); }
+@media (min-width: 900px) {
+  html[data-rnd] .rnd { padding: var(--s4) var(--s5); max-width: 1380px; margin: 0 auto; }
+  html[data-rnd] .rnd-strip { border: 1px solid var(--line); border-radius: var(--r-group); margin-bottom: var(--s3); }
+  .rnd-stage { height: auto; min-height: 0; }
+}

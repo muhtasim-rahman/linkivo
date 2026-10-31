@@ -29,7 +29,8 @@ export function initTooltips() {
   const find = (node) => (node && node.closest ? node.closest(TIP_SELECTOR) : null);
 
   function place(el) {
-    const r = el.getBoundingClientRect();
+    // v2.4.1: the profile link sits inside an outlined badge; place the tip beside the whole badge, never over the picture
+    const r = (el.matches('.pf-link') && el.closest('.pf-badge') ? el.closest('.pf-badge') : el).getBoundingClientRect();
     const tw = tip.offsetWidth, th = tip.offsetHeight, gap = 8;
     let side = el.getAttribute('data-tip-pos') || (el.closest('.sidebar') ? 'right' : el.closest('.bar') ? 'top' : 'bottom');
     let left, top;

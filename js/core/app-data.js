@@ -2,7 +2,7 @@
  * Linkivo — js/core/app-data.js  (v2.1.0)
  * Purpose: owns the data layer for the current session: the Engine (local for guests, cloud for accounts) and its job queue.
  *          Features call getEngine() / getQueue(); nothing else decides which engine is used.
- * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() getImportLog() dataReady() -> boolean
+ * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() getImportLog() getHistory() recordOpen(link, src) dataReady() -> boolean
  */
 import { createLocalEngine } from '../engine/local-engine.js';
 import { createCloudEngine } from '../engine/cloud-engine.js';
@@ -18,8 +18,10 @@ import { log } from './logger.js';
 import { prefs } from './local-prefs.js';
 import { createSettingsSync } from './settings-sync.js';
 import { createImportLog } from './import-log.js';
+import { createHistory } from './history.js';   // v2.4.1
+import { isAdminView } from './admin.js';
 
-let engine = null, queue = null, scope = null, settingsSync = null, importLog = null, devices = null;
+let engine = null, queue = null, scope = null, settingsSync = null, importLog = null, devices = null, history = null;
 
 export async function initData(session) {
   const wanted = session.mode === 'guest' ? 'guest' : session.mode === 'account' ? session.user.uid : null;
@@ -35,12 +37,29 @@ export async function initData(session) {
     pruneJobs(queue).catch(() => {});
     importLog = createImportLog({ adapter: session.mode === 'account' ? engine.adapter : null, uid: session.mode === 'account' ? session.user.uid : null, queue, autoDays: () => (prefs.get('import.autoClear', false) ? 7 : 0) }); // v2.2.2: Recent imports follow the account
     prefs.onChange('import.autoClear', (v) => { if (v) importLog?.purgeOld().catch(() => {}); });   // v2.2.3: turning the setting on cleans the list at once
+    startHistory(session);   // v2.4.1
     engine.purgeExpired().catch((e) => log.warn('data', 'recycle bin purge failed', e)); // v2.2.0: items deleted more than 15 days ago go for good
     scope = wanted;
     if (session.mode === 'account') { startSettingsSync(session.user.uid); startDevices(session.user.uid); startAdmin(session.user.uid); } // v2.2.1: the account's settings follow the user across devices
     if (typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__linkivo = { engine, queue }; // development only
   } catch (e) { log.error('data', 'data layer failed to start', e); engine = null; queue = null; scope = null; throw e; }
 }
+
+/** v2.4.1: the History list. Where it is kept (this device or the account) and for how long are settings; a failure here never breaks the app. */
+function startHistory(session) {
+  try {
+    const account = session.mode === 'account';
+    history = createHistory({ db: engine.db, adapter: account ? engine.adapter : null, uid: account ? session.user.uid : null, now: () => engine.now(),
+      getKeep: () => prefs.get('history.keep', '7d'), getWhere: () => prefs.get('history.where', 'local'), isAdmin: () => isAdminView() });
+    const h = history;
+    h.load().then(() => h.prune()).catch(() => {});
+    prefs.onChange('history.where', () => { if (history === h) h.load().catch(() => {}); });   // another store is shown: read it
+    prefs.onChange('history.keep', () => { if (history === h) h.prune().catch(() => {}); });
+  } catch (e) { log.warn('data', 'history did not start', e); history = null; }
+}
+export const getHistory = () => history;
+/** Records that a link was opened. `src` is "click" (opened the site), "preview" (opened in the preview) or "random". Never throws. */
+export const recordOpen = (link, src) => { try { return history ? history.record({ link, src }) : null; } catch { return null; } };
 
 /** v2.2.1: mirrors the settings catalog's preferences to users/<uid>/settings (js/core/settings-sync.js). A failure here must never break the app. */
 async function startSettingsSync(uid) {
@@ -90,13 +109,13 @@ export async function teardownData() {
   try { devices?.stop(); } catch { /* ignore */ }
   devices = null;
   try { importLog?.dispose(); } catch { /* ignore */ }
-  importLog = null;
+  importLog = null; history = null;
   if (engine) { try { engine.dispose(); engine.db.close(); } catch { /* ignore */ } }
   engine = null; queue = null; scope = null;
 }
 
 /** Tests only: installs an engine and queue built elsewhere (jsdom has no IndexedDB). */
-export function installDataForTests(e, q, l = null) { engine = e; queue = q; importLog = l; scope = 'test'; }
+export function installDataForTests(e, q, l = null, hist = null) { engine = e; queue = q; importLog = l; history = hist; scope = 'test'; }
 
 export const getEngine = () => engine;
 export const getQueue = () => queue;

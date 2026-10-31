@@ -21,7 +21,7 @@ export const LONG_DESC = 100;
 /** A row caption. Over LONG_DESC characters it gets `.is-long` (one step smaller text), so only the few big captions shrink. */
 export const descEl = (text) => h('span', { class: ['row-desc', String(text).length > LONG_DESC && 'is-long'], text });
 
-/** v2.3.2: live text after a label, e.g. "(Left: 5/25)" (entry.suffix) followed by an info button that opens a short note (entry.info), on hover, tap and keyboard. */
+/** v2.3.2: live text after a label, e.g. "(Left: 5/25)" (entry.suffix) followed by a small info button that expands a short note (entry.info) on click, tap and keyboard (no hover tooltip, v2.4.1). */
 const SUFFIX = {
   mlLeft: () => { const q = mlQuota(); return `(Left: ${q.left}/${q.limit})`; },
   thumLeft: () => { const q = shotQuota(); return q.limit === null ? '(No limit)' : `(Left: ${q.left}/${q.limit})`; }
@@ -31,13 +31,12 @@ const EXTRA = {
 };
 function labelEl(entry) {
   if (!entry.suffix || !SUFFIX[entry.suffix]) return h('span', { class: 'row-label', text: entry.label });
-  // v2.4.0 (owner): the note opens with a short height + fade transition (grid 0fr -> 1fr), its text may stay small
-  const suf = h('span', { class: 'row-suffix' }), noteText = h('span', { class: 'row-info-t', text: entry.info || '' }), note = h('span', { class: 'row-info', 'aria-hidden': 'true' }, noteText);
-  const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); noteText.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
+  const suf = h('span', { class: 'row-suffix' }), inner = h('span', { class: 'row-info-in' }), note = h('span', { class: 'row-info', 'aria-hidden': 'true' }, inner);   // v2.4.1: opens by click only (no hover tip), with a small height transition
+  const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); inner.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
   paint();
   const live = () => { if (suf.isConnected) paint(); };
   subscribeQuota(live); subscribeAdmin(live);
-  const info = entry.info ? h('button', { type: 'button', class: 'btn-icon row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', 'data-tip': entry.info, on: { click: (e) => { e.stopPropagation(); const open = !note.classList.contains('is-open'); note.classList.toggle('is-open', open); note.setAttribute('aria-hidden', String(!open)); info.setAttribute('aria-expanded', String(open)); } } }, icon('info', { size: 16 })) : null;
+  const info = entry.info ? h('button', { type: 'button', class: 'row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', on: { click: (e) => { e.stopPropagation(); const open = !note.classList.contains('is-open'); note.classList.toggle('is-open', open); note.setAttribute('aria-hidden', String(!open)); info.classList.toggle('is-on', open); info.setAttribute('aria-expanded', String(open)); } } }, icon('info', { size: 14 })) : null;
   return h('span', { class: 'row-label has-suffix' }, h('span', { text: entry.label }), ' ', suf, info, note);
 }
 

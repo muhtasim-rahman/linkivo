@@ -75,7 +75,7 @@ test('captions: only a few long ones are smaller; the line height is tighter', a
   assert.ok(descEl('x'.repeat(LONG_DESC + 1)).classList.contains('is-long')); assert.ok(!descEl('short').classList.contains('is-long'));
   const withDesc = CATALOG.filter((e) => e.desc), long = withDesc.filter((e) => e.desc.length > LONG_DESC);
   assert.ok(long.length >= 1 && long.length <= withDesc.length / 3, `a few, not all (${long.length} of ${withDesc.length})`);
-  assert.match(read('css/components/feedback.css'), /\.row-desc \{[^}]*line-height: 1\.3/); assert.match(read('css/components/feedback.css'), /\.row-desc\.is-long \{ font-size: var\(--fs-xs\)/);
+  assert.match(read('css/components/feedback.css'), /\.row-desc \{[^}]*line-height: 1\.3/); assert.match(read('css/components/feedback.css'), /\.row-desc\.is-long \{ font-size: var\(--fs-sm\)/);
 });
 
 test('toast: its position comes from --dock-b, so it moves with the bottom bar', () => {

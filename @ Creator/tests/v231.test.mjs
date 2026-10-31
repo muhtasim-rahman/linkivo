@@ -22,36 +22,40 @@ test('microlink: maps data, counts the day, reads the headers, stops at 429, res
   const r = ML.mapMicrolink({ title: 'T', description: 'D', image: { url: 'https://i.test/a.png' }, logo: { url: 'https://i.test/l.png' }, video: { url: 'https://v.test/v.mp4' }, audio: { url: 'https://a.test/a.mp3' }, publisher: 'Pub', date: '2026-01-01', url: 'https://x.test/c' }, 'https://x.test/a');
   assert.equal(r.title, 'T'); assert.equal(r.image, 'https://i.test/a.png'); assert.equal(r.favicon, 'https://i.test/l.png'); assert.equal(r.video, 'https://v.test/v.mp4'); assert.equal(r.audio, 'https://a.test/a.mp3'); assert.equal(r.canonical, 'https://x.test/c');
   assert.equal(ML.mapMicrolink({ lang: 'en' }, 'u'), null, 'nothing useful: null');
-  prefs.remove('ml.day'); prefs.set('meta.microlink', true);
+  prefs.remove('ml.d25'); prefs.set('meta.microlink', true);
   const now = Date.UTC(2026, 9, 29, 12);
   const ok = await ML.microlinkMeta('https://x.test/a', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }) });
-  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 24, 'v2.4.0: the free plan allows 25 a day');
+  assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 24, 'v2.4.1: the free endpoint without a key allows 25 a day');
   await ML.microlinkMeta('https://x.test/b', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }, { 'x-rate-limit-limit': '50', 'x-rate-limit-remaining': '40' }) });
   assert.equal(ML.quota(now).limit, 50); assert.equal(ML.quota(now).used, 10, 'the server numbers win');
   // too many at once (2 allowed): retried after a second, never counted as used up
-  prefs.set('ml.day', { day: '2026-10-29', used: 0, limit: 25, reset: 0 }); let calls = 0;
+  prefs.set('ml.d25', { day: '2026-10-29', used: 0, limit: 5, reset: 0 }); let calls = 0;
   const busy = await ML.microlinkMeta('https://x.test/b2', { now, fetch: async () => (++calls === 1 ? resp(429, { code: 'ECONCURRENCY' }) : resp(200, { status: 'success', data: { title: 'After wait' } }, { 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '3', 'x-rate-limit-reset': String(Math.floor(now / 1000) + 3600) })) });
-  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3, 'the server numbers win'); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
-  prefs.set('ml.day', { day: '2026-10-29', used: 10, limit: 50, reset: 0 });
+  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
+  prefs.set('ml.d25', { day: '2026-10-29', used: 10, limit: 50, reset: 0 });
   const lim = await ML.microlinkMeta('https://x.test/c', { now, fetch: async () => resp(429, {}) });
-  assert.equal(lim, null, 'a 429 gives nothing: the normal chain takes over');
-  assert.equal(ML.quota(now).left, 0); assert.equal(ML.canUseMicrolink(now), true, 'v2.4.0: the count is only a reminder, Microlink is still tried after the limit');
-  assert.ok(ML.canUseMicrolink(now + 86400000));
-  prefs.set('ml.day', { day: '2000-01-01', used: 0 }); prefs.set('meta.microlink', false);
+  assert.equal(lim, null); assert.equal(ML.canUseMicrolink(now), false, 'a REAL limit answer pauses Microlink for a minute: the normal chain takes over');
+  assert.ok(ML.canUseMicrolink(now + 61000), 'after the pause it is asked again');
+  // v2.4.1 (owner): the count is only a reminder, 25 a day; a count of 25/25 does not stop the call
+  prefs.set('ml.d25', { day: '2026-10-29', used: 25, limit: 25, reset: now + 100000 }); assert.equal(ML.ML_DEFAULT_LIMIT, 25); assert.equal(ML.quota(now).left, 0);
+  assert.equal(ML.canUseMicrolink(now + 120000), true, 'used up on our side but still tried');
+  const past = await ML.microlinkMeta('https://x.test/past', { now: now + 120000, fetch: async () => resp(200, { status: 'success', data: { title: 'Still answered' } }) }); assert.equal(past.title, 'Still answered');
+  prefs.set('ml.d25', { day: '2026-10-29', used: 5, limit: 5, reset: now + 1000 }); assert.equal(ML.quota(now + 2000).used, 0, 'after the reset time the window is fresh'); assert.equal(ML.quota(now + 2000).limit, 5, 'it keeps the last limit the server told us');
+  prefs.set('ml.d25', { day: '2000-01-01', used: 0 }); prefs.set('meta.microlink', false);
   assert.equal(await ML.microlinkMeta('https://x.test/d', { now, fetch: async () => { throw new Error('must not be called'); } }), null, 'switched off');
   prefs.set('meta.microlink', true);
   assert.equal(await ML.microlinkMeta('https://x.test/e', { now, fetch: async () => { throw new Error('net'); } }), null, 'a failure never throws');
 });
 
 test('admin: list read, view toggle only lowers access, thum.io 10 a day for normal users', async () => {
-  prefs.remove('shot.day'); prefs.remove('admin.view'); AD.clearAdmin();
+  prefs.remove('shot.day'); AD.clearAdmin();
   const now = Date.UTC(2026, 9, 29, 9);
   assert.equal(AD.isAdminView(), false); assert.equal(AD.shotQuota(now).limit, 10);
   for (let i = 0; i < 10; i++) { assert.ok(AD.canUseThum(now)); AD.countThum(now); }
   assert.equal(AD.canUseThum(now), false); assert.equal(AD.shotQuota(now).left, 0);
   assert.equal(await AD.loadAdmin({ get: async (p) => (p === 'admins/u1' ? true : null) }, 'u1'), true);
   assert.equal(AD.isAdminView(), true); assert.equal(AD.shotQuota(now).limit, null); assert.ok(AD.canUseThum(now), 'admin: no limit');
-  AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(prefs.get('admin.view', null), null, 'v2.4.0: the view is session only, nothing stored'); assert.equal(document.documentElement.dataset.admin, undefined, 'the badge hides too'); assert.equal(AD.canUseThum(now), false);
+  AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(document.documentElement.dataset.admin, undefined, 'Normal view: no admin badge'); assert.equal(AD.canUseThum(now), false);
   assert.equal(await AD.loadAdmin({ get: async () => { throw new Error('denied'); } }, 'u2'), false); assert.equal(AD.isAdminAccount(), false);
   AD.setAdminView('admin');
 });
@@ -75,7 +79,7 @@ test('catalog: every keyed setting appears in the sync popup list; theme is loca
   const st = { get: (k, f) => f, set() {}, remove() {} };
   const groups = SC.syncGroups(CATALOG, SECTIONS, st), ids = new Set(groups.flatMap((g) => g.entries.map((x) => x.entry.id)));
   for (const e of CATALOG) if (e.key && !e.device) assert.ok(ids.has(e.id), `${e.id} is listed`);
-  assert.equal(CATALOG.filter((e) => e.local).length >= 1 && CATALOG.filter((e) => e.local).length <= 3, true, 'two or three device-only defaults');
+  assert.equal(CATALOG.filter((e) => e.local).length >= 1 && CATALOG.filter((e) => e.local).length <= 4, true, 'a few device-only defaults (v2.4.1: + where History is kept)');
   assert.ok(SECTIONS.some((s) => s.id === 'search') && SECTIONS.some((s) => s.id === 'preview'));
 });
 

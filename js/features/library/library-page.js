@@ -10,7 +10,6 @@
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
 import { h } from '../../core/dom.js';
-import { remember, recall } from '../../core/page-memory.js';
 import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
 import { createSelect } from '../../ui/select.js';
@@ -52,14 +51,11 @@ export async function mount(container, ctx) {
   await loadCss('/css/pages/library.css');
   const engine = getEngine(), queue = getQueue(), router = ctx.router;
   const st = { q: '', filter: 'all', sort: pref(LIB.sort), view: pref(LIB.view) };
-  // v2.4.0: Back from a folder keeps the Library search and scroll position (see core/page-memory.js)
-  const scroller = document.getElementById('page-root') || document.scrollingElement, mem = ctx.pop ? recall('library') : null;
-  if (mem) st.q = mem.q || '';
   const page = h('div', { class: 'page lib page-enter' });
   container.appendChild(page);
 
   const sub = h('p', { class: 'page-sub lib-sub', 'aria-live': 'polite' });
-  const search = h('input', { class: 'input', type: 'search', placeholder: 'Search folders', 'aria-label': 'Search folders', autocomplete: 'off', value: st.q });
+  const search = h('input', { class: 'input', type: 'search', placeholder: 'Search folders', 'aria-label': 'Search folders', autocomplete: 'off' });
   const pairs = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
   // ! Unused since v2.2.2: the folder filter dropdown was removed (owner request). `filterFolders` and FILTERS stay because tests and a later search use them.
   const sortSel = createSelect({ options: pairs(SORTS), value: st.sort, label: 'Sort folders', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.sort, v); update(); } });
@@ -111,10 +107,9 @@ export async function mount(container, ctx) {
   const offKeys = registerShortcuts(keys);
   search.addEventListener('keydown', (e) => { if (e.key === 'Escape') { search.value = ''; st.q = ''; search.blur(); update(); } });
   update();
-  if (mem && mem.top > 0) { const put = () => { scroller.style.scrollBehavior = 'auto'; scroller.scrollTop = mem.top; }; put(); requestAnimationFrame(() => { put(); requestAnimationFrame(() => { put(); scroller.style.scrollBehavior = ''; }); }); }
   // v2.2.3 (owner): the install suggestion shows HERE only (not on other pages), as a dock that follows the bottom bar
   const suggest = mountInstallSuggest({ mountDock, page });
-  return () => { remember('library', { q: st.q, top: scroller.scrollTop }); off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
+  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

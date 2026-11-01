@@ -1,0 +1,22 @@
+feat(v2.4.3): Random polish, Folder paging, Profile redesign with photo upload
+
+- Random: no "Folders and filters" title, Select all in the Folders header (All folders badge removed), eased state changes (morph), Narrow it down with
+  Show only and a two-handle Point range bar with a points histogram, round favicons on site chips, the stray "null" under Sites and Tags fixed,
+  page keywords offered as tags, Surprise dice starts a session, (i) help on every option, wide-screen auto-next strip floats inside the preview
+- Microlink: asked for page keywords and article tags (data rules, plain retry on 400); keywords saved once in kw
+- Folder: sort Random (new order per open or Refresh), 100 links at a time with auto load, three-dot menu (Random first on phones, Refresh, Folder settings last)
+- History and Recycle Bin load 100 at a time; shared pager (ui/paged.js)
+- Admin: the Normal user view is stored, applies at once without reload, ends at log out
+- Nav item of the current page scrolls it to the top; Import page gets the settings icon; default control transitions in base.css
+- Profile: new profile card (banner, photo, badges, bio, country, copyable id, Edit profile), highlights, Top favourites and Recently opened sliders with
+  scroll arrows, Export opens the popup, Share Linkivo card, pull to refresh, profile.thumbs setting
+- Edit profile popup: square crop, upload via the Worker to imgbb, old photo removed (best effort), four SVG banners, name, bio, country, website
+- Worker 2.4.3: POST /img/upload and /img/delete (secret IMGBB_KEY); rules: profile fields, admins may read profiles
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database, then --only hosting
+- paste @ Creator/worker/worker.js into Cloudflare and add the secret IMGBB_KEY in the dashboard (never in chat)
+- hard reload twice

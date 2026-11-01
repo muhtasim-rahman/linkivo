@@ -22,13 +22,14 @@ import { emptyState } from '../../ui/empty-state.js';
 import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
 import { faviconUrl, safeHref } from '../library/folder-style.js';
+import { createPager } from '../../ui/paged.js';
 import { pickTile, faviconFace } from '../../ui/pick-tile.js';
 import { copyText } from '../library/link-actions.js';
 import { keepMs } from '../../core/history.js';
 import { isAdminView } from '../../core/admin.js';
 import { plural } from '../../core/format.js';
 
-const PAGE = 150;
+const PAGE = 100;   // v2.4.3 (owner): 100 at a time, the next 100 load while scrolling (was 150 with a button)
 const SRC = { preview: { label: 'Preview', icon: 'eye' }, click: { label: 'Opened site', icon: 'external' }, random: { label: 'Random', icon: 'random' } };
 const FILTERS = [['all', 'All'], ['preview', 'Preview'], ['click', 'Opened site'], ['random', 'Random']];
 
@@ -56,6 +57,7 @@ export async function mount(container, ctx) {
   if (!engine || !hist) { container.appendChild(h('div', { class: 'page' }, emptyState({ art: 'lost', title: 'History is not ready', text: 'Wait a moment and try again, or reload the app.', actions: [{ label: 'Open profile', href: '/profile', primary: true }] }))); return () => {}; }
 
   const st = { q: '', src: 'all', shown: PAGE, selecting: false, selected: new Set() };
+  const pager = createPager({ scroller: document.getElementById('page-root'), noun: 'entries', onGrow: () => paint() });
   const list = h('div', { class: 'hs-list' });
   const info = h('p', { class: 'hs-info', role: 'status' });
   const bar = h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected entries', hidden: true });
@@ -83,7 +85,7 @@ export async function mount(container, ctx) {
   const whereText = () => (hist.where() === 'account' ? 'in your account' : 'on this device');
 
   function paintFilter() {
-    filter.replaceChildren(...FILTERS.map(([v, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(st.src === v), text: l, on: { click: () => { st.src = v; st.shown = PAGE; paint(); } } })));
+    filter.replaceChildren(...FILTERS.map(([v, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(st.src === v), text: l, on: { click: () => { st.src = v; pager.reset(); paint(); } } })));
   }
   function menuFor(e, anchor) {
     const l = engine.getLink(e.lid); const live = l && !l.del;
@@ -134,7 +136,8 @@ export async function mount(container, ctx) {
     try { await hist.clear(); toast('History cleared.'); } catch { toast('Could not clear history. Try again.', { type: 'error' }); }
   }
   function paint() {
-    const all = rows(), shown = all.slice(0, st.shown);
+    const all = rows(), shown = all.slice(0, pager.limit());
+    pager.setTotal(all.length);
     paintFilter(); paintBar();
     const keep = keepMs(prefs.get('history.keep', '7d'), isAdminView());
     paintCard(all.length, keep);
@@ -147,15 +150,15 @@ export async function mount(container, ctx) {
     }
     const groups = groupByDay(shown);
     const nodes = groups.map((g) => h('section', { class: 'hs-group' }, h('h2', { class: 'hs-day' }, h('span', { text: g.label }), h('span', { class: 'hs-day-n', text: String(g.rows.length) })), h('ul', { class: 'hs-ul' }, g.rows.map(item))));
-    if (all.length > shown.length) nodes.push(h('button', { type: 'button', class: 'btn btn-quiet hs-more-btn', text: `Show ${Math.min(PAGE, all.length - shown.length)} more`, on: { click: () => { st.shown += PAGE; paint(); } } }));
+    nodes.push(pager.el);   // v2.4.3: the pager footer ("Showing 100 of 840", auto loads the next 100)
     list.replaceChildren(...nodes);
   }
 
-  let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; st.shown = PAGE; paint(); }, 120); });
+  let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; pager.reset(); paint(); }, 120); });
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
   clearHead.addEventListener('click', clearAll); clearCard.addEventListener('click', clearAll);
   const off = hist.subscribe(() => paint());
   hist.load().then(() => hist.prune()).catch(() => {});   // reads the chosen store again (the account list may have grown on another device) and applies the keep time
   paint();
-  return () => { off(); removeDock(); clearTimeout(t); };
+  return () => { off(); removeDock(); clearTimeout(t); pager.destroy(); };
 }

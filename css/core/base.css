@@ -49,3 +49,8 @@ code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; }
   a, button, [role='button'], [role='link'], [role='menuitem'], [tabindex], label, summary, .row, .fcard, .lrow, .card, .nav-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   input, textarea, select, [contenteditable='true'], pre, code, .selectable, .pv-details, .pv-details * { -webkit-user-select: text; user-select: text; }
 }
+
+/* v2.4.3 (owner): no sharp cuts anywhere. A low-specificity default for every control that has no transition of its own (a rule with a class wins over :where). */
+:where(button, [role='button'], [role='switch'], [role='radio'], summary) {
+  transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease), color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease), opacity var(--t-std) var(--ease);
+}

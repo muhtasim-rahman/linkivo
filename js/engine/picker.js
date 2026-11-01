@@ -42,7 +42,7 @@ export function mulberry32(seed) {
 export const emptyFilters = () => ({ folders: {}, include: [], exclude: [], tags: [], onlyFav: false, onlyLiked: false, minPts: MIN, maxPts: MAX, skipDisliked: false, skipDead: true, unseenOnly: false });
 
 const hostKey = (h) => String(h || '').toLowerCase().replace(/^www\./, '');
-const tagsOf = (l) => String(l.tags || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
+const tagsOf = (l) => `${l.tags || ''},${l.kw || ''}`.toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);   // v2.4.3: the page's own keywords (kw) count as tags
 
 /** Hard filters. A blocked or deleted link is never a candidate. "Liked" means its points are above the start value. */
 export function isCandidate(l, f) {

@@ -1,123 +1,145 @@
 /**
- * Linkivo — js/features/shell/pages/profile-page.js  (v2.1.2, v2.4.1, rebuilt v2.4.2)
- * Purpose: Profile. Rebuilt from nothing in v2.4.2 (owner: the old page was a settings list in disguise). What a profile page is for, in order:
- *            1. WHO: cover, avatar, name, masked email, badges (account or guest, verified, admin).
- *            2. HOW MUCH: four numbers (links, folders, favourites, opened this week), each one a shortcut.
- *            3. WHAT YOU DID: the last 20 opened links as a slider, YouTube style. Thumbnail first, then the saved screenshot, then the site icon. Only what is already
- *               saved on this device is used: this page makes no request of its own (engine.peekLinkMeta reads the local copy).
- *            4. WHERE TO GO: an icon grid (History, Random, Search, Import, Export, Recycle Bin, Switch account, Settings).
- *            5. YOUR DATA: where it lives, when it last synced, what waits to upload (guests get an invitation to sign in instead).
- *            6. Log out.
- *          Wide screens: the identity card stays on the left while the rest scrolls on the right. Phones: one column, compact, app-like.
- * Page module: mount(container, ctx) -> unmount        Route flag: refresh (pull down re-reads the lists)
+ * Linkivo — js/features/shell/pages/profile-page.js  (v2.1.2, v2.4.1, rebuilt v2.4.2, redesigned v2.4.3)
+ * Purpose: Profile. v2.4.3 (owner): a real profile card (banner, photo, name, email, badges, country, bio, the account id that copies on tap, an Edit button that
+ *          opens the Edit profile popup), a highlights grid (six numbers, each opens the real place), a Favourites slider (top points first) above the
+ *          Recently opened slider (both with scroll arrows beside See all), shortcuts (Export opens the export popup right here), the data card and a Share
+ *          Linkivo card. Pull down to refresh re-reads the profile. Thumbnails in the sliders can be switched off in Settings > History (profile.thumbs).
+ *          The sliders use only what is already saved on this device (engine.peekLinkMeta): this page makes no request for pictures.
+ *          Wide screens: profile card and highlights stay on the left, everything else scrolls on the right. Phones: one calm column.
+ * Page module: mount(container, ctx) -> unmount        refresh() (pull to refresh)        Route flag: refresh
  */
 import { h } from '../../../core/dom.js';
 import { icon } from '../../../ui/icons.js';
+import { toast } from '../../../ui/toast.js';
 import { getSession } from '../../../core/session.js';
 import { maskEmail } from '../../../core/mask.js';
 import { loadCss } from '../../../core/css-loader.js';
-import { getHistory, getEngine } from '../../../core/app-data.js';
+import { getHistory, getEngine, getImportLog } from '../../../core/app-data.js';
 import { prefs } from '../../../core/local-prefs.js';
 import { faviconUrl } from '../../library/folder-style.js';
 import { relativeTime, plural } from '../../../core/format.js';
 import { avatar, logOut } from '../shell-parts.js';
 import { adminChip } from '../../../ui/admin-badge.js';
 import { settingsShortcut } from '../../../ui/settings-shortcut.js';
-import { attachScrollRow } from '../../../ui/scroll-row.js';
 import { shotFromMeta } from './profile-thumbs.js';
+import { loadProfile, cachedProfile, bannerUrl } from '../../../core/profile-data.js';
+import { pointsOf } from '../../../engine/points.js';
 
-const WEEK = 7 * 86400000;
-const GRID = [['history', 'History', '/profile/history'], ['random', 'Random', '/random'], ['search', 'Search', '/search'], ['import', 'Import', '/import'],
-  ['download', 'Export', '/settings/data'], ['trash', 'Recycle Bin', '/settings/recycle-bin'], ['users', 'Switch', null], ['settings', 'Settings', '/settings']];
+const WEEK = 7 * 86400000, APP_URL = 'https://linkivo.web.app';
+let reload = null;   // set by the mounted page: pull to refresh calls it
+
+/** Top favourites by points, then newest. Pure and exported for the tests. */
+export const topFavourites = (links, n = 12) => links.filter((l) => l && l.fv && !l.del).sort((a, b) => pointsOf(b) - pointsOf(a) || (b.ts || 0) - (a.ts || 0)).slice(0, n);
+/** One entry per link, newest first, at most n. Pure and exported for the tests. */
+export function distinctRecent(entries, n = 20) { const seen = new Set(), out = []; for (const e of entries) { if (seen.has(e.lid)) continue; seen.add(e.lid); out.push(e); if (out.length === n) break; } return out; }
 
 export async function mount(container, ctx) {
   await Promise.all([loadCss('/css/pages/pages.css'), loadCss('/css/pages/profile.css')]);
-  const s = getSession(), guest = s.mode === 'guest', name = guest ? 'Guest' : s.user.name;
-  const engine = getEngine(), hist = getHistory();
-  const stat = (ic, value, label, href) => h('a', { class: 'pf2-stat', href }, h('span', { class: 'pf2-stat-ic', 'aria-hidden': 'true' }, icon(ic, { size: 16 })), h('strong', { class: 'pf2-stat-n', text: String(value) }), h('span', { class: 'pf2-stat-l', text: label }));
-  const stats = h('div', { class: 'pf2-stats', role: 'list' });
-  const slider = h('div', { class: 'pf2-slider fade-x', role: 'list', tabindex: '-1' });
-  const sliderBox = h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-recent-h' });
-  const dataBox = h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-data-h' });
-  let token = 0;
+  const s = getSession(), guest = s.mode === 'guest', engine = getEngine(), hist = getHistory();
+  const uid = guest ? '' : s.user.uid;
+  let profile = guest ? {} : cachedProfile(uid), token = 0;
+  const thumbsOn = () => prefs.get('profile.thumbs', true) !== false;
 
-  function paintStats() {
-    const c = engine ? engine.counts() : { folders: 0, links: 0 };
-    const favs = engine ? engine.listLinks().filter((l) => l.fv).length : 0;
-    const week = hist ? hist.list().filter((e) => e.ts > Date.now() - WEEK).length : 0;
-    stats.replaceChildren(stat('link', c.links, 'Links', '/library'), stat('folder', c.folders, 'Folders', '/library'), stat('star', favs, 'Favourites', '/library'), stat('history', week, 'This week', '/profile/history'));
+  // ---- profile card ---------------------------------------------------------------------------------------------------------------------
+  const hero = h('section', { class: 'pf2-hero', 'aria-label': 'Profile' });
+  function paintHero() {
+    const me = getSession(), name = guest ? 'Guest' : (profile.name || me.user.name), photo = guest ? '' : (profile.photo || me.user.photo || '');
+    const banner = h('div', { class: 'pf2-cover', style: { backgroundImage: `url(${bannerUrl(profile.banner)})` }, 'aria-hidden': 'true' });
+    const edit = guest ? null : h('button', { type: 'button', class: 'pf2-edit', 'aria-label': 'Edit profile', on: { click: openEdit } }, icon('edit', { size: 16 }), h('span', { text: 'Edit profile' }));
+    const badges = [];
+    if (!guest && me.user.emailVerified) badges.push(h('span', { class: 'pf2-badge is-verified' }, icon('check-circle', { size: 14 }), 'Verified'));
+    badges.push(adminChip());
+    if (guest) badges.push(h('span', { class: 'pf2-badge' }, 'Guest mode'));
+    if (profile.country) badges.push(h('span', { class: 'pf2-badge is-soft' }, icon('globe', { size: 14 }), profile.country));
+    const uidBtn = guest ? null : h('button', { type: 'button', class: 'pf2-uid', 'aria-label': 'Copy your account id', 'data-tip': 'Tap to copy', on: { click: copyUid } }, h('span', { class: 'pf2-uid-k', text: 'ID' }), h('code', { text: uid }), icon('copy', { size: 14 }));
+    hero.replaceChildren(banner, edit, h('div', { class: 'pf2-id' }, avatar(name, true, photo, !guest),
+      h('div', { class: 'pf2-who' }, h('h1', { class: 'pf2-name', text: name }), h('p', { class: 'pf2-mail', text: guest ? 'Stored only on this device' : maskEmail(me.user.email) }))),
+      h('div', { class: 'pf2-badges' }, ...badges),
+      profile.bio ? h('p', { class: 'pf2-bio', text: profile.bio }) : (guest ? null : h('button', { type: 'button', class: 'pf2-bio is-empty', on: { click: openEdit } }, 'Add a short bio')),
+      profile.site && /^https?:\/\//i.test(profile.site) ? h('a', { class: 'pf2-site', href: profile.site, target: '_blank', rel: 'noopener noreferrer' }, icon('link', { size: 14 }), profile.site.replace(/^https?:\/\//i, '').slice(0, 40)) : null,
+      uidBtn);
+  }
+  async function copyUid() { try { await navigator.clipboard.writeText(uid); toast('Account id copied.'); } catch { toast('Could not copy. Select the id and copy it.'); } }
+  function openEdit() { import('../../profile/profile-edit.js').then((m) => m.openProfileEdit({ session: getSession(), adapter: engine && engine.adapter, profile, onSaved: (p) => { profile = p; paintHero(); } })); }
+
+  // ---- highlights -----------------------------------------------------------------------------------------------------------------------
+  const highlights = h('div', { class: 'pf2-hl', role: 'list' });
+  function paintHighlights() {
+    const links = engine ? engine.listLinks().filter((l) => !l.del) : [], c = engine ? engine.counts() : { folders: 0, links: 0 };
+    const week = hist ? hist.list().filter((e) => e.ts > Date.now() - WEEK).length : 0, imports = getImportLog() ? getImportLog().list().length : 0;
+    const items = [['link', c.links, 'Links', '/library'], ['folder', c.folders, 'Folders', '/library'], ['star', links.filter((l) => l.fv).length, 'Favourites', '/folder/favourites'],
+      ['history', week, 'This week', '/profile/history'], ['random', links.filter((l) => !(l.oc > 0)).length, 'Never opened', '/random'], ['import', imports, 'Imports', '/import']];
+    highlights.replaceChildren(...items.map(([ic, n, label, href]) => h('a', { class: 'pf2-hlc', href, role: 'listitem' }, h('span', { class: 'pf2-hlc-ic', 'aria-hidden': 'true' }, icon(ic, { size: 18 })), h('strong', { class: 'pf2-hlc-n', text: Number(n).toLocaleString() }), h('span', { class: 'pf2-hlc-l', text: label }))));
   }
 
-  /** One card of the slider. The picture is decided once per card from saved data only. */
-  async function card(e, mySeq) {
-    const live = engine && engine.getLink(e.lid);
-    const meta = engine && live ? await engine.peekLinkMeta(e.lid) : null;
+  // ---- sliders (Favourites, Recently opened) --------------------------------------------------------------------------------------------
+  async function card(e, sub, mySeq) {
+    const live = engine && engine.getLink(e.lid), meta = thumbsOn() && engine && live ? await engine.peekLinkMeta(e.lid) : null;
     if (mySeq !== token) return null;
-    const sources = [meta && /^https?:/.test(meta.image || '') ? meta.image : '', shotFromMeta(meta)].filter(Boolean);
-    const pic = h('span', { class: 'pf2-pic' }, h('span', { class: 'pf2-pic-fav' }, e.host ? h('img', { src: faviconUrl(e.host), alt: '', width: '28', height: '28', loading: 'lazy', referrerpolicy: 'no-referrer', on: { error: (ev) => ev.target.remove() } }) : icon('globe', { size: 24 })));
-    const tryNext = () => {
-      const src = sources.shift(); if (!src) return;
-      const im = h('img', { class: 'pf2-thumb', src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
-      im.addEventListener('error', () => { im.remove(); tryNext(); }, { once: true });   // a thumbnail that fails falls to the screenshot, then to the site icon underneath
-      pic.prepend(im);
-    };
+    const sources = thumbsOn() ? [meta && /^https?:/.test(meta.image || '') ? meta.image : '', shotFromMeta(meta)].filter(Boolean) : [];
+    const pic = h('span', { class: ['pf2-pic', !thumbsOn() && 'is-icon'] }, h('span', { class: 'pf2-pic-fav' }, e.host ? h('img', { src: faviconUrl(e.host), alt: '', width: '28', height: '28', loading: 'lazy', referrerpolicy: 'no-referrer', on: { error: (ev) => ev.target.remove() } }) : icon('globe', { size: 24 })));
+    const tryNext = () => { const src = sources.shift(); if (!src) return; const im = h('img', { class: 'pf2-thumb', src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => { im.remove(); tryNext(); }, { once: true }); pic.prepend(im); };
     tryNext();
-    return h(live ? 'a' : 'div', { class: ['pf2-card', !live && 'is-gone'], role: 'listitem', href: live ? `/link/${encodeURIComponent(e.lid)}` : null }, pic,
-      h('span', { class: 'pf2-card-t', text: e.title || e.host || e.url }), h('span', { class: 'pf2-card-u', text: `${e.host || ''} \u00b7 ${relativeTime(e.ts)}` }));
+    return h(live ? 'a' : 'div', { class: ['pf2-card', !live && 'is-gone'], role: 'listitem', href: live ? `/link/${encodeURIComponent(e.lid)}` : null }, pic, h('span', { class: 'pf2-card-t', text: e.title || e.host || e.url }), h('span', { class: 'pf2-card-u', text: sub }));
   }
-  async function paintSlider() {
-    const mySeq = ++token;
-    const seen = new Set(), items = [];   // one card per link (a link opened five times is still one card)
-    for (const e of hist ? hist.list() : []) { if (seen.has(e.lid)) continue; seen.add(e.lid); items.push(e); if (items.length === 20) break; }
-    sliderBox.replaceChildren(h('div', { class: 'pf2-sec-head' }, h('h2', { class: 'pf2-h', id: 'pf2-recent-h', text: 'Recently opened' }), items.length ? h('a', { class: 'pf2-more', href: '/profile/history' }, 'See all', icon('chevron-right', { size: 16 })) : null),
-      items.length ? slider : h('p', { class: 'pf2-empty', text: 'Links you open will show up here.' }));
-    if (!items.length) return;
-    const cards = (await Promise.all(items.map((e) => card(e, mySeq)))).filter(Boolean);
-    if (mySeq !== token) return;
-    slider.replaceChildren(...cards);
+  /** A titled slider with See all and two scroll buttons (owner). `items` = [{ entry, sub }]. */
+  function sliderSection({ id, title, href, items, empty }) {
+    const track = h('div', { class: 'pf2-slider', role: 'list', tabindex: '-1' });
+    const go = (dir) => track.scrollBy({ left: dir * Math.max(180, track.clientWidth * 0.8), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    const prev = h('button', { type: 'button', class: 'pf2-arrow', 'aria-label': `Scroll ${title} left`, on: { click: () => go(-1) } }, icon('chevron-left', { size: 18 }));
+    const next = h('button', { type: 'button', class: 'pf2-arrow', 'aria-label': `Scroll ${title} right`, on: { click: () => go(1) } }, icon('chevron-right', { size: 18 }));
+    const edges = () => { prev.disabled = track.scrollLeft <= 2; next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; };
+    track.addEventListener('scroll', () => requestAnimationFrame(edges), { passive: true });
+    const sec = h('section', { class: 'pf2-sec', 'aria-labelledby': id }, h('div', { class: 'pf2-sec-head' }, h('h2', { class: 'pf2-h', id, text: title }),
+      items.length ? h('span', { class: 'pf2-sec-tools' }, h('a', { class: 'pf2-more', href }, 'See all'), prev, next) : null), items.length ? track : h('p', { class: 'pf2-empty', text: empty }));
+    const my = token;
+    Promise.all(items.map((it) => card(it.entry, it.sub, my))).then((cards) => { if (my !== token) return; track.replaceChildren(...cards.filter(Boolean)); requestAnimationFrame(edges); });
+    return sec;
   }
+  const favBox = h('div'), recentBox = h('div');
+  function paintSliders() {
+    token++;
+    const favs = engine ? topFavourites(engine.listLinks()) : [], recent = distinctRecent(hist ? hist.list() : []);
+    favBox.replaceChildren(sliderSection({ id: 'pf2-fav-h', title: 'Top favourites', href: '/folder/favourites', empty: 'Favourite a link and it appears here, highest points first.',
+      items: favs.map((l) => ({ entry: { lid: l.id, title: l.title, host: l.host, url: l.url }, sub: `${pointsOf(l)} points \u00b7 ${l.host || ''}` })) }));
+    recentBox.replaceChildren(sliderSection({ id: 'pf2-recent-h', title: 'Recently opened', href: '/profile/history', empty: 'Links you open will show up here.',
+      items: recent.map((e) => ({ entry: e, sub: `${e.host || ''} \u00b7 ${relativeTime(e.ts)}` })) }));
+  }
+
+  // ---- shortcuts, data, share -----------------------------------------------------------------------------------------------------------
+  const tile = (ic, label, onClick, href) => h(href ? 'a' : 'button', { class: 'pf2-tile', href, type: href ? null : 'button', on: href ? {} : { click: onClick } }, h('span', { class: 'pf2-tile-ic' }, icon(ic, { size: 22 })), h('span', { class: 'pf2-tile-l', text: label }));
+  const tiles = [tile('history', 'History', null, '/profile/history'), tile('random', 'Random', null, '/random'), tile('search', 'Search', null, '/search'), tile('import', 'Import', null, '/import'),
+    tile('download', 'Export', () => import('../../export/export-sheet.js').then((m) => m.openExport({ engine }))),   // v2.4.3 (owner): the export popup opens right here
+    tile('trash', 'Recycle Bin', null, '/settings/recycle-bin'), ...(guest ? [] : [tile('users', 'Switch', () => import('../switch-account.js').then((m) => m.openSwitchAccount(ctx.router)))]), tile('settings', 'Settings', null, '/settings')];
+  const dataBox = h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-data-h' });
   function paintData() {
     const st = engine ? engine.status() : null;
-    if (guest) {
-      dataBox.replaceChildren(h('h2', { class: 'pf2-h', id: 'pf2-data-h', text: 'Your data' }),
-        h('div', { class: 'pf2-invite' }, h('span', { class: 'pf2-invite-ic', 'aria-hidden': 'true' }, icon('cloud', { size: 22 })),
-          h('div', { class: 'pf2-invite-tx' }, h('strong', { text: 'Stored only on this device' }), h('span', { text: 'Sign in to keep your links in your account and open them anywhere.' })),
-          h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => logOut(ctx.router, { guest: true }) } }, 'Log in')));
-      return;
-    }
+    if (guest) { dataBox.replaceChildren(h('h2', { class: 'pf2-h', id: 'pf2-data-h', text: 'Your data' }), h('div', { class: 'pf2-invite' }, h('span', { class: 'pf2-invite-ic', 'aria-hidden': 'true' }, icon('cloud', { size: 22 })), h('div', { class: 'pf2-invite-tx' }, h('strong', { text: 'Stored only on this device' }), h('span', { text: 'Sign in to keep your links in your account and open them anywhere.' })), h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => logOut(ctx.router, { guest: true }) } }, 'Log in'))); return; }
     const last = (st && st.lastSync) || prefs.get('sync.last', 0);
     const kv = (ic, k, v) => h('div', { class: 'pf2-kv' }, h('span', { class: 'pf2-kv-ic', 'aria-hidden': 'true' }, icon(ic, { size: 18 })), h('span', { class: 'pf2-kv-k', text: k }), h('span', { class: 'pf2-kv-v', text: v }));
-    dataBox.replaceChildren(h('h2', { class: 'pf2-h', id: 'pf2-data-h', text: 'Your data' }),
-      h('div', { class: 'pf2-card-list' },
-        kv('cloud', 'Stored in', 'Your account, cached on this device'),
-        kv('refresh', 'Last synced', last ? relativeTime(last) : 'Not yet in this session'),
-        kv('clock', 'Waiting to upload', st ? plural(st.pending, 'change') : 'Nothing'),
-        h('a', { class: 'pf2-kv is-link', href: '/settings/account' }, h('span', { class: 'pf2-kv-ic', 'aria-hidden': 'true' }, icon('shield', { size: 18 })), h('span', { class: 'pf2-kv-k', text: 'Account and security' }), h('span', { class: 'pf2-kv-v' }, icon('chevron-right', { size: 18 })))));
+    dataBox.replaceChildren(h('h2', { class: 'pf2-h', id: 'pf2-data-h', text: 'Your data' }), h('div', { class: 'pf2-card-list' }, kv('cloud', 'Stored in', 'Your account, cached on this device'), kv('refresh', 'Last synced', last ? relativeTime(last) : 'Not yet in this session'), kv('clock', 'Waiting to upload', st ? plural(st.pending, 'change') : 'Nothing'),
+      h('a', { class: 'pf2-kv is-link', href: '/settings/account' }, h('span', { class: 'pf2-kv-ic', 'aria-hidden': 'true' }, icon('shield', { size: 18 })), h('span', { class: 'pf2-kv-k', text: 'Account and security' }), h('span', { class: 'pf2-kv-v' }, icon('chevron-right', { size: 18 })))));
   }
-
-  const tiles = GRID.filter(([, , href]) => href || !guest).map(([ic, label, href]) => (href
-    ? h('a', { class: 'pf2-tile', href }, h('span', { class: 'pf2-tile-ic' }, icon(ic, { size: 22 })), h('span', { class: 'pf2-tile-l', text: label }))
-    : h('button', { type: 'button', class: 'pf2-tile', on: { click: () => import('../switch-account.js').then((m) => m.openSwitchAccount(ctx.router)) } }, h('span', { class: 'pf2-tile-ic' }, icon(ic, { size: 22 })), h('span', { class: 'pf2-tile-l', text: label }))));
-
-  const badges = h('div', { class: 'pf2-badges' }, h('span', { class: 'tag', text: guest ? 'Guest mode' : 'Account' }),
-    !guest && s.user.emailVerified ? h('span', { class: 'tag is-ok' }, icon('check-circle', { size: 13 }), 'Verified') : null, adminChip());
-  const hero = h('section', { class: 'pf2-hero', 'aria-label': 'Profile' },
-    h('div', { class: 'pf2-cover', 'aria-hidden': 'true' }),
-    h('div', { class: 'pf2-id' }, avatar(name, true, s.user ? s.user.photo : '', !guest),
-      h('div', { class: 'pf2-who' }, h('h1', { class: 'pf2-name', text: name }), h('p', { class: 'pf2-mail', text: guest ? 'Stored only on this device' : maskEmail(s.user.email) }), badges)),
-    stats);
-
+  async function shareApp() {
+    const data = { title: 'Linkivo', text: 'Linkivo keeps all my links in one fast, private place.', url: APP_URL };
+    try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(APP_URL); toast('Link copied.'); } catch { toast(APP_URL); }
+  }
+  const shareCard = h('section', { class: 'pf2-share', 'aria-label': 'Share Linkivo' }, h('span', { class: 'pf2-share-logo', 'aria-hidden': 'true' }, h('span', { class: 'logo-mark', style: { '--w': '34px' } })),
+    h('div', { class: 'pf2-share-tx' }, h('strong', { text: 'Share Linkivo' }), h('span', { text: 'Know someone with too many saved links? Send them the app.' })),
+    h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: shareApp } }, icon('share', { size: 16 }), 'Share'));
   const logout = h('button', { type: 'button', class: 'pf2-logout', on: { click: () => logOut(ctx.router, guest ? { guest: true } : undefined) } }, icon('logout', { size: 20 }), guest ? 'Leave guest mode' : 'Log out');
-  const page = h('div', { class: 'page pf2 page-enter' },
-    h('header', { class: 'pf2-bar' }, h('span', { class: 'pf2-bar-t', text: 'Profile' }), settingsShortcut('account', 'Account settings')),
-    h('div', { class: 'pf2-grid' }, hero,
-      h('div', { class: 'pf2-main' }, sliderBox, h('section', { class: 'pf2-sec', 'aria-label': 'Shortcuts' }, h('div', { class: 'pf2-tiles' }, tiles)), dataBox, logout)));
+
+  const page = h('div', { class: 'page pf2 page-enter' }, h('header', { class: 'pf2-bar' }, h('span', { class: 'pf2-bar-t', text: 'Profile' }), settingsShortcut('account', 'Account settings')),
+    h('div', { class: 'pf2-grid' }, h('div', { class: 'pf2-left' }, hero, highlights),
+      h('div', { class: 'pf2-main' }, favBox, recentBox, h('section', { class: 'pf2-sec', 'aria-label': 'Shortcuts' }, h('div', { class: 'pf2-tiles' }, tiles)), dataBox, shareCard, logout)));
   container.appendChild(page);
-  paintStats(); paintData(); paintSlider();
-  const detach = attachScrollRow(slider, { arrows: false });
-  const offs = [hist ? hist.subscribe(() => { paintStats(); paintSlider(); }) : null, engine && engine.subscribe ? engine.subscribe((ev) => { if (ev.type === 'sync' || ev.type === 'change') { paintStats(); paintData(); } }) : null].filter(Boolean);
-  return () => { token++; detach(); for (const off of offs) { try { off(); } catch { /* ignore */ } } };
+  paintHero(); paintHighlights(); paintData(); paintSliders();
+  reload = async () => { if (!guest && engine && engine.adapter) { profile = await loadProfile(engine.adapter, uid); paintHero(); } paintHighlights(); paintSliders(); paintData(); };
+  if (!guest) reload();   // the saved profile arrives a moment after the page (the copy on this device is already shown)
+  const offs = [hist ? hist.subscribe(() => { paintHighlights(); paintSliders(); }) : null, engine && engine.subscribe ? engine.subscribe((ev) => { if (ev.type === 'sync' || ev.type === 'change') { paintHighlights(); paintData(); } }) : null].filter(Boolean);
+  return () => { token++; reload = null; for (const off of offs) { try { off(); } catch { /* ignore */ } } };
 }
 
-/** Pull-to-refresh: the lists are read again (the page's own data is local, so this only repaints). */
-export async function refresh() { /* the subscriptions above already repaint on every change; nothing else to load */ }
+/** Pull-to-refresh: the profile is read again from the account and every list is repainted. */
+export async function refresh() { if (reload) await reload(); }

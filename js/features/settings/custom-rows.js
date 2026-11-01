@@ -181,7 +181,7 @@ function adminViewRow() {
     box.hidden = false;
     const cur = getAdminViewMode();
     const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'Normal user' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { setAdminView(v); toast(v === 'admin' ? 'Back to Admin.' : 'Showing the app as a normal user.'); render(); } });
-    box.replaceChildren(row('View the app as', 'For testing. Normal user makes the whole app behave like an ordinary account until you switch back or reload.', sel, { admin: true }));
+    box.replaceChildren(row('View the app as', 'For testing. Normal user makes the whole app behave like an ordinary account, at once and also after a reload. Switch back here, or log out and log in again.', sel, { admin: true }));
   };
   subscribeAdmin(render); render(); return box;
 }

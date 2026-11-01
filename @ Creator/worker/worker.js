@@ -25,10 +25,11 @@
  * Secrets: none are needed in v2.1.2. PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT arrive with v2.5.0 and live only in Cloudflare.
  * Nothing in this file is secret; the Firebase project id below is public.
  */
+// 2.4.3: adds POST /img/upload and POST /img/delete (profile photo on imgbb, key in the secret IMGBB_KEY). /meta and /check are unchanged.
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.3.0';
+const VERSION = '2.4.3';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -707,6 +708,52 @@ async function handleCheck(request, ctx, cors) {
   return json({ ok: true, version: VERSION, results }, 200, cors);
 }
 
+/* ------------------------------------------------------------------------------------------------------------- /img (v2.4.3): profile photo on imgbb */
+// The imgbb key is a Worker SECRET (IMGBB_KEY), so it never ships in the app. Only signed-in accounts may upload; 6 uploads an hour per account.
+const IMG_MAX_BODY = 400000;   // base64 text of an already compressed 512 px photo is about 100 to 200 KB
+async function imgAuth(request, ctx, cors) {
+  const auth = request.headers.get('authorization') || '';
+  if (!/^Bearer\s+\S+$/i.test(auth)) return { res: json({ ok: false, error: 'unauthorized' }, 401, cors) };
+  try { return { user: await verifyIdToken(auth.replace(/^Bearer\s+/i, ''), ctx) }; } catch { return { res: json({ ok: false, error: 'unauthorized', message: 'Sign in again' }, 401, cors) }; }
+}
+async function readImgBody(request) {
+  const text = await request.text();
+  if (text.length > IMG_MAX_BODY) throw err('too_large', { status: 413 });
+  try { return JSON.parse(text); } catch { throw err('bad_request', { status: 400, detail: 'Body must be JSON' }); }
+}
+async function handleImgUpload(request, env, ctx, cors) {
+  const a = await imgAuth(request, ctx, cors); if (a.res) return a.res;
+  if (!env || !env.IMGBB_KEY) return json({ ok: false, error: 'not_configured', message: 'Photo upload is not set up yet' }, 503, cors);
+  const lim = takeTokens('img:' + a.user.uid, 1, { capacity: 6, perMs: 3600000 });
+  if (!lim.ok) return json({ ok: false, error: 'rate_limited', retryAfter: lim.retryAfter }, 429, { ...cors, 'Retry-After': String(lim.retryAfter || 60) });
+  let body; try { body = await readImgBody(request); } catch (e) { return json({ ok: false, error: e.message }, e.status || 400, cors); }
+  const image = body && typeof body.image === 'string' ? body.image.replace(/^data:image\/[a-z+]+;base64,/i, '') : '';
+  if (!/^[A-Za-z0-9+/=]{100,}$/.test(image)) return json({ ok: false, error: 'bad_request', message: 'Send { "image": base64 }' }, 400, cors);
+  const name = String(body.name || 'linkivo-photo').replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 120);
+  const form = new FormData(); form.set('image', image); form.set('name', name);
+  let res; try { res = await ctx.fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(env.IMGBB_KEY)}`, { method: 'POST', body: form }); } catch { return json({ ok: false, error: 'upstream_failed' }, 502, cors); }
+  let j = null; try { j = await res.json(); } catch { /* not JSON */ }
+  const d = j && j.success && j.data;
+  if (!d || !/^https:\/\//.test(d.url || '')) return json({ ok: false, error: 'upstream_failed' }, 502, cors);
+  return json({ ok: true, url: d.url, deleteUrl: /^https:\/\/ibb\.co(\.com)?\//.test(d.delete_url || '') ? d.delete_url : '' }, 200, cors);
+}
+/** Best effort ([verify]): imgbb has no documented delete API; its `delete_url` is a web page that holds a token. The page is read, the token is sent back as the page's own button does. */
+async function handleImgDelete(request, env, ctx, cors) {
+  const a = await imgAuth(request, ctx, cors); if (a.res) return a.res;
+  let body; try { body = await readImgBody(request); } catch (e) { return json({ ok: false, error: e.message }, e.status || 400, cors); }
+  const du = body && typeof body.deleteUrl === 'string' ? body.deleteUrl : '';
+  const m = /^https:\/\/(ibb\.co(?:\.com)?)\/([A-Za-z0-9]+)\/([a-f0-9]+)$/.exec(du);
+  if (!m) return json({ ok: false, error: 'bad_request' }, 400, cors);
+  try {
+    const page = await ctx.fetch(du, { headers: { 'User-Agent': 'Mozilla/5.0 Linkivo' } });
+    const html = await page.text(); const t = /auth_token\s*=\s*["']([a-f0-9]+)["']/.exec(html);
+    if (!t) return json({ ok: true, deleted: false }, 200, cors);
+    const form = new URLSearchParams({ action: 'delete', delete: 'image', from: 'resource', pathname: `/${m[2]}/${m[3]}`, auth_token: t[1] });
+    const r = await ctx.fetch(`https://${m[1]}/json`, { method: 'POST', body: form, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0 Linkivo' } });
+    return json({ ok: true, deleted: r.ok }, 200, cors);
+  } catch { return json({ ok: true, deleted: false }, 200, cors); }
+}
+
 async function route(request, env, deps = {}) {
   const origin = request.headers.get('origin');
   const cors = corsHeaders(origin);
@@ -719,7 +766,9 @@ async function route(request, env, deps = {}) {
     if (url.pathname === '/meta' && request.method === 'POST') return await handleMeta(request, ctx, cors);
     if (url.pathname === '/check' && request.method === 'POST') return await handleCheck(request, ctx, cors);
     if (url.pathname === '/whoami' && request.method === 'GET') return handleWhoami(request, cors);
-    if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami' || url.pathname === '/check') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
+    if (url.pathname === '/img/upload' && request.method === 'POST') return await handleImgUpload(request, env, ctx, cors);
+    if (url.pathname === '/img/delete' && request.method === 'POST') return await handleImgDelete(request, env, ctx, cors);
+    if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami' || url.pathname === '/check' || url.pathname === '/img/upload' || url.pathname === '/img/delete') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
     return json({ ok: false, error: 'not_found' }, 404, cors);
   } catch (e) {
     return json({ ok: false, error: 'internal' }, 500, cors);
@@ -729,5 +778,5 @@ async function route(request, env, deps = {}) {
 export default {
   fetch: (request, env) => route(request, env),
   // Pure functions exposed for the unit tests in @ Creator/tests/worker.test.mjs. Harmless in production.
-  __test: { checkOne, handleCheck, statusState, maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
+  __test: { handleImgUpload, handleImgDelete, checkOne, handleCheck, statusState, maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
 };

@@ -27,6 +27,14 @@ let tokenProvider = async () => null;
 const limiter = createRateLimiter({ capacity: 40, perMs: 60000 });
 /** v2.2.2: where this device appears to be (approximate, from the Worker). Never throws: no answer is just null. */
 export async function whoami() { try { const { data } = await call('/whoami', { method: 'GET', timeout: 5000 }); return data && data.ok ? data : null; } catch { return null; } }
+/** v2.4.3: profile photo. Returns { url, deleteUrl } or throws an Error whose message is a short code ('not_configured', 'rate_limited', 'too_large' ...). */
+export async function uploadImage(base64, name) {
+  const { data } = await call('/img/upload', { body: { image: base64, name }, timeout: 40000 });
+  if (!data || !data.ok) throw new Error((data && data.error) || 'upstream_failed');
+  return { url: data.url, deleteUrl: data.deleteUrl || '' };
+}
+/** Best effort: the old photo is removed from imgbb. Never throws. */
+export async function deleteImage(deleteUrl) { try { const { data } = await call('/img/delete', { body: { deleteUrl }, timeout: 20000 }); return !!(data && data.deleted); } catch { return false; } }
 export const setTokenProvider = (fn) => { tokenProvider = fn || (async () => null); };
 
 async function call(path, { method = 'POST', body, timeout = 15000 } = {}) {

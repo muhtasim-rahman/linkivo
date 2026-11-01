@@ -14,6 +14,7 @@ import { loadCss } from '../../core/css-loader.js';
 import { getEngine, getQueue, getImportLog } from '../../core/app-data.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { plural, relativeTime } from '../../core/format.js';
+import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { createImportForm, takeFiles, takeText } from './import-form.js';
 import { openJobDetails } from './import-progress.js';
 
@@ -27,8 +28,9 @@ export async function mount(container, ctx) {
   const form = createImportForm({ engine, router, fid: ctx.query.fid || null, files: takeFiles(), text: takeText() });
   const list = h('div', { class: 'imp-jobs', role: 'list' });
   const clearBtn = h('button', { type: 'button', class: 'btn btn-sm', hidden: true, on: { click: clearAll } }, 'Clear all');   // v2.2.2
+  // v2.4.3 (owner): the header carries the settings icon every other page has
   page.append(
-    h('header', { class: 'page-head is-stack' }, h('h1', { class: 'page-title', text: 'Import links' }), h('p', { class: 'page-sub', text: 'Paste text or add files. Linkivo finds every link, skips duplicates and saves them in the background.' })),
+    h('header', { class: 'page-head is-stack' }, h('div', { class: 'imp-headrow' }, h('h1', { class: 'page-title', text: 'Import links' }), settingsShortcut('data', 'Import settings')), h('p', { class: 'page-sub', text: 'Paste text or add files. Linkivo finds every link, skips duplicates and saves them in the background.' })),
     form.el,
     h('section', { 'aria-labelledby': 'imp-recent' }, h('div', { class: 'imp-h2-row' }, h('h2', { class: 'imp-h2 is-inline', id: 'imp-recent', text: 'Recent imports' }), clearBtn), list));
   const removeDock = mountDock(form.dockEl);

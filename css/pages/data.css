@@ -111,3 +111,6 @@
 /* v2.2.3: folder chips of the export popup (all selected by default) */
 .ex-folders { display: flex; flex-wrap: wrap; gap: var(--s1); max-height: 112px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 2px; }
 .ex-folders .chip { max-width: 100%; }
+
+/* v2.4.3: Import page header row with the settings icon */
+.imp-headrow { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); } .imp-headrow .page-title { margin: 0; min-width: 0; }

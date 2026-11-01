@@ -32,6 +32,9 @@ export const LINK_META = {
   fields: { image: s(2048), video: s(2048), audio: s(2048), shot: s(2048), long: s(2000), og: s(2000), log: s(3000), site: s(120), author: s(120), lang: s(16), pub: s(40), canon: s(2048), icon: s(2048), type: s(16), theme: s(9), frameable: b(), nf: b(), checkedAt: ts(), ml: ts() }   // v2.3.2: ml = when Microlink last answered for this link (never asked twice)   // v2.3.0: nf = the page refuses to be framed (booleans are stored only as true, so "false" needs its own field)
 };
 
+/** v2.4.3: the editable profile (users/<uid>/profile). Private: the owner and admins read it; only the owner writes it. */
+export const PROFILE_FIELDS = { bio: s(200), country: s(60), banner: s(8), photo: s(2048), photoDel: s(2048), photoAt: ts(), site: s(200) };
+
 export const HISTORY = { required: ['lid', 'ts'], fields: { lid: s(40, 1), url: s(2048), title: s(300), host: s(253), fid: s(40), src: s(10), ts: ts() } };
 /** v2.2.2: one finished import / title fetch / restore, kept in the account so every device lists the same Recent imports (users/<uid>/importLog/<id>). */
 export const IMPORT_LOG = { required: ['ty', 'ts'], fields: { ty: s(10, 1), title: s(120), st: s(10), total: n(0, 1e7), done: n(0, 1e7), failed: n(0, 1e7), saved: n(0, 1e7), skipped: n(0, 1e7), invalid: n(0, 1e7), fid: s(40), imp: s(40), ts: ts() } };

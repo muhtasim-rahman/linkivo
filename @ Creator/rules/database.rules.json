@@ -5,7 +5,7 @@
     "users": {
       "$uid": {
         "profile": {
-          ".read": "auth != null && auth.uid === $uid",
+          ".read": "auth != null && auth.uid === $uid || root.child('admins').child(auth.uid).val() === true",
           "name": {
             ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
             ".validate": "newData.isString() && newData.val().length <= 60"
@@ -17,6 +17,34 @@
           "lastLogin": {
             ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "bio": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "country": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "banner": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 8"
+          },
+          "photo": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "photoDel": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 2048"
+          },
+          "photoAt": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 60000"
+          },
+          "site": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 200"
           },
           "status": {
             ".write": false,

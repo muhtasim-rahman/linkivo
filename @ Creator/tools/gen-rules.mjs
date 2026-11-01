@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FOLDER, LINK, LINK_META, HISTORY, ACTIVITY, IMPORT_LOG, DEVICE, CLOCK_SKEW_MS } from '../../js/engine/schema.js';
+import { FOLDER, LINK, LINK_META, HISTORY, ACTIVITY, IMPORT_LOG, DEVICE, PROFILE_FIELDS, CLOCK_SKEW_MS } from '../../js/engine/schema.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -64,10 +64,11 @@ export function buildRules() {
         $uid: {
           // status is written ONLY by the Worker (admin access ignores rules); a missing status means "active".
           profile: {
-            '.read': OWN,
+            '.read': `${OWN} || root.child('admins').child(auth.uid).val() === true`,   // v2.4.3: admins may read profiles
             name: { '.write': `${OWN} && ${ACTIVE}`, '.validate': 'newData.isString() && newData.val().length <= 60' },
             createdAt: { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule({ t: 'ts' }) },
             lastLogin: { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule({ t: 'ts' }) },
+            ...Object.fromEntries(Object.entries(PROFILE_FIELDS).map(([k, def]) => [k, { '.write': `${OWN} && ${ACTIVE}`, '.validate': fieldRule(def) }])),
             status: { '.write': false, '.validate': "newData.val() === 'active' || newData.val() === 'deleted'" },
             $other: { '.validate': false }
           },

@@ -56,7 +56,7 @@ export async function mount(container, ctx) {
   const recent = h('section', { class: 'rnd-recent', 'aria-label': 'Picked this time' });
   const panel = buildFilterPanel({ engine, filters, onChange: () => { saveFilters(prefs, filters); paintCard(); } });
   const hub = h('div', { class: 'rnd-hub' }, h('div', { class: 'rnd-left' }, hubCard, quick, recent),
-    h('div', { class: 'rnd-side' }, h('div', { class: 'rnd-side-head' }, h('h2', { class: 'rnd-panel-h', text: 'Folders and filters' }), panel.counter), panel.el));
+    h('div', { class: 'rnd-side' }, panel.el));   // v2.4.3: no 'Folders and filters' title (PC alignment); the card on the left already shows how many links are in play
   const stage = h('div', { class: 'rnd-stage', hidden: true });
   const strip = h('div', { class: 'rnd-strip', hidden: true, role: 'status' });
   const page = h('div', { class: 'page rnd is-wide page-enter' },
@@ -65,24 +65,31 @@ export async function mount(container, ctx) {
   container.appendChild(page);
 
   // ---- quick options (also shown in a popup while a link is open) -----------------------------------------------------------------------------
-  const sel = (label, key, options, def, after) => {
+  /** v2.4.3 (owner): every option can explain itself in one short line behind a small (i) button; the line opens and closes with a fade. */
+  const withInfo = (row, text, mainEl) => {
+    const note = h('p', { class: 'rnd-info', hidden: true, text });
+    const btn = h('button', { type: 'button', class: 'rnd-i', 'aria-label': 'What does this do?', 'aria-expanded': 'false', 'data-tip': 'What is this?' }, icon('info', { size: 16 }));
+    btn.addEventListener('click', () => { const open = note.hidden; note.hidden = !open; btn.setAttribute('aria-expanded', String(open)); note.classList.toggle('is-open', open); });
+    return h('div', { class: 'rnd-row' }, h('div', { class: 'rnd-rowline' }, mainEl || row, btn), note);
+  };
+  const sel = (label, key, options, def, after, info) => {
     let cur = String(prefs.get(key, def)); if (!options.some((o) => o.value === cur)) cur = def;
     const c = createSelect({ options, value: cur, label, align: 'end', small: true, onChange: (v) => { prefs.set(key, v); if (after) after(v); paintCard(); } });
-    return h('div', { class: 'rnd-opt' }, h('span', { class: 'rnd-opt-l', text: label }), c);
+    return withInfo(h('div', { class: 'rnd-opt' }, h('span', { class: 'rnd-opt-l', text: label }), c), info);
   };
-  const flip = (label, key, def) => {
+  const flip = (label, key, def, info) => {
     const on = () => prefs.get(key, def) === true || (def === true && prefs.get(key, def) !== false);
     const btn = h('button', { type: 'button', class: 'rnd-opt rnd-opt-sw', role: 'switch', 'aria-checked': String(on()), 'aria-label': label }, h('span', { class: 'rnd-opt-l', text: label }), h('span', { class: 'switch', 'aria-checked': String(on()) }));
     btn.addEventListener('click', () => { prefs.set(key, !on()); btn.setAttribute('aria-checked', String(on())); btn.lastChild.setAttribute('aria-checked', String(on())); paintCard(); paintStrip(); });
-    return btn;
+    return withInfo(btn, info);
   };
   function optionsEl() {
     return h('div', { class: 'rnd-opts' },
-      sel('Pick mode', 'random.mode', Object.entries(MODE_LABEL).map(([value, label]) => ({ value, label })), 'balanced'),
-      sel('Next link by itself', 'random.auto', [['off', 'Off'], ['10', '10 seconds'], ['15', '15 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes']].map(([value, label]) => ({ value, label })), '15', () => { sessionAuto = null; if (!stage.hidden) startAuto(); }),
-      sel('Avoid recent links', 'random.avoid', [['off', 'Off'], ['6h', '6 hours'], ['24h', '1 day'], ['72h', '3 days'], ['7d', '7 days']].map(([value, label]) => ({ value, label })), '24h'),
-      sel('Point influence', 'random.gamma', [['soft', 'Soft'], ['normal', 'Normal'], ['sharp', 'Sharp']].map(([value, label]) => ({ value, label })), 'normal'),
-      flip('Skip dead links', 'random.skipDead', true), flip('Let points drift to 100', 'random.drift', false));
+      sel('Pick mode', 'random.mode', Object.entries(MODE_LABEL).map(([value, label]) => ({ value, label })), 'balanced', null, 'How the next link is chosen: by points, with an equal chance for all, low points first, or never-opened links first.'),
+      sel('Next link by itself', 'random.auto', [['off', 'Off'], ['10', '10 seconds'], ['15', '15 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes']].map(([value, label]) => ({ value, label })), '15', () => { sessionAuto = null; if (!stage.hidden) startAuto(); }, 'Opens a new random link after this many seconds. Pause, resume or stop it from the bar at any time.'),
+      sel('Avoid recent links', 'random.avoid', [['off', 'Off'], ['6h', '6 hours'], ['24h', '1 day'], ['72h', '3 days'], ['7d', '7 days']].map(([value, label]) => ({ value, label })), '24h', null, 'Links you opened lately are much less likely to come up again for this long.'),
+      sel('Point influence', 'random.gamma', [['soft', 'Soft'], ['normal', 'Normal'], ['sharp', 'Sharp']].map(([value, label]) => ({ value, label })), 'normal', null, 'How strongly points matter. Soft is close to an equal chance; sharp strongly favours high points.'),
+      flip('Skip dead links', 'random.skipDead', true, 'Leaves out links the dead-link checker found to be gone.'), flip('Let points drift to 100', 'random.drift', false, 'A link you have not touched for a long time slowly counts as 100 points again (1 point per 14 days). Stored points never change.'));
   }
   function paintQuick() { quick.replaceChildren(h('h2', { class: 'rnd-panel-h', text: 'Options' }), optionsEl()); }
   function paintRecent() {
@@ -98,7 +105,7 @@ export async function mount(container, ctx) {
     const n = pool(), chips = describeFilters(filters, nameOf);
     const go = h('button', { type: 'button', class: 'btn btn-primary rnd-go', disabled: n === 0, on: { click: () => next(true) } }, icon('random', { size: 22 }), h('span', { text: seen.size ? 'Surprise me again' : 'Surprise me' }));
     hubCard.replaceChildren(...[
-      h('div', { class: 'rnd-art', 'aria-hidden': 'true' }, h('span', { class: 'rnd-ring r1' }), h('span', { class: 'rnd-ring r2' }), h('span', { class: 'rnd-die' }, icon('random', { size: 34 }))),
+      h('div', { class: 'rnd-art' }, h('span', { class: 'rnd-ring r1', 'aria-hidden': 'true' }), h('span', { class: 'rnd-ring r2', 'aria-hidden': 'true' }), h('button', { type: 'button', class: 'rnd-die', disabled: n === 0, 'aria-label': 'Surprise me', 'data-tip': 'Surprise me', on: { click: () => next(true) } }, icon('random', { size: 34 }))),   // v2.4.3: the dice starts it too
       h('h2', { id: 'rnd-h', class: 'rnd-title', text: n ? 'Open something you saved' : 'Nothing to pick from' }),
       h('p', { class: 'rnd-pool' }, h('strong', { text: n.toLocaleString() }), h('span', { text: n === 1 ? ' link in play' : ' links in play' }), seen.size ? h('span', { class: 'rnd-seen', text: ` \u00b7 ${seen.size} seen this time` }) : null),
       h('div', { class: 'rnd-chips', role: 'list', 'aria-label': 'Active filters' }, ...(chips.length ? chips : ['No filters']).map((c) => h('span', { class: ['rnd-chip', !chips.length && 'is-quiet'], role: 'listitem', text: c }))),
@@ -137,16 +144,28 @@ export async function mount(container, ctx) {
       h('button', { type: 'button', class: 'rnd-fab-b', 'aria-label': 'Random options', 'data-tip': 'Random options', on: { click: openOptions } }, icon('settings', { size: 20 })));
     const embedded = { src: 'random', onClose: showHub, bar: () => [], float: () => fab };   // v2.4.2: the action bar keeps its normal single line
     stopPreview = await m.mount(stage, { params: { lid }, query: {}, router, embedded });
-    paintStrip(); paintRecent(); startAuto();
+    fabEl = fab; paintStrip(); placeStrip(); paintRecent(); startAuto();
   }
 
   function showHub() {
-    stopAuto();
+    stopAuto(); fabEl = null; placeStrip();
     try { stopPreview && stopPreview(); } catch { /* ignore */ } stopPreview = null;
     stage.replaceChildren(); stage.hidden = true; strip.hidden = true; hub.hidden = false;
     delete document.documentElement.dataset.rnd; setBar(true);
     panel.refresh(); paintCard(); paintRecent(); document.title = 'Random Discover | Linkivo';
   }
+
+  // v2.4.3 (owner): on a wide screen the "x seen / next in" strip floats INSIDE the preview (bottom left, opposite the Random group) instead of sitting above it,
+  // so the page no longer grows a second scrollbar; on a phone it stays in the strip at the bottom.
+  let fabEl = null;
+  const wideMq = window.matchMedia ? window.matchMedia('(min-width: 900px)') : { matches: false, addEventListener() {}, removeEventListener() {} };
+  function placeStrip() {
+    const inside = wideMq.matches && fabEl && fabEl.parentNode;
+    strip.classList.toggle('is-float', !!inside);
+    if (inside) { if (strip.parentNode !== fabEl.parentNode) fabEl.parentNode.appendChild(strip); }
+    else if (strip.parentNode !== page) page.appendChild(strip);
+  }
+  wideMq.addEventListener && wideMq.addEventListener('change', placeStrip);
 
   function openFilters() {
     if (filterSheet) return;
@@ -195,5 +214,5 @@ export async function mount(container, ctx) {
   paintCard(); paintQuick(); paintRecent();
   if (presetFolder) next(true);   // "Random from this folder": no panel stop, a link opens straight away
   document.title = 'Random Discover | Linkivo';
-  return () => { disposed = true; stopAuto(); off(); document.removeEventListener('keydown', onKey); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
+  return () => { disposed = true; stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
 }

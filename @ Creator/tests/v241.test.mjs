@@ -150,13 +150,15 @@ test('cloud engine: Sync now stamps Last synced even when nothing was waiting, a
   e.dispose();
 });
 
-test('admin: Normal view is memory only, hides the badge and the admin checks; a reload goes back to Admin', async () => {
+test('admin: Normal view hides the badge and the admin checks; since v2.4.3 it survives a reload and ends with a log out', async () => {
   const fake = createFakeRtdb(); fake.tree['admins/u9'] = true;
   AD.clearAdmin(); assert.equal(await AD.loadAdmin(fake.adapter, 'u9'), true);
   assert.equal(AD.isAdminView(), true); assert.equal(document.documentElement.dataset.admin, 'true');
   AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(AD.isAdminAccount(), true, 'the switch itself stays reachable'); assert.equal(document.documentElement.dataset.admin, undefined);
-  assert.equal(AD.getAdminViewMode(), 'normal'); assert.equal(prefs.get('admin.view', null), null, 'nothing is stored');
-  AD.clearAdmin(); await AD.loadAdmin(fake.adapter, 'u9'); assert.equal(AD.getAdminViewMode(), 'admin', 'a reload (new load) starts as Admin');
+  assert.equal(AD.getAdminViewMode(), 'normal'); assert.deepEqual(prefs.get('admin.view', null), { uid: 'u9', v: 'normal' }, 'the choice is stored with the uid');
+  await AD.loadAdmin(fake.adapter, 'u9'); assert.equal(AD.getAdminViewMode(), 'normal', 'a reload (new load) keeps Normal user');
+  AD.setAdminView('admin'); assert.equal(prefs.get('admin.view', null), null, 'switching back clears it'); AD.setAdminView('normal');
+  AD.clearAdmin(); await AD.loadAdmin(fake.adapter, 'u9'); assert.equal(AD.getAdminViewMode(), 'admin', 'log out and log in again: Admin');
   AD.clearAdmin(); AD.setAdminView('normal'); assert.equal(AD.getAdminViewMode(), 'admin', 'a normal account can not use it'); assert.equal(await AD.loadAdmin(fake.adapter, 'nobody'), false);
 });
 

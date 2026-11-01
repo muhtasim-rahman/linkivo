@@ -98,3 +98,64 @@ html[data-rnd] .rnd-head { display: none; }
   .rnd-strip { order: -1; border: 1px solid var(--line); border-radius: var(--r-group); margin-bottom: var(--s3); padding-bottom: 4px; }
   .rnd-stage { flex: none; height: auto; min-height: 0; }
 }
+
+/* ======================= v2.4.3 (owner round) ======================= */
+/* small transitions on every control of the page (no sharp cuts) */
+.rf-f, .rf-fmain, .rf-w, .rf-pill, .rf-c, .rf-more, .rf-act, .rf-clear, .rnd-opt, .rnd-i, .rnd-chip, .rnd-fab-go, .rnd-fab-b, .rnd-ab, .rnd-rec-b, .rnd-go {
+  transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease), color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease), transform var(--t-micro) var(--ease), opacity var(--t-std) var(--ease);
+}
+.rf-pill:active, .rf-c:active, .rf-fmain:active, .rnd-go:active, .rnd-fab-go:active { transform: scale(0.97); }
+@keyframes rf-in { from { opacity: 0; transform: scale(0.94); } }
+@media (prefers-reduced-motion: no-preference) { .rf-enter { animation: rf-in var(--t-std) var(--ease) both; } .rnd-info.is-open { animation: rf-in var(--t-std) var(--ease) both; } }
+
+/* section header: title, count, "Select all" text button, clear icon */
+.rf-act { min-height: 32px; padding: 0 var(--s2); border-radius: 8px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+@media (hover: hover) { .rf-act:hover { background: var(--accent-soft); } }
+.rf-fall { display: none; }   /* ! unused since v2.4.3: the "All folders" badge is gone (the header has Select all) */
+
+/* Narrow it down: two sub headings */
+.rf-narrow { display: grid; gap: var(--s2); }
+.rf-sub { margin: var(--s1) 0 0; font: 600 var(--fs-xs) / 1.2 var(--font-brand); letter-spacing: 0.04em; text-transform: uppercase; color: var(--sub); }
+.rf-sub:first-child { margin-top: 0; }
+.rf-fav { width: 16px; height: 16px; flex: none; border-radius: 50%; object-fit: cover; background: var(--surface-2); }
+.rf-c.is-out .rf-fav { opacity: 0.55; filter: grayscale(1); }
+
+/* Point range: one bar, two handles, a small histogram of the person's own points behind it */
+.rg { display: grid; gap: 4px; padding: 2px 12px 0; }
+.rg-bars { display: flex; align-items: flex-end; gap: 2px; height: 36px; }
+.rg-bar { flex: 1; min-width: 0; border-radius: 2px 2px 0 0; background: var(--line-strong); opacity: 0.5; transition: background-color var(--t-std) var(--ease), opacity var(--t-std) var(--ease), height var(--t-std) var(--ease); }
+.rg-bar.is-in { background: var(--accent); opacity: 0.55; }
+.rg-track { position: relative; height: 30px; margin-top: -4px; touch-action: none; cursor: pointer; user-select: none; }
+.rg-track::before { content: ''; position: absolute; inset: 50% 0 auto; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--line-strong); }
+.rg-fill { position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--accent); }
+.rg-thumb { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 1px 5px rgb(0 0 0 / 0.28); cursor: grab; touch-action: none; transition: transform var(--t-micro) var(--ease), box-shadow var(--t-std) var(--ease); }
+.rg-thumb::after { content: ''; position: absolute; inset: -11px; }   /* 44px touch target */
+.rg-thumb.is-drag { cursor: grabbing; transform: scale(1.18); box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 22%, transparent); }
+.rg-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.rg-read { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); font-size: var(--fs-sm); }
+.rg-out { min-width: 3ch; padding: 2px 10px; border-radius: 999px; background: var(--surface-2); font-weight: 650; font-variant-numeric: tabular-nums; }
+.rg.is-set .rg-out { background: var(--accent-soft); color: var(--accent-text); }
+.rg-note { color: var(--sub); font-size: var(--fs-xs); }
+
+/* the Surprise dice is a real button now */
+.rnd-die { border: 0; cursor: pointer; transition: transform var(--t-std) var(--spring), box-shadow var(--t-std) var(--ease), opacity var(--t-std) var(--ease); }
+.rnd-die:disabled { cursor: not-allowed; opacity: 0.45; }
+@media (hover: hover) { .rnd-die:not(:disabled):hover { rotate: -8deg; transform: scale(1.08) rotate(6deg); box-shadow: 0 14px 30px -8px color-mix(in srgb, var(--accent) 75%, transparent); } }
+.rnd-die:not(:disabled):active { transform: scale(0.94); }
+.rnd-die:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* options: each row has an (i) button that opens a one line explanation */
+.rnd-row { display: grid; }
+.rnd-rowline { display: flex; align-items: center; gap: var(--s1); }
+.rnd-rowline > .rnd-opt { flex: 1; min-width: 0; }
+.rnd-i { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: var(--sub); position: relative; }
+.rnd-i::after { content: ''; position: absolute; inset: -4px; }
+.rnd-i[aria-expanded='true'] { color: var(--accent-text); background: var(--accent-soft); }
+@media (hover: hover) { .rnd-i:hover { background: var(--surface-2); color: var(--text); } }
+.rnd-info { margin: 0 0 var(--s2); padding: 0 var(--s2); font-size: var(--fs-xs); line-height: 1.4; color: var(--sub); }
+.rnd-info[hidden] { display: none; }
+
+/* wide screens: the "x seen / next in" strip floats inside the preview, bottom left (no second scrollbar) */
+@media (min-width: 900px) {
+  .rnd-strip.is-float { position: absolute; left: var(--s3); bottom: var(--s3); z-index: 6; order: 0; margin: 0; min-height: 52px; padding: 4px 6px 4px var(--s4); gap: var(--s4); border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-float); }
+}

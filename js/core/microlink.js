@@ -48,11 +48,24 @@ function save(q, patch) { prefs.set(K_DAY, { day: q.day, used: q.used, limit: q.
 const str = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
 const urlOf = (v) => { const u = v && typeof v === 'object' ? v.url : v; return typeof u === 'string' && /^https?:\/\//i.test(u) ? u.slice(0, 2048) : undefined; };
 
+/** v2.4.3 (owner): the page's own keywords. Microlink returns them only when asked with data rules (see RULES below): `keywords` is the meta keywords text,
+ *  `tags` the article:tag values (an array). Joined, de-duplicated, at most 200 characters (the link's `kw` limit). Pure, exported for the tests. */
+export function keywordsOf(d) {
+  const raw = [d && d.keywords, ...(Array.isArray(d && d.tags) ? d.tags : [d && d.tags])].filter((x) => typeof x === 'string').join(',');
+  const seen = new Set(), out = [];
+  for (const t of raw.split(',').map((x) => x.trim().toLowerCase()).filter((x) => x && x.length <= 40)) if (!seen.has(t)) { seen.add(t); out.push(t); }
+  const text = out.join(', ').slice(0, 200).replace(/,\s*[^,]*$/, (m) => (out.join(', ').length > 200 ? '' : m));
+  return text || undefined;
+}
+/** The extra data rules (owner: store meta tags, not only title and image). [verify] Microlink's data-rule query syntax: if it answers 400 the call is repeated plain. */
+const RULES = `&data.keywords.selector=${encodeURIComponent('meta[name="keywords"]')}&data.keywords.attr=content&data.tags.selectorAll=${encodeURIComponent('meta[property="article:tag"]')}&data.tags.attr=content`;
+
 /** Microlink `data` -> the result shape the app already uses (worker-client.js). null when nothing readable came back. */
 export function mapMicrolink(d, url) {
   if (!d || typeof d !== 'object') return null;
   const r = { url, ok: true, engine: 'microlink', title: str(d.title, 300), desc: str(d.description, 2000), lang: str(d.lang, 16), author: str(d.author, 120), site: str(d.publisher, 120),
-    canonical: urlOf(d.url) && urlOf(d.url) !== url ? urlOf(d.url) : undefined, favicon: urlOf(d.logo), image: urlOf(d.image), video: urlOf(d.video), audio: urlOf(d.audio), published: str(d.date, 40) };
+    canonical: urlOf(d.url) && urlOf(d.url) !== url ? urlOf(d.url) : undefined, favicon: urlOf(d.logo), image: urlOf(d.image), video: urlOf(d.video), audio: urlOf(d.audio), published: str(d.date, 40),
+    kw: keywordsOf(d) };
   for (const k of Object.keys(r)) if (r[k] === undefined) delete r[k];
   if (!r.title && !r.desc && !r.image && !r.video) return null;
   return r;
@@ -69,8 +82,10 @@ export async function microlinkMeta(url, { fetch: f = (typeof fetch === 'functio
   const q = quota(now), t0 = Date.now();
   inflight++;
   try {
-    const endpoint = `https://api.microlink.io/?url=${encodeURIComponent(url)}&video=true&audio=true`;
+    const base = `https://api.microlink.io/?url=${encodeURIComponent(url)}&video=true&audio=true`;
+    let endpoint = base + RULES;
     let res = await f(endpoint, { headers: { Accept: 'application/json' } });
+    if (res.status === 400) { endpoint = base; res = await f(endpoint, { headers: { Accept: 'application/json' } }); }   // the data rules were not accepted: ask the plain way
     // 2 requests at a time are allowed: a 429 with ECONCURRENCY is not "used up", wait a second and try once more
     if (res.status === 429 && await isConcurrency(res)) { await new Promise((r) => setTimeout(r, 1100)); res = await f(endpoint, { headers: { Accept: 'application/json' } }); }
     // the real numbers, when the browser lets us read the headers (the server may not expose them: then our own count stands)

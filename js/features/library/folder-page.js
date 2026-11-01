@@ -18,7 +18,8 @@ import { createSelect } from '../../ui/select.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
 import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
-import { refreshButton } from '../../ui/refresh-button.js';
+import { refreshButton } from '../../ui/refresh-button.js';   // ! unused since v2.4.3: Refresh lives in the three-dot menu
+import { createPager } from '../../ui/paged.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { openShortcutHelp } from '../../ui/shortcut-help.js';
 import { emptyState } from '../../ui/empty-state.js';
@@ -39,13 +40,16 @@ import { savePageState, takePageState } from '../../core/page-state.js';   // v2
 
 /** v2.3.2 (owner): the title's font size follows its length so a long name does not crowd the header; CSS keeps at most 2 lines with an ellipsis. */
 export const lenClass = (name) => { const n = [...String(name || '')].length; return n > 40 ? 'xs' : n > 25 ? 's' : n > 15 ? 'm' : 'l'; };
-const SORTS = { new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high' };
+const SORTS = { new: 'Newest first', old: 'Oldest first', title: 'Title A to Z', domain: 'Domain', 'pts-hi': 'Points high to low', 'pts-lo': 'Points low to high', random: 'Random' };   // v2.4.3: Random
 const SCOPES = { all: 'All links', fv: 'Favourites', rl: 'Read later', pn: 'Pinned', bl: 'Blocked', dd: 'Dead links' };   // v2.3.0: dd = flagged by the link checker
 const text = (l) => `${l.title || ''} ${l.url} ${l.host || ''} ${l.desc || ''} ${l.tags || ''} ${l.kw || ''}`.toLowerCase();
 
-export function sortLinks(list, sort) {
+/** v2.4.3 (owner): a stable shuffle for ONE seed. The same seed gives the same order (so a list does not jump while it is edited); a new seed (a new open, a reload, Refresh)
+ *  gives a new order. FNV-1a over id + seed, no Math.random inside the comparator. Pure and exported for the tests. */
+export function shuffleKey(id, seed) { let x = 2166136261; const t = `${seed}:${id}`; for (let i = 0; i < t.length; i++) { x ^= t.charCodeAt(i); x = Math.imul(x, 16777619); } return x >>> 0; }
+export function sortLinks(list, sort, seed = 0) {
   // v2.2.2 (owner): pinned links are ALWAYS first, whatever the sort; the old 'folder' value (Pinned, then newest) now means plain newest
-  const by = { folder: (a, b) => b.ts - a.ts, new: (a, b) => b.ts - a.ts, old: (a, b) => a.ts - b.ts, title: (a, b) => (a.title || a.host || a.url).localeCompare(b.title || b.host || b.url), domain: (a, b) => (a.host || '').localeCompare(b.host || '') || b.ts - a.ts, 'pts-hi': (a, b) => (b.pt ?? 100) - (a.pt ?? 100), 'pts-lo': (a, b) => (a.pt ?? 100) - (b.pt ?? 100) }[sort] || ((a, b) => b.ts - a.ts);
+  const by = { folder: (a, b) => b.ts - a.ts, new: (a, b) => b.ts - a.ts, old: (a, b) => a.ts - b.ts, title: (a, b) => (a.title || a.host || a.url).localeCompare(b.title || b.host || b.url), domain: (a, b) => (a.host || '').localeCompare(b.host || '') || b.ts - a.ts, 'pts-hi': (a, b) => (b.pt ?? 100) - (a.pt ?? 100), 'pts-lo': (a, b) => (a.pt ?? 100) - (b.pt ?? 100), random: (a, b) => shuffleKey(a.id, seed) - shuffleKey(b.id, seed) }[sort] || ((a, b) => b.ts - a.ts);
   return [...list].sort((a, b) => (b.pn ? 1 : 0) - (a.pn ? 1 : 0) || by(a, b));
 }
 export function filterLinks(list, { q = '', domain = null, scope = 'all' }) {
@@ -59,11 +63,14 @@ export async function mount(container, ctx) {
   const engine = getEngine(), queue = getQueue(), router = ctx.router;
   const fid = ctx.params.fid, isFav = fid === FAV_ID;
   const scroller = document.getElementById('page-root') || document.scrollingElement;
-  const st = { q: '', domain: null, scope: 'all', sort: pref(LIB.fsort) === 'folder' ? 'new' : pref(LIB.fsort), view: pref(LIB.fview), selecting: ctx.query.select === '1', selected: new Set(), last: -1, rows: [] };
+  const st = { q: '', domain: null, scope: 'all', sort: pref(LIB.fsort) === 'folder' ? 'new' : pref(LIB.fsort), view: pref(LIB.fview), selecting: ctx.query.select === '1', selected: new Set(), last: -1, rows: [], seed: Math.random().toString(36).slice(2), limitKey: '' };
   // v2.4.1 (owner): after Back or Forward the folder comes back as it was left (search, domain row, scope, sort, view and scroll); a fresh visit starts clean
   const stateKey = `folder:${isFav ? 'fav' : fid}`;
   const saved = takePageState(stateKey, { pop: ctx.pop === true });
   if (saved) Object.assign(st, { q: saved.q, domain: saved.domain, scope: saved.scope, sort: saved.sort, view: saved.view });
+  const pager = createPager({ scroller, noun: 'links', onGrow: () => update() });   // v2.4.3: 100 links at a time, the next 100 while scrolling
+  if (saved && saved.limit) { st.limitKey = [saved.q, saved.domain, saved.scope, saved.sort].join('|'); pager.setLimit(saved.limit); }
+  reshuffle = () => { st.seed = Math.random().toString(36).slice(2); if (st.sort === 'random') update(); };
   const sourceLinks = () => (isFav ? engine.listLinks().filter((l) => l.fv) : engine.listLinks({ fid }));
   const folder = () => (isFav ? favouritesFolder(sourceLinks().length) : engine.getFolder(fid));
   const page = h('div', { class: 'page fp page-enter' });
@@ -76,7 +83,7 @@ export async function mount(container, ctx) {
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search in this folder', 'aria-label': 'Search in this folder', autocomplete: 'off' });
   const scopeSel = createSelect({ options: Object.entries(SCOPES).map(([value, label]) => ({ value, label })), value: 'all', label: 'Show', onChange: (v) => { st.scope = v; update(); } });
   scopeSel.classList.add('fp-scope'); if (saved) { scopeSel.setValue(st.scope); search.value = st.q; }
-  const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'new', label: 'Sort links', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; setPref(LIB.fsort, v); update(); } });
+  const sortBtn = createSelect({ options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), value: st.sort || 'new', label: 'Sort links', lead: 'sort', compact: true, align: 'end', onChange: (v) => { st.sort = v; if (v === 'random') st.seed = Math.random().toString(36).slice(2); setPref(LIB.fsort, v); update(); } });
   sortBtn.classList.add('fp-sort');
   const chips = h('div', { class: 'fp-chips fade-x', role: 'toolbar', 'aria-label': 'Filter by domain' });
   const chipRow = h('div', { class: 'fp-chiprow' }, chips);
@@ -91,7 +98,7 @@ export async function mount(container, ctx) {
     h('header', { class: 'fp-head' },
       h('button', { type: 'button', class: 'btn-icon fp-back', 'aria-label': 'Back to library', on: { click: () => router.navigate('/library') } }, icon('arrow-left', { size: 20 })),
       tile, h('div', { class: 'fp-titles' }, title, sub),
-      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), !isFav && isEnabled('randomFromFolder') && h('button', { type: 'button', class: 'btn-icon fp-rand', 'aria-label': 'Random from this folder', 'data-tip': 'Random from this folder', on: { click: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) } }, icon('random', { size: 20 })), viewBtn, selBtn, settingsShortcut('library', 'Library settings'), moreBtn)),
+      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), !isFav && isEnabled('randomFromFolder') && h('button', { type: 'button', class: 'btn-icon fp-rand', 'aria-label': 'Random from this folder', 'data-tip': 'Random from this folder', on: { click: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) } }, icon('random', { size: 20 })), viewBtn, selBtn, moreBtn)),   // v2.4.3 (owner): Refresh and Folder settings moved into the three-dot menu
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chipRow, info, body);
   const removeDock = mountDock(bar);
   const detachChips = attachScrollRow(chips);
@@ -142,7 +149,9 @@ export async function mount(container, ctx) {
 
   function update() {
     const f = folder(); if (!f || f.del) { router.navigate('/library', { replace: true }); return; }
-    const all = sourceLinks(); st.rows = sortLinks(filterLinks(all, st), st.sort);
+    const all = sourceLinks(); st.rows = sortLinks(filterLinks(all, st), st.sort, st.seed);
+    const lkey = [st.q, st.domain, st.scope, st.sort].join('|'); if (lkey !== st.limitKey) { st.limitKey = lkey; pager.reset(); }   // a new search or sort starts at the first 100 again
+    pager.setTotal(st.rows.length);
     for (const id of [...st.selected]) if (!st.rows.some((l) => l.id === id)) st.selected.delete(id);
     paintHead(); paintChips(all); paintBar();
     info.textContent = st.rows.length === all.length ? '' : `${st.rows.length} of ${all.length} links`;
@@ -153,9 +162,9 @@ export async function mount(container, ctx) {
     }
     if (!st.rows.length) { vl?.destroy(); vl = null; body.replaceChildren(emptyState({ art: 'search', title: 'No links match', text: 'Try another word, or clear the filters.', actions: [{ label: 'Clear filters', onClick: () => { st.q = ''; st.domain = null; st.scope = 'all'; search.value = ''; scopeSel.setValue('all'); update(); } }] })); return; }
     const card = st.view === 'grid';
-    if (!vl) { clear(body); vl = createVirtualList({ scroller, rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0, gap: card ? 10 : 0, render: renderRow }); vl.el.setAttribute('role', 'list'); vl.el.setAttribute('aria-label', 'Links'); body.appendChild(vl.el); vl.setLayout({ rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0 }); }
+    if (!vl) { clear(body); vl = createVirtualList({ scroller, rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0, gap: card ? 10 : 0, render: renderRow }); vl.el.setAttribute('role', 'list'); vl.el.setAttribute('aria-label', 'Links'); body.appendChild(vl.el); body.appendChild(pager.el); vl.setLayout({ rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0 }); }
     else vl.setLayout({ rowHeight: card ? CARD_HEIGHT : ROW_HEIGHT, minColWidth: card ? CARD_MIN_WIDTH : 0 });
-    vl.el.classList.toggle('is-grid', card); vl.setItems(st.rows);
+    vl.el.classList.toggle('is-grid', card); vl.setItems(st.rows.slice(0, pager.limit()));
   }
 
   // ---- events ---------------------------------------------------------------------------------------------------------
@@ -167,8 +176,10 @@ export async function mount(container, ctx) {
     const f = folder();
     const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
     const pick = phone ? [{ label: st.view === 'grid' ? 'List view' : 'Grid view', icon: st.view === 'grid' ? 'list' : 'grid', onSelect: toggleView }, { label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
-    const items = isFav ? [...pick, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking favourites' }) }, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }]
-      : [...pick, ...(isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking folder' }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f })];
+    const rnd = !isFav && phone && isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) }] : [];   // phones: Random is the FIRST item
+    const refreshItem = { label: 'Refresh', icon: 'refresh', onSelect: () => refresh() }, settingsItem = [{ separator: true }, { label: 'Folder settings', icon: 'settings', onSelect: () => router.navigate('/settings/library') }];
+    const items = isFav ? [...rnd, refreshItem, ...pick, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking favourites' }) }, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }, ...settingsItem]
+      : [...rnd, refreshItem, ...pick, ...(isEnabled('randomFromFolder') && !phone ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking folder' }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f }), ...settingsItem];
     moreBtn._m = openMenu(moreBtn, items);
   });
   body.addEventListener('click', (e) => {
@@ -209,7 +220,8 @@ export async function mount(container, ctx) {
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
   if (saved && saved.scroll > 0) requestAnimationFrame(() => requestAnimationFrame(() => { scroller.scrollTop = saved.scroll; }));   // after the list has laid out
-  return () => { savePageState(stateKey, { q: st.q, domain: st.domain, scope: st.scope, sort: st.sort, view: st.view, scroll: scroller.scrollTop }); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  return () => { savePageState(stateKey, { q: st.q, domain: st.domain, scope: st.scope, sort: st.sort, view: st.view, scroll: scroller.scrollTop, limit: pager.limit() }); reshuffle = null; pager.destroy(); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
 }
 
-export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }
+let reshuffle = null;   // set by the mounted page: a Refresh gives the Random sort a new order (owner)
+export async function refresh() { try { reshuffle && reshuffle(); await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

@@ -20,6 +20,7 @@ import { maskEmail } from '../../core/mask.js';
 import { getSession } from '../../core/session.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
+import { subscribeAdmin } from '../../core/admin.js';
 // ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
 // import { mountInstallBanner } from './install-banner.js';
 
@@ -139,6 +140,25 @@ export function mountShell({ router }) {
 
   // v2.3.0: Ctrl or Cmd + K opens global search from anywhere (the Search page itself focuses its field)
   registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { const cur = router.current(); if (cur && cur.route.id === 'search') return; if (document.documentElement.dataset.mode === 'none') return; e.preventDefault(); router.navigate('/search'); } }]);
+
+  // v2.4.3 (owner): pressing the nav item of the page you are already on scrolls that page to its top (no new navigation)
+  const toTopOnActive = (e) => {
+    const a = e.target.closest && e.target.closest('a.nav-item, a.bar-item'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const cur = router.current(); let path = ''; try { path = new URL(a.href, location.href).pathname; } catch { return; }
+    if (!cur || cur.path !== path) return;
+    e.preventDefault(); e.stopPropagation();
+    const sc = document.getElementById('page-root'); if (!sc) return;
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    sc.scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
+  };
+  sidebar.addEventListener('click', toTopOnActive, true); bar.addEventListener('click', toTopOnActive, true);
+  // v2.4.3 (owner): the Admin / Normal user switch applies at once: the page on screen is drawn again (scroll position kept), no reload
+  let adminKey = null;
+  subscribeAdmin((v) => {
+    const k = v && v.listed ? v.view : 'off';
+    if (adminKey && adminKey !== 'off' && k !== 'off' && k !== adminKey) { const sc = document.getElementById('page-root'), top = sc ? sc.scrollTop : 0; Promise.resolve(router.reevaluate()).then(() => requestAnimationFrame(() => { if (sc) sc.scrollTop = top; })); }
+    adminKey = k;
+  });
 
   router.on('route', ({ route }) => {
     const chrome = route.shell !== false;

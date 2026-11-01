@@ -1,72 +1,120 @@
-/* Linkivo v2.4.2 - Profile, rebuilt. Phones: one compact column. Wide screens: identity card on the left (sticky), everything else on the right. */
-.pf2 { padding-top: 0; }
-.pf2-bar { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-bottom: var(--s2); }
-.pf2-bar-t { font: 700 var(--fs-xl) / 1.2 var(--font-brand); }
+/* Linkivo v2.4.3 - Profile (redesigned): profile card, highlights, sliders, shortcuts, data, share. Edit profile popup and crop window at the end. */
+.pf2 { display: grid; gap: var(--s3); align-content: start; padding-bottom: var(--s6); overflow-x: clip; }
+.pf2-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 44px; }
+.pf2-bar-t { font: 650 var(--fs-lg) / 1.2 var(--font-brand); }
 .pf2-grid { display: grid; gap: var(--s4); align-items: start; }
-.pf2-main { display: grid; gap: var(--s5); min-width: 0; }
+.pf2-left, .pf2-main { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
+@media (min-width: 900px) { .pf2-grid { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: var(--s5); } .pf2-left { position: sticky; top: var(--s3); } }
 
-/* identity */
-.pf2-hero { position: relative; border: 1px solid var(--line); border-radius: var(--r-sheet); background: var(--surface); overflow: hidden; }
-.pf2-cover { height: 84px; background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 60%), radial-gradient(90% 120% at 100% 100%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 65%), linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), var(--surface-2)); }
-.pf2-id { display: flex; align-items: flex-end; gap: var(--s3); padding: 0 var(--s4); margin-top: -34px; }
-.pf2-id .avatar.is-lg { width: 76px; height: 76px; flex: none; box-shadow: 0 0 0 4px var(--surface); }
-.pf2-who { min-width: 0; display: grid; gap: 2px; padding-bottom: 2px; }
-.pf2-name { margin: 0; font: 700 var(--fs-lg) / 1.2 var(--font-brand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pf2-mail { margin: 0; font-size: var(--fs-sm); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pf2-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; } .pf2-badges .admin-chip { margin-left: 0; }
-.pf2-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: var(--s4) 0 0; border-top: 1px solid var(--line); background: var(--line); }
-.pf2-stat { display: grid; justify-items: center; gap: 1px; padding: 10px 4px 9px; background: var(--surface); color: inherit; text-decoration: none; min-height: 64px; }
-@media (hover: hover) { .pf2-stat:hover { background: var(--surface-2); text-decoration: none; } }
-.pf2-stat-ic { color: var(--accent-text); } .pf2-stat-n { font: 700 var(--fs-lg) / 1.1 var(--font-brand); font-variant-numeric: tabular-nums; } .pf2-stat-l { font-size: var(--fs-xs); color: var(--sub); white-space: nowrap; }
+/* ---- profile card ---- */
+.pf2-hero { position: relative; display: grid; gap: var(--s2); padding: 0 var(--s4) var(--s4); border: 1px solid var(--line); border-radius: var(--r-sheet); background: var(--surface); overflow: hidden; }
+.pf2-cover { height: 112px; margin: 0 calc(var(--s4) * -1); background: var(--accent-soft) center / cover no-repeat; }
+.pf2-edit { position: absolute; top: var(--s3); right: var(--s3); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; color: #fff; font-size: var(--fs-sm); font-weight: 600; background: rgb(15 23 42 / 0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgb(255 255 255 / 0.25); cursor: pointer; }
+.pf2-edit::after { content: ''; position: absolute; inset: -4px; }
+@media (hover: hover) { .pf2-edit:hover { background: rgb(15 23 42 / 0.72); } }
+.pf2-id { display: flex; align-items: flex-end; gap: var(--s3); margin-top: -40px; min-width: 0; }
+.pf2-id .avatar { flex: none; width: 84px; height: 84px; font-size: 32px; border: 4px solid var(--surface); box-shadow: 0 2px 10px rgb(0 0 0 / 0.18); }
+.pf2-who { min-width: 0; padding-bottom: 4px; }
+.pf2-name { margin: 0; font: 700 var(--fs-xl) / 1.15 var(--font-brand); overflow-wrap: anywhere; }
+.pf2-mail { margin: 2px 0 0; color: var(--sub); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.pf2-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pf2-badge, .pf2-badges .admin-chip { display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: 0; padding: 0 10px; border-radius: 999px; font: 600 12px / 1 var(--font-brand); background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+.pf2-badges .admin-chip { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+html[data-admin='true'] .pf2-badges .admin-chip { display: inline-flex; }
+.pf2-badge.is-verified { background: #1f2933; color: #f1f5f9; border-color: #1f2933; }   /* grayish black (owner) */
+html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #111827; border-color: #cbd5e1; }
+.pf2-badge.is-soft { color: var(--sub); }
+.pf2-bio { margin: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
+.pf2-bio.is-empty { justify-self: start; padding: 0; color: var(--accent-text); font-weight: 600; background: none; border: 0; cursor: pointer; }
+.pf2-site { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf2-uid { display: inline-flex; align-items: center; gap: 6px; justify-self: start; max-width: 100%; min-height: 32px; margin-top: var(--s1); padding: 0 10px; border-radius: 8px; background: var(--surface-2); color: var(--sub); cursor: pointer; position: relative; }
+.pf2-uid::after { content: ''; position: absolute; inset: -6px 0; }
+.pf2-uid-k { font: 700 10px var(--font-brand); letter-spacing: 0.06em; }
+.pf2-uid code { font: 400 11px var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+@media (hover: hover) { .pf2-uid:hover { color: var(--text); } }
 
-/* sections */
+/* ---- highlights ---- */
+.pf2-hl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.pf2-hlc { display: grid; justify-items: start; gap: 2px; min-height: 84px; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); color: inherit; text-decoration: none; position: relative; overflow: hidden; }
+.pf2-hlc-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-text); margin-bottom: 4px; }
+.pf2-hlc-n { font: 700 var(--fs-lg) / 1 var(--font-brand); font-variant-numeric: tabular-nums; }
+.pf2-hlc-l { font-size: var(--fs-xs); color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (hover: hover) { .pf2-hlc:hover { border-color: var(--line-strong); transform: translateY(-1px); text-decoration: none; } }
+.pf2-hlc:active { transform: scale(0.98); }
+
+/* ---- sections and sliders ---- */
 .pf2-sec { display: grid; gap: var(--s2); min-width: 0; }
-.pf2-sec-head { display: flex; align-items: center; justify-content: space-between; }
+.pf2-sec-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: 36px; }
+.pf2-sec-tools { display: inline-flex; align-items: center; gap: 4px; }
 .pf2-h { margin: 0; font: 650 var(--fs-md) / 1.2 var(--font-brand); }
-.pf2-more { display: inline-flex; align-items: center; gap: 2px; min-height: 36px; font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); }
-.pf2-empty { margin: 0; padding: var(--s4); border: 1px dashed var(--line-strong); border-radius: var(--r-group); color: var(--sub); text-align: center; }
-
-/* recently opened slider */
-.pf2-slider { display: flex; gap: var(--s3); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 2px var(--s4) var(--s2) 2px; margin-inline: calc(var(--s4) * -1); padding-left: var(--s4); }
+.pf2-more { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 999px; color: var(--accent-text); font-size: var(--fs-sm); font-weight: 600; }
+.pf2-arrow { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; position: relative; }
+.pf2-arrow::after { content: ''; position: absolute; inset: -5px; }
+.pf2-arrow:disabled { opacity: 0.35; cursor: default; }
+@media (hover: hover) { .pf2-arrow:not(:disabled):hover { background: var(--surface-2); } }
+.pf2-slider { display: flex; gap: var(--s3); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; padding: 2px 2px var(--s2); margin-inline: -2px; }
 .pf2-slider::-webkit-scrollbar { display: none; }
-.pf2-card { flex: none; width: 156px; display: grid; gap: 4px; align-content: start; scroll-snap-align: start; color: inherit; text-decoration: none; }
+.pf2-card { flex: none; display: grid; gap: 2px; align-content: start; width: 168px; color: inherit; text-decoration: none; scroll-snap-align: start; }
+@media (min-width: 600px) { .pf2-card { width: 200px; } }
 .pf2-card.is-gone { opacity: 0.55; }
-.pf2-pic { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, var(--surface-2), color-mix(in srgb, var(--accent) 10%, var(--surface-2))); border: 1px solid var(--line); }
-.pf2-pic-fav { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--sub); }
-.pf2-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: var(--surface-2); }
-.pf2-card-t { font-weight: 600; font-size: var(--fs-sm); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pf2-pic { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+.pf2-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pf2-pic-fav { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface); color: var(--sub); box-shadow: 0 1px 4px rgb(0 0 0 / 0.12); }
+.pf2-pic-fav img { width: 28px; height: 28px; border-radius: 6px; }
+.pf2-thumb ~ .pf2-pic-fav { display: none; }
+.pf2-card-t { margin-top: 6px; font-size: var(--fs-sm); font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pf2-card-u { font-size: var(--fs-xs); color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (hover: hover) { .pf2-card:hover .pf2-card-t { color: var(--accent-text); } }
+@media (hover: hover) { .pf2-card:not(.is-gone):hover .pf2-pic { border-color: var(--line-strong); } }
+.pf2-empty { margin: 0; padding: var(--s3); border: 1px dashed var(--line-strong); border-radius: var(--r-group); color: var(--sub); font-size: var(--fs-sm); }
 
-/* icon grid */
+/* ---- shortcuts ---- */
 .pf2-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); }
-.pf2-tile { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 76px; padding: 10px 4px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; font: inherit; cursor: pointer; }
-.pf2-tile-ic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); }
-.pf2-tile-l { font-size: var(--fs-xs); font-weight: 600; line-height: 1.2; text-align: center; }
-@media (hover: hover) { .pf2-tile:hover { background: var(--surface-2); border-color: var(--line-strong); text-decoration: none; } }
+.pf2-tile { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 76px; padding: var(--s2); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); color: var(--text); text-decoration: none; cursor: pointer; }
+.pf2-tile-ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--surface-2); color: var(--accent-text); }
+.pf2-tile-l { font-size: var(--fs-xs); font-weight: 560; text-align: center; }
+@media (hover: hover) { .pf2-tile:hover { border-color: var(--line-strong); text-decoration: none; } }
 .pf2-tile:active { transform: scale(0.97); }
 
-/* data */
+/* ---- data, share, log out ---- */
 .pf2-card-list { display: grid; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; }
-.pf2-kv { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s4); border-top: 1px solid var(--line); color: inherit; text-decoration: none; } .pf2-kv:first-child { border-top: 0; }
-.pf2-kv-ic { color: var(--sub); display: grid; } .pf2-kv-k { flex: 1; min-width: 0; font-weight: 560; } .pf2-kv-v { color: var(--sub); font-size: var(--fs-sm); text-align: right; display: inline-flex; align-items: center; }
-@media (hover: hover) { .pf2-kv.is-link:hover { background: var(--surface-2); text-decoration: none; } }
-.pf2-invite { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); flex-wrap: wrap; }
-.pf2-invite-ic { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: var(--accent-soft); color: var(--accent-text); flex: none; }
-.pf2-invite-tx { display: grid; flex: 1 1 200px; min-width: 0; } .pf2-invite-tx span { font-size: var(--fs-sm); color: var(--sub); }
-.pf2-logout { display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--line)); border-radius: var(--r-group); background: color-mix(in srgb, var(--danger) 7%, var(--surface)); color: var(--danger); font: 600 var(--fs-md) var(--font-brand); cursor: pointer; }
-@media (hover: hover) { .pf2-logout:hover { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); } }
+.pf2-kv { display: flex; align-items: center; gap: var(--s3); min-height: 48px; padding: 0 var(--s3); color: inherit; text-decoration: none; } .pf2-kv + .pf2-kv { border-top: 1px solid var(--line); }
+.pf2-kv-ic { display: grid; place-items: center; color: var(--sub); } .pf2-kv-k { flex: 1; font-size: var(--fs-sm); } .pf2-kv-v { color: var(--sub); font-size: var(--fs-sm); text-align: right; display: inline-flex; }
+.pf2-invite { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
+.pf2-invite-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); } .pf2-invite-tx { flex: 1; min-width: 180px; display: grid; gap: 2px; font-size: var(--fs-sm); } .pf2-invite-tx span { color: var(--sub); }
+.pf2-share { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s4); border-radius: var(--r-sheet); color: #fff; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #7c3aed)); }
+.pf2-share-logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: rgb(255 255 255 / 0.18); } .pf2-share-logo .logo-mark { background: #fff; }
+.pf2-share-tx { flex: 1; min-width: 180px; display: grid; gap: 2px; font-size: var(--fs-sm); } .pf2-share-tx strong { font-size: var(--fs-md); } .pf2-share-tx span { opacity: 0.88; }
+.pf2-share .btn { background: #fff; color: #111827; border-color: #fff; }
+.pf2-logout { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; border-radius: var(--r-group); border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line)); color: var(--danger); font-weight: 600; background: var(--surface); cursor: pointer; }
+@media (hover: hover) { .pf2-logout:hover { background: color-mix(in srgb, var(--danger) 8%, var(--surface)); } }
 
-@media (min-width: 900px) {
-  .pf2-grid { grid-template-columns: 300px minmax(0, 1fr); gap: var(--s5); }
-  .pf2-hero { position: sticky; top: var(--s3); }
-  .pf2-cover { height: 110px; }
-  .pf2-id { flex-direction: column; align-items: flex-start; margin-top: -42px; }
-  .pf2-id .avatar.is-lg { width: 88px; height: 88px; }
-  .pf2-who { width: 100%; padding-bottom: var(--s2); } .pf2-name, .pf2-mail { white-space: normal; overflow-wrap: anywhere; }
-  .pf2-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pf2-slider { margin-inline: 0; padding-inline: 0; } .pf2-card { width: 176px; }
-  .pf2-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* every control of the page eases between states (owner: no sharp cuts) */
+.pf2-hlc, .pf2-tile, .pf2-card .pf2-pic, .pf2-arrow, .pf2-edit, .pf2-uid, .pf2-more, .pf2-logout, .pf2-share .btn { transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease), color var(--t-std) var(--ease), transform var(--t-micro) var(--ease), opacity var(--t-std) var(--ease); }
+
+/* phones: slightly tighter, the sliders run to the screen edge */
+@media (max-width: 599px) {
+  .pf2-cover { height: 96px; } .pf2-id .avatar { width: 76px; height: 76px; font-size: 28px; } .pf2-id { margin-top: -36px; }
+  .pf2-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .pf2-tile { min-height: 70px; padding: 6px 2px; }
+  .pf2-slider { margin-inline: calc(var(--s4) * -1); padding-inline: var(--s4); scroll-padding-inline: var(--s4); }
+  .pf2-arrow { display: none; }   /* a finger scrolls; the buttons are for mouse screens */
 }
-@media (max-width: 360px) { .pf2-card { width: 140px; } .pf2-tile-l { font-size: 11px; } }
-.tag.is-ok { background: color-mix(in srgb, var(--success, #16a34a) 16%, transparent); color: var(--success, #15803d); gap: 4px; }
+
+/* ---- Edit profile popup and crop window ---- */
+.pe { display: grid; gap: var(--s3); }
+.pe-top { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.pe-photo .avatar { width: 84px; height: 84px; font-size: 32px; }
+.pe-photo-btns { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; flex: 1; min-width: 160px; } .pe-photo-btns .pe-note { flex-basis: 100%; }
+.pe-note { margin: 0; font-size: var(--fs-xs); color: var(--sub); line-height: 1.4; }
+.pe-f { display: grid; gap: 4px; min-width: 0; } .pe-l { font-size: var(--fs-xs); font-weight: 650; color: var(--sub); letter-spacing: 0.02em; }
+.pe-area { min-height: 76px; resize: vertical; font: inherit; }
+.pe-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); } @media (max-width: 479px) { .pe-two { grid-template-columns: 1fr; } }
+.pe-banners { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); }
+.pe-banner { height: 52px; border-radius: 12px; border: 2px solid transparent; background: center / cover no-repeat; cursor: pointer; transition: border-color var(--t-std) var(--ease), transform var(--t-micro) var(--ease), box-shadow var(--t-std) var(--ease); }
+.pe-banner.is-on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); } .pe-banner:active { transform: scale(0.96); }
+.crop { display: grid; gap: var(--s3); justify-items: center; }
+.crop-win { position: relative; width: 280px; max-width: 100%; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #111; touch-action: none; }
+.crop-cv { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.crop-guide { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 999px rgb(0 0 0 / 0.45); border: 2px solid rgb(255 255 255 / 0.9); pointer-events: none; }
+.crop-row { display: flex; align-items: center; gap: var(--s2); width: 280px; max-width: 100%; } .crop-zoom { flex: 1; accent-color: var(--accent); min-height: 44px; } .crop-ic { width: 16px; text-align: center; color: var(--sub); }
+.crop-hint { margin: 0; font-size: var(--fs-xs); color: var(--sub); text-align: center; }
+.crop-actions { display: flex; justify-content: flex-end; gap: var(--s2); width: 100%; }

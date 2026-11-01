@@ -85,3 +85,6 @@ Linkivo/
 | `@ Creator/reference/email-template-reset.html` | the owner's branded reset email (for the v2.5.0 Worker mail) |
 | `@ Creator/tests/v222.test.mjs` | tests for all of the above |
 | Unused, kept | `custom-rows.js` accountOld, install, update, about, developer rows; `library-page.js` FILTERS |
+
+## Added in v2.4.3
+- `js/features/random/random-range.js` (points range bar), `js/ui/paged.js` (100 at a time), `js/core/profile-data.js`, `js/features/profile/` (`profile-edit.js`, `image-crop.js`), `assets/art/banner-1.svg` to `banner-4.svg`, `@ Creator/tests/v243.test.mjs`.

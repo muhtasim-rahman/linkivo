@@ -13,6 +13,7 @@ import { toast } from '../../ui/toast.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { createVirtualList } from '../../ui/virtual-list.js';
+import { createPager } from '../../ui/paged.js';
 import { mountDock } from '../../ui/dock.js';
 import { refreshButton } from '../../ui/refresh-button.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
@@ -46,7 +47,8 @@ export async function mount(container, ctx) {
   page.append(h('header', { class: 'page-head is-stack' }, h('div', { class: 'lib-headrow' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to settings', on: { click: () => ctx.router.navigate('/settings') } }, icon('arrow-left', { size: 20 })), h('h1', { class: 'page-title', text: 'Recycle Bin' }), refreshButton(async () => { await engine.flush?.(); update(); }), emptyBtn), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search)), body);
   const unDock = mountDock(bar);
-  let vl = null;
+  let vl = null, lastQ = '';
+  const pager = createPager({ scroller, noun: 'items', onGrow: () => update() });   // v2.4.3: 100 rows at a time
 
   const pick = () => { const folderIds = [], linkIds = []; for (const r of st.rows) if (st.sel.has(r.id) && r.kind) (r.kind === 'folder' ? folderIds : linkIds).push(r.id); return { folderIds, linkIds }; };
   async function restore() {
@@ -92,11 +94,13 @@ export async function mount(container, ctx) {
     sub.textContent = all.length ? `${plural(all.length, 'item')}. Items are deleted forever after ${KEEP_DAYS} days.` : `Deleted folders and links stay here for ${KEEP_DAYS} days.`; emptyBtn.hidden = !all.length;
     const rows = []; let last = '';
     for (const r of shown) { const g = dayGroup(r.del); if (g !== last) { rows.push({ head: g }); last = g; } rows.push(r); }
+    if (st.q !== lastQ) { lastQ = st.q; pager.reset(); }
+    pager.setTotal(rows.length);
     st.rows = rows; for (const id of [...st.sel]) if (!shown.some((r) => r.id === id)) st.sel.delete(id);
     paintBar();
     if (!shown.length) { vl?.destroy(); vl = null; body.replaceChildren(emptyState({ art: 'library', title: all.length ? 'Nothing matches' : 'The Recycle Bin is empty', text: all.length ? 'Try another word.' : 'Deleted folders and links wait here, so a mistake is never final.' })); return; }
-    if (!vl) { body.replaceChildren(); vl = createVirtualList({ scroller, rowHeight: 56, render: row }); vl.el.setAttribute('role', 'list'); body.appendChild(vl.el); }
-    vl.setItems(rows);
+    if (!vl) { body.replaceChildren(); vl = createVirtualList({ scroller, rowHeight: 56, render: row }); vl.el.setAttribute('role', 'list'); body.appendChild(vl.el); body.appendChild(pager.el); }
+    vl.setItems(rows.slice(0, pager.limit()));
   }
   // ---- keyboard (v2.2.1) ----
   const keys = [
@@ -114,5 +118,5 @@ export async function mount(container, ctx) {
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
   let raf = 0; const off = engine.subscribe((e) => { if (e.type === 'change') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
-  return () => { off(); offKeys(); unDock(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  return () => { off(); offKeys(); unDock(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); pager.destroy(); };
 }

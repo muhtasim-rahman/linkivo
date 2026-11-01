@@ -35,8 +35,9 @@ export function quota(now = Date.now()) {
   const st = prefs.get(K_DAY, null), day = dayOf(now);
   // the stored window is valid until its reset time (when the server told us one), else for the same UTC day
   const live = st && (st.reset ? now < st.reset : st.day === day);
-  const cur = live ? st : { day, used: 0, limit: st && Number(st.limit) > 0 ? st.limit : ML_DEFAULT_LIMIT, reset: 0 };
-  const limit = Number(cur.limit) > 0 ? Number(cur.limit) : ML_DEFAULT_LIMIT, used = Math.max(0, Number(cur.used) || 0);
+  // v2.4.2 (owner): the allowance is ALWAYS 25. A stored limit (older versions kept the 5 of a short window, or a header value) is ignored.
+  const cur = live ? st : { day, used: 0, reset: 0 };
+  const limit = ML_DEFAULT_LIMIT, used = Math.min(limit, Math.max(0, Number(cur.used) || 0));
   return { day, limit, used, left: Math.max(0, limit - used), reset: Number(cur.reset) || 0 };
 }
 /** v2.4.1: the counter does not block any more (it is a reminder); only the switch and a recent real limit answer do. */
@@ -75,8 +76,10 @@ export async function microlinkMeta(url, { fetch: f = (typeof fetch === 'functio
     // the real numbers, when the browser lets us read the headers (the server may not expose them: then our own count stands)
     const hl = Number(res.headers && res.headers.get && res.headers.get('x-rate-limit-limit')), hr = res.headers && res.headers.get && res.headers.get('x-rate-limit-remaining');
     const hz = Number(res.headers && res.headers.get && res.headers.get('x-rate-limit-reset')), reset = hz > 0 ? hz * 1000 : q.reset;
-    const limit = hl > 0 ? hl : q.limit;
-    const used = hr != null && hr !== '' && Number.isFinite(Number(hr)) ? Math.max(0, limit - Number(hr)) : q.used + 1;
+    // v2.4.2: the daily allowance is 25 whatever a header says (a header of 5 describes a short window and made the counter read 5 and stop). The header
+    // 'remaining' is trusted only when its own limit is the daily 25; otherwise this device's count goes up by one.
+    const limit = ML_DEFAULT_LIMIT;
+    const used = hl === ML_DEFAULT_LIMIT && hr != null && hr !== '' && Number.isFinite(Number(hr)) ? Math.max(0, limit - Number(hr)) : Math.min(limit, q.used + 1);
     if (res.status === 429) {
       if (await isConcurrency(res)) { log.info('microlink', 'too many at once'); attempt = { ok: false, reason: 'busy', ms: Date.now() - t0 }; return null; }   // busy, not used up
       coolUntil = now + COOL_MS;

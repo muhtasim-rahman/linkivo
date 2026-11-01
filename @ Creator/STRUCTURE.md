@@ -12,7 +12,7 @@ Linkivo/
 │   ├── commits/                one commit message per version (v2.0.0-commit.txt, v2.1.0-commit.txt, ...)
 │   ├── rules/                  database.rules.json (GENERATED) + history/ snapshots
 │   ├── worker/                 worker.js (2.1.3: /health, /meta) + history/ snapshots
-│   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs
+│   ├── tools/                  check.mjs (gate), pack.sh, make-icons.mjs, gen-rules.mjs, gen-precache.mjs, hover-wrap.mjs (v2.4.2)
 │   ├── tests/                  *.test.mjs (12 files, 154 tests), rules-matrix.md, helpers/
 │   └── reference/              v1 splash animation, LinkIntel prototype (not deployed)
 │
@@ -54,7 +54,7 @@ Linkivo/
 - Files that appear in later versions: see `PLAN-v2.0_to_v2.5.md` (for example `js/features/preview/` in v2.3.0).
 - `.gitkeep` only marks an empty folder so git and zips keep it. Delete it when the folder gets its first real file.
 - Folder names `@ Creator`, `@ Extra files`, `@ Versions` contain a space and a leading `@`: always quote them in shell commands.
-- Nothing starting with `@` is deployed to hosting; `@ Creator` and `@ Versions` are pushed to GitHub, `@ Extra files` is git-ignored.
+- Nothing starting with `@` is deployed to hosting; only `@ Creator` is pushed to GitHub; `@ Extra files` and `@ Versions` are git-ignored (v2.4.2, owner decision).
 
 ## Added in v2.2.1
 

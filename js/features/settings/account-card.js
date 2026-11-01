@@ -42,12 +42,13 @@ export function accountRows({ router, rerender = () => {} }) {
   // 1. profile line: photo, name, masked email, View profile, sync icon (no separate Sync now row any more)
   const syncBtn = engine && engine.status().kind !== 'guest' ? h('button', { type: 'button', class: 'btn-icon is-sm', 'aria-label': 'Sync now', 'data-tip': 'Sync now', on: { click: async (e) => {
     const b = e.currentTarget; b.classList.add('is-loading');
-    try { const ok = engine.syncNow ? await engine.syncNow() : (await engine.flush?.(), true); if (ok) toast('Everything is synced.'); else toast('Could not sync. It will retry by itself.', { type: 'error' }); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }   // v2.4.1: syncNow stamps the time and repaints Last synced
+    try { const ok = engine.syncNow ? await engine.syncNow() : (await engine.flush?.(), true); if (ok) toast('Everything is synced.'); else toast(typeof navigator !== 'undefined' && navigator.onLine === false ? 'You are offline. Changes wait on this device and upload when you are back online.' : 'Could not sync. It will retry by itself.', { type: 'error' }); } catch { toast('Could not sync. It will retry by itself.', { type: 'error' }); }   // v2.4.1: syncNow stamps the time and repaints Last synced
     b.classList.remove('is-loading');
   } } }, icon('refresh', { size: 18 })) : null;
+  const switchBtn = h('button', { type: 'button', class: 'btn-icon is-sm', 'aria-label': 'Switch profile', 'data-tip': 'Switch profile', on: { click: () => import('../shell/switch-account.js').then((m) => m.openSwitchAccount(router)) } }, icon('users', { size: 18 }));
   const head = h('div', { class: 'row acc-head' }, avatar(u.name, true, u.photo, true),
     h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: u.name }), h('span', { class: 'row-desc', text: maskEmail(u.email) })),
-    h('span', { class: 'row-end' }, h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => router.navigate('/profile') } }, 'View profile'), syncBtn));
+    h('span', { class: 'row-end' }, h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => router.navigate('/profile') } }, 'View profile'), switchBtn, syncBtn));   // v2.4.2 (owner): Switch profile icon beside View profile
 
   // 2. verification: green tick when verified
   const verified = u.emailVerified

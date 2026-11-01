@@ -15,6 +15,7 @@ import { safeHref } from '../library/folder-style.js';
 import { bulk } from '../library/link-actions.js';
 import { frameState, videoSource, audioSource, pdfSource, mshotUrl, thumUrl, detailsRows, parseLog } from './preview-model.js';
 import { canUseThum, countThum, shotQuota } from '../../core/admin.js';
+import { thumAllowed } from './preview-ctx.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
 
 const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
@@ -58,18 +59,26 @@ function imageTab(src, alt, extra = null) {
   return status;
 }
 const photoTab = ({ link, meta }) => ({ el: h('div', { class: 'pv-tabbody' }, imageTab(meta.image, link.title || 'Page image')) });
-function shotTab({ link }) {
+function shotTab({ link, meta, engine }) {
   const body = h('div', { class: 'pv-tabbody' });
+  // v2.4.2 (owner): a thum.io screenshot is saved with the link details (linkMeta.shot) the first time it is taken, so the next visit shows it straight away
+  // and does not use today's allowance again. "Take a new screenshot" makes a fresh one and replaces the saved address.
+  const keep = (src) => { try { if (engine && engine.patchLinkMeta && link.id) engine.patchLinkMeta(link.id, { shot: src }).catch(() => {}); } catch { /* optional */ } };
+  const showSaved = (src) => {
+    const wrap = imageTab(src, `Screenshot of ${link.host || link.url}`);
+    body.replaceChildren(h('p', { class: 'pv-hint', text: 'Saved screenshot (taken with thum.io).' }), wrap, h('button', { type: 'button', class: 'btn btn-sm pv-reshoot', on: { click: () => show(true) } }, icon('refresh', { size: 16 }), 'Take a new screenshot'));
+  };
   // thum.io while today's allowance lasts (counted once per new screenshot), then WordPress mShots; an image that fails to load also falls back to mShots
   const show = (bust) => {
-    const thum = prefs.get('preview.thum', true) !== false && canUseThum(); if (thum) countThum();
+    const thum = prefs.get('preview.thum', true) !== false && thumAllowed() && canUseThum(); if (thum) countThum();
     const q = shotQuota(), src = thum ? thumUrl(link.url) : mshotUrl(link.url) + (bust ? `&v=${Date.now()}` : '');
-    const hint = thum ? (q.limit === null ? 'Screenshot by thum.io.' : `Screenshot by thum.io. ${q.left} of ${q.limit} left today.`) : 'Screenshot by WordPress mShots (the thum.io allowance for today is used).';
+    if (thum) keep(src);
+    const hint = thum ? (q.limit === null ? 'Screenshot by thum.io.' : `Screenshot by thum.io. ${q.left} of ${q.limit} left today.`) : 'Screenshot by WordPress mShots (thum.io is off or its allowance for today is used).';
     const wrap = imageTab(src, `Screenshot of ${link.host || link.url}`);
     if (thum) wrap.querySelector('img')?.addEventListener('error', () => { const img = wrap.querySelector('img'); if (img && !img.dataset.fb) { img.dataset.fb = '1'; img.src = mshotUrl(link.url); } }, { once: true });
     body.replaceChildren(h('p', { class: 'pv-hint', text: hint }), wrap, h('button', { type: 'button', class: 'btn btn-sm pv-reshoot', on: { click: () => show(true) } }, icon('refresh', { size: 16 }), 'Take a new screenshot'));
   };
-  show(false);
+  if (meta && typeof meta.shot === 'string' && /^https:\/\//.test(meta.shot)) showSaved(meta.shot); else show(false);
   return { el: body };
 }
 

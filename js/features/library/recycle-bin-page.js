@@ -5,6 +5,7 @@
  * v2.2.1: the selection bar is a dock (always fixed at the bottom), keyboard shortcuts (Ctrl+A, Esc, Delete, R, / and ?), a refresh icon on wide screens.
  * Page module: mount(container, ctx) -> unmount
  */
+import { pickTile, faviconFace } from '../../ui/pick-tile.js';
 import { selBarContent } from '../../ui/sel-bar.js';   // v2.2.2
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -20,7 +21,7 @@ import { loadCss } from '../../core/css-loader.js';
 import { getEngine } from '../../core/app-data.js';
 import { plural, relativeTime } from '../../core/format.js';
 import { logActivity } from '../../core/activity.js';
-import { folderTile, linkTitle } from './folder-style.js';
+import { folderTile, linkTitle, faviconUrl } from './folder-style.js';
 
 const DAY = 86400000, KEEP_DAYS = 15;
 export const daysLeft = (del, now = Date.now()) => Math.max(0, KEEP_DAYS - Math.floor((now - del) / DAY));
@@ -68,8 +69,11 @@ export async function mount(container, ctx) {
   const row = (r) => {
     if (r.head) return h('div', { class: 'bin-head', role: 'presentation', text: r.head });
     const on = st.sel.has(r.id), f = r.kind === 'folder';
-    return h('label', { class: ['bin-row', on && 'is-selected'], role: 'listitem' }, h('input', { type: 'checkbox', checked: on, 'aria-label': `Select ${r.name}`, on: { change: (e) => { e.target.checked ? st.sel.add(r.id) : st.sel.delete(r.id); paintBar(); vl?.refresh(); } } }),
-      f ? folderTile(r.rec, 32) : h('span', { class: 'ftile', style: { '--fc': '#64748b', '--sz': '32px' } }, icon('link', { size: 16 })),
+    // v2.4.2 (owner): the picture of a row becomes the check box on hover (ui/pick-tile.js), like the folder lists; a click anywhere on the row toggles it
+    const toggle = () => { st.sel.has(r.id) ? st.sel.delete(r.id) : st.sel.add(r.id); paintBar(); vl?.refresh(); };
+    const face = f ? folderTile(r.rec, 32) : faviconFace(r.rec.host, faviconUrl(r.rec.host));
+    return h('div', { class: ['bin-row', 'pk-row', on && 'is-selected'], role: 'listitem', on: { click: toggle } },
+      pickTile({ face, on, selecting: st.sel.size > 0, label: `Select ${r.name}`, onToggle: toggle }),
       h('span', { class: 'ltext' }, h('span', { class: 'ltitle', text: r.name }), h('span', { class: 'lsub', text: f ? `Folder, ${plural(r.n, 'link')}  \u00b7  ${relativeTime(r.del)}` : `${r.rec.host || 'Link'}  \u00b7  ${relativeTime(r.del)}` })),
       h('span', { class: ['badge', daysLeft(r.del) <= 2 && 'is-warn'], text: `${daysLeft(r.del)} d left` }));
   };

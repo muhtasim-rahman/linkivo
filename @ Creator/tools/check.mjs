@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { findUnwrapped } from './hover-wrap.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const errors = [], warns = [];
@@ -29,6 +30,9 @@ const ext = (f) => path.extname(f).toLowerCase();
 const read = (f) => fs.readFileSync(f, 'utf8');
 
 // ---- 1. JavaScript syntax (ES modules; checked via a temporary .mjs copy) -----------------------------
+// ---- 0b. v2.4.2: :hover only where a real pointer can hover (phones keep the hover state of the last tap otherwise) ---
+for (const f of files.filter((x) => ext(x) === '.css')) { const u = findUnwrapped(read(f)); if (u.length) err(`HOVER ${rel(f)}: ${u.length} :hover rule(s) outside @media (hover: hover), run node "@ Creator/tools/hover-wrap.mjs" (first: ${u[0]})`); }
+
 const jsFiles = files.filter((f) => ['.js', '.mjs'].includes(ext(f)));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lk-check-'));
 for (const f of jsFiles) {
@@ -129,7 +133,9 @@ try {
 } catch { err('firebase.json missing or invalid'); }
 const gi = fs.existsSync(path.join(root, '.gitignore')) ? read(path.join(root, '.gitignore')) : '';
 for (const need of ['@ Extra files', 'serviceAccount*.json', '.dev.vars']) if (!gi.includes(need)) err(`.gitignore must contain "${need}"`);
-for (const bad of ['@ Creator', '@ Versions']) if (gi.split('\n').some((l) => l.trim().replace(/\/$/, '') === bad)) err(`.gitignore must NOT ignore "${bad}" (it is pushed to GitHub)`);
+// v2.4.2: "@ Versions" is no longer pushed (owner decision); only "@ Creator" must stay tracked.
+if (gi.split('\n').some((l) => l.trim().replace(/\/$/, '') === '@ Creator')) err('.gitignore must NOT ignore "@ Creator" (it is pushed to GitHub)');
+for (const need of ['@ Versions', '@ Extra files']) if (!gi.split('\n').some((l) => l.trim().replace(/\/$/, '') === need)) err(`.gitignore must ignore "${need}" (private, never pushed)`);
 if (fs.existsSync(path.join(root, '.creator'))) err('Old folder ".creator" still exists: the folder is now named "@ Creator"');
 for (const need of ['PLAN-v2.0_to_v2.5.md', 'MASTER-PROMPT-v2.0_to_v2.5.md', 'RULES.md', 'CONTEXT-v2.0_to_v2.5.md']) if (!fs.existsSync(path.join(root, '@ Creator', need))) err(`Missing @ Creator/${need}`);
 

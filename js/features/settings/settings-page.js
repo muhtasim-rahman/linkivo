@@ -20,6 +20,7 @@ import { renderCustom } from './custom-rows.js';
 import { installCard } from '../shell/install-card.js';
 import { profileCard, logoutButton } from '../shell/shell-parts.js';
 import { binCard } from '../shell/bin-card.js';
+import { historyCard } from '../shell/history-card.js';   // v2.4.2
 import { renderAdvanced } from './advanced-tools.js';
 import { flashRow } from '../../ui/motion.js';
 
@@ -47,7 +48,7 @@ export async function mount(container, ctx) {
   }));
 
   // v2.2.2 (owner): on wide screens the install card and a Recycle Bin card sit at the very top (phones have both in the Menu page)
-  const topCards = h('div', { class: 'set-top' }, profileCard(ctx.router), installCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
+  const topCards = h('div', { class: 'set-top' }, profileCard(ctx.router), installCard(), historyCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
   function renderSections() {
     body.replaceChildren(topCards, ...SECTIONS.map((s) => {
       const group = h('div', { class: 'group' });

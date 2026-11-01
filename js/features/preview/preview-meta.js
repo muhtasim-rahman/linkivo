@@ -17,25 +17,26 @@ import { createStore } from '../../core/events.js';
 import { metaPatch, metaExtras } from '../import/import-job.js';
 import { packLog, parseLog } from './preview-model.js';
 import { log } from '../../core/logger.js';
+import { microlinkAllowed } from './preview-ctx.js';
 
 const inflight = new Map();
 
 /** v2.3.1: Microlink first (this device's own daily allowance, switch in Settings), then the Worker chain. Microlink never throws; null means "use the next one". */
 export const fetchStatus = createStore({ lid: null, engine: '' });
 const tried = new Set();   // links Microlink was asked about during this visit of the app: a failed attempt is not repeated on every open
-export const wantsMicrolink = (meta, lid) => canUseMicrolink() && !(meta && meta.ml) && !tried.has(lid);
+export const wantsMicrolink = (meta, lid) => canUseMicrolink() && microlinkAllowed() && !(meta && meta.ml) && !tried.has(lid);   // v2.4.2: inside Random only when its own switch is on
 
 const REASON = { off: 'switched off', limit: 'daily limit reached', busy: 'busy, try again', error: 'no answer', empty: 'nothing readable' };
 async function defaultFetch(urls, lid, { mlOnly = false } = {}) {
   const url = urls[0];
   let skipped = null;
-  if (canUseMicrolink()) {
+  if (canUseMicrolink() && microlinkAllowed()) {
     fetchStatus.set({ lid, engine: 'Microlink' });
     const ml = await microlinkMeta(url);
     if (ml && !ml.empty) return new Map([[url, ml]]);
     if (ml && ml.empty) { if (mlOnly) return new Map([[url, ml]]); skipped = ml.log; }
     else { const a = lastAttempt(); skipped = [{ engine: 'microlink', ok: false, ms: a.ms, error: REASON[a.reason] || 'no answer' }]; }
-  } else { const a = lastAttempt(); skipped = [{ engine: 'microlink', ok: false, ms: 0, error: REASON[a.reason] || 'skipped' }]; }
+  } else { const a = lastAttempt(); skipped = [{ engine: 'microlink', ok: false, ms: 0, error: !microlinkAllowed() ? 'switched off for Random' : (REASON[a.reason] || 'skipped') }]; }
   if (mlOnly) return new Map();                      // nothing to add and nothing to ask the other services about
   fetchStatus.set({ lid, engine: 'Worker' });
   const out = await workerFetch(urls);

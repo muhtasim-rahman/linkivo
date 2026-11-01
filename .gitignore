@@ -3,8 +3,8 @@
 @ Test
 @ Versions
 
-# NOTE: "@ Creator" (AI workspace: plan, rules, docs, tools) and "@ Versions" (release zips) ARE pushed on purpose.
-# So nothing sensitive may ever be placed in either of them.
+# NOTE: "@ Creator" (AI workspace: plan, rules, docs, tools) IS pushed on purpose: nothing sensitive may be placed in it.
+# "@ Versions" (release zips) is NOT pushed any more (v2.4.2, owner decision).
 
 # secrets: never commit (keys live only in Cloudflare/Firebase consoles)
 serviceAccount*.json

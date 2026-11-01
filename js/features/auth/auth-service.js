@@ -17,6 +17,7 @@ import { prefs } from '../../core/local-prefs.js';
 import { setSession, getSession } from '../../core/session.js';
 import { setTokenProvider } from '../../core/worker-client.js';
 import { log } from '../../core/logger.js';
+import { withTimeout } from '../../core/utils.js';
 import { sendAllowed, recordSend } from '../../core/send-limit.js';
 
 let fb = null;
@@ -35,7 +36,7 @@ export async function initAuth() {
   catch (e) { log.error('auth', 'sign-in service unavailable', e); setSession({ mode: 'none', user: null, ready: true, error: 'offline' }); return; }
   const { auth, mods } = fb;
   setTokenProvider(async () => (auth.currentUser ? auth.currentUser.getIdToken() : null));
-  try { await mods.auth.getRedirectResult(auth); } catch (e) { log.warn('auth', 'redirect sign-in failed', e); setSession({ redirectError: e.code || 'error' }); }
+  try { await withTimeout(mods.auth.getRedirectResult(auth), 5000, 'redirect result'); } catch (e) { log.warn('auth', 'redirect sign-in failed', e); if (e && e.code !== 'lk/timeout') setSession({ redirectError: e.code || 'error' }); }
   await new Promise((resolve) => {
     let first = true;
     mods.auth.onAuthStateChanged(auth, (user) => {

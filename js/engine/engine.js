@@ -298,6 +298,8 @@ export class Engine {
   }
   /** v2.3.0: the extra page data of ONE link (Preview reads it). Local cache first; the cloud engine also asks the database when this device never saw it. */
   async getLinkMeta(id) { try { return (await this.db.get('linkMeta', id)) || null; } catch { return null; } }
+  /** v2.4.2: this device's saved extra data only. Never asks the account (CloudEngine overrides getLinkMeta to do that); the Profile slider uses it so it makes no network call. */
+  async peekLinkMeta(id) { try { return (await this.db.get('linkMeta', id)) || null; } catch { return null; } }
   /** v2.3.0: merge fields into a link's extra data. saveLinkMeta writes the whole record, so this reads, merges, then writes. */
   async patchLinkMeta(id, raw) { const cur = (await this.getLinkMeta(id)) || {}; const { id: _id, checkedAt: _c, ...rest } = cur; return this.saveLinkMeta([[id, { ...rest, ...raw }]]); }
   async _dropLinkMeta(ids) {

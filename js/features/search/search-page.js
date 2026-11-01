@@ -7,6 +7,7 @@
  *          rise in one after another and new rows of "See more" rise in on their own; the search field is a sticky header with a small top gap and a fade under it.
  * Page module: mount(container, ctx)      Pure logic: search-core.js
  */
+import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
@@ -35,8 +36,11 @@ export async function mount(container, ctx) {
   const input = h('input', { class: 'input sp-input', type: 'search', placeholder: 'Search links, folders, pages and settings', 'aria-label': 'Search links, folders, pages and settings', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', value: st.q });
   const clear = h('button', { type: 'button', class: 'btn-icon sp-clear', 'aria-label': 'Clear search', hidden: !st.q, on: { click: () => { input.value = ''; setQuery(''); input.focus(); } } }, icon('close', { size: 18 }));
   const out = h('div', { class: 'sp-out', 'aria-live': 'polite' });
-  const page = h('div', { class: 'page sp page-enter' }, h('h1', { class: 'sr-only', text: 'Search' }), h('div', { class: 'sp-head' }, h('div', { class: 'sp-bar' }, icon('search', { size: 20 }), input, clear)), out);
+  const page = h('div', { class: 'page sp page-enter' }, h('h1', { class: 'sr-only', text: 'Search' }), h('div', { class: 'sp-head' }, h('div', { class: 'sp-bar' }, icon('search', { size: 20 }), input, clear, settingsShortcut('search', 'Search settings'))), out);
   container.appendChild(page);
+  const headEl = page.querySelector('.sp-head');   // v2.4.2: the fade under the bar only shows while the page is scrolled
+  const onScroll = () => headEl.classList.toggle('is-stuck', container.scrollTop > 6);
+  container.addEventListener('scroll', onScroll, { passive: true });
 
   const keep = (q) => { if (prefs.get('search.recent', true) !== false) pushHistory(store, q); };   // v2.3.1: setting "Remember recent searches"
   const openFrom = (e, q) => { keep(q); return e; };
@@ -104,5 +108,5 @@ export async function mount(container, ctx) {
   // keyboard, later visits show the page quietly so the keyboard does not jump up each time.
   const fine = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
   if (fine || !phoneFocused) { phoneFocused = true; setTimeout(() => input.focus({ preventScroll: true }), 60); }
-  return () => { clearTimeout(timer); off(); offEngine(); };
+  return () => { clearTimeout(timer); off(); offEngine(); container.removeEventListener('scroll', onScroll); };
 }

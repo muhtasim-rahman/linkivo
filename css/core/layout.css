@@ -3,6 +3,7 @@
 #app[data-chrome='none'] .sidebar, #app[data-chrome='none'] .bar { display: none; }
 #app[data-nobar='1'] .bar { display: none; } #app[data-nobar='1'] #page-root { padding-bottom: 0 !important; }   /* v2.3.0: Preview, full screen on phones */
 .app-main { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+#page-root.is-entering { overflow-y: hidden; }   /* v2.4.2 (owner): the enter animation moves the page 10px, which made a scrollbar appear for a moment and shift the layout; no scrollbar while it runs */
 #page-root { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
 #app:not([data-chrome='none']) #page-root { padding-bottom: calc(var(--bar-h) + var(--bar-gap) * 2 + var(--safe-b)); }
 .sidebar { display: none; }
@@ -22,7 +23,7 @@
   .bar { display: none !important; }
   /* wide screens: the sidebar stays on the left, the page content is centred in the space that remains (never stuck to the left edge) */
   .page { padding-top: var(--s6); padding-inline: var(--s8); margin-inline: auto; }
-  .page.is-wide { --content-max: 1080px; }
+  .page.is-wide { --content-max: var(--w-wide); }   /* v2.4.2: Settings, Random Discover (the Preview has its own root, see preview.css) */
   .page-title { font-size: var(--fs-2xl); }
 }
 

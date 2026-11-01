@@ -25,11 +25,12 @@ import { logOut } from '../shell/shell-parts.js';
 import app from '../../core/app-info.js';
 import { syncRow } from './sync-picker.js';
 import { quota as mlQuota, mlEnabled, subscribeQuota } from '../../core/microlink.js';
+import { adminChip } from '../../ui/admin-badge.js';
 import { isAdminAccount, isAdminView, subscribeAdmin, getAdminViewMode, setAdminView } from '../../core/admin.js';
 import { KEEP_OPTIONS } from '../../core/history.js';
 import { createSelect } from '../../ui/select.js';
 
-const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
+const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label' }, label, opts.admin ? adminChip() : null), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
 
 function install() {
   const box = h('div');
@@ -164,7 +165,7 @@ function historyKeepRow() {
   const box = h('div');
   const draw = () => {
     const opts = KEEP_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
-    if (isAdminView()) opts.push({ value: 'never', label: 'No limit' });
+    if (isAdminView()) opts.push({ value: 'never', label: 'No limit (Admin)' });   // v2.4.2: only admins get this choice; the label says so
     let cur = prefs.get('history.keep', '7d'); if (!opts.some((o) => o.value === cur)) cur = '7d';
     const sel = createSelect({ options: opts, value: cur, label: 'Keep history for', align: 'end', onChange: (v) => { prefs.set('history.keep', v); toast(v === 'off' ? 'History is off. Existing entries are removed.' : 'History keep time saved.'); } });
     box.replaceChildren(row('Keep history for', 'Older entries are removed automatically. Off stops recording and clears the list.', sel));
@@ -172,9 +173,7 @@ function historyKeepRow() {
   draw(); subscribeAdmin(() => { if (box.isConnected) draw(); });
   return box;
 }
-function historyOpenRow() {
-  return h('a', { class: 'row', href: '/profile/history' }, h('span', { class: 'row-ic' }, icon('history')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Open History' }), h('span', { class: 'row-desc', text: 'See the links you opened, by day.' })), h('span', { class: 'row-end' }, icon('chevron-right')));
-}
+/* ! Removed in v2.4.2 (owner): the "Open History" row of the History section; historyOpenRow() is gone with its catalog entry. */
 function adminViewRow() {
   const box = h('div');
   const render = () => {
@@ -182,11 +181,11 @@ function adminViewRow() {
     box.hidden = false;
     const cur = getAdminViewMode();
     const sel = createSelect({ options: [{ value: 'admin', label: 'Admin' }, { value: 'normal', label: 'Normal user' }], value: cur, label: 'View the app as', align: 'end', onChange: (v) => { setAdminView(v); toast(v === 'admin' ? 'Back to Admin.' : 'Showing the app as a normal user.'); render(); } });
-    box.replaceChildren(row('View the app as', 'For testing. Normal user makes the whole app behave like an ordinary account until you switch back or reload.', sel));
+    box.replaceChildren(row('View the app as', 'For testing. Normal user makes the whole app behave like an ordinary account until you switch back or reload.', sel, { admin: true }));
   };
   subscribeAdmin(render); render(); return box;
 }
 
 export function renderCustom(name, ctx) {
-  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin, syncPick, mlQuota: mlQuotaRow, adminView: adminViewRow, historyKeep: historyKeepRow, historyOpen: historyOpenRow })[name]?.(ctx) ?? h('div');
+  return ({ install, update, about, developer, appDetails, account, sync, worker, importData, exportData, recycleBin, syncPick, mlQuota: mlQuotaRow, adminView: adminViewRow, historyKeep: historyKeepRow })[name]?.(ctx) ?? h('div');
 }

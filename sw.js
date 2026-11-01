@@ -8,10 +8,14 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.4.1';
+const VERSION = '2.4.2';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
+// v2.4.2: the pinned Firebase SDK is fetched at install time too, so an installed app can start offline right after its FIRST visit
+// (before, a file was cached only after a page that the worker already controlled had asked for it). Keep FIREBASE_VERSION equal to js/core/firebase-loader.js.
+const FIREBASE_VERSION = '12.19.0';
+const FIREBASE_FILES = ['firebase-app.js', 'firebase-auth.js', 'firebase-database.js'].map((f) => `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/${f}`);
 
 // Files needed to start offline. check.mjs verifies this list against the files on disk.
 const PRECACHE = [
@@ -58,6 +62,7 @@ const PRECACHE = [
   '/css/pages/library.css',
   '/css/pages/pages.css',
   '/css/pages/preview.css',
+  '/css/pages/profile.css',
   '/css/pages/random.css',
   '/css/pages/search.css',
   '/css/pages/settings.css',
@@ -167,6 +172,7 @@ const PRECACHE = [
   '/js/features/library/pickers.js',
   '/js/features/library/quick-add.js',
   '/js/features/library/recycle-bin-page.js',
+  '/js/features/preview/preview-ctx.js',
   '/js/features/preview/preview-meta.js',
   '/js/features/preview/preview-model.js',
   '/js/features/preview/preview-page.js',
@@ -192,13 +198,17 @@ const PRECACHE = [
   '/js/features/share/share-model.js',
   '/js/features/share/share-page.js',
   '/js/features/shell/bin-card.js',
+  '/js/features/shell/history-card.js',
   '/js/features/shell/install-banner.js',
   '/js/features/shell/install-card.js',
   '/js/features/shell/pages/menu-page.js',
+  '/js/features/shell/pages/not-found-page.js',
   '/js/features/shell/pages/profile-page.js',
+  '/js/features/shell/pages/profile-thumbs.js',
   '/js/features/shell/pages/reactivate-page.js',
   '/js/features/shell/pages/stub-page.js',
   '/js/features/shell/routes.js',
+  '/js/features/shell/settings-card.js',
   '/js/features/shell/shell-parts.js',
   '/js/features/shell/shell.js',
   '/js/features/shell/switch-account.js',
@@ -206,12 +216,14 @@ const PRECACHE = [
   '/js/features/splash/splash-start.js',
   '/js/features/splash/splash.js',
   '/js/main.js',
+  '/js/ui/admin-badge.js',
   '/js/ui/confirm.js',
   '/js/ui/dock.js',
   '/js/ui/empty-state.js',
   '/js/ui/icons.js',
   '/js/ui/image-menu.js',
   '/js/ui/motion.js',
+  '/js/ui/pick-tile.js',
   '/js/ui/popover.js',
   '/js/ui/pull-refresh.js',
   '/js/ui/refresh-button.js',
@@ -219,6 +231,7 @@ const PRECACHE = [
   '/js/ui/scroll-row.js',
   '/js/ui/sel-bar.js',
   '/js/ui/select.js',
+  '/js/ui/settings-shortcut.js',
   '/js/ui/sheet.js',
   '/js/ui/shortcut-help.js',
   '/js/ui/skeleton.js',
@@ -235,6 +248,8 @@ self.addEventListener('install', (event) => {
     const cache = await caches.open(SHELL_CACHE);
     // allSettled: one missing file must never make the whole update fail to install
     await Promise.allSettled(PRECACHE.map((url) => cache.add(new Request(url, { cache: 'reload' }))));
+    const libs = await caches.open(LIB_CACHE);
+    await Promise.allSettled(FIREBASE_FILES.map((url) => libs.match(url).then((hit) => hit || libs.add(url))));
     await self.skipWaiting();
   })());
 });

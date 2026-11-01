@@ -27,7 +27,7 @@
   .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
   .set-nav { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
   .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }
-  .set-nav-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
+  @media (hover: hover) { .set-nav-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); } }
   .set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }
   .set-sec { scroll-margin-top: var(--s6); }
 }
@@ -98,7 +98,7 @@
 .acc-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--success, #16a34a); font-weight: 600; font-size: var(--fs-sm); }
 .acc-methods { display: inline-flex; gap: var(--s2); }
 .acc-method { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--sub); }
-.acc-method:not(:disabled):hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+@media (hover: hover) { .acc-method:not(:disabled):hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); } }
 .acc-method.is-linked { border-color: color-mix(in srgb, var(--success, #16a34a) 55%, var(--line)); color: var(--text); opacity: 1; } .acc-method:disabled { cursor: default; }
 .acc-tick { position: absolute; right: -5px; top: -5px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--success, #16a34a); color: #fff; box-shadow: 0 0 0 2px var(--surface); }
 .acc-warn { display: flex; align-items: flex-start; gap: var(--s2); margin: 0; padding: var(--s2) var(--s4); font-size: var(--fs-sm); color: var(--text); background: color-mix(in srgb, var(--warning, #d97706) 14%, transparent); border-top: 1px solid var(--line); }
@@ -112,7 +112,7 @@
 /* v2.2.3: logged-in devices: the row is a div (main button + optional cross), badges for Signing out (yellow) and Signed out (grey) */
 .dev-row { gap: var(--s1); padding-inline: 0; }
 .dev-main { display: flex; align-items: center; gap: var(--s3); flex: 1; min-width: 0; min-height: var(--row-h); padding: 6px var(--s4); text-align: left; color: inherit; border-radius: var(--r-control); }
-.dev-main:hover { background: var(--surface-2); }
+@media (hover: hover) { .dev-main:hover { background: var(--surface-2); } }
 .dev-row.is-out .row-label, .dev-row.is-out .row-ic { opacity: 0.6; }
 .dev-row.is-out > .btn-icon { margin-right: var(--s2); }
 .tag.is-warn { background: color-mix(in srgb, var(--warning) 20%, transparent); color: color-mix(in srgb, var(--warning) 70%, var(--text)); }
@@ -171,7 +171,7 @@
 .syp { display: grid; gap: var(--s3); } .syp-g { display: grid; gap: 2px; }
 .syp-h { display: flex; align-items: center; gap: var(--s2); margin: 0; font: 650 var(--fs-sm) var(--font-brand); color: var(--sub); }
 .syp-l { list-style: none; margin: 0; padding: 0; display: grid; }
-.syp-i { display: flex; align-items: center; gap: var(--s3); min-height: 40px; padding: 0 var(--s2); border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); } .syp-i:hover { background: var(--surface-2); }
+.syp-i { display: flex; align-items: center; gap: var(--s3); min-height: 40px; padding: 0 var(--s2); border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); } @media (hover: hover) { .syp-i:hover { background: var(--surface-2); } }
 .syp-i input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
 
 /* ---- v2.3.2: live suffix after a label, with the info button after the bracket ---- */
@@ -179,7 +179,7 @@
 /* v2.4.1 (owner): the info button is small and has no tooltip; a click expands a quiet note (a touch of accent colour so it reads as an aside) */
 .row-i { display: inline-grid; place-items: center; vertical-align: middle; width: 22px; height: 22px; margin-left: 4px; padding: 0; border-radius: 50%; color: var(--sub); position: relative; transition: color var(--t-micro) var(--ease), background var(--t-micro) var(--ease); }
 .row-i::after { content: ''; position: absolute; inset: -11px; }   /* the touch target stays 44px */
-.row-i:hover { color: var(--text); } .row-i.is-on { color: var(--accent-text); background: var(--accent-soft); }
+@media (hover: hover) { .row-i:hover { color: var(--text); } } .row-i.is-on { color: var(--accent-text); background: var(--accent-soft); }
 .row-info { display: grid; grid-template-rows: 0fr; margin-top: 0; max-width: 62ch; font: 400 var(--fs-xs) / 1.4 var(--font-ui); color: var(--accent-text); opacity: 0; transition: grid-template-rows 160ms var(--ease), opacity 160ms var(--ease), margin-top 160ms var(--ease); }
 .row-info.is-open { grid-template-rows: 1fr; margin-top: 4px; opacity: 1; }
 .row-info-in { overflow: hidden; min-height: 0; }

@@ -14,7 +14,7 @@
 .bar-item { position: relative; z-index: 1; display: grid; place-items: center; height: 100%; color: var(--sub); border-radius: 26px; transition: color var(--t-std) var(--ease); -webkit-touch-callout: none; touch-action: manipulation; }
 .bar-item > svg { transition: transform 200ms var(--spring); }
 .bar-item:active > svg { transform: scale(0.84); }
-.bar-item:hover { text-decoration: none; color: var(--text); }
+@media (hover: hover) { .bar-item:hover { text-decoration: none; color: var(--text); } }
 .bar-item[aria-current='page'] { color: var(--accent-text); }
 .bar-item[aria-current='page'] > svg { animation: bar-hop 460ms var(--spring); }
 @keyframes bar-hop { 0% { transform: translateY(5px) scale(0.78); } 55% { transform: translateY(-2px) scale(1.14); } 100% { transform: none; } }
@@ -44,29 +44,32 @@
 /* v2.4.1 (owner): ONE toggle in the first 44px slot. Collapsed: the logo, swapped for the panel icon on hover or focus. Expanded: the panel icon, with a
    thin divider and then the logo and name on its right. Nothing else in the sidebar moves. */
 .sb-slotbtn { position: relative; flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; color: var(--sub); transition: background var(--t-micro) var(--ease), color var(--t-micro) var(--ease); }
-.sb-slotbtn:hover, .sb-slotbtn:focus-visible { background: var(--accent-soft); color: var(--accent-text); }
+.sb-slotbtn:focus-visible { background: var(--accent-soft); color: var(--accent-text); }
+@media (hover: hover) { .sb-slotbtn:hover { background: var(--accent-soft); color: var(--accent-text); } }
 .sb-slotbtn > * { grid-area: 1 / 1; transition: opacity var(--t-std) var(--ease), transform var(--t-std) var(--ease); }
 .sb-slotbtn .logo-mark { opacity: 0; transform: scale(0.85); }
 .sb-slotbtn svg { opacity: 1; }
 #app[data-collapsed='true'] .sb-slotbtn .logo-mark { opacity: 1; transform: none; }
 #app[data-collapsed='true'] .sb-slotbtn svg { opacity: 0; transform: scale(0.8); }
-#app[data-collapsed='true'] .sb-slotbtn:hover .logo-mark, #app[data-collapsed='true'] .sb-slotbtn:focus-visible .logo-mark { opacity: 0; transform: scale(0.85); }
-#app[data-collapsed='true'] .sb-slotbtn:hover svg, #app[data-collapsed='true'] .sb-slotbtn:focus-visible svg { opacity: 1; transform: none; }
+#app[data-collapsed='true'] .sb-slotbtn:focus-visible .logo-mark { opacity: 0; transform: scale(0.85); }
+@media (hover: hover) { #app[data-collapsed='true'] .sb-slotbtn:hover .logo-mark { opacity: 0; transform: scale(0.85); } }
+#app[data-collapsed='true'] .sb-slotbtn:focus-visible svg { opacity: 1; transform: none; }
+@media (hover: hover) { #app[data-collapsed='true'] .sb-slotbtn:hover svg { opacity: 1; transform: none; } }
 .sb-sep { flex: none; width: 1px; height: 22px; margin: 0 6px 0 4px; background: var(--line-strong); transition: opacity 160ms var(--ease); }
 .sb-brand { display: flex; align-items: center; flex: 1; min-width: 0; height: 44px; border-radius: 12px; color: var(--text); overflow: hidden; transition: opacity 160ms var(--ease); }
-.sb-brand:hover { text-decoration: none; }
+@media (hover: hover) { .sb-brand:hover { text-decoration: none; } }
 .sb-slot { flex: none; width: 36px; height: 44px; display: grid; place-items: center; }
 .sb-word { font-size: 23px; padding-left: 2px; white-space: nowrap; }
 .sb-nav { display: grid; gap: 4px; }
 
 .nav-item { position: relative; display: flex; align-items: center; width: 100%; height: 44px; padding: 0; border-radius: 12px; color: var(--sub); font-size: var(--fs); font-weight: 560; text-align: left; overflow: hidden; white-space: nowrap;
   transition: background var(--t-std) var(--ease), color var(--t-std) var(--ease); }
-.nav-item:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); text-decoration: none; }
+@media (hover: hover) { .nav-item:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); text-decoration: none; } }
 .nav-ic { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
 .nav-item[aria-current='page'] { color: var(--accent-text); background: var(--accent-soft); }
 .nav-item[aria-current='page'] .nav-ic svg { stroke-width: 2.05; }
 .nav-item.is-primary { background: var(--accent-strong); color: var(--accent-fg); }
-.nav-item.is-primary:hover { background: var(--accent-strong); filter: brightness(1.08); }
+@media (hover: hover) { .nav-item.is-primary:hover { background: var(--accent-strong); filter: brightness(1.08); } }
 .nav-item.is-primary[aria-current='page'] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 .nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; transition: opacity 140ms var(--ease); }
 .sb-spacer { flex: 1; }
@@ -76,10 +79,11 @@
    is on the same vertical line (34px) as every icon above it, expanded or collapsed. */
 .pf-badge { display: flex; align-items: center; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--line); border-radius: 14px; height: 46px; overflow: hidden; transition: border-color var(--t-std) var(--ease); }
 .pf-link { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border-radius: 11px; color: inherit; }
-.pf-link:hover { text-decoration: none; }
+@media (hover: hover) { .pf-link:hover { text-decoration: none; } }
 .pf-avatar { display: block; flex: none; }
 .pf-more { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; color: var(--sub); transition: background var(--t-micro) var(--ease), color var(--t-micro) var(--ease), opacity 140ms var(--ease); }
-.pf-more:hover, .pf-more[aria-expanded='true'] { background: var(--accent-soft); color: var(--text); }
+.pf-more[aria-expanded='true'] { background: var(--accent-soft); color: var(--text); }
+@media (hover: hover) { .pf-more:hover { background: var(--accent-soft); color: var(--text); } }
 .avatar { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
 .avatar span { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); font: 700 14px / 1 var(--font-brand); color: var(--text); }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }

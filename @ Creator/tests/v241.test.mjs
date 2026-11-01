@@ -196,11 +196,11 @@ test('Random page: hub shows the pool, Surprise me opens a preview inside the pa
   assert.match($('.rnd-pool').textContent, /3 links in play/); assert.ok($('.rf'), 'merged folder and filter panel is on the page');
   assert.equal(ROUTES.find((r) => r.id === 'random').stub, undefined, 'real page, no placeholder');
   $('.rnd-go').click(); await waitFor(() => $('.rnd-stage .pv') && $('.rnd-stage .pv-tab')); await tick(30);
-  assert.ok($('.rnd-stage .pv'), 'embedded preview'); assert.ok($('.pv-act-new') && $('.pv-act[aria-label="Filters"]'), 'new random link and filters buttons are in the action bar');
+  assert.ok($('.rnd-stage .pv'), 'embedded preview'); assert.ok($('.rnd-fab-go') && $('.rnd-fab [aria-label="Filters"]') && $('.rnd-fab [aria-label="Random options"]'), 'v2.4.2: Random, Filters and Random options are one floating group'); assert.equal($('.pv-bar').children.length, 8, 'the action bar keeps its own eight buttons (six on phones), none added by Random'); assert.ok(!$('.pv-bar .pv-act-new'), 'no extra buttons in the bar');
   assert.ok(!$('.pv-side') || $('.pv-side').hidden, 'no related column in the embedded preview');
   const opened = e.listLinks().filter((l) => l.oc === 1); assert.equal(opened.length, 1); assert.equal(opened[0].pt, 90, 'the owner rule: -10 per random open');
   assert.equal(hist.list()[0].src, 'random'); assert.equal(hist.list()[0].lid, opened[0].id);
-  $('.pv-act-new').click(); await tick(60); await waitFor(() => e.listLinks().filter((l) => l.oc === 1).length === 2);
+  $('.rnd-fab-go').click(); await tick(60); await waitFor(() => e.listLinks().filter((l) => l.oc === 1).length === 2);
   assert.equal(new Set(e.listLinks().filter((l) => l.oc === 1).map((l) => l.id)).size, 2, 'no repeat in a session');
   $('.pv-head .btn-icon[aria-label="Back"]').click(); await tick(20); assert.equal($('.rnd-stage').hidden, true); assert.equal($('.rnd-hub').hidden, false, 'Back inside Random returns to the hub');
   router.destroy(); void ids;
@@ -208,9 +208,9 @@ test('Random page: hub shows the pool, Surprise me opens a preview inside the pa
 
 test('Random page: choosing a folder narrows the pool live; /random?folder= presets it and opens a link at once', async () => {
   prefs.remove('random.filters'); const { f2, e, router } = await boot();
-  await router.navigate('/random'); await waitFor(() => $('.rf-folder'));
-  const tools = $$('.rf-folder').find((b) => /Tools/.test(b.textContent)); tools.click(); await tick(10);
-  assert.match($('.rnd-pool').textContent, /1 link in play/); assert.ok($('.rf-weight'), 'a selected folder gets Low / Normal / High');
+  await router.navigate('/random'); await waitFor(() => $('.rf-fmain'));
+  const tools = $$('.rf-fmain').find((b) => /Tools/.test(b.textContent)); tools.click(); await tick(10);
+  assert.match($('.rnd-pool').textContent, /1 link in play/); assert.ok($('.rf-w'), 'a selected folder gets the chance dropdown (Low / Normal / High)'); assert.ok($$('.rf-clear').length >= 1, 'the Folders section has a clear icon once something is chosen');
   assert.ok($$('.rnd-chip').some((c) => /Tools/.test(c.textContent)));
   assert.equal(prefs.get('random.filters').folders[f2.id], 'normal', 'remembered');
   await router.navigate('/random?folder=' + f2.id); await waitFor(() => $('.rnd-stage .pv'));
@@ -225,7 +225,7 @@ test('History page: grouped by day, searchable, source filter, remove one, selec
   const entry = (n, lid, src, ts) => { const l = e.getLink(lid); return { id: 'h' + n, lid, url: l.url, title: l.title, host: l.host, fid: l.fid, src, ts }; };
   await e.db.putMany('history', [entry(1, ids[0], 'click', sod + 1000), entry(2, ids[1], 'preview', sod - DAY + 12 * HOUR), entry(3, ids[2], 'random', sod - 3 * DAY + 12 * HOUR)]); await hist.load(); void now;
   await router.navigate('/profile/history'); await waitFor(() => $('.hs-item'));
-  assert.deepEqual($$('.hs-day').map((d) => d.textContent).slice(0, 2), ['Today', 'Yesterday']); assert.equal($$('.hs-item').length, 3);
+  assert.deepEqual($$('.hs-day').map((d) => d.firstChild.textContent).slice(0, 2), ['Today', 'Yesterday']); assert.equal($$('.hs-item').length, 3);
   const s = $('.hs input[type=search]'); s.value = 'gamma'; s.dispatchEvent(new w.Event('input')); await tick(200); assert.equal($$('.hs-item').length, 1);
   s.value = ''; s.dispatchEvent(new w.Event('input')); await tick(200);
   $$('.hs-filter button').find((b) => b.textContent === 'Random').click(); await tick(5); assert.equal($$('.hs-item').length, 1);
@@ -246,8 +246,8 @@ test('History day labels and grouping are pure and exact', async () => {
 test('Profile: History section shows the latest entries and links to the full page', async () => {
   const { e, ids, hist, router } = await boot();
   await hist.record({ link: { ...e.getLink(ids[0]), id: ids[0] }, src: 'click' });
-  await router.navigate('/profile'); await waitFor(() => $('.profile-head'));
-  assert.ok($('.pf-rec'), 'recent entry'); assert.ok($$('a.row').some((a) => a.getAttribute('href') === '/profile/history'));
+  await router.navigate('/profile'); await waitFor(() => $('.pf2-hero') && $('.pf2-card'));   // v2.4.2: the rebuilt profile page
+  assert.ok($('.pf2-card'), 'recent entry'); assert.ok($$('a').some((a) => a.getAttribute('href') === '/profile/history'), 'See all and the History tile link to the page');
   router.destroy();
 });
 

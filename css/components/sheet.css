@@ -27,9 +27,10 @@
   transform-origin: var(--ox, top right); max-height: 70dvh; overflow-y: auto;
 }
 .pop-item { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 44px; padding: 0 var(--s3); border-radius: 10px; text-align: left; font-weight: 500; }
-.pop-item:hover, .pop-item:focus-visible { background: var(--accent-soft); outline: none; }
+.pop-item:focus-visible { background: var(--accent-soft); outline: none; }
+@media (hover: hover) { .pop-item:hover { background: var(--accent-soft); outline: none; } }
 .pop-item.is-danger { color: var(--danger); }
-.pop-item.is-danger:hover { background: var(--danger-soft); }
+@media (hover: hover) { .pop-item.is-danger:hover { background: var(--danger-soft); } }
 .pop-sep { height: 1px; background: var(--line); margin: 4px 6px; }
 @media (pointer: fine) { .pop-item { min-height: 38px; } }
 

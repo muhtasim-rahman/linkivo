@@ -160,9 +160,9 @@ test('recycle bin: deleted folder and link, restore, delete forever, empty state
   await engine.deleteLinks([r.added[0].id]); await engine.deleteFolders([A.id]);
   await router.navigate('/settings/recycle-bin'); await waitFor(() => $('.bin-row'));
   const text = $$('.bin-row').map((x) => x.textContent).join('|'); assert.match(text, /Reading/); assert.match(text, /old\.test/); assert.equal($$('.bin-row').length, 2, 'folder links are not listed separately');
-  click($$('.bin-row input')[0]); await tick(10); click(btn($('.selbar'), 'Restore')); await waitFor(() => engine.getFolder(A.id) && !engine.getFolder(A.id).del);
+  click($$('.bin-row')[0]); await tick(10); click(btn($('.selbar'), 'Restore')); await waitFor(() => engine.getFolder(A.id) && !engine.getFolder(A.id).del);
   assert.equal(engine.counts().folders >= 3, true); await waitFor(() => $$('.bin-row').length === 1);
-  click($$('.bin-row input')[0]); await tick(10); click(btn($('.selbar'), 'Delete forever')); await waitFor(() => $('.sheet')); click(btn($('.sheet'), 'Delete forever')); await waitFor(() => engine.counts().deletedLinks === 0);
+  click($$('.bin-row')[0]); await tick(10); click(btn($('.selbar'), 'Delete forever')); await waitFor(() => $('.sheet')); click(btn($('.sheet'), 'Delete forever')); await waitFor(() => engine.counts().deletedLinks === 0);
   await waitFor(() => /empty/i.test(container.textContent)); assert.match(container.textContent, /The Recycle Bin is empty/);
   const { daysLeft, dayGroup } = await import('../../js/features/library/recycle-bin-page.js'); const now = Date.now();
   assert.equal(daysLeft(now - 3 * 86400000, now), 12); assert.equal(dayGroup(now - 100, now), 'Today'); assert.equal(dayGroup(now - 86400000 * 1.5, now), 'Yesterday');

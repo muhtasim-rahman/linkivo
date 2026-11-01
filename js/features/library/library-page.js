@@ -9,6 +9,7 @@
  *          v2.2.3: the install suggestion (a floating card above the bottom bar) lives on this page only.
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
+import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
@@ -63,7 +64,7 @@ export async function mount(container, ctx) {
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn,
+      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn, settingsShortcut('library', 'Library settings'),   // v2.4.2: settings icon in every page header
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 

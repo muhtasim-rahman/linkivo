@@ -69,6 +69,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
   const fullPath = () => (current ? current.path + current.search : '/');
   const parentPath = () => (current ? parentOf(current.route, current.params, { isWide: isWide() }, { from: current.from }) : null);
 
+  let enterTimer = 0;
   function rearm() {
     history.replaceState({ lk: 'base' }, '', fullPath());
     history.pushState({ lk: 'top', from: current?.from || null }, '', fullPath());
@@ -110,6 +111,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     resetLayers(); // overlays belong to the page that is leaving
     container.replaceChildren();
     resetScroll();
+    container.classList.add('is-entering'); clearTimeout(enterTimer); enterTimer = setTimeout(() => container.classList.remove('is-entering'), 420);   // v2.4.2: see layout.css
     applyPageMeta(pageMeta(route, params));
     // v2.2.4 (owner): NATIVE history. A new page is a new history entry (pushState), so the browser's own Back and Forward buttons behave as in any website.
     //   Replace only for the first page, a reload of the same page, or when the browser itself moved (pop).

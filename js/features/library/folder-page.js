@@ -10,6 +10,7 @@
  *          becomes a checkbox on hover (css) and a click on it starts selecting.
  * Page module: mount(container, ctx) -> unmount;  refresh(ctx)
  */
+import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { h, clear } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
@@ -90,7 +91,7 @@ export async function mount(container, ctx) {
     h('header', { class: 'fp-head' },
       h('button', { type: 'button', class: 'btn-icon fp-back', 'aria-label': 'Back to library', on: { click: () => router.navigate('/library') } }, icon('arrow-left', { size: 20 })),
       tile, h('div', { class: 'fp-titles' }, title, sub),
-      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), !isFav && isEnabled('randomFromFolder') && h('button', { type: 'button', class: 'btn-icon fp-rand', 'aria-label': 'Random from this folder', 'data-tip': 'Random from this folder', on: { click: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) } }, icon('random', { size: 20 })), viewBtn, selBtn, moreBtn)),
+      h('div', { class: 'page-actions fp-actions' }, !isFav && h('button', { type: 'button', class: 'btn btn-sm fp-add', on: { click: () => openQuickAdd({ engine, queue, fid }) } }, icon('plus', { size: 18 }), h('span', { class: 'fp-add-t', text: 'Add link' })), refreshButton(() => refresh()), !isFav && isEnabled('randomFromFolder') && h('button', { type: 'button', class: 'btn-icon fp-rand', 'aria-label': 'Random from this folder', 'data-tip': 'Random from this folder', on: { click: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) } }, icon('random', { size: 20 })), viewBtn, selBtn, settingsShortcut('library', 'Library settings'), moreBtn)),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), scopeSel, sortBtn), chipRow, info, body);
   const removeDock = mountDock(bar);
   const detachChips = attachScrollRow(chips);

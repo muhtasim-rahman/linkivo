@@ -3,8 +3,9 @@
 /* v2.3.1 (owner): the sticky header keeps a small gap above the field (it used to touch the top edge on PC) and a fade below it, so rows that scroll up
    beneath the floating field melt away instead of being cut by its edge. The header has the page color, so nothing shows through the gap. */
 .sp-head { position: sticky; top: 0; z-index: 3; padding-top: var(--s3); margin-top: calc(var(--s3) * -1); background: var(--bg); }
-.sp-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 26px; background: linear-gradient(to bottom, var(--bg), transparent); pointer-events: none; }
-.sp-bar { display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s2) 0 var(--s4); min-height: 52px; border: 1px solid var(--line-strong); border-radius: 26px; background: var(--surface); box-shadow: var(--shadow-float); color: var(--sub); transition: border-color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease); }
+.sp-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 26px; background: linear-gradient(to bottom, var(--bg), transparent); pointer-events: none; opacity: 0; transition: opacity var(--t-std) var(--ease); }
+.sp-head.is-stuck::after { opacity: 1; }   /* v2.4.2 (owner): the fade showed as a shadow under the bar at the top of the page and vanished while typing; it now appears only when rows have scrolled under the bar */
+.sp-bar { display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s2) 0 var(--s4); min-height: 52px; border: 1px solid var(--line-strong); border-radius: 26px; background: var(--surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent); color: var(--sub); transition: border-color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease); }
 .sp-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .sp-input { flex: 1; min-width: 0; border: 0; background: transparent; box-shadow: none; padding: 0; min-height: 48px; font-size: var(--fs-md); color: var(--text); }
 .sp-input:focus { outline: none; box-shadow: none; } .sp-input::-webkit-search-cancel-button { display: none; }
@@ -16,7 +17,7 @@
 .sp-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; }
 .sp-list > li + li { border-top: 1px solid var(--line); }
 .sp-item { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 56px; padding: 6px var(--s4); color: inherit; text-align: left; }
-.sp-item:hover { background: var(--surface-2); text-decoration: none; }
+@media (hover: hover) { .sp-item:hover { background: var(--surface-2); text-decoration: none; } }
 .sp-ic, .sp-fav { width: 32px; height: 32px; display: grid; place-items: center; flex: none; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); color: var(--sub); overflow: hidden; }
 .sp-t { display: grid; gap: 1px; min-width: 0; flex: 1; }
 .sp-name { font-weight: 560; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

@@ -14,6 +14,7 @@
 import { Engine } from './engine.js';
 import { openDbSafe } from './idb.js';
 import { log } from '../core/logger.js';
+import { withTimeout } from '../core/utils.js';
 
 const TREES = ['folders', 'links'];
 const RETRY_MS = 30000;
@@ -106,9 +107,12 @@ export class CloudEngine extends Engine {
    * connection with one tiny read, stamps `lastSync` and emits a sync event so the row repaints. Returns true when the account answered.
    */
   async syncNow() {
+    // v2.4.2 (owner): offline showed "synced" and "just now". Firebase answers a read from its memory cache while offline, so the browser's own flag is
+    // checked first, and the proving read gets a time limit (a half-dead connection would otherwise wait for ever).
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) { this._setState('offline'); return false; }
     this._setState('syncing');
     if (!(await this.flush())) return false;   // flush() has already set offline or error
-    try { await this._withRetry(() => this.adapter.get(`users/${this.uid}/meta/purgeEpoch`)); }
+    try { await withTimeout(this._withRetry(() => this.adapter.get(`users/${this.uid}/meta/purgeEpoch`)), 8000, 'sync check'); }
     catch (e) { this._setState(typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'error'); log.warn('cloud', 'sync now failed', { code: e && e.code }); return false; }
     this.lastSync = Date.now();
     if (this.syncState !== 'idle') this._setState('idle');

@@ -15,7 +15,7 @@
 
 /* ---- v2.3.2: close button, swipe, repeat count, and a lift on the wide Preview page (its action bar is at the bottom of the card) ---- */
 .toast { touch-action: pan-y; user-select: none; } .toast.is-drag { transition: none; cursor: grabbing; }
-.toast-x { flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin-right: -6px; border-radius: 50%; opacity: .7; } .toast-x:hover { opacity: 1; background: color-mix(in srgb, var(--bg) 16%, transparent); }
+.toast-x { flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin-right: -6px; border-radius: 50%; opacity: .7; } @media (hover: hover) { .toast-x:hover { opacity: 1; background: color-mix(in srgb, var(--bg) 16%, transparent); } }
 .toast.is-bump { animation: lk-bump 220ms var(--ease); } @keyframes lk-bump { 0% { scale: 1; } 40% { scale: 1.04; } 100% { scale: 1; } }
 @media (min-width: 900px) { html[data-pv] .toast-host { bottom: calc(var(--dock-b) + 84px); } }
 @media (prefers-reduced-motion: reduce) { .toast.is-bump { animation: none; } }

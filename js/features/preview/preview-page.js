@@ -12,6 +12,8 @@
  *          menu gets Microlink and thum.io on/off lines; a slim "Data Fetching (SERVICE)" strip shows while details are being loaded; opening a link starts
  *          the fetch by itself; the Details tab updates live (points); the card has a fixed, sensible height and its two columns scroll on their own.
  * Page module: mount(container, ctx)
+ * v2.4.2: `embedded.float()` returns one element placed at the bottom right corner of the preview area, above the action bar (Random's Random / Filters /
+ *         Settings group). `embedded.bar()` should return nothing now: more buttons made the action bar wrap to two lines.
  * v2.4.1: also the preview INSIDE Random Discover. The Random page calls mount(el, { params: { lid }, query: {}, router, embedded: { src: 'random', onClose(), bar() -> Element[] } }):
  *          the related-links column is left out, Back calls onClose, `bar()` adds the Random page's own buttons (new random link, filters) to the action bar,
  *          and the open is recorded in History with the given src (the normal page records src "preview").      Pure logic: preview-model.js     Tabs: preview-tabs.js
@@ -30,6 +32,7 @@ import { bulk, linkMenuItems, copyText } from '../library/link-actions.js';
 import { TABS, TAB_LABELS, TAB_ICONS, availableTabs, pickTab, needsFetch, relatedLinks } from './preview-model.js';
 import { buildPanel } from './preview-tabs.js';
 import { ensureMeta, fetchStatus, wantsMicrolink } from './preview-meta.js';
+import { setInRandom } from './preview-ctx.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
 import { shotQuota } from '../../core/admin.js';
 
@@ -42,6 +45,7 @@ export async function mount(container, ctx) {
   await loadCss('/css/pages/preview.css');
   const lid = ctx.params.lid;
   const emb = ctx.embedded || null;
+  setInRandom(!!(emb && emb.src === 'random'));   // v2.4.2: Microlink and thum.io follow the Random switches while Random shows this preview
   // v2.4.1 (owner): Back always lands in the folder the link lives in: the browser's own Back when we came from a page of this app (related links replace the entry,
   // so one step is enough), otherwise (a pasted address, a reload) straight into the link's folder, and only then the Library.
   const back = () => {
@@ -66,6 +70,7 @@ export async function mount(container, ctx) {
   const paintFetch = () => { const st = fetchStatus.get(), on = st.lid === lid && !!st.engine; fetching.hidden = !on; fetching.replaceChildren(...(on ? [h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { text: `Data Fetching (${st.engine})` })] : [])); };
   const offFetch = fetchStatus.subscribe(paintFetch);
   stage.append(tabsEl, panel);
+  if (emb && emb.float) { try { stage.appendChild(emb.float()); } catch { /* optional */ } }   // v2.4.2: Random's floating group, bottom right of the preview area
   const detachTabs = attachScrollRow(tabsEl, { arrows: false });
 
   // ---- header ------------------------------------------------------------------------------------------------------
@@ -168,5 +173,5 @@ export async function mount(container, ctx) {
   const off = engine.subscribe((e) => { if (e.type === 'change' && (e.links || []).includes(lid)) { if (!link() || link().del) { back(); return; } paintHead(); paintBar(); if (tab === 'details') panelNode?.update?.({ link: link(), meta }); } });   // v2.3.2: points and flags update live in Details
   load();
 
-  return () => { disposed = true; off(); offFetch(); delete document.documentElement.dataset.pv; detachTabs(); document.removeEventListener('fullscreenchange', onFsChange); panelNode?.dispose?.(); if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };
+  return () => { disposed = true; setInRandom(false); off(); offFetch(); delete document.documentElement.dataset.pv; detachTabs(); document.removeEventListener('fullscreenchange', onFsChange); panelNode?.dispose?.(); if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };
 }

@@ -27,15 +27,15 @@ export const ROUTES = [
   { id: 'random', pattern: '/random', title: 'Random Discover', parent: '/library', guard: 'auth', tab: 'random', load: () => import('../random/random-page.js') },   // v2.4.1: real page
   { id: 'history', pattern: '/profile/history', title: 'History', parent: '/profile', guard: 'auth', tab: 'menu', refresh: true, load: () => import('../history/history-page.js') },   // v2.4.1: real page
 
-  { id: 'menu', pattern: '/menu', title: 'Menu', parent: '/library', guard: 'auth', tab: 'menu', load: () => import('./pages/menu-page.js') },
+  { id: 'menu', pattern: '/menu', title: 'Menu', parent: '/library', guard: 'auth', refresh: true, tab: 'menu', load: () => import('./pages/menu-page.js') },
   { id: 'profile', pattern: '/profile', title: 'Profile', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'menu', refresh: true, load: () => import('./pages/profile-page.js') },
-  { id: 'settings', pattern: '/settings', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'settings', load: settings },
-  { id: 'recycle-bin', pattern: '/settings/recycle-bin', title: 'Recycle Bin', parent: '/settings', guard: 'auth', tab: 'settings', load: recyclePage },
-  { id: 'settings-section', pattern: '/settings/:section', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'settings', load: settings },
+  { id: 'settings', pattern: '/settings', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', refresh: true, tab: 'settings', load: settings },
+  { id: 'recycle-bin', pattern: '/settings/recycle-bin', title: 'Recycle Bin', parent: '/settings', guard: 'auth', refresh: true, tab: 'settings', load: recyclePage },
+  { id: 'settings-section', pattern: '/settings/:section', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', refresh: true, tab: 'settings', load: settings },
 
   { id: 'terms', pattern: '/terms', title: 'Terms', desc: 'The terms of use for Linkivo.', parent: '/library', guard: 'open', stub: 'terms', since: '2.6.0', load: stub },
   { id: 'privacy', pattern: '/privacy', title: 'Privacy', desc: 'How Linkivo handles your data: what is stored, where, and who can see it.', parent: '/library', guard: 'open', stub: 'privacy', since: '2.6.0', load: stub },
   { id: 'docs', pattern: '/docs', title: 'Documentation', desc: 'A guide to every Linkivo feature: import, folders, search, random discover, vault and backup.', parent: '/library', guard: 'open', stub: 'docs', since: '2.6.0', load: stub },
   { id: 'docs-topic', pattern: '/docs/:topic', title: 'Documentation', parent: '/docs', guard: 'open', stub: 'docs', since: '2.6.0', load: stub },
-  { id: 'not-found', pattern: '*', title: 'Page not found', parent: '/library', guard: 'open', stub: 'lost', load: stub }
+  { id: 'not-found', pattern: '*', title: 'Page not found', parent: '/library', guard: 'open', stub: 'lost', load: () => import('./pages/not-found-page.js') }   // v2.4.2: its own centred page
 ];

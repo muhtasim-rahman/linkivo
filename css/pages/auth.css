@@ -6,11 +6,11 @@
 .auth-main::before { content: ''; position: absolute; right: -120px; top: -90px; width: 380px; height: 420px; opacity: 0.1; pointer-events: none; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); -webkit-mask: url(/assets/art/auth-rings.svg) center / contain no-repeat; mask: url(/assets/art/auth-rings.svg) center / contain no-repeat; }
 .auth-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: calc(var(--safe-t) + var(--s3)) var(--pad) 0; min-height: 56px; }
 .auth-brand { display: flex; align-items: center; gap: 10px; color: var(--text); }
-.auth-brand:hover { text-decoration: none; }
+@media (hover: hover) { .auth-brand:hover { text-decoration: none; } }
 .auth-tile { width: 36px; height: 36px; border-radius: 10px; flex: none; box-shadow: 0 0 0 1px var(--line); }
 .auth-brand .wordmark { font-size: 24px; }
 .auth-theme { color: var(--sub); }
-.auth-theme:hover { color: var(--text); }
+@media (hover: hover) { .auth-theme:hover { color: var(--text); } }
 
 .auth-panel { position: relative; z-index: 1; width: 100%; max-width: 400px; margin: 0 auto; padding: var(--s3) var(--pad) calc(var(--s5) + var(--safe-b)); display: grid; gap: var(--s3); align-content: center; }
 .auth-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }

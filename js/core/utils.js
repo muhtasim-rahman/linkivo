@@ -16,6 +16,8 @@ export function newId(now = Date.now()) {
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** v2.4.2: rejects with code 'lk/timeout' when `promise` has not settled after `ms` (a Firebase call made while offline can wait for ever). */
+export const withTimeout = (promise, ms, what = 'operation') => new Promise((resolve, reject) => { const t = setTimeout(() => reject(Object.assign(new Error(`${what} timed out`), { code: 'lk/timeout' })), ms); Promise.resolve(promise).then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); }); });
 export const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 export const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const uniq = (arr) => [...new Set(arr)];

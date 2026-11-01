@@ -8,7 +8,7 @@ Step-by-step actions only the owner can do. Console menus change over time: if a
 1. Extract the AI's zip into the project root (next to `.git`, `@ Versions`, `@ Extra files`). It contains the `@ Creator` folder too. Delete the files listed under "Removed files".
 2. Test locally if you can (any static server on the project root, for example `npx serve .`), or deploy and test on the live URL.
 3. Deploy hosting: `firebase deploy --only hosting`. If the version changed rules: `firebase deploy --only database`.
-4. Commit with the text from `@ Creator/commits/vX.Y.Z-commit.txt`. Save the version zip into `@ Versions`.
+4. Commit with the text from `@ Creator/commits/vX.Y.Z-commit.txt`. Save the version zip into `@ Versions` (that folder is git-ignored and is not committed).
 5. After deploying, hard-reload the site once; the new service worker then keeps the app current on its own.
 
 ## B. Firebase (first needed in v2.1.0)

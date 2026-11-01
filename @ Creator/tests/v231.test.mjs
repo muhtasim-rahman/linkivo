@@ -27,11 +27,11 @@ test('microlink: maps data, counts the day, reads the headers, stops at 429, res
   const ok = await ML.microlinkMeta('https://x.test/a', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }) });
   assert.equal(ok.title, 'Hi'); assert.equal(ML.quota(now).used, 1); assert.equal(ML.quota(now).left, 24, 'v2.4.1: the free endpoint without a key allows 25 a day');
   await ML.microlinkMeta('https://x.test/b', { now, fetch: async () => resp(200, { status: 'success', data: { title: 'Hi' } }, { 'x-rate-limit-limit': '50', 'x-rate-limit-remaining': '40' }) });
-  assert.equal(ML.quota(now).limit, 50); assert.equal(ML.quota(now).used, 10, 'the server numbers win');
+  assert.equal(ML.quota(now).limit, 25, 'v2.4.2: the allowance is always 25, whatever a header says'); assert.equal(ML.quota(now).used, 2, 'a header with another limit is not trusted: our own count goes up');
   // too many at once (2 allowed): retried after a second, never counted as used up
   prefs.set('ml.d25', { day: '2026-10-29', used: 0, limit: 5, reset: 0 }); let calls = 0;
-  const busy = await ML.microlinkMeta('https://x.test/b2', { now, fetch: async () => (++calls === 1 ? resp(429, { code: 'ECONCURRENCY' }) : resp(200, { status: 'success', data: { title: 'After wait' } }, { 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '3', 'x-rate-limit-reset': String(Math.floor(now / 1000) + 3600) })) });
-  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 3); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
+  const busy = await ML.microlinkMeta('https://x.test/b2', { now, fetch: async () => (++calls === 1 ? resp(429, { code: 'ECONCURRENCY' }) : resp(200, { status: 'success', data: { title: 'After wait' } }, { 'x-rate-limit-limit': '25', 'x-rate-limit-remaining': '23', 'x-rate-limit-reset': String(Math.floor(now / 1000) + 3600) })) });
+  assert.equal(busy.title, 'After wait'); assert.equal(calls, 2); assert.equal(ML.quota(now).left, 23, 'a header whose limit is the daily 25 is trusted'); assert.equal(ML.quota(now).reset, (Math.floor(now / 1000) + 3600) * 1000);
   prefs.set('ml.d25', { day: '2026-10-29', used: 10, limit: 50, reset: 0 });
   const lim = await ML.microlinkMeta('https://x.test/c', { now, fetch: async () => resp(429, {}) });
   assert.equal(lim, null); assert.equal(ML.canUseMicrolink(now), false, 'a REAL limit answer pauses Microlink for a minute: the normal chain takes over');
@@ -40,7 +40,7 @@ test('microlink: maps data, counts the day, reads the headers, stops at 429, res
   prefs.set('ml.d25', { day: '2026-10-29', used: 25, limit: 25, reset: now + 100000 }); assert.equal(ML.ML_DEFAULT_LIMIT, 25); assert.equal(ML.quota(now).left, 0);
   assert.equal(ML.canUseMicrolink(now + 120000), true, 'used up on our side but still tried');
   const past = await ML.microlinkMeta('https://x.test/past', { now: now + 120000, fetch: async () => resp(200, { status: 'success', data: { title: 'Still answered' } }) }); assert.equal(past.title, 'Still answered');
-  prefs.set('ml.d25', { day: '2026-10-29', used: 5, limit: 5, reset: now + 1000 }); assert.equal(ML.quota(now + 2000).used, 0, 'after the reset time the window is fresh'); assert.equal(ML.quota(now + 2000).limit, 5, 'it keeps the last limit the server told us');
+  prefs.set('ml.d25', { day: '2026-10-29', used: 5, limit: 5, reset: now + 1000 }); assert.equal(ML.quota(now + 2000).used, 0, 'after the reset time the window is fresh'); assert.equal(ML.quota(now + 2000).limit, 25, 'v2.4.2: a stored limit of 5 from an older version is ignored');
   prefs.set('ml.d25', { day: '2000-01-01', used: 0 }); prefs.set('meta.microlink', false);
   assert.equal(await ML.microlinkMeta('https://x.test/d', { now, fetch: async () => { throw new Error('must not be called'); } }), null, 'switched off');
   prefs.set('meta.microlink', true);

@@ -14,6 +14,8 @@ import { KEYS } from '../../../core/appearance.js';
 import { profileCard, logoutButton } from '../shell-parts.js';   // v2.3.0: avatar and logOut moved into the shared profileCard and logoutButton
 import { installCard } from '../install-card.js';
 import { binCard } from '../bin-card.js';
+import { historyCard } from '../history-card.js';   // v2.4.2
+import { settingsCard } from '../settings-card.js';   // v2.4.2
 import { appInfoCard, appLinkButtons } from '../../settings/about-card.js';
 import { findEntry } from '../../settings/catalog.js';
 import { renderControl } from '../../settings/controls.js';
@@ -43,7 +45,8 @@ export async function mount(container, ctx = {}) {
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),
         h('div', { class: 'group' }, themeRow(), hide && renderControl(hide), linkRow('database', 'Import and export', 'Backup, restore, export formats', '/settings/data'))),
-      h('div', { class: 'group' }, linkRow('settings', 'View all settings', 'Every option in one place', '/settings')),   // v2.2.4: its own card
+      settingsCard(),   // v2.4.2 (owner): a distinct filled card, so it clearly reads as Settings (was a plain row)
+      historyCard(),   // v2.4.2 (owner): directly above the Recycle Bin card
       binCard(),
       appInfoCard(),
       appLinkButtons(),

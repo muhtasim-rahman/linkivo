@@ -122,7 +122,7 @@ Make it concrete and short: 8 to 15 steps per version, each "do this, expect tha
 ## 10. Never
 
 - Never build on an unverified base or skip the gate.
-- Never include secrets, emojis or sensitive data anywhere in `@ Creator` (it is pushed to GitHub), and never put `@ Extra files` or `@ Versions` in the zip. Never touch those two folders.
+- Never include secrets, emojis or sensitive data anywhere in `@ Creator` (it is pushed to GitHub; `@ Versions` is NOT pushed since v2.4.2), and never put `@ Extra files` or `@ Versions` in the zip. Never touch those two folders.
 - Never edit or delete history entries of earlier versions.
 - Never claim something works, was tested or was verified when it was not.
 - Never silently change a locked decision from `PLAN-v2.0_to_v2.5.md` or `FEATURES.md`; propose the change, get the owner's answer, then record it.

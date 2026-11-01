@@ -2,7 +2,7 @@
    One 4px grid, tokens only. Folder color arrives as --fc on the element that owns it. */
 .ftile { display: inline-grid; place-items: center; width: var(--sz, 40px); height: var(--sz, 40px); flex: none; border-radius: 10px; color: #fff; background: var(--fc); } /* v2.2.1: flat, one solid color */
 .chip { display: inline-flex; align-items: center; gap: var(--s1); min-height: 32px; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-size: var(--fs-sm); font-weight: 560; white-space: nowrap; flex: none; }
-.chip:hover { border-color: var(--sub); } .chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+@media (hover: hover) { .chip:hover { border-color: var(--sub); } } .chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
 .chip-n { color: var(--sub); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 
 /* ---- Library ---- */
@@ -17,7 +17,7 @@
 /* v2.2.1 flat folder cards: a 1px outline, one solid tile, no gradient or color bar. Hover only tints the surface. */
 .fcard-wrap { position: relative; }
 .fcard { display: grid; gap: var(--s3); align-content: start; min-height: 112px; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); color: var(--text); text-decoration: none; position: relative; transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease); }
-.fcard:hover { background: var(--surface-2); border-color: var(--line-strong); text-decoration: none; }
+@media (hover: hover) { .fcard:hover { background: var(--surface-2); border-color: var(--line-strong); text-decoration: none; } }
 .fcard:active { background: var(--accent-soft); }
 .fcard-text { display: grid; gap: 1px; min-width: 0; }
 .fcard-name { font-weight: 620; overflow-wrap: anywhere; line-height: 1.25; min-height: 2.5em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -43,10 +43,10 @@
 .fp-body { min-height: 120px; }
 .vlist { contain: layout; }
 .lrow { display: flex; align-items: center; gap: var(--s2); border-bottom: 1px solid var(--line); background: transparent; box-sizing: border-box; }
-.lrow:hover { background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+@media (hover: hover) { .lrow:hover { background: color-mix(in srgb, var(--accent-soft) 45%, transparent); } }
 .lrow.is-selected { background: var(--accent-soft); }
 .lmain { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s3); padding: var(--s2) 0 var(--s2) var(--s1); color: var(--text); text-decoration: none; height: 100%; }
-.lmain:hover { text-decoration: none; }
+@media (hover: hover) { .lmain:hover { text-decoration: none; } }
 .lfav { position: relative; flex: none; width: 32px; height: 32px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
 .lfav-l { font: 650 14px var(--font-brand); color: var(--sub); } .lfav img { position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; border-radius: 4px; background: var(--surface); }
 .ltext { min-width: 0; display: grid; gap: 1px; flex: 1; }
@@ -58,13 +58,14 @@
 /* v2.2.2: the check box lies over the favicon (32px, same place). Mouse: visible on hover/focus and when selected. Touch: visible on every row while selecting. */
 .lcheck { position: absolute; left: var(--s1); top: 50%; translate: 0 -50%; z-index: 1; width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--line-strong); display: grid; place-items: center; color: transparent; background: var(--surface); opacity: 0; transition: opacity var(--t-micro) var(--ease); }
 .lcheck::after { content: ''; position: absolute; inset: -6px; } /* 44px touch target */
-.lcheck:hover, .lcheck:focus-visible, .lrow.is-selected .lcheck { opacity: 1; }
+.lcheck:focus-visible, .lrow.is-selected .lcheck { opacity: 1; }
+@media (hover: hover) { .lcheck:hover { opacity: 1; } }
 /* v2.2.3 (owner): once select mode is on (the select icon, the keyboard, a click on one favicon) EVERY favicon is a check box, on mouse screens too, no hover needed */
 .lrow.is-selecting .lcheck { opacity: 1; }
 .lrow.is-selected .lcheck { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 @media (hover: none) { .lcheck { pointer-events: none; } .lrow.is-selecting .lcheck { pointer-events: auto; opacity: 1; } }
 .vlist.is-grid .lrow.is-card { display: flex; align-items: flex-start; gap: var(--s2); border: 1px solid var(--line); border-radius: var(--r-group); padding: var(--s3) var(--s1) var(--s3) var(--s3); background: var(--surface); overflow: hidden; }
-.vlist.is-grid .lrow.is-card:hover { background: var(--surface-2); } .vlist.is-grid .lrow.is-card.is-selected { background: var(--accent-soft); border-color: var(--accent); }
+@media (hover: hover) { .vlist.is-grid .lrow.is-card:hover { background: var(--surface-2); } } .vlist.is-grid .lrow.is-card.is-selected { background: var(--accent-soft); border-color: var(--accent); }
 .vlist.is-grid .lrow.is-card .lmain { flex: 1; min-width: 0; align-items: flex-start; padding: 0; height: auto; }
 .vlist.is-grid .lrow.is-card .ltitle { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .vlist.is-grid .lrow.is-card .lmore { margin-top: -6px; align-self: flex-start; }
@@ -72,12 +73,13 @@
 .vlist.is-grid .lrow.is-card .lflags { margin-top: 2px; }
 .lopen { display: none; opacity: 0; transition: opacity var(--t-micro) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .lopen { display: inline-grid; } .lrow:hover .lopen, .lopen:focus-visible { opacity: 1; } }
-.lmore, .lopen { color: var(--sub); } .lmore:hover, .lopen:hover { color: var(--text); }
+.lmore, .lopen { color: var(--sub); } @media (hover: hover) { .lmore:hover, .lopen:hover { color: var(--text); } }
 .ltags { display: flex; gap: 4px; margin-top: 2px; } .ltag { font-size: var(--fs-xs); padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--sub); }
 .selbar { position: relative; display: flex; align-items: center; gap: 2px; padding: var(--s1) var(--s2); border: 1px solid var(--line-strong); border-radius: var(--r-group); background: color-mix(in srgb, var(--surface) 94%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: var(--shadow-float); } /* v2.2.2: no sideways scroll: icons only, count is a corner pill */
 .selbar[hidden] { display: none; } .selcount { position: absolute; top: -11px; left: 14px; padding: 1px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); font-size: var(--fs-xs); font-weight: 650; line-height: 1.5; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.18); } .selgap { flex: 1; min-width: 0; }
 .selbtn { display: inline-flex; align-items: center; gap: var(--s1); min-height: 44px; min-width: 44px; padding: 0 var(--s2); border-radius: var(--r-control); color: var(--text); justify-content: center; flex: none; }
-.selbtn:hover:not(:disabled), .selbtn.is-on { background: var(--accent-soft); } .selbtn.is-on { color: var(--accent-text); } .selbtn:disabled { opacity: 0.4; } .selbtn.is-danger { color: var(--danger); } .selbtn-l { display: none; font-size: var(--fs-sm); font-weight: 560; }
+.selbtn.is-on { background: var(--accent-soft); }
+@media (hover: hover) { .selbtn:hover:not(:disabled) { background: var(--accent-soft); } } .selbtn.is-on { color: var(--accent-text); } .selbtn:disabled { opacity: 0.4; } .selbtn.is-danger { color: var(--danger); } .selbtn-l { display: none; font-size: var(--fs-sm); font-weight: 560; }
 @media (min-width: 900px) { .selbtn-l { display: inline; } .selbtn { padding: 0 var(--s3); } }
 @media (max-width: 600px) { .fp-add { display: none; } }
 /* v2.2.2: Show and Sort are the same height; on phones search, Show and Sort share ONE row (Sort is an icon); the header select icon moves into the three-dot menu */
@@ -93,10 +95,10 @@
 .swatch { width: 36px; height: 36px; border-radius: 50%; background: var(--c); border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line-strong); position: relative; }
 .swatch::after { content: ''; position: absolute; inset: -4px; } .swatch[aria-checked='true'] { box-shadow: 0 0 0 2px var(--c); }
 .ff-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: var(--s1); max-height: 168px; overflow: auto; padding: 2px; }
-.ff-icon { height: 44px; border-radius: var(--r-control); display: grid; place-items: center; color: var(--sub); } .ff-icon:hover { background: var(--surface-2); }
+.ff-icon { height: 44px; border-radius: var(--r-control); display: grid; place-items: center; color: var(--sub); } @media (hover: hover) { .ff-icon:hover { background: var(--surface-2); } }
 .ff-icon[aria-checked='true'] { background: var(--fc, var(--accent)); color: #fff; }
 .picker-list { display: grid; gap: 2px; max-height: 320px; overflow: auto; }
-.picker-row { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: var(--s2) var(--s3); border-radius: var(--r-control); text-align: left; } .picker-row:hover { background: var(--accent-soft); }
+.picker-row { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: var(--s2) var(--s3); border-radius: var(--r-control); text-align: left; } @media (hover: hover) { .picker-row:hover { background: var(--accent-soft); } }
 .picker-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .picker-sub { color: var(--sub); font-size: var(--fs-sm); }
 .qa-row { display: flex; gap: var(--s2); } .qa-row .input { flex: 1; min-width: 0; } .qa-folder { justify-content: flex-start; gap: var(--s2); } .qa-folder span { flex: 1; text-align: left; }
 .help.is-error { color: var(--danger); }
@@ -110,7 +112,7 @@
 .chk-stat.is-ok b { color: var(--success); } .chk-stat.is-dead b { color: var(--danger); } .chk-stat.is-unsure b { color: var(--caution); }
 .chk-h { margin: var(--s2) 0 0; font: 650 var(--fs-md) var(--font-brand); }
 .chk-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-group); max-height: 34dvh; overflow-y: auto; } .chk-list li { display: flex; align-items: center; } .chk-list li + li { border-top: 1px solid var(--line); }
-.chk-item { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 8px var(--s3); color: inherit; min-height: 52px; align-content: center; } .chk-item:hover { background: var(--surface-2); text-decoration: none; }
+.chk-item { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 8px var(--s3); color: inherit; min-height: 52px; align-content: center; } @media (hover: hover) { .chk-item:hover { background: var(--surface-2); text-decoration: none; } }
 .chk-t { font-weight: 560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .chk-u { font: 400 var(--fs-xs) var(--font-mono); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chk-foot { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; padding-top: var(--s2); }
 .lflag.is-dead { color: var(--danger); }

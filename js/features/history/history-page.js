@@ -5,6 +5,9 @@
  *          a three-dot menu per entry; multi-select with Remove; Clear history in the page menu. The list is read from where the History setting keeps it
  *          (this device or the account) and entries past the chosen keep time are removed when the page opens.
  *          Long lists show 150 entries at a time ("Show more") so 2,000 entries stay light.
+ *          v2.4.2 (owner): the header has a settings icon (opens Settings > History) instead of the three-dot menu; picking entries is the select icon only; the
+ *          red Clear history button sits in the header row on wide screens and in a card above the list on phones; the favicon turns into a check box on hover
+ *          (ui/pick-tile.js); a day heading shows how many entries it holds.
  * Page module: mount(container, ctx) -> unmount
  */
 import { h } from '../../core/dom.js';
@@ -19,6 +22,7 @@ import { emptyState } from '../../ui/empty-state.js';
 import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
 import { faviconUrl, safeHref } from '../library/folder-style.js';
+import { pickTile, faviconFace } from '../../ui/pick-tile.js';
 import { copyText } from '../library/link-actions.js';
 import { keepMs } from '../../core/history.js';
 import { isAdminView } from '../../core/admin.js';
@@ -58,13 +62,17 @@ export async function mount(container, ctx) {
   const removeDock = mountDock(bar);
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search history', 'aria-label': 'Search history', autocomplete: 'off' });
   const filter = h('div', { class: 'seg hs-filter', role: 'radiogroup', 'aria-label': 'How it was opened' });
-  const moreBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'More actions', 'aria-haspopup': 'menu' }, icon('more-h', { size: 20 }));
+  const setBtn = h('a', { class: 'btn-icon', href: '/settings/history', 'aria-label': 'History settings', 'data-tip': 'History settings' }, icon('settings', { size: 20 }));   // v2.4.2: replaces the three-dot menu
+  const clearHead = h('button', { type: 'button', class: 'btn btn-sm hs-clear hs-clear-head', 'aria-label': 'Clear history' }, icon('trash', { size: 18 }), h('span', { text: 'Clear history' }));
+  const clearCard = h('button', { type: 'button', class: 'btn btn-block hs-clear', 'aria-label': 'Clear history' }, icon('trash', { size: 18 }), h('span', { text: 'Clear history' }));
+  const card = h('section', { class: 'hs-card', 'aria-label': 'History summary' });   // phones: summary and the Clear history button above the list
   const selBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Select entries', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
 
   container.appendChild(h('div', { class: 'page hs page-enter' },
     h('header', { class: 'page-head hs-head' },
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to profile', on: { click: () => router.navigate('/profile') } }, icon('arrow-left', { size: 20 })),
-      h('h1', { class: 'page-title', text: 'History' }), h('div', { class: 'page-actions' }, selBtn, moreBtn)),
+      h('h1', { class: 'page-title', text: 'History' }), h('div', { class: 'page-actions' }, selBtn, setBtn, clearHead)),
+    card,
     h('div', { class: 'hs-tools' }, h('div', { class: 'hs-search' }, icon('search', { size: 18 }), search), filter), info, list));
 
   const rows = () => {
@@ -89,20 +97,21 @@ export async function mount(container, ctx) {
   }
   function item(e) {
     const l = engine.getLink(e.lid), live = l && !l.del, s = SRC[e.src] || SRC.preview;
-    const fav = h('span', { class: 'hs-fav', 'aria-hidden': 'true' }, h('span', { text: (e.host || '?').replace(/^www\./, '').charAt(0).toUpperCase() }));
-    const im = h('img', { src: faviconUrl(e.host), alt: '', width: '20', height: '20', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => im.remove(), { once: true }); fav.appendChild(im);
+    const on = st.selected.has(e.id);
+    const toggle = () => { st.selected.has(e.id) ? st.selected.delete(e.id) : st.selected.add(e.id); if (!st.selecting) { st.selecting = true; selBtn.setAttribute('aria-pressed', 'true'); } paint(); };
+    const tile = pickTile({ face: faviconFace(e.host, faviconUrl(e.host)), on, selecting: st.selecting, label: `Select ${e.title || e.host || 'entry'}`, onToggle: toggle });
     const more = h('button', { type: 'button', class: 'btn-icon hs-more', 'aria-label': `Options for ${e.title || e.host || 'entry'}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 }));
     more.addEventListener('click', (ev) => { ev.stopPropagation(); more._m = menuFor(e, more); });
-    const on = st.selected.has(e.id);
     const main = h(live ? 'a' : 'div', { class: 'hs-main', href: live ? `/link/${encodeURIComponent(e.lid)}` : null, 'data-native': st.selecting ? '' : null },
-      st.selecting ? h('span', { class: ['hs-check', on && 'is-on'], 'aria-hidden': 'true' }, on ? icon('check', { size: 14 }) : null) : fav,
-      h('span', { class: 'hs-tx' }, h('span', { class: 'hs-t', text: e.title || e.host || e.url }), h('span', { class: 'hs-u' }, h('span', { text: e.host || e.url }), live ? null : h('em', { class: 'hs-gone', text: 'removed' }))),
-      h('span', { class: 'hs-meta' }, h('span', { class: 'hs-src', 'data-tip': s.label }, icon(s.icon, { size: 14, label: s.label })), h('time', { text: timeOf(e.ts), datetime: new Date(e.ts).toISOString() })));
+      tile,
+      h('span', { class: 'hs-tx' }, h('span', { class: 'hs-t', text: e.title || e.host || e.url }),
+        h('span', { class: 'hs-u' }, h('span', { class: 'hs-host', text: e.host || e.url }), h('span', { class: 'hs-dot', 'aria-hidden': 'true', text: '\u00b7' }), h('time', { class: 'hs-time', text: timeOf(e.ts), datetime: new Date(e.ts).toISOString() }), live ? null : h('em', { class: 'hs-gone', text: 'removed' }))),
+      h('span', { class: 'hs-src', 'data-tip': s.label }, icon(s.icon, { size: 14, label: s.label })));
     main.addEventListener('click', (ev) => {
-      if (st.selecting) { ev.preventDefault(); st.selected.has(e.id) ? st.selected.delete(e.id) : st.selected.add(e.id); paint(); return; }
+      if (st.selecting) { ev.preventDefault(); toggle(); return; }
       if (!live) { ev.preventDefault(); const href = safeHref(e.url); if (href !== '#') window.open(href, '_blank', 'noopener,noreferrer'); }
     });
-    return h('li', { class: ['hs-item', on && 'is-on'] }, main, st.selecting ? null : more);
+    return h('li', { class: ['hs-item', 'pk-row', on && 'is-on'] }, main, st.selecting ? null : more);
   }
 
   function paintBar() {
@@ -114,10 +123,21 @@ export async function mount(container, ctx) {
   }
   function setSelecting(on) { st.selecting = on; if (!on) st.selected.clear(); selBtn.setAttribute('aria-pressed', String(on)); paint(); }
 
+  function paintCard(n, keep) {
+    const total = hist.list().length;
+    card.replaceChildren(h('div', { class: 'hs-card-top' }, h('span', { class: 'hs-card-ic', 'aria-hidden': 'true' }, icon('history', { size: 22 })),
+      h('div', { class: 'hs-card-tx' }, h('strong', { text: keep === 0 ? 'History is off' : plural(total, 'entry', 'entries') }), h('span', { text: keep === 0 ? 'Nothing is being recorded.' : `${keepText()} \u00b7 ${whereText()}` }))), clearCard);
+    clearHead.disabled = clearCard.disabled = total === 0;
+  }
+  async function clearAll() {
+    if (!(await confirmDialog({ title: 'Clear all history?', message: `Every entry ${whereText()} is removed. Your links and folders are not touched.`, confirmLabel: 'Clear history', danger: true }))) return;
+    try { await hist.clear(); toast('History cleared.'); } catch { toast('Could not clear history. Try again.', { type: 'error' }); }
+  }
   function paint() {
     const all = rows(), shown = all.slice(0, st.shown);
     paintFilter(); paintBar();
     const keep = keepMs(prefs.get('history.keep', '7d'), isAdminView());
+    paintCard(all.length, keep);
     info.textContent = keep === 0 ? 'History is off. Nothing is being recorded.' : `${all.length ? plural(all.length, 'entry', 'entries') : 'No entries'} \u00b7 ${keepText()} \u00b7 ${whereText()}`;
     if (!all.length) {
       list.replaceChildren(emptyState({ art: 'search', title: st.q || st.src !== 'all' ? 'Nothing matches' : keep === 0 ? 'History is off' : 'No history yet',
@@ -126,21 +146,14 @@ export async function mount(container, ctx) {
       return;
     }
     const groups = groupByDay(shown);
-    const nodes = groups.map((g) => h('section', { class: 'hs-group' }, h('h2', { class: 'hs-day', text: g.label }), h('ul', { class: 'hs-ul' }, g.rows.map(item))));
+    const nodes = groups.map((g) => h('section', { class: 'hs-group' }, h('h2', { class: 'hs-day' }, h('span', { text: g.label }), h('span', { class: 'hs-day-n', text: String(g.rows.length) })), h('ul', { class: 'hs-ul' }, g.rows.map(item))));
     if (all.length > shown.length) nodes.push(h('button', { type: 'button', class: 'btn btn-quiet hs-more-btn', text: `Show ${Math.min(PAGE, all.length - shown.length)} more`, on: { click: () => { st.shown += PAGE; paint(); } } }));
     list.replaceChildren(...nodes);
   }
 
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; st.shown = PAGE; paint(); }, 120); });
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
-  moreBtn.addEventListener('click', () => { moreBtn._m = openMenu(moreBtn, [
-    { label: 'Select entries', icon: 'check-square', onSelect: () => setSelecting(true) },
-    { label: 'History settings', icon: 'settings', onSelect: () => router.navigate('/settings/history') },
-    { separator: true },
-    { label: 'Clear history', icon: 'trash', danger: true, disabled: hist.list().length === 0, onSelect: async () => {
-      if (!(await confirmDialog({ title: 'Clear all history?', message: `Every entry ${whereText()} is removed. Your links and folders are not touched.`, confirmLabel: 'Clear history', danger: true }))) return;
-      try { await hist.clear(); toast('History cleared.'); } catch { toast('Could not clear history. Try again.', { type: 'error' }); }
-    } }]); });
+  clearHead.addEventListener('click', clearAll); clearCard.addEventListener('click', clearAll);
   const off = hist.subscribe(() => paint());
   hist.load().then(() => hist.prune()).catch(() => {});   // reads the chosen store again (the account list may have grown on another device) and applies the keep time
   paint();

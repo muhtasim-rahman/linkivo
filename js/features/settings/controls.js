@@ -9,6 +9,7 @@
  *          target); captions get a tighter line height and the few long ones are set a little smaller (`descEl`).
  * API: renderControl(entry) -> Element     descEl(text) -> Element     LONG_DESC (characters from which a caption counts as long)
  */
+import { adminChip } from '../../ui/admin-badge.js';
 import { h } from '../../core/dom.js';
 import { prefs } from '../../core/local-prefs.js';
 import { createSelect } from '../../ui/select.js';
@@ -30,14 +31,14 @@ const EXTRA = {
   mlLeft: () => { const q = mlQuota(); if (!q.reset || q.reset < Date.now()) return ''; const mins = Math.max(1, Math.round((q.reset - Date.now()) / 60000)); return `The counter resets in ${mins >= 90 ? Math.round(mins / 60) + ' h' : mins + ' min'}.`; }
 };
 function labelEl(entry) {
-  if (!entry.suffix || !SUFFIX[entry.suffix]) return h('span', { class: 'row-label', text: entry.label });
+  if (!entry.suffix || !SUFFIX[entry.suffix]) return h('span', { class: 'row-label' }, entry.label, entry.admin ? adminChip() : null);   // v2.4.2: `admin: true` entries carry the Admin chip
   const suf = h('span', { class: 'row-suffix' }), inner = h('span', { class: 'row-info-in' }), note = h('span', { class: 'row-info', 'aria-hidden': 'true' }, inner);   // v2.4.1: opens by click only (no hover tip), with a small height transition
   const paint = () => { suf.textContent = SUFFIX[entry.suffix](); const x = EXTRA[entry.suffix] && EXTRA[entry.suffix](); inner.textContent = (entry.info || '') + (x ? ' ' + x : ''); };
   paint();
   const live = () => { if (suf.isConnected) paint(); };
   subscribeQuota(live); subscribeAdmin(live);
   const info = entry.info ? h('button', { type: 'button', class: 'row-i', 'aria-label': 'More about ' + entry.label, 'aria-expanded': 'false', on: { click: (e) => { e.stopPropagation(); const open = !note.classList.contains('is-open'); note.classList.toggle('is-open', open); note.setAttribute('aria-hidden', String(!open)); info.classList.toggle('is-on', open); info.setAttribute('aria-expanded', String(open)); } } }, icon('info', { size: 14 })) : null;
-  return h('span', { class: 'row-label has-suffix' }, h('span', { text: entry.label }), ' ', suf, info, note);
+  return h('span', { class: 'row-label has-suffix' }, h('span', { text: entry.label }), entry.admin ? adminChip() : null, ' ', suf, info, note);
 }
 
 function shell(entry, control, stack = false) {

@@ -7,7 +7,7 @@
   transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
 }
 .input::placeholder { color: var(--sub); opacity: 0.8; }
-.input:hover, .select:hover { border-color: var(--sub); }
+@media (hover: hover) { .input:hover, .select:hover { border-color: var(--sub); } }
 .input:focus, .select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 textarea.input { padding: var(--s3); min-height: 120px; resize: vertical; line-height: 1.45; }
 .input[aria-invalid='true'] { border-color: var(--danger); }

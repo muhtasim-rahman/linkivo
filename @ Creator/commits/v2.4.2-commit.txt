@@ -1,0 +1,17 @@
+fix(v2.4.2): offline start, Random and Profile rebuilt, History and Settings clean-up
+
+- Offline: Sync now no longer reports success while offline; the installed app starts offline (boot no longer waits for Firebase, SDK cached at install, 15 s watchdog)
+- Phones: :hover rules only inside @media (hover: hover) (tools/hover-wrap.mjs plus a gate rule)
+- Layout: two page widths (normal, wide); no scrollbar flash while a page enters; Search fade only while scrolled; pull to refresh on Menu, Settings, Recycle Bin
+- Random Discover rebuilt: two columns on wide screens, compact icon filters with clear icons, top 10 sites and 15 tags with search, chance dropdown, quick options, floating Random / Filters / Options group, strip at the bottom on phones, auto next default 15 s with pause, resume, stop
+- Profile page rebuilt; 404 page redesigned; History page redesigned (favicon becomes a check box, also in Recycle Bin, settings icon, Clear history button or card)
+- Menu: History card above Recycle Bin, distinct All settings card; settings icon in page headers
+- Settings: Random six defaults plus Microlink and thum.io switches, Preview before History, Open History row removed, admin chips, Switch profile icon, sync defaults, Video and PDF first tabs
+- Microlink allowance fixed at 25; thum.io screenshot saved with the link
+- @ Versions is no longer committed (.gitignore, gate rule, docs)
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting (rules and Worker unchanged); hard reload twice; open once online, then test offline

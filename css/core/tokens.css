@@ -18,7 +18,7 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
   --r-control: 9px; --r-group: 12px; --r-sheet: 20px;
   --ctl-h: 44px; --row-h: 44px; --pad: var(--s4); /* touch targets stay 44px on touch screens; mouse screens get the compact values below */
-  --bar-h: 58px; --bar-gap: 12px; --sidebar-w: 244px; --sidebar-w-collapsed: 68px; --content-max: 960px;
+  --bar-h: 58px; --bar-gap: 12px; --sidebar-w: 244px; --sidebar-w-collapsed: 68px; --w-normal: 960px; --w-wide: 1240px; --content-max: var(--w-normal);   /* v2.4.2 (owner): ONLY two page widths on wide screens: normal for every page, wide for Settings, Preview and Random */
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
 
   --shadow-float: 0 10px 30px rgba(12, 22, 41, 0.16), 0 2px 6px rgba(12, 22, 41, 0.08);

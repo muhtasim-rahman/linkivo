@@ -14,9 +14,12 @@ import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { relativeTime } from '../../core/format.js';
 import { faviconUrl, linkTitle, safeHref } from './folder-style.js';
+import { createThumb } from '../../ui/thumb.js';
 
-export const ROW_HEIGHT = 62, CARD_HEIGHT = 112, CARD_MIN_WIDTH = 230;
+// v2.4.4 (owner): thumbnails, mid size cards. A row is 68px (64 x 44 picture); a card has a picture on top (a saved image, else a saved screenshot, else the site icon).
+export const ROW_HEIGHT = 68, CARD_HEIGHT = 212, CARD_MIN_WIDTH = 210;
 
+// ! unused since v2.4.4: the site icon alone was replaced by createThumb (which keeps the site icon underneath as the last choice)
 function favicon(l) {
   const letter = (l.host || l.url || '?').replace(/^www\./, '').charAt(0).toUpperCase();
   const img = h('img', { src: faviconUrl(l.host), alt: '', width: '20', height: '20', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' });
@@ -24,7 +27,8 @@ function favicon(l) {
   return h('span', { class: 'lfav', 'aria-hidden': 'true' }, h('span', { class: 'lfav-l', text: letter }), img);
 }
 
-export function createLinkRow(l, { card = false, selecting = false, selected = false, show = {} } = {}) {
+export function createLinkRow(l, { card = false, selecting = false, selected = false, show = {}, engine = null } = {}) {
+  const thumb = createThumb({ engine, id: l.id, host: l.host, favicon: faviconUrl(l.host), variant: card ? 'card' : 'row' });
   const flags = h('span', { class: 'lflags' },
     l.pn && h('span', { class: 'lflag', 'data-tip': 'Pinned' }, icon('pin', { size: 14, label: 'Pinned' })),
     l.fv && h('span', { class: 'lflag is-fav', 'data-tip': 'Favourite' }, icon('heart', { size: 14, label: 'Favourite' })),
@@ -37,7 +41,7 @@ export function createLinkRow(l, { card = false, selecting = false, selected = f
   return h('div', { class: `lrow${card ? ' is-card' : ''}${selected ? ' is-selected' : ''}${selecting ? ' is-selecting' : ''}`, role: 'listitem', 'data-id': l.id },
     h('button', { type: 'button', class: 'lcheck', 'data-act': 'toggle', role: 'checkbox', tabindex: selecting ? '0' : '-1', 'aria-checked': String(selected), 'aria-label': `Select ${linkTitle(l)}` }, icon('check', { size: 16 })),
     h('a', { class: 'lmain', href: safeHref(l.url), target: '_blank', rel: 'noopener noreferrer', 'data-act': 'open', title: l.url },
-      favicon(l),
+      card ? h('span', { class: 'lcover' }, thumb) : thumb,
       h('span', { class: 'ltext' }, h('span', { class: 'ltitle', text: linkTitle(l) }), h('span', { class: 'lsub', text: meta }), card && tags, card && hasFlags && flags),
       !card && hasFlags && flags),
     // mouse screens: a quick "open in new tab" button beside the menu (the row itself opens the link on touch screens)

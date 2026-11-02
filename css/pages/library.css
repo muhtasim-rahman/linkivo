@@ -119,3 +119,18 @@
 
 @media (max-width: 899px) { .fp-head { gap: var(--s2); } .fp-tile { width: 40px; height: 40px; } .fp-name { font-size: calc(var(--fs-xl) * .9); } .fp-name[data-len='m'] { font-size: calc(var(--fs-xl) * .82); } .fp-name[data-len='s'] { font-size: calc(var(--fs-xl) * .72); } .fp-name[data-len='xs'] { font-size: calc(var(--fs-xl) * .62); } }
 @media (max-width: 599px) { .fp-add-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .fp-add { padding-inline: 10px; } }   /* v2.3.2: the label hides on phones so the title gets the room; the button keeps its icon and (via aria) its name */
+
+/* ======================= v2.4.4 thumbnails (owner) ======================= */
+/* the check box exists only while selecting, in the corner of the picture; hover and a click on the picture no longer start selecting */
+.lrow:not(.is-selecting):not(.is-selected) .lcheck { display: none; }
+.lcheck { width: 24px; height: 24px; border-radius: 8px; left: calc(var(--s1) + 4px); top: calc(50% - 18px); translate: 0 0; }
+.lcheck::after { inset: -10px; }
+.lrow.is-selected .thb { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* cards: mid size, picture on top */
+.vlist.is-grid .lrow.is-card { display: block; padding: 0; gap: 0; }
+.vlist.is-grid .lrow.is-card .lmain { display: flex; flex-direction: column; align-items: stretch; gap: 0; height: 100%; padding: 0; }
+.lcover { display: block; height: 104px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.vlist.is-grid .lrow.is-card .ltext { padding: var(--s2) var(--s3) var(--s3); }
+.vlist.is-grid .lrow.is-card .lmore { position: absolute; top: 6px; right: 6px; margin: 0; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 84%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.vlist.is-grid .lrow.is-card .lcheck { left: 8px; top: 8px; }
+.vlist.is-grid .lrow.is-card.is-selected .lcover { outline: 2px solid var(--accent); outline-offset: -2px; }

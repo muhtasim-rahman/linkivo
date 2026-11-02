@@ -23,7 +23,8 @@ import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
 import { faviconUrl, safeHref } from '../library/folder-style.js';
 import { createPager } from '../../ui/paged.js';
-import { pickTile, faviconFace } from '../../ui/pick-tile.js';
+import { pickTile } from '../../ui/pick-tile.js';
+import { createThumb } from '../../ui/thumb.js';
 import { copyText } from '../library/link-actions.js';
 import { keepMs } from '../../core/history.js';
 import { isAdminView } from '../../core/admin.js';
@@ -101,7 +102,7 @@ export async function mount(container, ctx) {
     const l = engine.getLink(e.lid), live = l && !l.del, s = SRC[e.src] || SRC.preview;
     const on = st.selected.has(e.id);
     const toggle = () => { st.selected.has(e.id) ? st.selected.delete(e.id) : st.selected.add(e.id); if (!st.selecting) { st.selecting = true; selBtn.setAttribute('aria-pressed', 'true'); } paint(); };
-    const tile = pickTile({ face: faviconFace(e.host, faviconUrl(e.host)), on, selecting: st.selecting, label: `Select ${e.title || e.host || 'entry'}`, onToggle: toggle });
+    const tile = pickTile({ face: createThumb({ engine, id: e.lid, host: e.host, favicon: faviconUrl(e.host) }), corner: true, on, selecting: st.selecting, label: `Select ${e.title || e.host || 'entry'}`, onToggle: toggle });
     const more = h('button', { type: 'button', class: 'btn-icon hs-more', 'aria-label': `Options for ${e.title || e.host || 'entry'}`, 'aria-haspopup': 'menu' }, icon('more', { size: 18 }));
     more.addEventListener('click', (ev) => { ev.stopPropagation(); more._m = menuFor(e, more); });
     const main = h(live ? 'a' : 'div', { class: 'hs-main', href: live ? `/link/${encodeURIComponent(e.lid)}` : null, 'data-native': st.selecting ? '' : null },

@@ -46,6 +46,38 @@
             ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
             ".validate": "newData.isString() && newData.val().length <= 200"
           },
+          "headline": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "city": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "birthday": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "languages": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "interests": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "pronouns": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "ring": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 9"
+          },
+          "adminColor": {
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted'",
+            ".validate": "newData.isString() && newData.val().length <= 9"
+          },
           "status": {
             ".write": false,
             ".validate": "newData.val() === 'active' || newData.val() === 'deleted'"

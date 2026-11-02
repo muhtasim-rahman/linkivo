@@ -88,3 +88,6 @@ Linkivo/
 
 ## Added in v2.4.3
 - `js/features/random/random-range.js` (points range bar), `js/ui/paged.js` (100 at a time), `js/core/profile-data.js`, `js/features/profile/` (`profile-edit.js`, `image-crop.js`), `assets/art/banner-1.svg` to `banner-4.svg`, `@ Creator/tests/v243.test.mjs`.
+
+## Added in v2.4.4
+- `js/ui/thumb.js` (list pictures), `js/ui/edge-fade.js` (fade helper over `scroll-fade.js`), `js/core/countries.js`, `js/features/profile/country-picker.js`, `js/features/shell/pages/admin-reset-page.js`, `assets/art/banner-5.svg`, `banner-6.svg`, `texture-links.svg`, `@ Creator/tests/v244.test.mjs`.

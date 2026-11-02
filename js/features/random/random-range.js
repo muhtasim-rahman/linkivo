@@ -3,7 +3,9 @@
  * Purpose: the "Point range" control of the Random filter panel (owner: ONE bar with TWO handles instead of two number boxes). The bar is drawn on a gentle
  *          curve (finer steps at the low end, where most links live) and shows a small histogram of the person's own points behind it, so the choice is
  *          informed. Pointer (mouse, touch, pen) and keyboard both work; each handle is a real slider for screen readers.
- * API: valueAt(p) -> points   posOf(points) -> 0..1   histogram(points[], bins) -> counts[]        (pure, tested)
+ * v2.4.4 (owner): the bars became ONE continuous graph (a smooth area), the part inside the chosen range is coloured, and pointing at the graph shows how many
+ *          links have points in that part (a tip with the range and the count). The middle of the readout always says how many links are inside the chosen range.
+ * API: valueAt(p) -> points   posOf(points) -> 0..1   histogram(points[], bins) -> counts[]   areaPath(counts, w, h) -> svg path d   inRange(list, a, b)  (pure, tested)
  *      buildRange({ lo, hi, pointsList, onInput, onCommit }) -> { el, set(lo, hi), setPoints(list) }
  *        onInput(lo, hi) runs while a handle moves; onCommit(lo, hi) runs once when it is released (or after a key press).
  */
@@ -20,9 +22,26 @@ export function histogram(list, bins = 28) {
   return out;
 }
 
+/** A smooth area under the counts (quadratic curves through the middles), closed at the bottom. */
+export function areaPath(counts, w = 100, hgt = 40) {
+  const n = counts.length; if (!n) return '';
+  const top = Math.max(1, ...counts), pts = counts.map((c, i) => [(i + 0.5) / n * w, hgt - 2 - (c / top) * (hgt - 7)]);
+  const f = (v) => Math.round(v * 100) / 100;
+  let d = `M0,${hgt} L0,${f(pts[0][1])} L${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < n - 1; i++) { const [x, y] = pts[i], [x2, y2] = pts[i + 1]; d += ` Q${f(x)},${f(y)} ${f((x + x2) / 2)},${f((y + y2) / 2)}`; }
+  return `${d} L${f(pts[n - 1][0])},${f(pts[n - 1][1])} L${w},${f(pts[n - 1][1])} L${w},${hgt} Z`;
+}
+export const inRange = (list, a, b) => list.reduce((n, v) => n + (v >= a && v <= b ? 1 : 0), 0);
+const SVG = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => { const e = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); return e; };
+const BINS = 40;
+
 export function buildRange({ lo = MIN, hi = MAX, pointsList = [], onInput = () => {}, onCommit = () => {} }) {
   let a = lo, b = hi, dragging = null;
-  const bars = h('div', { class: 'rg-bars', 'aria-hidden': 'true' });
+  const base = svgEl('path', { class: 'rg-area' }), lit = svgEl('path', { class: 'rg-area is-lit' }), cursor = svgEl('line', { class: 'rg-cursor', y1: '0', y2: '40' });
+  const svg = svgEl('svg', { viewBox: '0 0 100 40', preserveAspectRatio: 'none', class: 'rg-svg' }); svg.append(base, lit, cursor);
+  const tip = h('span', { class: 'rg-tip', hidden: true });
+  const bars = h('div', { class: 'rg-graph', 'aria-hidden': 'true' }, svg, tip);   // (kept the old name `bars` for the layout below)
   const fill = h('div', { class: 'rg-fill', 'aria-hidden': 'true' });
   const mk = (label) => h('div', { class: 'rg-thumb', role: 'slider', tabindex: '0', 'aria-label': label, 'aria-valuemin': String(MIN), 'aria-valuemax': String(MAX) });
   const tA = mk('Lowest points'), tB = mk('Highest points');
@@ -36,14 +55,21 @@ export function buildRange({ lo = MIN, hi = MAX, pointsList = [], onInput = () =
     tA.style.left = `${pa}%`; tB.style.left = `${pb}%`; fill.style.left = `${pa}%`; fill.style.width = `${Math.max(0, pb - pa)}%`;
     tA.setAttribute('aria-valuenow', String(a)); tB.setAttribute('aria-valuenow', String(b));
     outA.textContent = `${a.toLocaleString()}`; outB.textContent = `${b.toLocaleString()}`;
-    note.textContent = a <= MIN && b >= MAX ? 'Any points' : 'points';
+    const n = inRange(pointsList, a, b); note.textContent = a <= MIN && b >= MAX ? `${n.toLocaleString()} links` : `${n.toLocaleString()} of ${pointsList.length.toLocaleString()} links`;
+    lit.style.clipPath = `inset(0 ${100 - pb}% 0 ${pa}%)`;
     el.classList.toggle('is-set', a > MIN || b < MAX);
   }
-  function paintBars() {
-    const counts = histogram(pointsList), top = Math.max(1, ...counts);
-    bars.replaceChildren(...counts.map((c, i) => { const bar = h('span', { class: 'rg-bar' }); bar.style.height = `${c ? Math.max(14, Math.round((c / top) * 100)) : 6}%`; bar.classList.toggle('is-in', (i + 0.5) / counts.length >= posOf(a) && (i + 0.5) / counts.length <= posOf(b)); return bar; }));
-  }
-  const refresh = () => { paint(); paintBars(); };
+  let counts = [];
+  function paintBars() { counts = histogram(pointsList, BINS); const d = areaPath(counts); base.setAttribute('d', d); lit.setAttribute('d', d); note.textContent = note.textContent; paint(); }
+  // pointing at the graph: the tip names the part under the pointer and how many links have points in it
+  bars.addEventListener('pointermove', (e) => {
+    const r = bars.getBoundingClientRect(); if (!r.width || !counts.length) return;
+    const p = Math.min(0.9999, Math.max(0, (e.clientX - r.left) / r.width)), i = Math.floor(p * BINS), lo = valueAt(i / BINS), hi = i === BINS - 1 ? MAX : Math.max(lo, valueAt((i + 1) / BINS) - 1);
+    tip.textContent = `${lo.toLocaleString()} to ${hi.toLocaleString()} points: ${counts[i].toLocaleString()} ${counts[i] === 1 ? 'link' : 'links'}`; tip.hidden = false;
+    tip.style.left = `${Math.min(88, Math.max(12, p * 100))}%`; cursor.setAttribute('x1', String((i + 0.5) / BINS * 100)); cursor.setAttribute('x2', String((i + 0.5) / BINS * 100)); cursor.style.opacity = '1';
+  });
+  bars.addEventListener('pointerleave', () => { tip.hidden = true; cursor.style.opacity = '0'; });
+  const refresh = () => { paint(); };
 
   const pFromEvent = (e) => { const r = track.getBoundingClientRect(); return r.width ? Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) : 0; };
   function move(which, v) {
@@ -71,7 +97,7 @@ export function buildRange({ lo = MIN, hi = MAX, pointsList = [], onInput = () =
     move(which, v); down(e, which);
   });
 
-  refresh();
+  paintBars();
   return {
     el,
     /** Sets the handles from outside (a clear button, a loaded filter). Ignored while a handle is being dragged. */

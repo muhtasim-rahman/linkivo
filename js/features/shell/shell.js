@@ -155,8 +155,8 @@ export function mountShell({ router }) {
   // v2.4.3 (owner): the Admin / Normal user switch applies at once: the page on screen is drawn again (scroll position kept), no reload
   let adminKey = null;
   subscribeAdmin((v) => {
-    const k = v && v.listed ? v.view : 'off';
-    if (adminKey && adminKey !== 'off' && k !== 'off' && k !== adminKey) { const sc = document.getElementById('page-root'), top = sc ? sc.scrollTop : 0; Promise.resolve(router.reevaluate()).then(() => requestAnimationFrame(() => { if (sc) sc.scrollTop = top; })); }
+    const k = v && v.listed ? 'admin' : 'off';
+    if (adminKey && k !== adminKey) { const sc = document.getElementById('page-root'), top = sc ? sc.scrollTop : 0; Promise.resolve(router.reevaluate()).then(() => requestAnimationFrame(() => { if (sc) sc.scrollTop = top; })); }
     adminKey = k;
   });
 

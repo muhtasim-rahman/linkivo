@@ -122,7 +122,7 @@ export async function mount(container, ctx) {
   }
 
   const show = () => ({ url: pref(LIB.showUrl), points: pref(LIB.showPoints), added: pref(LIB.showAdded) });
-  const renderRow = (l) => createLinkRow(l, { card: st.view === 'grid', selecting: st.selecting, selected: st.selected.has(l.id), show: show() });
+  const renderRow = (l) => createLinkRow(l, { card: st.view === 'grid', selecting: st.selecting, selected: st.selected.has(l.id), show: show(), engine });
 
   function paintBar() {
     const n = st.selected.size;

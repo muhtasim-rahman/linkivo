@@ -150,16 +150,18 @@ test('cloud engine: Sync now stamps Last synced even when nothing was waiting, a
   e.dispose();
 });
 
-test('admin: Normal view hides the badge and the admin checks; since v2.4.3 it survives a reload and ends with a log out', async () => {
+test('admin: Normal user is a device flag (v2.4.4): hides every admin feature, survives reload and log out, only resetAdmin clears it', async () => {
   const fake = createFakeRtdb(); fake.tree['admins/u9'] = true;
-  AD.clearAdmin(); assert.equal(await AD.loadAdmin(fake.adapter, 'u9'), true);
-  assert.equal(AD.isAdminView(), true); assert.equal(document.documentElement.dataset.admin, 'true');
-  AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(AD.isAdminAccount(), true, 'the switch itself stays reachable'); assert.equal(document.documentElement.dataset.admin, undefined);
-  assert.equal(AD.getAdminViewMode(), 'normal'); assert.deepEqual(prefs.get('admin.view', null), { uid: 'u9', v: 'normal' }, 'the choice is stored with the uid');
-  await AD.loadAdmin(fake.adapter, 'u9'); assert.equal(AD.getAdminViewMode(), 'normal', 'a reload (new load) keeps Normal user');
-  AD.setAdminView('admin'); assert.equal(prefs.get('admin.view', null), null, 'switching back clears it'); AD.setAdminView('normal');
-  AD.clearAdmin(); await AD.loadAdmin(fake.adapter, 'u9'); assert.equal(AD.getAdminViewMode(), 'admin', 'log out and log in again: Admin');
-  AD.clearAdmin(); AD.setAdminView('normal'); assert.equal(AD.getAdminViewMode(), 'admin', 'a normal account can not use it'); assert.equal(await AD.loadAdmin(fake.adapter, 'nobody'), false);
+  prefs.remove('admin.off'); AD.clearAdmin(); assert.equal(await AD.loadAdmin(fake.adapter, 'u9'), true);
+  assert.equal(AD.isAdminView(), true); assert.equal(document.documentElement.dataset.admin, 'true'); assert.equal(AD.getAdminViewMode(), 'admin');
+  AD.setAdminView('normal'); assert.equal(AD.isAdminView(), false); assert.equal(AD.isAdminAccount(), false, 'the account is simply not an admin any more'); assert.equal(document.documentElement.dataset.admin, undefined);
+  assert.equal(prefs.get('admin.off', false), true); assert.equal(AD.getAdminViewMode(), 'normal');
+  let reads = 0; const spy = { get: async (p) => { reads++; return fake.adapter.get(p); } };
+  assert.equal(await AD.loadAdmin(spy, 'u9'), false, 'a reload keeps Normal user'); assert.equal(reads, 0, 'the admin list is not even read');
+  AD.clearAdmin(); assert.equal(await AD.loadAdmin(spy, 'u9'), false, 'log out and in again: still Normal user'); assert.equal(AD.shotQuota().limit, 10);
+  assert.equal(await AD.resetAdmin(spy, 'u9'), true, '/admin-reset brings the admin features back'); assert.equal(prefs.get('admin.off', false), false); assert.equal(AD.isAdminView(), true);
+  assert.equal(await AD.resetAdmin(spy, 'nobody'), false, 'an ordinary account stays ordinary');
+  AD.clearAdmin(); AD.setAdminView('normal'); assert.equal(prefs.get('admin.off', false), false, 'a non admin can not set it');
 });
 
 // ---------------------------------------------------------------- small fixes (source and DOM)

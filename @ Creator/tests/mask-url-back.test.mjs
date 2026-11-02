@@ -7,13 +7,13 @@ import { compileRoutes, resolveGuard, parentOf } from '../../js/core/router.js';
 import { newId } from '../../js/core/utils.js';
 import { relativeTime, formatBytes } from '../../js/core/format.js';
 
-test('maskEmail keeps first 2 and last 2 of long names, less of short ones', () => {
-  assert.equal(maskEmail('tuzo.dev99@gmail.com'), 'tu******99@gmail.com');
-  assert.equal(maskEmail('abcdef@x.io'), 'ab******ef@x.io');
-  assert.equal(maskEmail('abcde@x.io'), 'a******e@x.io');
-  assert.equal(maskEmail('abc@x.io'), 'a******c@x.io');
-  assert.equal(maskEmail('ab@x.io'), 'a******@x.io');
-  assert.equal(maskEmail('a@x.io'), 'a******@x.io');
+test('maskEmail keeps first 2 and last 1 of long names, five stars (v2.4.4), less of short ones', () => {
+  assert.equal(maskEmail('tuzo.dev99@gmail.com'), 'tu*****9@gmail.com');
+  assert.equal(maskEmail('abcdef@x.io'), 'ab*****f@x.io');
+  assert.equal(maskEmail('abcde@x.io'), 'a*****e@x.io');
+  assert.equal(maskEmail('abc@x.io'), 'a*****c@x.io');
+  assert.equal(maskEmail('ab@x.io'), 'a*****@x.io');
+  assert.equal(maskEmail('a@x.io'), 'a*****@x.io');
   assert.equal(maskEmail('not-an-email'), '');
   assert.equal(maskEmail(null), '');
 });

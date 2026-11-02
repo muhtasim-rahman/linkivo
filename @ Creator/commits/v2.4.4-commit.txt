@@ -1,0 +1,20 @@
+feat(v2.4.4): thumbnails everywhere, Profile polish, Admin device flag, Random graph
+
+- Thumbnails in Folder, Favourites, History, Search and the Profile sliders: saved image, else saved screenshot, else the site icon (no new requests);
+  mid size cards with the picture on top; the check box shows only while selecting, in the corner; setting "Show thumbnails in lists"
+- Profile: Explore heading, new highlights, one-button Share card with a link texture, account switch icon in the header, wider two-column layout,
+  ring colour and admin badge colour (10 templates, custom, Default), 6 banners in a scrollable row, more details (headline, city, birthday,
+  languages, interests, pronouns), Country dropdown with flags (Palestine, no Israel), fades on every sideways row
+- Edit profile: choosing a photo no longer closes the popup or loses the changes (crop is inside the popup); closing with unsaved changes asks first
+- Menu: the settings card is compact and light blue with one scrollable line of category chips that open their section
+- Random: Point range is one continuous graph with a hover count; short transitions on every text and button change
+- Admin: "Normal user" is a device flag that hides every admin feature and survives reloads; /admin-reset clears it; the Profile admin chip is no longer always shown
+- Email mask is md*****9@gmail.com; the Library settings icon is hidden on small screens; the Profile card no longer prints "null"
+- Rules: new private profile fields (headline, city, birthday, languages, interests, pronouns, ring, adminColor)
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only database, then --only hosting
+- hard reload twice (the old "Normal user" choice is reset once; choose it again if wanted)

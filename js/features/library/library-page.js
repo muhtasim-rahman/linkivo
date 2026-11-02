@@ -64,7 +64,7 @@ export async function mount(container, ctx) {
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn, settingsShortcut('library', 'Library settings'),   // v2.4.2: settings icon in every page header
+      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 

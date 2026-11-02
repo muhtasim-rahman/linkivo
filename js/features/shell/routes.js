@@ -13,6 +13,7 @@ const recyclePage = () => import('../library/recycle-bin-page.js');
 
 export const ROUTES = [
   { id: 'root', pattern: '/', title: '', parent: null, guard: 'open', redirect: (s) => (s.mode === 'none' ? '/login' : '/library'), load: stub },
+  { id: 'admin-reset', pattern: '/admin-reset', title: 'Admin reset', parent: null, guard: 'open', shell: false, load: () => import('./pages/admin-reset-page.js') },   // v2.4.4: clears the device flag "Normal user"
   { id: 'login', pattern: '/login', title: 'Sign in', desc: 'Sign in to Linkivo or try it as a guest. A fast, private link manager for your folders, links and bookmarks.', index: true, parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
   // v2.2.2: Linkivo's own page for the links in Firebase emails (password reset, verification). Used once Firebase's "Customize action URL" points here.
   { id: 'auth-action', pattern: '/auth/action', title: 'Account action', parent: null, guard: 'open', shell: false, load: () => import('../auth/action-page.js') },

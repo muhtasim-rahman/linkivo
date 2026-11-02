@@ -90,7 +90,7 @@ async function startDevices(uid) {
 }
 /** v2.3.1: is this account in the `admins` list? One read; a failure just means a normal user. */
 async function startAdmin(uid) {
-  try { const { loadAdmin } = await import('./admin.js'); if (engine && scope === uid && engine.adapter) await loadAdmin(engine.adapter, uid); } catch (e) { log.warn('data', 'admin check did not run', e); }
+  try { const { loadAdmin } = await import('./admin.js'); if (engine && scope === uid && engine.adapter && (await loadAdmin(engine.adapter, uid))) { const P = await import('./profile-data.js'); P.applyProfileLook(P.cachedProfile(uid)); P.loadProfile(engine.adapter, uid).then((p) => P.applyProfileLook(p)).catch(() => {}); } } catch (e) { log.warn('data', 'admin check did not run', e); }
 }
 /** v2.3.1: the sync choice changed: stop the running sync and start it again with the new list of keys. */
 let choiceWatch = [];

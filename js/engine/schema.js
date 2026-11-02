@@ -33,7 +33,9 @@ export const LINK_META = {
 };
 
 /** v2.4.3: the editable profile (users/<uid>/profile). Private: the owner and admins read it; only the owner writes it. */
-export const PROFILE_FIELDS = { bio: s(200), country: s(60), banner: s(8), photo: s(2048), photoDel: s(2048), photoAt: ts(), site: s(200) };
+export const PROFILE_FIELDS = { bio: s(200), country: s(60), banner: s(8), photo: s(2048), photoDel: s(2048), photoAt: ts(), site: s(200),
+  // v2.4.4: more details (the long ones have the smaller limits), the ring colour around the photo and the admin badge colour ('' = follow the app accent)
+  headline: s(60), city: s(60), birthday: s(10), languages: s(80), interests: s(120), pronouns: s(20), ring: s(9), adminColor: s(9) };
 
 export const HISTORY = { required: ['lid', 'ts'], fields: { lid: s(40, 1), url: s(2048), title: s(300), host: s(253), fid: s(40), src: s(10), ts: ts() } };
 /** v2.2.2: one finished import / title fetch / restore, kept in the account so every device lists the same Recent imports (users/<uid>/importLog/<id>). */

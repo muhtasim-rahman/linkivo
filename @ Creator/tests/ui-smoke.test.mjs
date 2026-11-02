@@ -159,7 +159,7 @@ test('shell: builds sidebar and bar, marks the active tab, slides the ring marke
   assert.equal($('#bar [aria-current="page"]').dataset.tab, 'random'); assert.equal($('.bar-marker').style.getPropertyValue('--l'), '1'); assert.equal($('.bar-marker').style.getPropertyValue('--r'), '1'); assert.equal($('.bar-marker').dataset.hidden, 'false');
   handlers.route({ route: { tab: 'import', shell: true } }); assert.equal($('.bar-marker').dataset.hidden, 'true', 'filled Import button needs no ring');
   handlers.route({ route: { tab: 'x', shell: false } }); assert.equal($('#app').dataset.chrome, 'none');
-  assert.equal($('.pf-mail').textContent, 'tu******99@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
+  assert.equal($('.pf-mail').textContent, 'tu*****9@gmail.com'); assert.equal($('.pf-name').textContent, 'Turzo');
   $('.theme-row').click(); await tick(5); assert.equal(prefs.get('ui.theme'), 'dark'); prefs.remove('ui.theme');
   $('.sb-slotbtn').click(); assert.equal($('#app').dataset.collapsed, 'true'); assert.equal(prefs.get('ui.sidebarCollapsed'), true);   // v2.4.1: ONE button collapses and expands
   assert.equal($('.sb-slotbtn').getAttribute('aria-label'), 'Expand sidebar');
@@ -192,7 +192,7 @@ test('pages mount without errors: stub, menu, profile, reactivate, login (guest 
   assert.match(container.textContent, /Guest/, 'profile shows guest mode');
   await router.navigate('/library'); assert.match(container.textContent, /Your data is not ready/, 'without a data layer the Library shows a designed state, not a crash');
   setSession({ mode: 'account', user: { uid: 'u1', email: 'abcdefgh@x.io', name: 'Abc', emailVerified: false, providers: ['password'] }, status: 'active' });
-  await router.navigate('/profile'); assert.match(container.textContent, /ab\*{6}gh@x\.io/);
+  await router.navigate('/profile'); assert.match(container.textContent, /ab\*{5}h@x\.io/);
   setSession({ status: 'deleted' }); await router.reevaluate(); assert.equal(location.pathname, '/reactivate'); assert.match(container.textContent, /scheduled for deletion/);
   setSession({ mode: 'none', user: null, status: 'active' }); await router.reevaluate();
   assert.equal(location.pathname, '/login'); assert.ok($('.auth-panel')); assert.equal($('.auth-title').textContent, 'Welcome back');

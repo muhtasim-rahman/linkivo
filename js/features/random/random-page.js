@@ -59,6 +59,10 @@ export async function mount(container, ctx) {
     h('div', { class: 'rnd-side' }, panel.el));   // v2.4.3: no 'Folders and filters' title (PC alignment); the card on the left already shows how many links are in play
   const stage = h('div', { class: 'rnd-stage', hidden: true });
   const strip = h('div', { class: 'rnd-strip', hidden: true, role: 'status' });
+  // v2.4.4 (owner): wherever text or buttons change, the new content eases in (a short fade and rise) instead of cutting. The three boxes restart the animation on each repaint.
+  const restart = (box) => { box.classList.remove('rnd-swap'); void box.offsetWidth; box.classList.add('rnd-swap'); };
+  for (const box of [hubCard, recent, strip]) { const orig = box.replaceChildren.bind(box); box.replaceChildren = (...n) => { orig(...n); restart(box); }; }
+  let autoSig = '';
   const page = h('div', { class: 'page rnd is-wide page-enter' },
     h('header', { class: 'page-head rnd-head' }, h('h1', { class: 'page-title', text: 'Random Discover' }), settingsShortcut('random', 'Random settings')),
     hub, stage, strip);   // the strip comes after the stage: at the bottom on phones (css puts it on top on wide screens)
@@ -201,8 +205,10 @@ export async function mount(container, ctx) {
   function paintAuto() {
     const el = strip.querySelector('#rnd-auto'); if (!el) return;
     const btn = (ic, label, fn) => h('button', { type: 'button', class: 'rnd-ab', 'aria-label': label, 'data-tip': label, on: { click: fn } }, icon(ic, { size: 18 }));
-    if (!timer) { el.replaceChildren(h('span', { class: 'rnd-s-off', text: 'Auto next off' }), btn('play', 'Start automatic next link', userStart)); return; }
+    const sig = !timer ? 'off' : paused ? 'paused' : 'run', changed = sig !== autoSig; autoSig = sig;   // the countdown ticks without animating; a state change eases in
+    if (!timer) { el.replaceChildren(h('span', { class: 'rnd-s-off', text: 'Auto next off' }), btn('play', 'Start automatic next link', userStart)); if (changed) restart(el); return; }
     el.replaceChildren(h('span', { class: 'rnd-s-time', text: paused ? `Paused at ${auto}s` : `Next in ${auto}s` }), paused ? btn('play', 'Resume', resumeAuto) : btn('pause', 'Pause', pauseAuto), btn('stop', 'Stop automatic next link', userStop));
+    if (changed) restart(el);
   }
   // a touch inside the preview means the person is reading: the countdown pauses (Resume continues it, Stop ends it)
   stage.addEventListener('pointerdown', () => { if (timer && !paused) pauseAuto(); });

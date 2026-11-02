@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.4.3';
+const VERSION = '2.4.4';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -78,6 +78,7 @@ const PRECACHE = [
   '/js/core/clear-local.js',
   '/js/core/clipboard-watch.js',
   '/js/core/config.js',
+  '/js/core/countries.js',
   '/js/core/css-loader.js',
   '/js/core/device-info.js',
   '/js/core/devices.js',
@@ -178,6 +179,7 @@ const PRECACHE = [
   '/js/features/preview/preview-model.js',
   '/js/features/preview/preview-page.js',
   '/js/features/preview/preview-tabs.js',
+  '/js/features/profile/country-picker.js',
   '/js/features/profile/image-crop.js',
   '/js/features/profile/profile-edit.js',
   '/js/features/random/random-filters.js',
@@ -205,6 +207,7 @@ const PRECACHE = [
   '/js/features/shell/history-card.js',
   '/js/features/shell/install-banner.js',
   '/js/features/shell/install-card.js',
+  '/js/features/shell/pages/admin-reset-page.js',
   '/js/features/shell/pages/menu-page.js',
   '/js/features/shell/pages/not-found-page.js',
   '/js/features/shell/pages/profile-page.js',
@@ -223,6 +226,7 @@ const PRECACHE = [
   '/js/ui/admin-badge.js',
   '/js/ui/confirm.js',
   '/js/ui/dock.js',
+  '/js/ui/edge-fade.js',
   '/js/ui/empty-state.js',
   '/js/ui/icons.js',
   '/js/ui/image-menu.js',
@@ -241,6 +245,7 @@ const PRECACHE = [
   '/js/ui/shortcut-help.js',
   '/js/ui/skeleton.js',
   '/js/ui/task-chip.js',
+  '/js/ui/thumb.js',
   '/js/ui/toast.js',
   '/js/ui/tooltip.js',
   '/js/ui/virtual-list.js',

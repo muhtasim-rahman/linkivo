@@ -16,6 +16,7 @@ import { getEngine } from '../../core/app-data.js';
 import { plural } from '../../core/format.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { faviconUrl, linkTitle, safeHref, folderTile } from '../library/folder-style.js';
+import { createThumb } from '../../ui/thumb.js';
 import { CATALOG, SECTIONS } from '../settings/catalog.js';
 import { appPages } from './search-pages.js';
 import { staggerIn } from '../../ui/motion.js';
@@ -76,7 +77,7 @@ export async function mount(container, ctx) {
     if (links.length) nodes.push(group('Links', links.length, links.slice(0, st.shown.links).map(({ link: l }) => {
       const f = engine.getFolder(l.fid);
       const a = h('a', { class: 'sp-item', href: tab ? safeHref(l.url) : `/link/${encodeURIComponent(l.id)}`, target: tab ? '_blank' : null, rel: tab ? 'noopener noreferrer' : null, 'data-native': tab ? '' : null, on: { click: (e) => openFrom(e, q) } },
-        h('span', { class: 'sp-fav', 'aria-hidden': 'true' }, h('img', { src: faviconUrl(l.host), alt: '', width: '20', height: '20', loading: 'lazy', referrerpolicy: 'no-referrer', on: { error: (e) => e.target.remove() } })),
+        createThumb({ engine, id: l.id, host: l.host, favicon: faviconUrl(l.host), variant: 'sm' }),   // v2.4.4: thumbnail, else screenshot, else the site icon
         h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(linkTitle(l), ws)), h('span', { class: 'sp-sub' }, marked(l.host || l.url, ws), f ? ` \u00b7 ${f.name}` : '')));
       return li(a);
     }), 'links', st.shown.links));

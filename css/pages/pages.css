@@ -91,7 +91,7 @@
 .avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 18px; height: 18px; overflow: visible; border-radius: 50%; place-items: center; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
 .avatar.is-lg .avatar-admin { width: 22px; height: 22px; }
 html[data-admin='true'] .avatar .avatar-admin { display: grid; }
-.admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
+.admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--admin-chip-bg, var(--accent-soft)); color: var(--admin-chip-fg, var(--accent-text)); font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
 
 /* ---- v2.4.1: Profile sections and the recently opened list ---- */
@@ -102,16 +102,6 @@ html[data-admin='true'] .admin-chip { display: inline-block; }
 
 /* ---- v2.4.2: History card, and the All settings card of the Menu ---- */
 .binrow-ic.is-accent { background: var(--accent-soft); color: var(--accent-text); }
-.sc-card { position: relative; display: grid; gap: var(--s3); padding: var(--s4); border-radius: var(--r-group); overflow: hidden; color: var(--accent-fg); text-decoration: none; background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 62%, #000)); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent); }
-@media (hover: hover) { .sc-card:hover { text-decoration: none; } }
-.sc-gear { position: absolute; right: -14px; top: -16px; opacity: 0.16; pointer-events: none; transform: rotate(-12deg) scale(2.1); transform-origin: top right; }
-.sc-top { position: relative; display: flex; align-items: center; gap: var(--s3); }
-.sc-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 14px; background: rgb(255 255 255 / 0.2); }
-.sc-tx { flex: 1; min-width: 0; display: grid; } .sc-tx strong { font: 700 var(--fs-lg) / 1.2 var(--font-brand); } .sc-tx span { font-size: var(--fs-sm); opacity: 0.88; }
-.sc-chips { position: relative; display: flex; flex-wrap: wrap; gap: 6px; }
-.sc-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 10px; border-radius: 999px; background: rgb(255 255 255 / 0.18); font: 600 var(--fs-xs) var(--font-brand); }
-.sc-card:active { transform: scale(0.985); }
-@media (prefers-reduced-motion: reduce) { .sc-card:active { transform: none; } }
 
 /* ---- v2.4.2: Page not found, centred ---- */
 .nf { display: grid; place-items: center; min-height: 100%; }
@@ -126,3 +116,17 @@ html[data-admin='true'] .admin-chip { display: inline-block; }
 .nf-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: var(--s3); }
 .nf-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--sub); font-weight: 560; text-decoration: none; }
 @media (hover: hover) { .nf-chip:hover { color: var(--text); background: var(--surface-2); text-decoration: none; } }
+
+/* v2.4.4 (owner): the All settings card, calmer: a light blue tinted surface, a compact header and ONE scrollable line of category chips */
+.sc-card { --sc-blue: #3b82f6; display: grid; gap: var(--s2); padding: var(--s3); border-radius: var(--r-group); border: 1px solid color-mix(in srgb, var(--sc-blue) 22%, var(--line)); background: color-mix(in srgb, var(--sc-blue) 8%, var(--surface)); color: var(--text); overflow: hidden; }
+html[data-theme='dark'] .sc-card { --sc-blue: #60a5fa; background: color-mix(in srgb, var(--sc-blue) 11%, var(--surface)); border-color: color-mix(in srgb, var(--sc-blue) 26%, var(--line)); }
+.sc-top { display: flex; align-items: center; gap: var(--s3); min-height: 44px; color: inherit; text-decoration: none; }
+.sc-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 11px; background: color-mix(in srgb, var(--sc-blue) 16%, var(--surface)); color: color-mix(in srgb, var(--sc-blue) 85%, var(--text)); }
+.sc-tx { flex: 1; min-width: 0; display: grid; } .sc-tx strong { font: 650 var(--fs-md) / 1.2 var(--font-brand); } .sc-tx span { font-size: var(--fs-xs); color: var(--sub); }
+.sc-top > svg { color: var(--sub); flex: none; }
+.sc-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; padding: 2px 0; margin-inline: calc(var(--s3) * -1); padding-inline: var(--s3); scroll-padding-inline: var(--s3); }
+.sc-chips::-webkit-scrollbar { display: none; }
+.sc-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border-radius: 999px; scroll-snap-align: start; border: 1px solid color-mix(in srgb, var(--sc-blue) 24%, var(--line)); background: color-mix(in srgb, var(--sc-blue) 9%, var(--surface)); color: var(--text); font-size: var(--fs-sm); font-weight: 560; white-space: nowrap; text-decoration: none; transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease), transform var(--t-micro) var(--ease); }
+.sc-chip svg { color: color-mix(in srgb, var(--sc-blue) 80%, var(--text)); }
+@media (hover: hover) { .sc-chip:hover { background: color-mix(in srgb, var(--sc-blue) 18%, var(--surface)); text-decoration: none; } }
+.sc-chip:active { transform: scale(0.97); }

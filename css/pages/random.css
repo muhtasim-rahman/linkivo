@@ -159,3 +159,23 @@ html[data-rnd] .rnd-head { display: none; }
 @media (min-width: 900px) {
   .rnd-strip.is-float { position: absolute; left: var(--s3); bottom: var(--s3); z-index: 6; order: 0; margin: 0; min-height: 52px; padding: 4px 6px 4px var(--s4); gap: var(--s4); border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-float); }
 }
+
+/* ======================= v2.4.4 (owner) ======================= */
+/* Point range: ONE continuous graph; the part inside the chosen range is coloured; a tip follows the pointer */
+.rg-graph { position: relative; height: 44px; }
+.rg-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.rg-area { fill: var(--line-strong); opacity: 0.55; transition: opacity var(--t-std) var(--ease); }
+.rg-area.is-lit { fill: var(--accent); opacity: 0.6; transition: clip-path var(--t-micro) linear; }
+.rg-cursor { stroke: var(--text); stroke-width: 0.5; stroke-opacity: 0.55; vector-effect: non-scaling-stroke; opacity: 0; transition: opacity var(--t-std) var(--ease); }
+.rg-tip { position: absolute; bottom: calc(100% + 4px); translate: -50% 0; z-index: 3; padding: 4px 8px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow-float); }
+.rg-tip[hidden] { display: none; }
+.rg-bars, .rg-bar { display: none; }   /* ! unused since v2.4.4: the bars became the graph */
+.rg-read { align-items: center; } .rg-note { text-align: center; }
+
+/* everything that changes text or appears eases in (short fade and rise) */
+@keyframes rnd-swap { from { opacity: 0; transform: translateY(5px); } }
+@media (prefers-reduced-motion: no-preference) {
+  .rnd-swap > * { animation: rnd-swap var(--t-std) var(--ease) both; }
+  .rnd-hub:not([hidden]), .rnd-stage:not([hidden]), .rnd-strip:not([hidden]), .rf-none:not([hidden]), .rf-more:not([hidden]), .rnd-info:not([hidden]) { animation: rnd-swap var(--t-std) var(--ease) both; }
+}
+.rnd-s-time, .rnd-s-off, .rnd-s-n, .rnd-ab { transition: opacity var(--t-std) var(--ease), color var(--t-std) var(--ease), background-color var(--t-std) var(--ease); }

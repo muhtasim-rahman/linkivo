@@ -129,3 +129,16 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .pk.is-on .pk-box { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 @media (hover: hover) and (pointer: fine) { .pk-row:hover .pk-box { opacity: 1; } }
 @media (hover: none) { .pk:not(.is-selecting):not(.is-on) .pk-box { pointer-events: none; } }
+
+/* v2.4.4: list thumbnails (js/ui/thumb.js). The site icon is underneath; a saved picture fades in over it. */
+.thb { position: relative; flex: none; display: grid; place-items: center; width: 64px; height: 44px; overflow: hidden; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); }
+.thb.is-sm { width: 48px; height: 34px; border-radius: 8px; } .thb.is-card { width: 100%; height: 100%; border-radius: 0; border: 0; }
+.thb .pk-fav { width: 28px; height: 28px; border: 0; background: transparent; } .thb.is-card .pk-fav { width: 40px; height: 40px; } .thb.is-card .pk-fav img { width: 28px; height: 28px; }
+.thb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--t-std) var(--ease); }
+.thb.has-img .thb-img { opacity: 1; } .thb .pk-fav { transition: opacity var(--t-std) var(--ease); } .thb.has-img .pk-fav { opacity: 0; }
+/* History: the check box sits in the corner of the picture and shows only while selecting (no hover trigger) */
+.pk.is-corner { width: 64px; height: 44px; }
+.pk.is-corner .pk-box { inset: 4px auto auto 4px; width: 22px; height: 22px; border-radius: 7px; opacity: 0; }
+.pk.is-corner.is-selecting .pk-box, .pk.is-corner.is-on .pk-box { opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .pk-row:hover .pk.is-corner:not(.is-selecting):not(.is-on) .pk-box { opacity: 0; pointer-events: none; } }
+.pk.is-corner:not(.is-selecting):not(.is-on) .pk-box { pointer-events: none; }

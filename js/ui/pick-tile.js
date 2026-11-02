@@ -16,8 +16,8 @@ export function faviconFace(host, url, size = 32) {
   return el;
 }
 
-export function pickTile({ face, on = false, selecting = false, label = 'Select', onToggle }) {
+export function pickTile({ face, on = false, selecting = false, corner = false, label = 'Select', onToggle }) {   // v2.4.4: `corner` = the box sits in the top left corner of a picture and shows only while selecting (History)
   const box = h('button', { type: 'button', class: 'pk-box', 'aria-label': label, 'aria-pressed': String(!!on), tabindex: selecting || on ? '0' : '-1',
     on: { click: (e) => { e.preventDefault(); e.stopPropagation(); onToggle && onToggle(); } } }, on ? icon('check', { size: 16 }) : null);
-  return h('span', { class: ['pk', on && 'is-on', selecting && 'is-selecting'] }, face, box);
+  return h('span', { class: ['pk', corner && 'is-corner', on && 'is-on', selecting && 'is-selecting'] }, face, box);
 }

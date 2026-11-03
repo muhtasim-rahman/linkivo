@@ -19,11 +19,34 @@ const LIMITS = { name: 60, bio: 200, country: 60, site: 200, banner: 8, photo: 2
 /** Ten colour templates for the ring around the photo and the admin badge (owner). A custom colour is any #rrggbb. '' = follow the app accent. */
 export const PALETTE = [['#3b82f6', 'Blue'], ['#6366f1', 'Indigo'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#ef4444', 'Red'], ['#f97316', 'Orange'], ['#f59e0b', 'Amber'], ['#22c55e', 'Green'], ['#14b8a6', 'Teal'], ['#64748b', 'Slate']];
 export const isColor = (v) => /^#[0-9a-fA-F]{6}$/.test(v || '');
-/** Puts the profile's look on the page: the admin badge colour is a pair of CSS variables on <html> (the ring is drawn by the profile card itself). */
+/** Black or white, whichever reads better on a #rrggbb background (the small shield on an admin's photo). Pure, tested. */
+export function readableOn(hex) {
+  if (!isColor(hex)) return '#ffffff';
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#111827' : '#ffffff';
+}
+/** v2.5.0 (owner): ONE ring around the photo everywhere (sidebar, menu, settings, profile) and ONE colour for the small shield under an admin's photo. Both are CSS variables on <html>,
+ *  so every avatar follows them at once. No value = the app's own brand gradient / accent. The "Admin" word badge is NOT affected: it always follows the accent colour. */
 export function applyProfileLook(profile, root = document.documentElement) {
-  const c = profile && isColor(profile.adminColor) ? profile.adminColor : '';
-  if (c) { root.style.setProperty('--admin-chip-bg', `color-mix(in srgb, ${c} 20%, var(--surface))`); root.style.setProperty('--admin-chip-fg', `color-mix(in srgb, ${c} 75%, var(--text))`); }
-  else { root.style.removeProperty('--admin-chip-bg'); root.style.removeProperty('--admin-chip-fg'); }
+  const ring = profile && isColor(profile.ring) ? profile.ring : '', c = profile && isColor(profile.adminColor) ? profile.adminColor : '';
+  if (ring) root.style.setProperty('--avatar-ring', ring); else root.style.removeProperty('--avatar-ring');
+  if (c) { root.style.setProperty('--admin-badge-bg', c); root.style.setProperty('--admin-badge-fg', readableOn(c)); }
+  else { root.style.removeProperty('--admin-badge-bg'); root.style.removeProperty('--admin-badge-fg'); }
+  for (const old of ['--admin-chip-bg', '--admin-chip-fg']) root.style.removeProperty(old);   // v2.4.4 names: the word badge no longer changes colour
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "2000-08-10" -> "10 Aug 2000" (the owner's format; written by hand because the browser's short month names differ, for example "Sept"). '' when it is not a date. Pure, tested. */
+export function formatBirthday(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); if (!m) return '';
+  const mo = Number(m[2]), d = Number(m[3]); if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+  return `${d} ${MONTHS[mo - 1]} ${m[1]}`;
+}
+/** The name and photo to SHOW for a signed-in user: what the person saved in the profile (kept on this device) wins over the sign-in provider's own picture. Used by the sidebar,
+ *  the Menu, Settings and the Profile page, so a new photo appears in all of them. */
+export function shownUser(user) {
+  if (!user) return { name: '', photo: '' };
+  const p = cachedProfile(user.uid);
+  return { name: p.name || user.name || '', photo: p.photo || user.photo || '' };
 }
 /** Keeps only known fields, trimmed and cut to the length the rules allow; an empty text becomes null (= remove the field). */
 export function cleanProfile(patch) {

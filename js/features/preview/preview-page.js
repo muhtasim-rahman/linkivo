@@ -44,7 +44,7 @@ export async function mount(container, ctx) {
   const engine = getEngine(), router = ctx.router;
   await loadCss('/css/pages/preview.css');
   const lid = ctx.params.lid;
-  const emb = ctx.embedded || null;
+  const emb = ctx.embedded || null;   // embedded.onGone (v2.5.0): Random picks the next link when this one is deleted, instead of closing
   setInRandom(!!(emb && emb.src === 'random'));   // v2.4.2: Microlink and thum.io follow the Random switches while Random shows this preview
   // v2.4.1 (owner): Back always lands in the folder the link lives in: the browser's own Back when we came from a page of this app (related links replace the entry,
   // so one step is enough), otherwise (a pasted address, a reload) straight into the link's folder, and only then the Library.
@@ -101,7 +101,14 @@ export async function mount(container, ctx) {
         { label: mlEnabled() ? `Turn off Microlink (${q.left}/${q.limit} left)` : 'Turn on Microlink', icon: 'zap', onSelect: () => { prefs.set('meta.microlink', !mlEnabled()); toast(mlEnabled() ? 'Microlink is on.' : 'Microlink is off.'); } },
         { label: prefs.get('preview.thum', true) !== false ? `Turn off thum.io${s.limit === null ? '' : ` (${s.left}/${s.limit} left)`}` : 'Turn on thum.io', icon: 'monitor', onSelect: () => { prefs.set('preview.thum', prefs.get('preview.thum', true) === false); toast(prefs.get('preview.thum', true) !== false ? 'thum.io is on.' : 'thum.io is off.'); } }
       ];
-      const items = linkMenuItems({ engine, link: link() }).filter((it) => !SHOWN.has(it.label));
+      let items = linkMenuItems({ engine, link: link() }).filter((it) => !SHOWN.has(it.label));
+      // v2.5.0 (owner review): the Random preview keeps what helps while you browse (block from Random, tags, read later, check, delete, and a way to the folder) and drops the
+      // organising actions (pin, move, copy to a folder), which belong to the Library. The normal Preview keeps the full list.
+      if (emb && emb.src === 'random') {
+        const DROP = new Set(['Pin to top', 'Unpin', 'Move to folder', 'Copy to folder']), block = items.find((it) => /Random$/.test(it.label));
+        const l1 = link(), where = l1 && l1.fid && engine.getFolder(l1.fid) ? { label: 'Show in its folder', icon: 'folder', onSelect: () => router.navigate(`/folder/${encodeURIComponent(l1.fid)}`) } : null;
+        items = [...(block ? [block, { separator: true }] : []), ...items.filter((it) => it !== block && !DROP.has(it.label)), ...(where ? [{ separator: true }, where] : [])];
+      }
       if (!wide) items.unshift({ label: 'Refresh data', icon: 'refresh', onSelect: () => load(true) }, { separator: true });
       more._m = openMenu(more, tidy([...items, { separator: true }, ...svc]));
     });
@@ -170,7 +177,7 @@ export async function mount(container, ctx) {
   paintHead(); paintBar(); paintSide();
   choose(firstTab(avail()), false);
   recordOpen(link(), emb ? emb.src : 'preview');   // v2.4.1: every preview is one History entry (repeats within seconds count once)
-  const off = engine.subscribe((e) => { if (e.type === 'change' && (e.links || []).includes(lid)) { if (!link() || link().del) { back(); return; } paintHead(); paintBar(); if (tab === 'details') panelNode?.update?.({ link: link(), meta }); } });   // v2.3.2: points and flags update live in Details
+  const off = engine.subscribe((e) => { if (e.type === 'change' && (e.links || []).includes(lid)) { if (!link() || link().del) { if (emb && emb.onGone) emb.onGone(); else back(); return; } paintHead(); paintBar(); if (tab === 'details') panelNode?.update?.({ link: link(), meta }); } });   // v2.3.2: points and flags update live in Details
   load();
 
   return () => { disposed = true; setInRandom(false); off(); offFetch(); delete document.documentElement.dataset.pv; detachTabs(); document.removeEventListener('fullscreenchange', onFsChange); panelNode?.dispose?.(); if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };

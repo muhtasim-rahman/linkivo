@@ -68,3 +68,12 @@ If the console answers "An error occurred updating action URL", check Authentica
 2. `firebase deploy --only database` (the rules gained one field, `linkMeta/<uid>/<id>/nf`) and `firebase deploy --only hosting`.
 3. Cloudflare dashboard > Workers & Pages > your Worker > Edit code: replace everything with `@ Creator/worker/worker.js` (Worker 2.3.0 adds `POST /check`), then Deploy. Open `<worker-url>/health`: it must show `"version":"2.3.0"`. Without this step Preview and Search work, but "Check links" shows "The Cloudflare Worker is out of date".
 4. Hard reload the app once (Ctrl+Shift+R) so the new service worker takes over. On Android, open the installed app once; the Share sheet lists Linkivo after the manifest refreshes (this can take a few minutes or a reinstall).
+
+## I. v2.5.0 deploy steps (owner)
+1. Secrets (done): `PIN_PEPPER` (a long random text; keep it, changing it later makes every existing PIN stop working and everyone must use Forgot PIN) and `FIREBASE_SERVICE_ACCOUNT` (the whole JSON). Both are type Secret in Cloudflare > Workers & Pages > linkivo > Settings > Variables and Secrets. Delete the downloaded `.json` afterwards; `.gitignore` also blocks `*firebase-adminsdk*.json`.
+2. Cron (done): Worker > Settings > Triggers > Cron Triggers: `* * * * *`.
+3. Paste `@ Creator/worker/worker.js` (it is one complete file) into the Worker editor, replace everything, Deploy.
+4. Open `<your worker address>/health`: it must show `"version":"2.5.0"` and `"security":{"pepper":true,"serviceAccount":true}`. If a value is false, that secret name is missing or misspelled.
+5. `firebase deploy --only hosting`. The database rules did not change in v2.5.0.
+6. Hard reload twice (the service worker updates itself), then Settings > Security > App lock.
+

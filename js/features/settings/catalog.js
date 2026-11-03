@@ -21,6 +21,7 @@ export const SECTIONS = [
   { id: 'preview', label: 'Preview', desc: 'The link preview: tabs, related links, metadata and screenshot services', icon: 'globe' },
   { id: 'history', label: 'History', desc: 'Where the list of opened links is kept and for how long', icon: 'history' },
   { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
+  { id: 'security', label: 'Security', desc: 'App lock, PIN and auto-lock', icon: 'lock' },
   { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
   { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
   { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
@@ -96,6 +97,9 @@ export const CATALOG = [
   { id: 'impSpeed', section: 'data', type: 'seg', key: 'import.speed', label: 'Import speed', desc: 'Fast writes more groups of 100 links at once. Gentle is kinder to a weak connection.', default: 'normal', options: opt(['gentle', 'Gentle'], ['normal', 'Normal'], ['fast', 'Fast']), keywords: ['import', 'speed', 'parallel'], since: '2.2.0' },
   { id: 'exportData', section: 'data', type: 'custom', custom: 'exportData', label: 'Export library', keywords: ['export', 'backup', 'download', 'json', 'csv', 'excel'], since: '2.2.0' },
   { id: 'recycleBin', section: 'data', type: 'custom', custom: 'recycleBin', top: true, label: 'Recycle Bin', keywords: ['deleted', 'restore', 'trash', 'bin'], since: '2.2.0' },
+
+  // ---- Security (v2.5.0)
+  { id: 'appLock', section: 'security', type: 'custom', custom: 'security', label: 'App lock', keywords: ['pin', 'lock', 'passcode', 'security', 'auto-lock', 'privacy', 'password', 'unlock'], since: '2.5.0' },
 
   // ---- Account and sync
   { id: 'accountInfo', section: 'account', type: 'custom', custom: 'account', label: 'Account', keywords: ['sign in', 'log in', 'log out', 'email', 'guest', 'password', 'verification'], since: '2.1.0' },

@@ -86,6 +86,8 @@ export async function resendVerification() {
   recordSend('verify', auth.currentUser.uid);
 }
 export async function getIdToken() { return fb && fb.auth.currentUser ? fb.auth.currentUser.getIdToken() : null; }
+/** v2.5.0: a brand new ID token (after reauthenticate) so the Worker sees the NEW sign-in time (forgot PIN and account deletion need one from the last 5 minutes). */
+export async function freshIdToken() { return fb && fb.auth.currentUser ? fb.auth.currentUser.getIdToken(true) : null; }
 
 /** Fresh sign-in proof for sensitive server actions (v2.5.0). Password users pass their password; Google users get a popup. */
 export async function reauthenticate(password) {

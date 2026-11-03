@@ -40,8 +40,10 @@ test('profile: ten colours, six banners, new fields are cleaned, the admin badge
   assert.equal(P.PALETTE.length, 10); assert.equal(P.BANNERS.length, 6); for (const n of [1, 2, 3, 4, 5, 6]) assert.ok(fs.existsSync(new URL(`assets/art/banner-${n}.svg`, root)));
   assert.deepEqual(P.cleanProfile({ ring: '#ff0000', adminColor: 'red', birthday: '2008-03-05', city: ' Dhaka ' }), { ring: '#ff0000', birthday: '2008-03-05', city: 'Dhaka' });
   assert.deepEqual(P.cleanProfile({ birthday: 'yesterday', ring: '' }), { ring: null });
-  const el = document.createElement('div'); P.applyProfileLook({ adminColor: '#8b5cf6' }, el); assert.match(el.style.getPropertyValue('--admin-chip-bg'), /8b5cf6/);
-  P.applyProfileLook({}, el); assert.equal(el.style.getPropertyValue('--admin-chip-bg'), '');
+  const el = document.createElement('div'); P.applyProfileLook({ adminColor: '#8b5cf6' }, el); assert.equal(el.style.getPropertyValue('--admin-badge-bg'), '#8b5cf6');   // v2.5.0: the colour is for the shield on the photo, not the word badge
+  assert.equal(el.style.getPropertyValue('--admin-chip-bg'), '');
+  P.applyProfileLook({ ring: '#ef4444' }, el); assert.equal(el.style.getPropertyValue('--avatar-ring'), '#ef4444'); assert.equal(el.style.getPropertyValue('--admin-badge-bg'), '');
+  P.applyProfileLook({}, el); assert.equal(el.style.getPropertyValue('--avatar-ring'), '');
 });
 
 test('edit profile: changes are detected; the sheet asks before discarding; the crop no longer opens a second popup', async () => {
@@ -79,7 +81,7 @@ test('menu settings card: one scrollable line of chips built from the sections, 
 test('profile page: explore heading, ring, share card is one button, switch icon in the header, wide layout, library icon hidden on phones', () => {
   const src = read('js/features/shell/pages/profile-page.js'), css = read('css/pages/profile.css');
   assert.match(src, /text: 'Explore'/); assert.match(src, /role: 'button', tabindex: '0', 'aria-label': 'Share Linkivo'/); assert.match(src, /switchSlot/); assert.match(src, /pf2-hl-big/);
-  assert.match(css, /\.page\.pf2 \{ max-width: min\(1280px/); assert.match(css, /\.pf2-share-t \{ display: none; \}/); assert.match(css, /outline: 3px solid var\(--ring/);
+  assert.match(css, /\.page\.pf2 \{ max-width: min\(1280px/); assert.match(css, /\.pf2-share-t \{ display: none; \}/); assert.doesNotMatch(css, /outline: 3px solid var\(--ring/);   // v2.5.0: ONE ring, the avatar's own (nav.css --avatar-ring)
   assert.match(read('js/features/library/library-page.js'), /is-wide-only/); assert.match(read('css/core/base.css'), /\.is-wide-only \{ display: none !important; \}/);
 });
 
@@ -97,5 +99,5 @@ test('rules and settings: new profile fields, the thumbnail switch, versions', a
   for (const k of ['headline', 'city', 'birthday', 'languages', 'interests', 'pronouns', 'ring', 'adminColor']) assert.ok(prof[k] && /auth\.uid === \$uid/.test(prof[k]['.write']), k);
   assert.equal(fs.readFileSync(new URL('@ Creator/rules/database.rules.json', root), 'utf8'), JSON.stringify(buildRules(), null, 2) + '\n');
   const { CATALOG } = await import('../../js/features/settings/catalog.js'); const e = CATALOG.find((x) => x.id === 'uiThumbs'); assert.ok(e && e.key === 'ui.thumbs' && e.section === 'library' && e.default === true);
-  assert.match(read('app.json'), /"version": "2\.4\.4"/); assert.match(read('sw.js'), /VERSION = '2\.4\.4'/); assert.match(read('js/core/app-info.js'), /version: '2\.4\.4'/);
+  assert.match(read('app.json'), /"version": "2\.\d+\.\d+"/); assert.match(read('sw.js'), /VERSION = '2\.\d+\.\d+'/); assert.match(read('js/core/app-info.js'), /version: '2\.\d+\.\d+'/);   // v2.5.0: no pinned number
 });

@@ -91,3 +91,10 @@ Linkivo/
 
 ## Added in v2.4.4
 - `js/ui/thumb.js` (list pictures), `js/ui/edge-fade.js` (fade helper over `scroll-fade.js`), `js/core/countries.js`, `js/features/profile/country-picker.js`, `js/features/shell/pages/admin-reset-page.js`, `assets/art/banner-5.svg`, `banner-6.svg`, `texture-links.svg`, `@ Creator/tests/v244.test.mjs`.
+| v2.5.0 | |
+| `js/core/lock.js` `lockout.js` `crypto-box.js` | the app lock service (account PIN via the Worker, guest PIN on the device), wait times, the key derived from the PIN |
+| `js/engine/encrypted-db.js` | wraps the device database so records are stored encrypted while the lock is on |
+| `js/features/lock/*` | pin-pad, pin-sheet (ask/create a PIN, error words), lock-screen, lock-controller (boot gate, auto-lock, sensitive gate), lock-actions (turn on/off, change PIN), lock-settings (Settings > Security rows), forgot-pin |
+| `css/pages/lock.css` | lock screen and keypad |
+| `@ Creator/tests/v250*.test.mjs` `helpers/fake-firebase.mjs` | v2.5.0 tests and the in-memory fake of Firebase, Google token and Identity Toolkit |
+

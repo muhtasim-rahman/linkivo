@@ -1,0 +1,32 @@
+feat(v2.5.0): app lock, forgot PIN, account deletion and recovery, Worker security (PARTIAL), profile and Random fixes
+
+Security and account (slices 1, 2, 3, 5, 6, 7, 10 of the plan):
+- Worker 2.5.0: POST /pin/set /pin/verify /pin/change /pin/reset, /lock/config /lock /lock/extend, /account/summary /account/delete /account/reactivate, /jobs/enqueue /jobs/cancel,
+  and the cron (background jobs every run, purge of accounts after 15 days every half hour). PIN = HMAC with the PIN_PEPPER secret, lockout 30 s / 5 min / 1 h / 6 h,
+  service-account access to the database over REST. /health reports whether both secrets exist (booleans only).
+- App lock for accounts (server session checked by the database rules) and for guests (PIN checked on the device). Every page load starts locked. Lock screen with PIN pad,
+  lockout countdown, Forgot PIN and Log out. Auto-lock, lock when leaving the app (device setting), Lock now, keep-alive, another device locking the account.
+- Device copy of the library encrypted with a key derived from the PIN (AES-GCM, kept in memory only); turn on/off and PIN change re-encrypt in place.
+- Sensitive-action gate: requireSensitive() now asks for the PIN with a 5 minute window.
+- Forgot PIN: account = sign in again, new PIN, data untouched; guest = erase local data (clearly warned).
+- Account deletion: the email request is replaced by the Worker (marked deleted, 15 days, reactivate page, daily purge). Profile page has Security and Delete account links.
+- Settings > Security section. Database rules unchanged (tests added, matrix section v2.5.0).
+
+Profile and fixes (owner list on v2.4.4):
+- Edit profile redesigned: live preview of the card, photo is the upload button (hover icon, menu), one ring colour used by every avatar, admin shield colour separate from the Admin word badge,
+  banner row no longer jumps or stops short, fields no longer inside labels (typing on phones), pronouns removed.
+- Profile card order: bio, website, location with flag picture, birth date as 10 Aug 2000, languages, Interests with See more, UID last.
+- New photo, name, ring and shield colour appear in the sidebar, Menu and Settings at once and after reload.
+- Random: deleting the open link opens the next one; Random preview menu keeps useful actions and adds Show in its folder.
+- .gitignore: zip files in the project root and Firebase admin key files.
+
+Not in this version (v2.5.1): vault, guest-to-account sync, background-job hand-over button.
+
+Removed files:
+- none
+
+Owner actions:
+- Paste @ Creator/worker/worker.js into the Cloudflare Worker (replace everything) and Deploy. Secrets PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT and the cron trigger "* * * * *" are already added.
+- Open <worker-url>/health: expect version 2.5.0 and security pepper true, serviceAccount true.
+- firebase deploy --only hosting (rules did not change).
+- Delete the downloaded service-account .json file.

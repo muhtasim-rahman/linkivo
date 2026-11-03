@@ -88,10 +88,10 @@
 
 /* ---- v2.3.2: admin badge. <html data-admin> is set by core/admin.js for accounts listed in `admins`. ---- */
 .avatar { position: relative; overflow: visible; }
-.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 18px; height: 18px; overflow: visible; border-radius: 50%; place-items: center; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
+.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 18px; height: 18px; overflow: visible; border-radius: 50%; place-items: center; background: var(--admin-badge-bg, var(--accent)); color: var(--admin-badge-fg, var(--accent-fg)); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
 .avatar.is-lg .avatar-admin { width: 22px; height: 22px; }
 html[data-admin='true'] .avatar .avatar-admin { display: grid; }
-.admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--admin-chip-bg, var(--accent-soft)); color: var(--admin-chip-fg, var(--accent-text)); font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
+.admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text);   /* v2.5.0: the word badge always follows the accent */ font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
 
 /* ---- v2.4.1: Profile sections and the recently opened list ---- */

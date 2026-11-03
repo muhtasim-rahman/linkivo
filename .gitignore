@@ -8,12 +8,16 @@
 
 # secrets: never commit (keys live only in Cloudflare/Firebase consoles)
 serviceAccount*.json
+*firebase-adminsdk*.json
 *-service-account*.json
 *.pem
 *.key
 .env
 .env.*
 .dev.vars
+
+# release zips left in the project root (extracted zips are often committed by mistake; the zips belong in @ Versions)
+/*.zip
 
 # tooling / local output
 node_modules/

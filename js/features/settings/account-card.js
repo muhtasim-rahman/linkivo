@@ -17,6 +17,7 @@ import { confirmDialog } from '../../ui/confirm.js';
 import { resendVerification, linkGoogle, unlinkGoogle, friendlyAuthError, hasPassword, emailsDiffer } from '../auth/auth-service.js';
 import { requireSensitive } from '../../core/sensitive.js';
 import { logOut, avatar } from '../shell/shell-parts.js';
+import { shownUser } from '../../core/profile-data.js';
 import { openChangePassword, openSetPassword, openChangeEmail } from './account-dialogs.js';
 
 const row = (label, desc, end) => h('div', { class: 'row' }, h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
@@ -46,8 +47,8 @@ export function accountRows({ router, rerender = () => {} }) {
     b.classList.remove('is-loading');
   } } }, icon('refresh', { size: 18 })) : null;
   const switchBtn = h('button', { type: 'button', class: 'btn-icon is-sm', 'aria-label': 'Switch profile', 'data-tip': 'Switch profile', on: { click: () => import('../shell/switch-account.js').then((m) => m.openSwitchAccount(router)) } }, icon('users', { size: 18 }));
-  const head = h('div', { class: 'row acc-head' }, avatar(u.name, true, u.photo, true),
-    h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: u.name }), h('span', { class: 'row-desc', text: maskEmail(u.email) })),
+  const head = h('div', { class: 'row acc-head' }, avatar(shownUser(u).name, true, shownUser(u).photo, true),
+    h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: shownUser(u).name }), h('span', { class: 'row-desc', text: maskEmail(u.email) })),
     h('span', { class: 'row-end' }, h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => router.navigate('/profile') } }, 'View profile'), switchBtn, syncBtn));   // v2.4.2 (owner): Switch profile icon beside View profile
 
   // 2. verification: green tick when verified

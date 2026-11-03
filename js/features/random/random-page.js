@@ -146,7 +146,8 @@ export async function mount(container, ctx) {
       h('span', { class: 'rnd-fab-sep', 'aria-hidden': 'true' }),
       h('button', { type: 'button', class: 'rnd-fab-b', 'aria-label': 'Filters', 'data-tip': 'Filters', on: { click: openFilters } }, icon('filter', { size: 20 })),
       h('button', { type: 'button', class: 'rnd-fab-b', 'aria-label': 'Random options', 'data-tip': 'Random options', on: { click: openOptions } }, icon('settings', { size: 20 })));
-    const embedded = { src: 'random', onClose: showHub, bar: () => [], float: () => fab };   // v2.4.2: the action bar keeps its normal single line
+    // v2.5.0 (owner): deleting the link that is open in Random does not close the preview: the next random link opens (onGone). Only when nothing is left does it return to the hub.
+    const embedded = { src: 'random', onClose: showHub, onGone: () => { toast('Link deleted. Here is the next one.', { duration: 2200 }); next(); }, bar: () => [], float: () => fab };   // v2.4.2: the action bar keeps its normal single line
     stopPreview = await m.mount(stage, { params: { lid }, query: {}, router, embedded });
     fabEl = fab; paintStrip(); placeStrip(); paintRecent(); startAuto();
   }

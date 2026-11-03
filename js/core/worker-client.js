@@ -20,7 +20,7 @@ import { rescueMeta, isWeak } from './meta-fallback.js';
 // 6 per call (v2.1.2): every Worker call has its own budget of 50 subrequests; 25 URLs in one call starved each other and many came back empty.
 export const META_BATCH = 6;
 /** The Worker version this app build expects. A lower number means the owner has not pasted the newest worker.js yet. */
-export const EXPECTED_WORKER = '2.3.0';   // v2.3.0: /check (dead-link checker) arrived in Worker 2.3.0
+export const EXPECTED_WORKER = '2.5.0';   // v2.5.0: PIN, sessions, account and cron routes arrived in Worker 2.5.0 (2.3.0 added /check)
 const vnum = (v) => String(v || '0').split('.').map((n) => parseInt(n, 10) || 0);
 export function isWorkerOutdated(version) { const a = vnum(version), b = vnum(EXPECTED_WORKER); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); } return false; }
 let tokenProvider = async () => null;
@@ -35,10 +35,12 @@ export async function uploadImage(base64, name) {
 }
 /** Best effort: the old photo is removed from imgbb. Never throws. */
 export async function deleteImage(deleteUrl) { try { const { data } = await call('/img/delete', { body: { deleteUrl }, timeout: 20000 }); return !!(data && data.deleted); } catch { return false; } }
+/** v2.5.0: the secure routes of the Worker (PIN, lock, account, jobs). Resolves with the answer's JSON; errors carry `status`, `code` (wrong_pin, locked_out, locked, reauth_required ...), `retryAfter`, `attemptsLeft`. */
+export const securePost = async (path, body = {}) => (await call(path, { body, timeout: 20000, skipLimit: true })).data;
 export const setTokenProvider = (fn) => { tokenProvider = fn || (async () => null); };
 
-async function call(path, { method = 'POST', body, timeout = 15000 } = {}) {
-  const wait = limiter.take();
+async function call(path, { method = 'POST', body, timeout = 15000, skipLimit = false } = {}) {
+  const wait = skipLimit ? 0 : limiter.take();   // v2.5.0: PIN and account calls never queue behind the metadata limiter
   if (wait > 0) await sleep(Math.min(wait, 8000));
   const headers = { Accept: 'application/json' };
   if (body) headers['Content-Type'] = 'application/json';
@@ -51,7 +53,7 @@ async function call(path, { method = 'POST', body, timeout = 15000 } = {}) {
     let data = null;
     try { data = await res.json(); } catch { /* non-JSON error page */ }
     const ms = Math.round(performance.now() - t0);
-    if (!res.ok) { const err = new Error((data && data.error) || `HTTP ${res.status}`); err.status = res.status; err.retryAfter = Number(res.headers.get('Retry-After')) || 0; throw err; }
+    if (!res.ok) { const err = new Error((data && data.error) || `HTTP ${res.status}`); err.status = res.status; err.retryAfter = Number(res.headers.get('Retry-After')) || (data && data.retryAfter) || 0; err.code = (data && data.error) || ''; err.attemptsLeft = data && data.attemptsLeft; throw err; }
     return { data, ms };
   } catch (e) {
     if (e.name === 'AbortError') { const t = new Error('timeout'); t.status = 0; throw t; }

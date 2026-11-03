@@ -12,7 +12,7 @@
  *            optional: export async function refresh(ctx) -> reload the page's data in place (pull-to-refresh, v2.1.3). Only routes with
  *            `refresh: true` take part; the page is NOT re-mounted, no splash, no reload.
  * API:     compileRoutes(table) resolveGuard(route, session) createRouter(options) -> router
- *   router: start() navigate(path, {from}) back() reevaluate() refreshCurrent() canRefresh() current() destroy() on(event, fn)   events: 'route' 'mounted'
+ *   router: start() navigate(path, {from}) back() reevaluate() suspend() refreshCurrent() canRefresh() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers, handlePop } from './nav-stack.js';   // v2.3.1: handlePop lets Back close an open overlay first
@@ -165,6 +165,9 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     navigate(path, opts = {}) { return go(path, { from: current ? current.path : null, ...opts }); },
     back() { history.back(); },
     reevaluate() { return go(current ? fullPath() : location.pathname, { force: true }); },
+    /** v2.5.0 (app lock): removes the page on screen from the DOM at once (nothing of the library may stay in it while the app is locked). The path is kept: reevaluate() after the
+     *  unlock mounts the same page again. Loads that are still running are cancelled. */
+    suspend() { ++seq; unmountCurrent(); if (current) current.unmount = null; resetLayers(); container.replaceChildren(); },
     /** Does the page on screen take part in pull-to-refresh? (route flag `refresh: true`) */
     canRefresh() { return !!(current && current.route.refresh === true); },
     /** In-app refresh for pull-to-refresh: asks the page module to reload its own data. Resolves 'unsupported' | 'nothing' | 'refreshed' | 'error'. */

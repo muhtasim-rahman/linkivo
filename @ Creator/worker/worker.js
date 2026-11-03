@@ -22,14 +22,21 @@
  * Free-plan limits (verified 2026-10-22 on developers.cloudflare.com/workers/platform/limits): 100,000 requests/day, 10 ms CPU per
  * request, 50 subrequests per request. Budget: 30 per call, split fairly between the URLs of the call (a URL never uses more than 6).
  *
- * Secrets: none are needed in v2.1.2. PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT arrive with v2.5.0 and live only in Cloudflare.
+ *   POST /pin/set /pin/verify /pin/change /pin/reset, /lock/config /lock /lock/extend   v2.5.0: PIN, unlock sessions, auto-lock (token required, never in guests)
+ *   POST /account/summary /account/delete /account/reactivate                           v2.5.0: account lifecycle (delete = marked, purged after 15 days by the cron)
+ *   POST /jobs/enqueue /jobs/cancel   v2.5.0: hand a title fetch to the cron so it continues while the app is closed
+ *   cron  every minute (Settings > Triggers > Cron Triggers: * * * * *): background jobs, and every half hour the purge of expired accounts
+ *
+ * Secrets (Cloudflare > Settings > Variables and Secrets, type Secret; never in this file): PIN_PEPPER (long random string), FIREBASE_SERVICE_ACCOUNT (the service-account JSON), IMGBB_KEY (v2.4.3).
  * Nothing in this file is secret; the Firebase project id below is public.
  */
+// 2.5.0: PIN and unlock sessions (/pin/*, /lock*), account deletion and recovery (/account/*), background enrichment (/jobs/*) and the cron (scheduled). They need the secrets PIN_PEPPER and
+//        FIREBASE_SERVICE_ACCOUNT; without them those routes answer 503 not_configured and /meta, /check, /whoami, /img work as before.
 // 2.4.3: adds POST /img/upload and POST /img/delete (profile photo on imgbb, key in the secret IMGBB_KEY). /meta and /check are unchanged.
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.4.3';
+const VERSION = '2.5.0';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -597,6 +604,327 @@ function takeTokens(key, cost, { capacity, perMs }, now = nowMs()) {
   return { ok: false, retryAfter: Math.max(1, Math.ceil(((cost - b.tokens) / capacity) * (perMs / 1000))) };
 }
 
+/* ------------------------------------------------------------------------------------------------------------- v2.5.0: security and account (PIN, unlock sessions, account lifecycle, cron) */
+// Everything below needs the two Cloudflare secrets (see SETUP-GUIDE section D): PIN_PEPPER and FIREBASE_SERVICE_ACCOUNT. Without them these routes answer
+// 503 "not_configured" and nothing else in the Worker changes. The secrets never leave Cloudflare, never appear in a response and are never logged.
+const SEC = {
+  dbUrl: 'https://linkivo-default-rtdb.firebaseio.com',
+  tokenUrl: 'https://oauth2.googleapis.com/token',
+  scopes: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/cloud-platform',   // verified 2026-11-01: the first two are Google's scopes for the database REST API, cloud-platform for Identity Toolkit
+  authApi: `https://identitytoolkit.googleapis.com/v1/projects/${CONFIG.firebaseProject}`,
+  sessionDefaultMs: 12 * 3600000,      // "never auto-lock" still ends after 12 hours; the app extends a session while it is in use
+  freshAuthSec: 300,                   // forgot PIN and account deletion need a sign-in made in the last 5 minutes
+  deleteAfterMs: 15 * 86400000,
+  purgePerRun: 3, jobUidsPerRun: 3, jobLinksPerRun: 3, maxJobIds: 500, maxActiveJobs: 4, jobKeepMs: 2 * 86400000,
+  limit: { capacity: 40, perMs: 60000 }, pinLimit: { capacity: 12, perMs: 60000 },
+  autoLockChoices: [0, 1, 5, 15, 30, 60]
+};
+const PIN_RE = /^\d{4,8}$/;
+const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+const LID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const enc = (s) => new TextEncoder().encode(s);
+const bytesToB64u = (bytes) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const b64ToBytes = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const randomB64u = (n = 16) => bytesToB64u(crypto.getRandomValues(new Uint8Array(n)));
+/** Compares two strings without stopping at the first difference (a timing difference must not tell how many characters were right). */
+function safeEqual(a, b) { a = String(a || ''); b = String(b || ''); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
+
+/** Escalating lockout after wrong PINs (ARCHITECTURE section 10): 5 failures 30 s, 10 failures 5 min, 15 failures 1 h, 20 or more 6 h. Every failure from the fifth on locks again. */
+function lockoutMs(att) { return att >= 20 ? 6 * 3600000 : att >= 15 ? 3600000 : att >= 10 ? 300000 : att >= 5 ? 30000 : 0; }
+
+/* ---- service account: a short-lived Google access token, signed here with the key in the secret (cached for about an hour per isolate) */
+let saCache = { raw: '', token: '', exp: 0 };
+async function accessToken(sec) {
+  const raw = sec.env && sec.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) throw err('not_configured', { status: 503 });
+  if (saCache.token && saCache.raw === raw && nowMs() < saCache.exp - 60000) return saCache.token;
+  let sa; try { sa = JSON.parse(raw); } catch { throw err('not_configured', { status: 503 }); }
+  if (!sa || !sa.client_email || !sa.private_key) throw err('not_configured', { status: 503 });
+  const iat = Math.floor(nowMs() / 1000);
+  const head = bytesToB64u(enc(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const claim = bytesToB64u(enc(JSON.stringify({ iss: sa.client_email, scope: SEC.scopes, aud: SEC.tokenUrl, iat, exp: iat + 3600 })));
+  const key = await crypto.subtle.importKey('pkcs8', b64ToBytes(String(sa.private_key).replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc(`${head}.${claim}`)));
+  if (!sec.budget.spend()) throw err('budget', { status: 503 });
+  const res = await sec.fetch(SEC.tokenUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${head}.${claim}.${bytesToB64u(sig)}` }).toString() });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body || !body.access_token) throw err('token_failed', { status: 502 });
+  saCache = { raw, token: body.access_token, exp: nowMs() + (Number(body.expires_in) || 3600) * 1000 };
+  return saCache.token;
+}
+
+/* ---- Realtime Database over REST with that token (it bypasses the rules, so every path below is built from a validated uid) */
+async function db(sec, method, path, body, query = '') {
+  const token = await accessToken(sec);
+  if (!sec.budget.spend()) throw err('budget', { status: 503 });
+  const res = await sec.fetch(`${SEC.dbUrl}/${path}.json${query}`, { method, headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!res.ok) throw err('db_failed', { status: 502 });
+  return method === 'GET' ? res.json() : null;
+}
+const dbGet = (sec, path, query) => db(sec, 'GET', path, undefined, query);
+const dbMulti = (sec, updates) => db(sec, 'PATCH', '', updates);        // one multi-path update at the root (null removes a path)
+
+/* ---- the PIN: HMAC-SHA256(PIN_PEPPER, uid | salt | kind | pin). A copy of the database alone can not be brute forced because the pepper lives only in Cloudflare. */
+async function hashPin(env, uid, salt, pin, kind) {
+  if (!env || !env.PIN_PEPPER) throw err('not_configured', { status: 503 });
+  const key = await crypto.subtle.importKey('raw', enc(String(env.PIN_PEPPER)), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return bytesToB64u(new Uint8Array(await crypto.subtle.sign('HMAC', key, enc(`${uid}|${salt}|${kind}|${pin}`))));
+}
+const checkFormat = (pin) => { if (typeof pin !== 'string' || !PIN_RE.test(pin)) throw err('bad_pin', { status: 400 }); };
+
+/** Checks a PIN for scope "app" (the main PIN) or "vault" (the separate vault PIN when there is one, otherwise the main PIN). Counts failures, answers 429 while locked out. */
+async function checkPin(sec, uid, pin, scope, now = nowMs()) {
+  checkFormat(pin);
+  const s = (await dbGet(sec, `secure/${uid}`)) || {};
+  if (s.lockUntil > now) throw err('locked_out', { status: 429, retryAfter: Math.ceil((s.lockUntil - now) / 1000) });
+  const own = scope === 'vault' && s.vaultHash;
+  const hash = own ? s.vaultHash : s.pinHash, salt = own ? s.vaultSalt : s.pinSalt;
+  if (!hash) throw err('no_pin', { status: 409 });
+  if (safeEqual(await hashPin(sec.env, uid, salt, pin, own ? 'vault' : 'main'), hash)) { if (s.att || s.lockUntil) await dbMulti(sec, { [`secure/${uid}/att`]: 0, [`secure/${uid}/lockUntil`]: 0 }); return s; }
+  const att = (s.att || 0) + 1, wait = lockoutMs(att);
+  await dbMulti(sec, { [`secure/${uid}/att`]: att, [`secure/${uid}/lockUntil`]: wait ? now + wait : 0 });   // absolute values, never an increment
+  throw err('wrong_pin', { status: 403, attemptsLeft: att < 5 ? 5 - att : 0, retryAfter: Math.ceil(wait / 1000) });
+}
+
+async function readLock(sec, uid) {
+  const v = (await dbGet(sec, `users/${uid}/lockState`)) || {};
+  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, autoLock: SEC.autoLockChoices.includes(Number(v.autoLock)) ? Number(v.autoLock) : 0 };
+}
+const ttlOf = (lock) => (lock.autoLock > 0 ? lock.autoLock * 60000 : SEC.sessionDefaultMs);
+const lockUpdates = (uid, patch) => Object.fromEntries(Object.entries(patch).map(([k, v]) => [`users/${uid}/lockState/${k}`, v]));
+const activityEntry = (uid, type, info, now) => ({ [`activity/${uid}/${randomB64u(9)}`]: { type, ts: now, info } });
+
+/** Every secure route starts here: a valid ID token, a per-account rate limit and a JSON object body. Guests have no token and get 401. */
+async function secureCall(request, ctx, env, cfg = SEC.limit) {
+  const m = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') || '');
+  if (!m) throw err('unauthorized', { status: 401 });
+  let user; try { user = await verifyIdToken(m[1], ctx); } catch { throw err('unauthorized', { status: 401 }); }
+  if (!UID_RE.test(user.uid)) throw err('unauthorized', { status: 401 });
+  const a = takeTokens('s:' + user.uid, 1, cfg);
+  if (!a.ok) throw err('rate_limited', { status: 429, retryAfter: a.retryAfter });
+  const body = await readJsonBody(request);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw err('bad_request', { status: 400 });
+  return { user, body, sec: { fetch: ctx.fetch, budget: ctx.budget, env }, now: nowMs() };
+}
+const fresh = (user, now) => user.authTime > 0 && now / 1000 - user.authTime <= SEC.freshAuthSec;
+const ok = (data, cors) => json({ ok: true, ...data }, 200, cors);
+
+/* ---- PIN and sessions */
+async function handlePinSet(request, ctx, env, cors) {           // the first PIN. enable:true also turns the app lock on.
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  checkFormat(body.pin);
+  if ((await dbGet(sec, `secure/${user.uid}`) || {}).pinHash) throw err('pin_exists', { status: 409 });
+  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
+  const lock = await readLock(sec, user.uid), enable = body.enable === true;
+  const up = { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, ...lockUpdates(user.uid, { pin: true, app: enable || lock.app, vaultSep: false, hideVault: lock.hideVault, autoLock: lock.autoLock }) };
+  const exp = now + ttlOf(lock);
+  if (enable) { up[`session/${user.uid}/app`] = exp; Object.assign(up, activityEntry(user.uid, 'lock-on', 'App lock turned on', now)); }
+  await dbMulti(sec, up);
+  return ok({ appExp: enable ? exp : 0, lock: { ...lock, pin: true, app: enable || lock.app } }, cors);
+}
+
+async function handlePinVerify(request, ctx, env, cors) {        // a correct PIN opens a session; the database rules check it on every read and write
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const scope = body.scope === 'vault' ? 'vault' : 'app';
+  await checkPin(sec, user.uid, body.pin, scope, now);
+  const lock = await readLock(sec, user.uid), exp = now + ttlOf(lock);
+  const up = { [`session/${user.uid}/app`]: exp }; if (scope === 'vault') up[`session/${user.uid}/vault`] = exp;
+  await dbMulti(sec, up);
+  return ok({ appExp: exp, vaultExp: scope === 'vault' ? exp : 0, lock }, cors);
+}
+
+async function handlePinChange(request, ctx, env, cors) {        // kind main: new main PIN. kind vault: a separate vault PIN (pin null = back to the main PIN)
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const kind = body.kind === 'vault' ? 'vault' : 'main', lock = await readLock(sec, user.uid);
+  if (kind === 'vault' && body.pin === null) {
+    if (!lock.vaultSep) throw err('no_separate_pin', { status: 409 });
+    await checkPin(sec, user.uid, body.current, 'vault', now);
+    await dbMulti(sec, { [`secure/${user.uid}/vaultHash`]: null, [`secure/${user.uid}/vaultSalt`]: null, ...lockUpdates(user.uid, { vaultSep: false }) });
+    return ok({ lock: { ...lock, vaultSep: false } }, cors);
+  }
+  checkFormat(body.pin);
+  await checkPin(sec, user.uid, body.current, kind === 'vault' && lock.vaultSep ? 'vault' : 'app', now);   // creating a separate vault PIN asks for the main PIN
+  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, kind);
+  const up = kind === 'main' ? { [`secure/${user.uid}/pinHash`]: hash, [`secure/${user.uid}/pinSalt`]: salt } : { [`secure/${user.uid}/vaultHash`]: hash, [`secure/${user.uid}/vaultSalt`]: salt, ...lockUpdates(user.uid, { vaultSep: true }) };
+  await dbMulti(sec, up);
+  return ok({ lock: { ...lock, vaultSep: kind === 'vault' ? true : lock.vaultSep } }, cors);
+}
+
+async function handlePinReset(request, ctx, env, cors) {         // forgot PIN: a fresh sign-in is the proof, the data is untouched (it is gated, not encrypted by the PIN)
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  if (!fresh(user, now)) throw err('reauth_required', { status: 403 });
+  checkFormat(body.pin);
+  const lock = await readLock(sec, user.uid), salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
+  await dbMulti(sec, { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, [`session/${user.uid}`]: { app: now + ttlOf(lock) },
+    ...lockUpdates(user.uid, { pin: true, vaultSep: false }), ...activityEntry(user.uid, 'pin-reset', 'PIN reset after signing in again', now) });
+  return ok({ appExp: now + ttlOf(lock), lock: { ...lock, pin: true, vaultSep: false } }, cors);
+}
+
+async function handleLockConfig(request, ctx, env, cors) {       // turn the lock on or off, hide the vault entry, change the auto-lock time
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const lock = await readLock(sec, user.uid), patch = {}, up = {};
+  if (body.autoLock !== undefined) { if (!SEC.autoLockChoices.includes(body.autoLock)) throw err('bad_request', { status: 400 }); patch.autoLock = body.autoLock; }
+  if (body.hideVault !== undefined) patch.hideVault = body.hideVault === true;
+  if (body.app === false && lock.app) await checkPin(sec, user.uid, body.pin, 'app', now);               // turning the lock OFF needs the PIN itself
+  else if (lock.app && Object.keys(patch).length && !((await dbGet(sec, `session/${user.uid}/app`)) > now)) throw err('locked', { status: 403 });
+  if (body.app === true) { if (!lock.pin) throw err('no_pin', { status: 409 }); patch.app = true; up[`session/${user.uid}/app`] = now + ttlOf({ ...lock, ...patch }); }
+  if (body.app === false) { patch.app = false; Object.assign(up, activityEntry(user.uid, 'lock-off', 'App lock turned off', now)); }
+  if (!Object.keys(patch).length) throw err('bad_request', { status: 400 });
+  await dbMulti(sec, { ...up, ...lockUpdates(user.uid, patch) });
+  return ok({ lock: { ...lock, ...patch }, appExp: up[`session/${user.uid}/app`] || 0 }, cors);
+}
+
+async function handleLock(request, ctx, env, cors) {             // manual lock, auto-lock and lock-on-background: end the session(s). Needs no PIN.
+  const { user, body, sec } = await secureCall(request, ctx, env);
+  const scope = ['app', 'vault', 'all'].includes(body.scope) ? body.scope : 'all';
+  await dbMulti(sec, scope === 'vault' ? { [`session/${user.uid}/vault`]: null } : { [`session/${user.uid}/app`]: null, [`session/${user.uid}/vault`]: null });
+  return ok({}, cors);
+}
+
+async function handleLockExtend(request, ctx, env, cors) {       // keeps a session alive while the app is in use; an already ended session stays ended
+  const { user, sec, now } = await secureCall(request, ctx, env);
+  const [sess, lock] = [(await dbGet(sec, `session/${user.uid}`)) || {}, await readLock(sec, user.uid)];
+  if (!(sess.app > now)) throw err('locked', { status: 403 });
+  const exp = now + ttlOf(lock), up = { [`session/${user.uid}/app`]: exp }; if (sess.vault > now) up[`session/${user.uid}/vault`] = exp;
+  await dbMulti(sec, up);
+  return ok({ appExp: exp, vaultExp: sess.vault > now ? exp : 0 }, cors);
+}
+
+/* ---- account lifecycle */
+async function accountSummary(sec, uid) {
+  const [f, l, v, p] = await Promise.all([dbGet(sec, `folders/${uid}`, '?shallow=true'), dbGet(sec, `links/${uid}`, '?shallow=true'), dbGet(sec, `vault/${uid}/folders`, '?shallow=true'), dbGet(sec, `users/${uid}/profile`)]);
+  const n = (o) => (o && typeof o === 'object' ? Object.keys(o).length : 0);
+  return { folders: n(f), links: n(l), vaultFolders: n(v), joined: Number(p && p.createdAt) || 0, lastLogin: Number(p && p.lastLogin) || 0 };   // counts include the Recycle Bin: "shallow" returns keys only
+}
+async function handleAccountSummary(request, ctx, env, cors) { const { user, sec } = await secureCall(request, ctx, env); return ok({ summary: await accountSummary(sec, user.uid) }, cors); }
+
+async function handleAccountDelete(request, ctx, env, cors) {    // marks the account deleted; everything is removed for good after 15 days by the daily purge
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  if (!fresh(user, now)) throw err('reauth_required', { status: 403 });
+  const lock = await readLock(sec, user.uid);
+  if (lock.app) await checkPin(sec, user.uid, body.pin, 'app', now);
+  const summary = await accountSummary(sec, user.uid), deleteAt = now + SEC.deleteAfterMs;
+  await dbMulti(sec, { [`deletedAccounts/${user.uid}`]: { deleteAt, at: now, email: String(user.email || '').slice(0, 200), summary }, [`users/${user.uid}/profile/status`]: 'deleted', [`users/${user.uid}/profile/deletedAt`]: now, [`session/${user.uid}`]: null });
+  try {   // other devices must sign in again; failing here changes nothing else
+    if (sec.budget.spend()) await sec.fetch(`${SEC.authApi}/accounts:update`, { method: 'POST', headers: { Authorization: `Bearer ${await accessToken(sec)}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: user.uid, validSince: String(Math.floor(now / 1000)) }) });
+  } catch { /* best effort */ }
+  return ok({ deleteAt, summary }, cors);
+}
+
+async function handleAccountReactivate(request, ctx, env, cors) {
+  const { user, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const rec = await dbGet(sec, `deletedAccounts/${user.uid}`);
+  if (!rec) throw err('not_deleted', { status: 404 });
+  if (!(rec.deleteAt > now)) throw err('expired', { status: 410 });
+  await dbMulti(sec, { [`deletedAccounts/${user.uid}`]: null, [`users/${user.uid}/profile/status`]: 'active', [`users/${user.uid}/profile/deletedAt`]: null, ...activityEntry(user.uid, 'reactivated', 'Account reactivated', now) });
+  return ok({ summary: rec.summary || null }, cors);
+}
+
+async function deleteAuthUser(sec, uid) {                         // Identity Toolkit accounts:delete (verified 2026-11-01); an account that is already gone counts as done
+  if (!sec.budget.spend()) throw err('budget', { status: 503 });
+  const res = await sec.fetch(`${SEC.authApi}/accounts:delete`, { method: 'POST', headers: { Authorization: `Bearer ${await accessToken(sec)}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: uid }) });
+  if (res.ok) return true;
+  const t = await res.json().catch(() => null);
+  if (/USER_NOT_FOUND/.test(JSON.stringify(t || {}))) return true;
+  throw err('auth_delete_failed', { status: 502 });
+}
+
+/** Daily purge: accounts whose 15 days are over. The sign-in is deleted FIRST, then the data and the record in one update, so a failure half way is retried next run. Nobody else is touched. */
+async function purgeExpired(sec, now = nowMs()) {
+  const due = (await dbGet(sec, 'deletedAccounts', `?orderBy=%22deleteAt%22&endAt=${Math.floor(now)}&limitToFirst=${SEC.purgePerRun}`)) || {};
+  const done = [];
+  for (const uid of Object.keys(due)) {
+    if (!UID_RE.test(uid) || !(Number(due[uid] && due[uid].deleteAt) <= now)) continue;
+    try {
+      await deleteAuthUser(sec, uid);
+      const up = {}; for (const t of ['users', 'folders', 'links', 'linkMeta', 'vault', 'history', 'activity', 'jobs', 'secure', 'session', 'deletedAccounts']) up[`${t}/${uid}`] = null;
+      await dbMulti(sec, up); done.push(uid);
+    } catch { /* the record stays; the next run tries again */ }
+  }
+  return done;
+}
+
+/* ---- background enrichment (v2.5.0): the app hands the rest of a title fetch to the Worker; the cron continues it while the app is closed */
+const joinIds = (ids) => ids.join(',');
+function jobPatch(link, r) {                                      // same rules as the app (features/import/import-job.js metaPatch)
+  if (!r || !r.ok) return null;
+  const patch = {}, title = typeof r.title === 'string' ? r.title.trim() : '';
+  if (title && !link.tEdit && (!r.partial || !link.title)) patch.title = title.slice(0, 300);
+  if (r.desc && !link.desc) patch.desc = String(r.desc).slice(0, 300);
+  if (r.kw && !link.kw) patch.kw = String(Array.isArray(r.kw) ? r.kw.join(', ') : r.kw).slice(0, 200);
+  for (const k of Object.keys(patch)) if (patch[k] === link[k]) delete patch[k];
+  return Object.keys(patch).length ? patch : null;
+}
+function jobExtras(r) {
+  const cut = (v, n) => (typeof v === 'string' && v ? v.slice(0, n) : undefined);
+  const o = { image: cut(r.image, 2048), video: cut(r.video, 2048), audio: cut(r.audio, 2048), long: cut(r.desc, 2000), site: cut(r.site, 120), author: cut(r.author, 120), lang: cut(r.lang, 16), pub: cut(r.published, 40), canon: cut(r.canonical, 2048), icon: cut(r.favicon, 2048), type: cut(r.type, 16), theme: cut(r.themeColor || r.theme, 9), frameable: r.frameable === true ? true : undefined, nf: r.frameable === false ? true : undefined };
+  for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k];
+  return o;
+}
+
+async function handleJobsEnqueue(request, ctx, env, cors) {
+  const { user, body, sec, now } = await secureCall(request, ctx, env);
+  const ids = Array.isArray(body.ids) ? [...new Set(body.ids)] : null;
+  if (body.type !== 'enrich' || !ids || !ids.length || ids.length > SEC.maxJobIds || ids.some((i) => typeof i !== 'string' || !LID_RE.test(i))) throw err('bad_request', { status: 400 });
+  const lock = await readLock(sec, user.uid);
+  if (lock.app && !((await dbGet(sec, `session/${user.uid}/app`)) > now)) throw err('locked', { status: 403 });
+  const jobs = (await dbGet(sec, `jobs/${user.uid}`)) || {};
+  if (Object.values(jobs).filter((j) => j && (j.status === 'queued' || j.status === 'running')).length >= SEC.maxActiveJobs) throw err('too_many_jobs', { status: 429 });
+  const id = randomB64u(9);
+  await dbMulti(sec, { [`jobs/${user.uid}/${id}`]: { type: 'enrich', status: 'queued', ids: joinIds(ids), cursor: 0, total: ids.length, done: 0, failed: 0, createdAt: now, up: now } });
+  return ok({ id, total: ids.length }, cors);
+}
+async function handleJobsCancel(request, ctx, env, cors) {
+  const { user, body, sec } = await secureCall(request, ctx, env);
+  if (typeof body.id !== 'string' || !LID_RE.test(body.id)) throw err('bad_request', { status: 400 });
+  await dbMulti(sec, { [`jobs/${user.uid}/${body.id}`]: null });
+  return ok({}, cors);
+}
+
+/** One cron run: continue the next waiting job of a few accounts, a few links each (the free plan allows 50 subrequests per run). Old finished jobs are removed. */
+async function runJobs(sec, ctx, now = nowMs()) {
+  const all = (await dbGet(sec, 'jobs', '?shallow=true')) || {};
+  const uids = Object.keys(all).filter((u) => UID_RE.test(u)).sort(() => Math.random() - 0.5).slice(0, SEC.jobUidsPerRun);
+  const report = [];
+  for (const uid of uids) {
+    if (sec.budget.left() < 14) break;
+    const jobs = (await dbGet(sec, `jobs/${uid}`)) || {};
+    const up = {};
+    for (const [jid, j] of Object.entries(jobs)) if (j && (j.status === 'done' || j.status === 'failed') && now - (j.up || 0) > SEC.jobKeepMs) up[`jobs/${uid}/${jid}`] = null;
+    const next = Object.entries(jobs).filter(([, j]) => j && j.type === 'enrich' && (j.status === 'queued' || j.status === 'running')).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0))[0];
+    if (next) {
+      const [jid, job] = next, ids = String(job.ids || '').split(',').filter((i) => LID_RE.test(i)), at = Number(job.cursor) || 0;
+      const group = ids.slice(at, at + SEC.jobLinksPerRun); let failed = 0;
+      for (const lid of group) {
+        const link = await dbGet(sec, `links/${uid}/${lid}`);
+        if (!link || link.del || !link.url) { failed++; continue; }
+        const r = await metaForUrl(link.url, { fetch: sec.fetch, budget: childBudget(sec.budget, 4), perUrl: 4 }).catch(() => null);
+        if (!r || !r.ok) { failed++; continue; }
+        const patch = jobPatch(link, r);
+        if (patch) { for (const [k, v] of Object.entries(patch)) up[`links/${uid}/${lid}/${k}`] = v; up[`links/${uid}/${lid}/up`] = now; }   // `up` makes every device's delta sync pick the change up
+        for (const [k, v] of Object.entries({ ...jobExtras(r), checkedAt: now })) up[`linkMeta/${uid}/${lid}/${k}`] = v;
+      }
+      const cursor = Math.min(ids.length, at + group.length), fin = cursor >= ids.length || !group.length;
+      Object.assign(up, { [`jobs/${uid}/${jid}/cursor`]: cursor, [`jobs/${uid}/${jid}/done`]: cursor, [`jobs/${uid}/${jid}/failed`]: (Number(job.failed) || 0) + failed, [`jobs/${uid}/${jid}/status`]: fin ? 'done' : 'running', [`jobs/${uid}/${jid}/up`]: now });
+      report.push({ uid, jid, cursor, fin });
+    }
+    if (Object.keys(up).length) await dbMulti(sec, up);
+  }
+  return report;
+}
+
+/** Cron entry (one trigger every minute is enough): background jobs on every run, the purge of expired accounts every half hour. Errors are swallowed here; Cloudflare keeps the run log. */
+async function scheduled(event, env, deps = {}) {
+  const fetchFn = deps.fetch || ((...a) => fetch(...a));
+  const ctx = { fetch: fetchFn, budget: createBudget(), perUrl: 4 }, sec = { fetch: fetchFn, budget: ctx.budget, env };
+  const t = new Date(event && event.scheduledTime ? event.scheduledTime : nowMs());
+  try { await runJobs(sec, ctx); } catch { /* next run */ }
+  if (t.getUTCMinutes() % 30 === 0 || (event && event.cron === '0 3 * * *')) { try { await purgeExpired(sec); } catch { /* next run */ } }
+}
+
+const SECURE_ROUTES = { '/pin/set': handlePinSet, '/pin/verify': handlePinVerify, '/pin/change': handlePinChange, '/pin/reset': handlePinReset, '/lock/config': handleLockConfig, '/lock': handleLock, '/lock/extend': handleLockExtend,
+  '/account/summary': handleAccountSummary, '/account/delete': handleAccountDelete, '/account/reactivate': handleAccountReactivate, '/jobs/enqueue': handleJobsEnqueue, '/jobs/cancel': handleJobsCancel };
+
 /* ------------------------------------------------------------------------------------------------------------- routes */
 async function readJsonBody(request) {
   const declared = Number(request.headers.get('content-length') || 0);
@@ -762,21 +1090,26 @@ async function route(request, env, deps = {}) {
   if (origin && !cors['Access-Control-Allow-Origin']) return json({ ok: false, error: 'forbidden_origin' }, 403, cors);
   const ctx = { fetch: deps.fetch || ((...a) => fetch(...a)), budget: createBudget() };
   try {
-    if (url.pathname === '/health' && request.method === 'GET') return json({ ok: true, version: VERSION, time: nowMs(), project: CONFIG.firebaseProject }, 200, cors);
+    if (url.pathname === '/health' && request.method === 'GET') return json({ ok: true, version: VERSION, time: nowMs(), project: CONFIG.firebaseProject, security: { pepper: !!(env && env.PIN_PEPPER), serviceAccount: !!(env && env.FIREBASE_SERVICE_ACCOUNT) } }, 200, cors);
     if (url.pathname === '/meta' && request.method === 'POST') return await handleMeta(request, ctx, cors);
     if (url.pathname === '/check' && request.method === 'POST') return await handleCheck(request, ctx, cors);
     if (url.pathname === '/whoami' && request.method === 'GET') return handleWhoami(request, cors);
     if (url.pathname === '/img/upload' && request.method === 'POST') return await handleImgUpload(request, env, ctx, cors);
     if (url.pathname === '/img/delete' && request.method === 'POST') return await handleImgDelete(request, env, ctx, cors);
     if (url.pathname === '/health' || url.pathname === '/meta' || url.pathname === '/whoami' || url.pathname === '/check' || url.pathname === '/img/upload' || url.pathname === '/img/delete') return json({ ok: false, error: 'method_not_allowed' }, 405, cors);
+    const secure = SECURE_ROUTES[url.pathname];
+    if (secure) return request.method === 'POST' ? await secure(request, ctx, env, cors) : json({ ok: false, error: 'method_not_allowed' }, 405, cors);
     return json({ ok: false, error: 'not_found' }, 404, cors);
   } catch (e) {
+    // v2.5.0: the secure routes throw errors that carry an HTTP status (wrong_pin 403, locked_out 429 ...). Messages are short codes, never secrets.
+    if (e && e.status && e.message) return json({ ok: false, error: e.message, retryAfter: e.retryAfter, attemptsLeft: e.attemptsLeft }, e.status, e.retryAfter ? { ...cors, 'Retry-After': String(e.retryAfter) } : cors);
     return json({ ok: false, error: 'internal' }, 500, cors);
   }
 }
 
 export default {
   fetch: (request, env) => route(request, env),
+  scheduled: (event, env, c) => { const job = scheduled(event, env); if (c && c.waitUntil) c.waitUntil(job); return job; },
   // Pure functions exposed for the unit tests in @ Creator/tests/worker.test.mjs. Harmless in production.
-  __test: { handleImgUpload, handleImgDelete, checkOne, handleCheck, statusState, maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
+  __test: { SEC, lockoutMs, hashPin, checkPin, accessToken, purgeExpired, runJobs, scheduled, accountSummary, jobPatch, jobExtras, safeEqual, bytesToB64u, resetSa() { saCache = { raw: '', token: '', exp: 0 }; }, handleImgUpload, handleImgDelete, checkOne, handleCheck, statusState, maskIp, handleWhoami, CONFIG, FALLBACKS, OEMBED, jsonFallback, guardedGet, normalizeTarget, isBlockedHost, isBlockedUrl, parseHead, computeFrameable, readHead, decodeEntities, metaForUrl, verifyIdToken, takeTokens, route, createBudget, childBudget, youtubeId, deriveFromUrl, weakTitle, prettyHost, parseJsonLd, DIRECT_STEPS, breaker, resetCaches() { resultCache.clear(); buckets.clear(); breaker.clear(); jwksCache = { keys: null, exp: 0, at: 0 }; } }
 };

@@ -22,9 +22,9 @@ import { avatar, logOut } from '../shell-parts.js';
 import { adminChip } from '../../../ui/admin-badge.js';
 import { settingsShortcut } from '../../../ui/settings-shortcut.js';
 import { shotFromMeta } from './profile-thumbs.js';
-import { loadProfile, cachedProfile, bannerUrl, applyProfileLook, isColor } from '../../../core/profile-data.js';
+import { loadProfile, cachedProfile, bannerUrl, applyProfileLook, formatBirthday } from '../../../core/profile-data.js';
 import { attachFade } from '../../../ui/edge-fade.js';
-import { countryLabel } from '../../../core/countries.js';
+import { findCountry, flagUrl } from '../../../core/countries.js';
 import { isAdminAccount } from '../../../core/admin.js';
 import { pointsOf } from '../../../engine/points.js';
 
@@ -45,11 +45,18 @@ export async function mount(container, ctx) {
 
   // ---- profile card ---------------------------------------------------------------------------------------------------------------------
   const hero = h('section', { class: 'pf2-hero', 'aria-label': 'Profile' });
+  /** v2.5.0: quiet entry points to security and account deletion (accounts only; a guest has no account to delete). */
+  function accountLinks() {
+    if (getSession().mode !== 'account') return null;
+    const go = (path) => () => ctx.router.navigate(path);
+    return h('div', { class: 'pf2-acct' },
+      h('button', { type: 'button', class: 'pf2-acct-b', on: { click: go('/settings/security') } }, icon('lock', { size: 16 }), h('span', { text: 'Security and app lock' })),
+      h('button', { type: 'button', class: 'pf2-acct-b is-danger', on: { click: async () => { const m = await import('../../settings/delete-account.js'); m.openDeleteAccount(); } } }, icon('trash', { size: 16 }), h('span', { text: 'Delete account' })));
+  }
   function paintHero() {
     const me = getSession(), name = guest ? 'Guest' : (profile.name || me.user.name), photo = guest ? '' : (profile.photo || me.user.photo || '');
     const banner = h('div', { class: 'pf2-cover', style: { backgroundImage: `url(${bannerUrl(profile.banner)})` }, 'aria-hidden': 'true' });
     const edit = guest ? null : h('button', { type: 'button', class: 'pf2-edit', 'aria-label': 'Edit profile', on: { click: openEdit } }, icon('edit', { size: 16 }), h('span', { text: 'Edit profile' }));
-    hero.style.setProperty('--ring', isColor(profile.ring) ? profile.ring : 'var(--accent)');
     const badges = [];
     if (!guest && me.user.emailVerified) badges.push(h('span', { class: 'pf2-badge is-verified' }, icon('check-circle', { size: 14 }), 'Verified'));
     badges.push(adminChip());
@@ -60,21 +67,38 @@ export async function mount(container, ctx) {
       profile.headline ? h('p', { class: 'pf2-headline', text: profile.headline }) : null,
       h('div', { class: 'pf2-badges' }, ...badges),
       profile.bio ? h('p', { class: 'pf2-bio', text: profile.bio }) : (guest ? null : h('button', { type: 'button', class: 'pf2-bio is-empty', on: { click: openEdit } }, 'Add a short bio')),
+      profile.site && /^https?:\/\//i.test(profile.site) ? h('a', { class: 'pf2-site', href: profile.site, target: '_blank', rel: 'noopener noreferrer' }, icon('link', { size: 14 }), profile.site.replace(/^https?:\/\//i, '').slice(0, 40)) : null,   // v2.5.0 (owner): the website sits right under the description
       infoList(),
-      profile.site && /^https?:\/\//i.test(profile.site) ? h('a', { class: 'pf2-site', href: profile.site, target: '_blank', rel: 'noopener noreferrer' }, icon('link', { size: 14 }), profile.site.replace(/^https?:\/\//i, '').slice(0, 40)) : null,
       uidBtn].filter(Boolean));   // (replaceChildren(null) writes the text "null": v2.4.3 showed it on the card)
   }
-  /** The details of the profile as a calm list (only what is filled in); interests become small chips. */
+  /** A country flag as a picture (Windows shows the emoji as two letters); if the picture can not load, the emoji or the code is shown instead. */
+  function flagNode(c) {
+    const box = h('span', { class: 'pf2-flag' });
+    const img = h('img', { src: flagUrl(c.code), alt: '', width: '20', height: '15', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' });
+    img.addEventListener('error', () => box.replaceChildren(h('span', { class: 'pf2-flag-t', text: c.flag })), { once: true });
+    box.appendChild(img); return box;
+  }
+  /** The details as a calm list, in the owner's order (v2.5.0): location (flag, city, country), birth date as "10 Aug 2000", languages, then the Interests heading with the chips.
+   *  Interests show about one and a half rows and a "See more" text when there are more (it opens and closes smoothly). Pronouns are not shown any more. */
   function infoList() {
-    const rows = [];
-    const place = [profile.city, profile.country ? countryLabel(profile.country) : ''].filter(Boolean).join(', ');
-    if (place) rows.push(['map-pin', place]);
-    if (profile.birthday) { const d = new Date(`${profile.birthday}T00:00:00`); if (!Number.isNaN(d.getTime())) rows.push(['gift', d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })]); }
-    if (profile.languages) rows.push(['languages', profile.languages]);
-    if (profile.pronouns) rows.push(['user', profile.pronouns]);
-    const tags = String(profile.interests || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8);
+    const rows = [], c = profile.country ? findCountry(profile.country) : null;
+    const place = [profile.city, c ? c.name : profile.country].filter(Boolean).join(', ');
+    if (place) rows.push([c ? flagNode(c) : icon('map-pin', { size: 15 }), place]);
+    const born = formatBirthday(profile.birthday); if (born) rows.push([icon('gift', { size: 15 }), born]);
+    if (profile.languages) rows.push([icon('languages', { size: 15 }), profile.languages]);
+    const tags = String(profile.interests || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 12);
     if (!rows.length && !tags.length) return null;
-    return h('div', { class: 'pf2-info' }, ...rows.map(([ic, tx]) => h('p', { class: 'pf2-info-r' }, icon(ic, { size: 15 }), h('span', { text: tx }))), tags.length ? h('div', { class: 'pf2-interests' }, ...tags.map((t) => h('span', { class: 'pf2-int', text: t }))) : null);
+    return h('div', { class: 'pf2-info' }, ...rows.map(([lead, tx]) => h('p', { class: 'pf2-info-r' }, lead, h('span', { text: tx }))), tags.length ? interestsBlock(tags) : null);
+  }
+  function interestsBlock(tags) {
+    const list = h('div', { class: 'pf2-interests', id: 'pf2-int-list' }, ...tags.map((t) => h('span', { class: 'pf2-int', text: t })));
+    const more = h('button', { type: 'button', class: 'pf2-see', 'aria-controls': 'pf2-int-list', 'aria-expanded': 'false', hidden: true }, 'See more');
+    const CLAMP = 52;   // about 1.6 rows of chips (a row is 26px plus a 6px gap)
+    let open = false;
+    const apply = () => { list.style.maxHeight = open ? `${list.scrollHeight}px` : `${CLAMP}px`; list.classList.toggle('is-clamped', !open); more.textContent = open ? 'See less' : 'See more'; more.setAttribute('aria-expanded', String(open)); };
+    more.addEventListener('click', () => { open = !open; apply(); });
+    requestAnimationFrame(() => { more.hidden = list.scrollHeight <= CLAMP + 2; if (more.hidden) { list.style.maxHeight = ''; list.classList.remove('is-clamped'); } else apply(); });
+    return h('div', { class: 'pf2-int-box' }, h('h3', { class: 'pf2-int-h', text: 'Interests' }), list, more);
   }
   async function copyUid() { try { await navigator.clipboard.writeText(uid); toast('Account id copied.'); } catch { toast('Could not copy. Select the id and copy it.'); } }
   function openEdit() { import('../../profile/profile-edit.js').then((m) => m.openProfileEdit({ session: getSession(), adapter: engine && engine.adapter, profile, isAdmin: isAdminAccount(), onSaved: (p) => { profile = p; paintHero(); } })); }
@@ -156,7 +180,7 @@ export async function mount(container, ctx) {
   const switchSlot = h('span', { class: 'pf2-switch' });   // v2.4.4 (owner): the account switch icon is in the Profile header too
   if (!guest) import('../switch-account.js').then((m) => switchSlot.appendChild(m.switchButton(ctx.router))).catch(() => {});
   const page = h('div', { class: 'page pf2 page-enter' }, h('header', { class: 'pf2-bar' }, h('span', { class: 'pf2-bar-t', text: 'Profile' }), h('span', { class: 'pf2-bar-act' }, switchSlot, settingsShortcut('account', 'Account settings'))),
-    h('div', { class: 'pf2-grid' }, h('div', { class: 'pf2-left' }, hero, highlights),
+    h('div', { class: 'pf2-grid' }, h('div', { class: 'pf2-left' }, hero, accountLinks(), highlights),
       h('div', { class: 'pf2-main' }, favBox, recentBox, h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-explore-h' }, h('h2', { class: 'pf2-h', id: 'pf2-explore-h', text: 'Explore' }), h('div', { class: 'pf2-tiles' }, tiles)), dataBox, shareCard, logout)));
   container.appendChild(page);
   paintHero(); paintHighlights(); paintData(); paintSliders();

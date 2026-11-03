@@ -134,3 +134,18 @@ Owner: rules changed (one new field), so `firebase deploy --only database` is ne
 | admins/$uid | signed-in user with the same uid | read | allow (value true or null) |
 | admins/$uid | another user | read | deny |
 | admins/$uid | any client, including the admin | write | deny (only the console) |
+
+## v2.5.0 additions (no rules change: the gates written in v2.1.0 are now switched on by the Worker's sessions)
+The Worker (service account, rules bypassed) writes `users/<uid>/lockState`, `session/<uid>`, `secure/<uid>`, `jobs/<uid>`, `deletedAccounts/<uid>`, `activity/<uid>/*` and `users/<uid>/profile/status`. Automated cases: `v250-rules.test.mjs` (5 tests) and `rules.test.mjs`. No `firebase deploy --only database` is needed for v2.5.0.
+| # | Who | State | Path | Operation | Expected |
+|---|---|---|---|---|---|
+| Q1 | owner | `lockState.app = true`, no session | `folders/u1`, `links/u1`, `linkMeta`, `history`, `activity`, `users/u1/settings` | read, write | deny |
+| Q2 | owner | same, `session/u1/app` in the future | the same paths | read, write | allow |
+| Q3 | owner | same, `session/u1/app` in the past, or a session of another uid | the same paths | read | deny |
+| Q4 | owner | lock on, no session | `users/u1/lockState`, `session/u1`, `users/u1/profile`, `users/u1/vaultCount`, `jobs/u1` | read | allow (the lock screen needs them) |
+| Q5 | owner | any state | `users/u1/lockState`, `session/u1/*`, `secure/u1/*`, `jobs/u1/*`, `deletedAccounts/u1`, `users/u1/profile/status` | write | deny |
+| Q6 | owner | any state | `secure/u1` (anything) | read | deny |
+| Q7 | owner | only `session/u1/app` open (lock on) | `vault/u1/*` | read, write | deny |
+| Q8 | owner | `session/u1/vault` open and the app gate satisfied | `vault/u1/*`, `users/u1/vaultCount` | read, write | allow |
+| Q9 | owner | `status = deleted`, any session | every data tree, `jobs/u1`, `importLog`, `devices` | read, write | deny; `users/u1/profile` and `deletedAccounts/u1/summary` stay readable |
+Rules Playground (owner), only if you want to confirm on the live database: with the app lock turned on and the session ended (tap Lock now), simulate a read at `/folders/<your uid>` as yourself: denied; at `/users/<your uid>/lockState`: allowed.

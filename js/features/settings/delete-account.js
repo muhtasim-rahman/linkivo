@@ -7,7 +7,9 @@
  *            3 Type DELETE ACCOUNT exactly.
  *            4 Request email: a ready email (subject, message, account details, a request id) to the developer, opened in the person's mail app (or Gmail on
  *              the web, or copied). It must be sent FROM the account's own email address, otherwise it is rejected.
- *          Nothing is deleted by this flow. API: openDeleteAccount({ router? }) -> Promise<void>     buildRequest(facts, counts, id, now) -> { subject, body }  (pure, tested)
+ *          v2.5.0: the request email is gone. Step 4 asks the Worker (POST /account/delete) to mark the account deleted: nothing is removed for 15 days, signing in again offers
+ *          "Reactivate", and the daily cron removes everything after the 15 days. When the app lock is on, step 4 also asks for the PIN. (The old mail text builder stays for its tests.)
+ *          API: openDeleteAccount({ router? }) -> Promise<void>     buildRequest(facts, counts, id, now) -> { subject, body }  (pure, tested)
  *          v2.3.1 (owner): quieter design (no glowing icon box, red only where it matters), smooth step changes, and a tap outside no longer closes it.
  *          v2.3.0 (owner): redesigned. All four steps live in ONE popup (the content swaps, the popup never closes between steps) with a red theme (the sheet
  *          overrides the accent variables, see css/pages/settings.css `.da-sheet`), a red step bar, big folder and link counts on the review step and a live
@@ -26,6 +28,9 @@ import { sendAllowed, friendlyWait } from '../../core/send-limit.js';
 import { reauthenticate, accountFacts, sendReset, friendlyAuthError, hasPassword } from '../auth/auth-service.js';
 import { getSession } from '../../core/session.js';
 import app from '../../core/app-info.js';
+import { getLock } from '../../core/lock.js';
+import { securePost } from '../../core/worker-client.js';
+import { signOutUser, freshIdToken } from '../auth/auth-service.js';
 
 export const PHRASE = 'DELETE ACCOUNT';
 export const REQUEST_TO = 'linkivo.web@gmail.com';
@@ -44,7 +49,7 @@ export function buildRequest(f, counts, id, now) {
 }
 const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 
-const STEP_NAMES = ['Verify', 'Review', 'Confirm', 'Send'];
+const STEP_NAMES = ['Verify', 'Review', 'Confirm', 'Delete'];
 
 export async function openDeleteAccount() {
   const s = getSession(); if (s.mode !== 'account') return;
@@ -101,7 +106,7 @@ export async function openDeleteAccount() {
     const kv = [['Name', facts.name || '-'], ['Email', maskEmail(facts.email)], ['Sign-in', facts.providers.map((p) => (p === 'google.com' ? 'Google' : 'Email and password')).join(' and ')], ['Created', facts.created ? dateTime(facts.created) : '-'], ['Last sign-in', facts.lastLogin ? dateTime(facts.lastLogin) : '-']];
     const ok = h('input', { type: 'checkbox', id: 'da-ok' });
     const next = btn('chevron-right', 'Continue', () => { if (!ok.checked) { err.textContent = 'Tick the box to continue.'; return; } stepType(c); }, { primary: true });
-    frame(2, 'Check what will be deleted', 'Everything below goes when the request is approved.', [
+    frame(2, 'Check what will be deleted', 'Everything below is removed after 15 days. Until then you can change your mind.', [
       h('div', { class: 'da-stats' }, h('div', {}, h('b', { text: String(c.folders) }), h('span', { text: c.folders === 1 ? 'folder' : 'folders' })), h('div', {}, h('b', { text: String(c.links) }), h('span', { text: c.links === 1 ? 'link' : 'links' }))),
       h('dl', { class: 'kv da-kv' }, kv.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: v })])),
       h('ul', { class: 'da-list' }, WHAT.map((t) => h('li', null, icon('x-circle', { size: 16 }), h('span', { text: t })))),
@@ -113,7 +118,7 @@ export async function openDeleteAccount() {
   function stepType(c) {
     const input = h('input', { class: 'input', type: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', placeholder: PHRASE, 'aria-label': 'Type DELETE ACCOUNT' });
     const hit = h('span', { class: 'da-hit', 'aria-hidden': 'true' }, icon('check-circle', { size: 20 }));
-    const next = btn('chevron-right', 'Continue', () => { if (input.value.trim() !== PHRASE) { err.textContent = `Type ${PHRASE} exactly, in capital letters.`; return; } stepEmail(c); }, { primary: true });
+    const next = btn('chevron-right', 'Continue', () => { if (input.value.trim() !== PHRASE) { err.textContent = `Type ${PHRASE} exactly, in capital letters.`; return; } stepDelete(c); }, { primary: true });
     input.addEventListener('input', () => { const ok = input.value.trim() === PHRASE; hit.classList.toggle('is-on', ok); err.textContent = ''; });
     frame(3, 'Type to confirm', 'This stops an accidental tap.', [
       h('p', { class: 'da-phrase', text: PHRASE }), h('div', { class: 'da-type' }, input, hit)],
@@ -121,19 +126,37 @@ export async function openDeleteAccount() {
     input.focus();
   }
 
-  function stepEmail(c) {
-    const id = newId(), { subject, body: text } = buildRequest(facts, c, id, verifiedAt);
-    const enc = encodeURIComponent, mailto = `mailto:${REQUEST_TO}?subject=${enc(subject)}&body=${enc(text)}`;
-    const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(REQUEST_TO)}&su=${enc(subject)}&body=${enc(text)}`;
-    const copy = async () => { try { await navigator.clipboard.writeText(`To: ${REQUEST_TO}\nSubject: ${subject}\n\n${text}`); toast('Copied. Paste it into an email.'); } catch { toast('Could not copy. Select the text and copy it.', { type: 'error' }); } };
-    frame(4, 'Send the request', 'The developer checks every request by hand.', [
-      h('p', { class: 'da-warn' }, icon('mail', { size: 18 }), h('span', { text: `Send it from ${facts.email}, the email of this account. A request from any other address is rejected.` })),
-      h('div', { class: 'da-actions' },
-        btn('mail', 'Open my email app', null, { primary: true, tag: 'a', attrs: { href: mailto, 'data-native': '' } }),
-        btn('external', 'Open Gmail', null, { tag: 'a', attrs: { href: gmail, target: '_blank', rel: 'noopener', 'data-native': '' } }),
-        btn('copy', 'Copy', copy)),
-      h('details', { class: 'da-mail' }, h('summary', { text: 'Preview the email' }), h('strong', { text: subject }), h('pre', { text }))],
-      foot(btn('arrow-left', 'Back', () => stepType(c)), btn('check', 'Done', () => sheet.close(true), { primary: true })));
+  /** Step 4 (v2.5.0): the Worker marks the account deleted. The PIN is asked here when the app lock is on (the Worker checks it; this screen never stores it). */
+  function stepDelete(c) {
+    const lockOn = getLock().enabled;
+    const pin = lockOn ? h('input', { class: 'input', type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '8', 'aria-label': 'Your PIN', placeholder: 'Your PIN' }) : null;
+    const run = async () => {
+      err.textContent = '';
+      if (lockOn && !/^\d{4,8}$/.test(pin.value)) { err.textContent = 'Enter your PIN (4 to 8 digits).'; return; }
+      sheet.setBusy?.(true);
+      try {
+        await freshIdToken();
+        const r = await securePost('/account/delete', lockOn ? { pin: pin.value } : {});
+        stepDone(r && r.deleteAt);
+      } catch (e) {
+        const code = e && e.code;
+        err.textContent = code === 'reauth_required' ? 'For your safety this needs a sign-in from the last 5 minutes. Go back and verify again.'
+          : code === 'wrong_pin' ? `That PIN is not right.${e.attemptsLeft ? ` ${e.attemptsLeft} tries left before a short wait.` : ''}`
+          : code === 'locked_out' ? 'Too many wrong PINs. Wait a little and try again.'
+          : code === 'not_configured' ? 'Account deletion is not set up on the server yet.' : 'Could not delete the account. Check your connection and try again.';
+        sheet.setBusy?.(false);
+      }
+    };
+    frame(4, 'Delete my account', 'The last step. Nothing is lost today.', [
+      h('ul', { class: 'da-list' }, ['Your account is marked as deleted and you are signed out.', 'For 15 days nothing is removed: sign in again and choose Reactivate to get everything back.', 'After 15 days your links, folders and sign-in are deleted for good.'].map((t) => h('li', null, icon('x-circle', { size: 16 }), h('span', { text: t })))),
+      lockOn ? h('label', { class: 'acc-field' }, h('span', { class: 'acc-label', text: 'App lock PIN' }), pin) : null],
+      foot(btn('arrow-left', 'Back', () => stepType(c)), btn('trash', 'Delete my account', run, { primary: true })));
+  }
+  function stepDone(deleteAt) {
+    frame(4, 'Account marked for deletion', 'You are being signed out.', [
+      h('p', { class: 'da-note', text: `Everything is kept until ${deleteAt ? dateTime(deleteAt) : 'the 15 days are over'}. Sign in again before then to reactivate it.` })],
+      foot(null, btn('check', 'Done', () => sheet.close(true), { primary: true })));
+    signOutUser().catch(() => {});
   }
 
   sheet = openSheet({ title: 'Delete account', body, actions: [], wide: true, scrimClose: false });   // v2.3.1: a tap outside must never close it

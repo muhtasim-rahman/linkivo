@@ -20,7 +20,18 @@ import { createSettingsSync } from './settings-sync.js';
 import { createImportLog } from './import-log.js';
 import { createHistory } from './history.js';   // v2.4.1
 import { isAdminView } from './admin.js';
+import { getBox } from './lock.js';   // v2.5.0
+import { openDbSafe } from '../engine/idb.js';
+import { openEncryptedDb } from '../engine/encrypted-db.js';
+import { GUEST_DB } from '../engine/local-engine.js';
 
+/** v2.5.0: while the app lock is on (and unlocked) the copy on this device is opened through the encrypted wrapper. A plain copy is encrypted in place, a copy made with another PIN
+ *  is thrown away for an account (it is downloaded again) and refused for a guest. No key (lock off) = the normal plain database. */
+async function openSessionDb(session) {
+  const box = getBox(); if (!box) return undefined;
+  const inner = await openDbSafe(session.mode === 'guest' ? GUEST_DB : `linkivo-${session.user.uid}`);
+  return openEncryptedDb(inner, box, { discardUnreadable: session.mode !== 'guest' });
+}
 let engine = null, queue = null, scope = null, settingsSync = null, importLog = null, devices = null, history = null;
 
 export async function initData(session) {
@@ -28,8 +39,9 @@ export async function initData(session) {
   if (!wanted || wanted === scope) return;
   await teardownData();
   try {
-    if (session.mode === 'guest') engine = await createLocalEngine();
-    else { const firebase = await loadFirebase(); engine = await createCloudEngine({ uid: session.user.uid, adapter: createRtdbAdapter({ firebase }) }); }
+    const db = await openSessionDb(session);
+    if (session.mode === 'guest') engine = await createLocalEngine({ db });
+    else { const firebase = await loadFirebase(); engine = await createCloudEngine({ uid: session.user.uid, adapter: createRtdbAdapter({ firebase }), db }); }
     queue = createJobQueue({ db: engine.db, now: () => engine.now() });
     registerCheckJob({ queue, engine, check: checkLinks }); // v2.3.0: dead-link checker (must be registered before start() resumes jobs)
     registerImportJobs({ queue, engine, fetchMeta }); // v2.2.0: import and title-fetch handlers must exist before start() resumes interrupted jobs

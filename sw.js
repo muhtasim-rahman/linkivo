@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.4.4';
+const VERSION = '2.5.0';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -60,6 +60,7 @@ const PRECACHE = [
   '/css/pages/data.css',
   '/css/pages/history.css',
   '/css/pages/library.css',
+  '/css/pages/lock.css',
   '/css/pages/pages.css',
   '/css/pages/preview.css',
   '/css/pages/profile.css',
@@ -79,6 +80,7 @@ const PRECACHE = [
   '/js/core/clipboard-watch.js',
   '/js/core/config.js',
   '/js/core/countries.js',
+  '/js/core/crypto-box.js',
   '/js/core/css-loader.js',
   '/js/core/device-info.js',
   '/js/core/devices.js',
@@ -95,6 +97,8 @@ const PRECACHE = [
   '/js/core/keyboard-safe.js',
   '/js/core/known-accounts.js',
   '/js/core/local-prefs.js',
+  '/js/core/lock.js',
+  '/js/core/lockout.js',
   '/js/core/logger.js',
   '/js/core/mask.js',
   '/js/core/meta-fallback.js',
@@ -118,6 +122,7 @@ const PRECACHE = [
   '/js/core/worker-client.js',
   '/js/engine/chunker.js',
   '/js/engine/cloud-engine.js',
+  '/js/engine/encrypted-db.js',
   '/js/engine/engine.js',
   '/js/engine/idb.js',
   '/js/engine/job-queue.js',
@@ -174,6 +179,13 @@ const PRECACHE = [
   '/js/features/library/pickers.js',
   '/js/features/library/quick-add.js',
   '/js/features/library/recycle-bin-page.js',
+  '/js/features/lock/forgot-pin.js',
+  '/js/features/lock/lock-actions.js',
+  '/js/features/lock/lock-controller.js',
+  '/js/features/lock/lock-screen.js',
+  '/js/features/lock/lock-settings.js',
+  '/js/features/lock/pin-pad.js',
+  '/js/features/lock/pin-sheet.js',
   '/js/features/preview/preview-ctx.js',
   '/js/features/preview/preview-meta.js',
   '/js/features/preview/preview-model.js',

@@ -112,5 +112,5 @@ test('Offline start: the Firebase files are cached at install; boot has a watchd
   const sw = read('sw.js'), loader = read('js/core/firebase-loader.js');
   const v = /FIREBASE_VERSION = '([\d.]+)'/.exec(sw)[1]; assert.ok(loader.includes(v), 'sw.js and firebase-loader.js use the same SDK version');
   assert.match(sw, /FIREBASE_FILES/); assert.match(read('js/boot.js'), /startWatchdog/);
-  const app = JSON.parse(read('app.json')); assert.equal(app.version, '2.4.4'); assert.match(sw, /VERSION = '2\.4\.4'/);
+  const app = JSON.parse(read('app.json')); assert.match(app.version, /^2\.\d+\.\d+$/); assert.match(sw, new RegExp("VERSION = '" + app.version.replace(/\./g, '\\.') + "'"));   // v2.5.0: follows app.json instead of pinning a number
 });

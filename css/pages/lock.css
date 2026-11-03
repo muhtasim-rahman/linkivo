@@ -1,0 +1,28 @@
+/* Linkivo v2.5.0 - the lock screen and the PIN keypad (js/features/lock). */
+.lock { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(var(--s4), env(safe-area-inset-top)) var(--s4) max(var(--s4), env(safe-area-inset-bottom)); overflow-y: auto; background: var(--bg); animation: lock-in var(--t-std) var(--ease); }
+.lock.is-out { opacity: 0; transition: opacity var(--t-std) var(--ease); }
+@keyframes lock-in { from { opacity: 0; } to { opacity: 1; } }
+.lock-card { width: min(360px, 100%); display: grid; justify-items: center; gap: var(--s3); text-align: center; }
+.lock-mark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: var(--accent-soft); color: var(--accent-text); }
+.lock-title { margin: 0; font: 700 var(--fs-xl) / 1.2 var(--font-brand); }
+.lock-who { margin: -6px 0 0; color: var(--sub); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.lock-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2) var(--s4); margin-top: var(--s2); }
+.lock-link { min-height: 44px; padding: 0 var(--s2); background: none; border: 0; color: var(--accent-text); font: 600 var(--fs-sm) var(--font-brand); cursor: pointer; }
+.lock-link.is-quiet { color: var(--sub); }
+@media (hover: hover) { .lock-link:hover { text-decoration: underline; } }
+.pin { display: grid; justify-items: center; gap: var(--s3); width: 100%; outline: none; }
+.pin-dots { display: flex; justify-content: center; align-items: center; gap: 14px; min-height: 22px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-strong); background: transparent; transition: background-color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease); }
+.pin-dot.is-on { background: var(--accent); border-color: var(--accent); transform: scale(1.08); }
+.pin-dots.is-shake { animation: pin-shake 360ms var(--ease); }
+@keyframes pin-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+.pin-msg { margin: 0; min-height: 20px; font-size: var(--fs-sm); color: var(--sub); } .pin-msg.is-error { color: var(--danger, #dc2626); }
+.pin-grid { display: grid; grid-template-columns: repeat(3, 64px); gap: 14px; justify-content: center; }
+.pin-key { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 22px / 1 var(--font-brand); cursor: pointer; transition: background-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease), opacity var(--t-std) var(--ease); touch-action: manipulation; }
+.pin-key:active:not(:disabled) { transform: scale(0.93); background: var(--surface-2); }
+.pin-key.is-go { background: var(--accent); color: var(--accent-fg); border-color: transparent; } .pin-key.is-aux { color: var(--sub); }
+.pin-key:disabled { opacity: 0.4; cursor: default; }
+@media (hover: hover) { .pin-key:hover:not(:disabled):not(.is-go) { background: var(--surface-2); } }
+.pin-sheet { display: grid; justify-items: center; gap: var(--s3); padding-bottom: var(--s3); } .pin-sheet .pin-text { margin: 0; text-align: center; color: var(--sub); font-size: var(--fs-sm); }
+@media (max-height: 640px) { .pin-grid { gap: 10px; grid-template-columns: repeat(3, 56px); } .pin-key { width: 56px; height: 56px; } .lock-mark { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lock, .pin-dots.is-shake { animation: none; } }

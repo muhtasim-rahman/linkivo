@@ -219,8 +219,8 @@ test('meta-fallback: the real providers parse their answers (fake fetch)', async
 
 test('worker client: isWorkerOutdated compares versions numerically', async () => {
   const { isWorkerOutdated, EXPECTED_WORKER } = await imp('js/core/worker-client.js');
-  assert.equal(EXPECTED_WORKER, '2.3.0');
-  assert.equal(isWorkerOutdated('2.1.0'), true); assert.equal(isWorkerOutdated('2.1.2'), true); assert.equal(isWorkerOutdated('2.3.0'), false); assert.equal(isWorkerOutdated('2.3.1'), false); assert.equal(isWorkerOutdated('2.2.2'), true); assert.equal(isWorkerOutdated('2.10.0'), false);
+  assert.equal(EXPECTED_WORKER, '2.5.0');   // v2.5.0: Worker with PIN, account and cron routes
+  assert.equal(isWorkerOutdated('2.1.0'), true); assert.equal(isWorkerOutdated('2.1.2'), true); assert.equal(isWorkerOutdated('2.3.0'), true); assert.equal(isWorkerOutdated('2.4.3'), true); assert.equal(isWorkerOutdated('2.5.0'), false); assert.equal(isWorkerOutdated('2.5.1'), false); assert.equal(isWorkerOutdated('2.2.2'), true); assert.equal(isWorkerOutdated('2.10.0'), false);
   assert.equal(isWorkerOutdated(undefined), true);
 });
 

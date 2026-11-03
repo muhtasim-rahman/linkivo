@@ -17,6 +17,9 @@ import { ROUTES } from './features/shell/routes.js';
 import { mountShell } from './features/shell/shell.js';
 import { endSplash } from './features/splash/splash.js';
 import { initTaskChip } from './ui/task-chip.js';
+import { prefs } from './core/local-prefs.js';
+import { loadProfile, cachedProfile, applyProfileLook } from './core/profile-data.js';
+import { ensureUnlocked, startLockWatch, installSensitiveGate } from './features/lock/lock-controller.js';   // v2.5.0 app lock
 import { initPullRefresh } from './ui/pull-refresh.js';
 import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
@@ -28,7 +31,7 @@ import { initClipboardSuggest } from './features/import/clipboard-suggest.js';
  */
 function startWatchdog() {
   const t = setTimeout(() => {
-    if (document.documentElement.dataset.boot === 'ok') return;
+    if (document.documentElement.dataset.boot === 'ok' || document.documentElement.dataset.locked) return;   // v2.5.0: waiting at the lock screen is not a slow start
     log.error('boot', 'start took more than 15 seconds');
     const card = document.createElement('div');
     card.setAttribute('role', 'alert');
@@ -58,24 +61,41 @@ export async function boot() {
     }
     if (s.mode === 'none') checkedUid = null;
     if (s.mode === 'guest' || (s.mode === 'account' && s.status === 'active')) {
+      if (!(await ensureUnlocked(s))) { lastKey = keyOf(getSession()); return; }   // v2.5.0: with the app lock on nothing starts before the PIN (every page load asks)
       try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => job.type === 'check' ? import('./features/check/check-sheet.js').then((m) => m.openCheckSheet({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) : import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
       catch (e) { toast('Storage could not start. Reload the page.', { type: 'error' }); }
-    } else { destroyChip?.(); destroyChip = null; await teardownData(); }
+    } else { destroyChip?.(); destroyChip = null; await teardownData(); await ensureUnlocked(s); }   // (the last call only forgets the lock when signed out)
     lastKey = keyOf(getSession());
   }
 
+  /** v2.5.0 (owner): the saved profile (photo, ring colour, admin shield colour) is applied at start, not only when the Profile page is open, and again whenever it changes
+   *  (the Edit popup writes the copy on this device, which also triggers the repaint of the sidebar). */
+  let offProfile = null;
+  async function startProfileLook(s) {
+    offProfile?.(); offProfile = null;
+    if (s.mode !== 'account') { applyProfileLook({}); return; }
+    const uid = s.user.uid;
+    applyProfileLook(cachedProfile(uid));
+    offProfile = prefs.onChange(`profile.cache.${uid}`, (p) => { applyProfileLook(p || {}); if (shell) shell.setSession(getSession()); });
+    const e = getEngine();
+    if (e && e.adapter) loadProfile(e.adapter, uid).then((p) => { if (getSession().user && getSession().user.uid === uid) { applyProfileLook(p); if (shell) shell.setSession(getSession()); } }).catch(() => {});
+  }
+
   await applySession(getSession());
+  startProfileLook(getSession());
 
   const container = document.getElementById('page-root');
   router = createRouter({ routes: ROUTES, container, getSession, isWide: () => (shell ? shell.isWide() : false), onHint: (m) => toast(m, { duration: 2000 }) });
   shell = mountShell({ router });
+  installSensitiveGate();
+  startLockWatch({ router, reinit: async () => { await applySession(getSession()); startProfileLook(getSession()); await router.reevaluate(); } });
   shell.setSession(getSession());
 
   // keep everything in step when the session changes later (sign-in, sign-out, guest entry, deleted status)
   let chain = Promise.resolve();
   subscribeSession((s) => {
     if (keyOf(s) === lastKey) return;
-    chain = chain.then(async () => { await applySession(getSession()); await router.reevaluate(); }).catch((e) => log.error('boot', 'session change failed', e));
+    chain = chain.then(async () => { await applySession(getSession()); startProfileLook(getSession()); await router.reevaluate(); }).catch((e) => log.error('boot', 'session change failed', e));
   });
 
   // Pull down at the top of a page that can change (library, folder, history, profile: route flag `refresh`) = in-app refresh of that page's

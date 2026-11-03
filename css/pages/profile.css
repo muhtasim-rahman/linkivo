@@ -14,14 +14,14 @@
 .pf2-edit::after { content: ''; position: absolute; inset: -4px; }
 @media (hover: hover) { .pf2-edit:hover { background: rgb(15 23 42 / 0.72); } }
 .pf2-id { display: flex; align-items: flex-end; gap: var(--s3); margin-top: -40px; min-width: 0; }
-.pf2-id .avatar { flex: none; width: 84px; height: 84px; font-size: 32px; border: 4px solid var(--surface); outline: 3px solid var(--ring, var(--accent)); box-shadow: 0 2px 10px rgb(0 0 0 / 0.18); }
+.pf2-id .avatar { flex: none; width: 88px; height: 88px; padding: 4px; font-size: 32px; box-shadow: 0 0 0 4px var(--surface), 0 2px 12px rgb(0 0 0 / 0.18); }   /* v2.5.0: ONE ring (the avatar's own); the 4px surface gap only separates it from the banner */
 .pf2-who { min-width: 0; padding-bottom: 4px; }
 .pf2-name { margin: 0; font: 700 var(--fs-xl) / 1.15 var(--font-brand); overflow-wrap: anywhere; }
 .pf2-mail { margin: 2px 0 0; color: var(--sub); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .pf2-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .pf2-badge, .pf2-badges .admin-chip { align-items: center; gap: 4px; height: 26px; margin: 0; padding: 0 10px; border-radius: 999px; font: 600 12px / 1 var(--font-brand); background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
 .pf2-badge { display: inline-flex; }
-.pf2-badges .admin-chip { background: var(--admin-chip-bg, var(--accent-soft)); color: var(--admin-chip-fg, var(--accent-text)); border-color: transparent; }
+.pf2-badges .admin-chip { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
 html[data-admin='true'] .pf2-badges .admin-chip { display: inline-flex; }
 .pf2-badge.is-verified { background: #1f2933; color: #f1f5f9; border-color: #1f2933; }   /* grayish black (owner) */
 html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #111827; border-color: #cbd5e1; }
@@ -83,7 +83,7 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 
 /* phones: slightly tighter, the sliders run to the screen edge */
 @media (max-width: 599px) {
-  .pf2-cover { height: 96px; } .pf2-id .avatar { width: 76px; height: 76px; font-size: 28px; } .pf2-id { margin-top: -36px; }
+  .pf2-cover { height: 96px; } .pf2-id .avatar { width: 80px; height: 80px; font-size: 28px; } .pf2-id { margin-top: -36px; }
   .pf2-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .pf2-tile { min-height: 70px; padding: 6px 2px; }
   .pf2-slider { margin-inline: calc(var(--s4) * -1); padding-inline: var(--s4); scroll-padding-inline: var(--s4); }
   .pf2-arrow { display: none; }   /* a finger scrolls; the buttons are for mouse screens */
@@ -91,7 +91,7 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 
 /* ---- Edit profile popup and crop window ---- */
 .pe { display: grid; gap: var(--s3); }
-.pe-top { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+/* ! removed in v2.5.0: .pe-top (the old photo row is the live preview now) */
 .pe-photo .avatar { width: 84px; height: 84px; font-size: 32px; }
 .pe-photo-btns { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; flex: 1; min-width: 160px; } .pe-photo-btns .pe-note { flex-basis: 100%; }
 .pe-note { margin: 0; font-size: var(--fs-xs); color: var(--sub); line-height: 1.4; }
@@ -148,9 +148,8 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 /* Edit profile: grouped fields, banner row, colour dots, country dropdown */
 .pe { display: grid; gap: var(--s4); } .pe[hidden], .pe-crop[hidden] { display: none; }
 .pe-group { display: grid; gap: var(--s3); margin: 0; padding: 0; border: 0; min-width: 0; } .pe-legend { padding: 0; margin-bottom: var(--s2); font: 650 var(--fs-xs) var(--font-brand); letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent-text); }
-.pe-photo .avatar { outline: 3px solid var(--ring, var(--accent)); }
-.pe-banners { display: flex; gap: var(--s2); overflow-x: auto; scrollbar-width: none; padding: 3px; margin: -3px; scroll-snap-type: x proximity; } .pe-banners::-webkit-scrollbar { display: none; }
-.pe-banner { flex: none; width: 112px; scroll-snap-align: start; }
+.pe-banners { display: flex; gap: var(--s2); overflow-x: auto; scrollbar-width: none; padding: 4px 3px; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; } .pe-banners::-webkit-scrollbar { display: none; }   /* v2.5.0: no scroll snap, no negative margin: the row reaches both edges */
+.pe-banner { flex: none; width: 112px; }
 .pe-colors { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 4px 3px; margin: -4px -3px; } .pe-colors::-webkit-scrollbar { display: none; }
 .pe-dot { position: relative; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface); background: var(--dot, var(--surface-2)); box-shadow: 0 0 0 1px var(--line-strong); color: var(--sub); cursor: pointer; transition: box-shadow var(--t-std) var(--ease), transform var(--t-micro) var(--ease); }
 .pe-dot::after { content: ''; position: absolute; inset: -7px; }
@@ -171,3 +170,42 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 .pe-crop { display: grid; }
 
 .pf2-bar-act { display: inline-flex; align-items: center; gap: var(--s1); } .pf2-switch { display: inline-flex; }
+
+/* ---- v2.5.0: details order (website, location with flag picture, birth date, languages, Interests with "See more") ---- */
+.pf2-info { display: grid; gap: var(--s2); margin-top: var(--s1); }
+.pf2-flag { display: inline-grid; place-items: center; width: 20px; height: 15px; flex: none; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); } .pf2-flag img { display: block; width: 100%; height: 100%; object-fit: cover; } .pf2-flag-t { font-size: 13px; line-height: 1; }
+.pf2-int-box { display: grid; gap: 6px; margin-top: var(--s1); }
+.pf2-int-h { margin: 0; font: 650 var(--fs-xs) var(--font-brand); letter-spacing: 0.05em; text-transform: uppercase; color: var(--sub); }
+.pf2-interests { display: flex; flex-wrap: wrap; gap: 6px; overflow: hidden; transition: max-height var(--t-large) var(--ease); }
+.pf2-interests.is-clamped { -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent); mask-image: linear-gradient(to bottom, #000 62%, transparent); }
+.pf2-see { justify-self: start; min-height: 32px; padding: 0; background: none; border: 0; color: var(--accent-text); font: 600 var(--fs-sm) var(--font-brand); cursor: pointer; position: relative; } .pf2-see::after { content: ''; position: absolute; inset: -6px -8px; }
+.pf2-see[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .pf2-interests { transition: none; } }
+
+/* ---- v2.5.0: Edit profile = live preview + controls (two columns on wide screens) ---- */
+.pe { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.pe-side, .pe-main { display: grid; gap: var(--s4); min-width: 0; align-content: start; }
+@media (min-width: 720px) { .pe { grid-template-columns: 270px minmax(0, 1fr); gap: var(--s5); } .pe-side { position: sticky; top: 0; } }
+.pe-prev { position: relative; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; padding-bottom: var(--s3); }
+.pe-prev-cover { height: 72px; background: var(--accent-soft) center / cover no-repeat; transition: background-image var(--t-std) var(--ease); }
+.pe-prev-id { display: flex; align-items: flex-end; gap: var(--s3); margin: -30px var(--s3) 0; min-width: 0; }
+.pe-av { position: relative; flex: none; display: block; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; box-shadow: 0 0 0 3px var(--surface); }
+.pe-av .avatar { width: 68px; height: 68px; padding: 3px; font-size: 24px; display: grid; }
+.pe-av-cam { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 1px; border-radius: 50%; background: rgb(15 23 42 / 0.55); color: #fff; opacity: 0; transition: opacity var(--t-std) var(--ease); font: 600 9px / 1 var(--font-brand); }
+.pe-av-cam-t { display: none; }
+@media (hover: hover) { .pe-av:hover .pe-av-cam, .pe-av:focus-visible .pe-av-cam { opacity: 1; } .pe-av:hover .pe-av-cam-t, .pe-av:focus-visible .pe-av-cam-t { display: block; } }
+@media (hover: none) { .pe-av-cam { inset: auto -2px -2px auto; width: 26px; height: 26px; opacity: 1; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); } .pe-av-cam svg { width: 14px; height: 14px; } }   /* touch screens have no hover: a small camera badge is always visible */
+.pe-prev-who { display: grid; min-width: 0; padding-bottom: 2px; } .pe-prev-name { font: 700 var(--fs-md) / 1.2 var(--font-brand); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-prev-head { font-size: var(--fs-xs); color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .pe-prev-head.is-empty { opacity: 0.6; }
+.pe-prev-chip.admin-chip { margin: var(--s2) var(--s3) 0; width: max-content; }
+html[data-admin='true'] .pe-prev-chip.admin-chip { display: inline-block; }
+.pe-look { display: grid; gap: var(--s3); min-width: 0; }
+.pe-brow { min-width: 0; }
+.pe input, .pe textarea, .pe .pe-f { -webkit-user-select: text; user-select: text; touch-action: manipulation; }   /* typing must always work on a phone */
+.pe .input { font-size: max(16px, 1rem); }   /* below 16px iOS zooms the page when a field gets focus */
+
+/* ---- v2.5.0: quiet account links under the card ---- */
+.pf2-acct { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.pf2-acct-b { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--r-ctl, 12px); background: var(--surface); color: var(--text); font: 600 var(--fs-sm) var(--font-brand); cursor: pointer; transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
+.pf2-acct-b.is-danger { color: var(--danger, #dc2626); }
+@media (hover: hover) { .pf2-acct-b:hover { background: var(--surface-2); } }

@@ -17,6 +17,7 @@ import { icon } from '../../ui/icons.js';
 import { clearSearchHistory } from '../search/search-store.js';
 import { getSession } from '../../core/session.js';
 import { maskEmail } from '../../core/mask.js';
+import { shownUser } from '../../core/profile-data.js';
 
 /** `self: true` (the signed-in person's own avatar) adds the small admin shield, shown only while <html data-admin> is set (core/admin.js). */
 export function avatar(name, large = false, photo = '', self = false) {
@@ -33,13 +34,13 @@ export function avatar(name, large = false, photo = '', self = false) {
 export function toggleTheme() { prefs.set(KEYS.theme, resolvedTheme() === 'dark' ? 'light' : 'dark'); }
 
 /** Logging out asks for confirmation (and, from v2.5.0, the PIN through the sensitive gate). Guests only leave guest mode: their data stays on the device. */
-export async function logOut(router, { guest = false } = {}) {
+export async function logOut(router, { guest = false, skipPin = false } = {}) {   // skipPin (v2.5.0): the lock screen's own Log out must not ask for the PIN the person forgot
   const leavingGuest = guest || document.documentElement.dataset.mode === 'guest';
   const ok = await confirmDialog(leavingGuest
     ? { title: 'Leave guest mode?', message: 'Your guest data stays on this device. You can come back to it later by choosing Visit as guest again.', confirmLabel: 'Continue' }
     : { title: 'Log out?', message: 'You will need to sign in again to open your links.', confirmLabel: 'Log out', danger: true });
   if (!ok) return;
-  if (!(await requireSensitive('logout'))) return;
+  if (!skipPin && !(await requireSensitive('logout'))) return;
   try {
     if (leavingGuest) leaveGuest(); else { clearSearchHistory(); await signOutUser(); }   // v2.3.0: recent searches are cleared when an account logs out
   } catch (e) { log.error('auth', 'logout failed', e); toast('Could not log out. Try again.', { type: 'error' }); }
@@ -48,11 +49,12 @@ export async function logOut(router, { guest = false } = {}) {
 /** The profile card: avatar, name, masked email, arrow. Opens the Profile page. Used first on the Menu page and first on the wide Settings page (owner, v2.3.0). */
 export function profileCard(router = null) {
   const s = getSession(), account = s.mode === 'account';
-  const name = account ? s.user.name : 'Guest';
+  const shown = account ? shownUser(s.user) : { name: '', photo: '' };
+  const name = account ? shown.name : 'Guest';
   const sub = account ? maskEmail(s.user.email) : 'Stored only on this device';
   // v2.3.2 (owner): the switch-account button sits INSIDE the card, on the right, where the arrow was (accounts); guests keep the arrow. The card is a div so a
   // button can live in it; the avatar and the text are one link to the Profile page.
-  const main = h('a', { class: 'menu-hero-main', href: '/profile' }, avatar(name, true, s.user ? s.user.photo : '', account),
+  const main = h('a', { class: 'menu-hero-main', href: '/profile' }, avatar(name, true, shown.photo, account),
     h('div', { class: 'pf-text' }, h('span', { class: 'pf-name' }, h('span', { text: name }), h('span', { class: 'admin-chip', text: 'Admin' })), h('span', { class: 'pf-mail', text: sub })));
   const end = h('span', { class: 'menu-hero-end' });
   if (account) import('./switch-account.js').then((m) => end.appendChild(m.switchButton(router)));

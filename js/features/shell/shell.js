@@ -21,6 +21,7 @@ import { getSession } from '../../core/session.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { subscribeAdmin } from '../../core/admin.js';
+import { shownUser } from '../../core/profile-data.js';   // v2.5.0: the saved profile photo and name win over the sign-in provider's
 // ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
 // import { mountInstallBanner } from './install-banner.js';
 
@@ -176,9 +177,10 @@ export function mountShell({ router }) {
     isWide: () => wide.matches,
     setSession(s) {
       const guest = s.mode === 'guest';
-      const name = guest ? 'Guest' : s.user ? s.user.name : '';
+      const shown = s.user ? shownUser(s.user) : { name: '', photo: '' };
+      const name = guest ? 'Guest' : shown.name;
       app.dataset.mode = s.mode; document.documentElement.dataset.mode = s.mode;
-      pfAvatar.replaceChildren(avatar(name, false, s.user ? s.user.photo : '', s.mode === 'account'));
+      pfAvatar.replaceChildren(avatar(name, false, shown.photo, s.mode === 'account'));
       pfName.textContent = name;
       pfMail.textContent = guest ? 'This device only' : s.user ? maskEmail(s.user.email) : '';
     }

@@ -15,12 +15,14 @@
  *          the automatic next link starts at 15 seconds by default and can be paused, resumed and stopped.
  * Page module: mount(container, ctx) -> unmount
  */
+import { lockButton } from '../../ui/lock-button.js';
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { prefs } from '../../core/local-prefs.js';
 import { loadCss } from '../../core/css-loader.js';
 import { getEngine } from '../../core/app-data.js';
 import { openSheet } from '../../ui/sheet.js';
+import { pushLayer } from '../../core/nav-stack.js';
 import { toast } from '../../ui/toast.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { pickNext, PICKER, describeFilters } from '../../engine/picker.js';
@@ -64,7 +66,7 @@ export async function mount(container, ctx) {
   for (const box of [hubCard, recent, strip]) { const orig = box.replaceChildren.bind(box); box.replaceChildren = (...n) => { orig(...n); restart(box); }; }
   let autoSig = '';
   const page = h('div', { class: 'page rnd is-wide page-enter' },
-    h('header', { class: 'page-head rnd-head' }, h('h1', { class: 'page-title', text: 'Random Discover' }), settingsShortcut('random', 'Random settings')),
+    h('header', { class: 'page-head rnd-head' }, h('h1', { class: 'page-title', text: 'Random Discover' }), h('div', { class: 'page-actions' }, lockButton(), settingsShortcut('random', 'Random settings'))),
     hub, stage, strip);   // the strip comes after the stage: at the bottom on phones (css puts it on top on wide screens)
   container.appendChild(page);
 
@@ -139,6 +141,8 @@ export async function mount(container, ctx) {
     try { stopPreview && stopPreview(); } catch { /* ignore */ }
     stage.replaceChildren(); hub.hidden = true; stage.hidden = false; strip.hidden = false;
     document.documentElement.dataset.rnd = '1'; setBar(false);
+    // v2.5.1 (owner): Back from the playing preview returns to the Random hub, not to the page before Random. The playing view is a back layer, like a popup.
+    if (!playLayer) playLayer = pushLayer(() => { playLayer = null; showHub(); });
     const m = await import('../preview/preview-page.js');
     if (disposed) return;
     const fab = h('div', { class: 'rnd-fab', role: 'group', 'aria-label': 'Random controls' },
@@ -152,7 +156,9 @@ export async function mount(container, ctx) {
     fabEl = fab; paintStrip(); placeStrip(); paintRecent(); startAuto();
   }
 
+  let playLayer = null;
   function showHub() {
+    if (playLayer) { const l = playLayer; playLayer = null; l.remove(); }   // v2.5.1: leaving the playing view by a button also drops its history entry
     stopAuto(); fabEl = null; placeStrip();
     try { stopPreview && stopPreview(); } catch { /* ignore */ } stopPreview = null;
     stage.replaceChildren(); stage.hidden = true; strip.hidden = true; hub.hidden = false;
@@ -221,5 +227,5 @@ export async function mount(container, ctx) {
   paintCard(); paintQuick(); paintRecent();
   if (presetFolder) next(true);   // "Random from this folder": no panel stop, a link opens straight away
   document.title = 'Random Discover | Linkivo';
-  return () => { disposed = true; stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
+  return () => { disposed = true; if (playLayer) { const l = playLayer; playLayer = null; l.remove(); } stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
 }

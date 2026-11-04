@@ -6,6 +6,7 @@
  *          documentation, privacy policy, terms).
  * Page module: mount(container, ctx)
  */
+import { lockButton } from '../../../ui/lock-button.js';
 import { h } from '../../../core/dom.js';
 import { icon } from '../../../ui/icons.js';
 import { loadCss } from '../../../core/css-loader.js';
@@ -38,7 +39,7 @@ export async function mount(container, ctx = {}) {
   await Promise.all([loadCss('/css/pages/pages.css'), loadCss('/css/pages/settings.css')]);
   const hide = findEntry('hideBar');
   container.appendChild(h('div', { class: 'page page-enter' },
-    h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 }))),   // v2.2.4: gear = all settings
+    h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('div', { class: 'page-actions' }, lockButton(), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 })))),   // v2.2.4: gear = all settings
     h('div', { class: 'menu-list' },
       profileCard(ctx.router),   // v2.3.0: shared with the wide Settings page
       installCard(),

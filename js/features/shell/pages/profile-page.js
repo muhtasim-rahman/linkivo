@@ -45,14 +45,7 @@ export async function mount(container, ctx) {
 
   // ---- profile card ---------------------------------------------------------------------------------------------------------------------
   const hero = h('section', { class: 'pf2-hero', 'aria-label': 'Profile' });
-  /** v2.5.0: quiet entry points to security and account deletion (accounts only; a guest has no account to delete). */
-  function accountLinks() {
-    if (getSession().mode !== 'account') return null;
-    const go = (path) => () => ctx.router.navigate(path);
-    return h('div', { class: 'pf2-acct' },
-      h('button', { type: 'button', class: 'pf2-acct-b', on: { click: go('/settings/security') } }, icon('lock', { size: 16 }), h('span', { text: 'Security and app lock' })),
-      h('button', { type: 'button', class: 'pf2-acct-b is-danger', on: { click: async () => { const m = await import('../../settings/delete-account.js'); m.openDeleteAccount(); } } }, icon('trash', { size: 16 }), h('span', { text: 'Delete account' })));
-  }
+  // v2.5.1 (owner): the "Security and app lock" and "Delete account" buttons were removed from the Profile page. Both stay in Settings (Security, Danger zone).
   function paintHero() {
     const me = getSession(), name = guest ? 'Guest' : (profile.name || me.user.name), photo = guest ? '' : (profile.photo || me.user.photo || '');
     const banner = h('div', { class: 'pf2-cover', style: { backgroundImage: `url(${bannerUrl(profile.banner)})` }, 'aria-hidden': 'true' });
@@ -180,7 +173,7 @@ export async function mount(container, ctx) {
   const switchSlot = h('span', { class: 'pf2-switch' });   // v2.4.4 (owner): the account switch icon is in the Profile header too
   if (!guest) import('../switch-account.js').then((m) => switchSlot.appendChild(m.switchButton(ctx.router))).catch(() => {});
   const page = h('div', { class: 'page pf2 page-enter' }, h('header', { class: 'pf2-bar' }, h('span', { class: 'pf2-bar-t', text: 'Profile' }), h('span', { class: 'pf2-bar-act' }, switchSlot, settingsShortcut('account', 'Account settings'))),
-    h('div', { class: 'pf2-grid' }, h('div', { class: 'pf2-left' }, hero, accountLinks(), highlights),
+    h('div', { class: 'pf2-grid' }, h('div', { class: 'pf2-left' }, hero, highlights),
       h('div', { class: 'pf2-main' }, favBox, recentBox, h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-explore-h' }, h('h2', { class: 'pf2-h', id: 'pf2-explore-h', text: 'Explore' }), h('div', { class: 'pf2-tiles' }, tiles)), dataBox, shareCard, logout)));
   container.appendChild(page);
   paintHero(); paintHighlights(); paintData(); paintSliders();

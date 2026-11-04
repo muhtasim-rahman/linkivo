@@ -36,7 +36,7 @@
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.5.0';
+const VERSION = '2.5.1';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -617,7 +617,9 @@ const SEC = {
   deleteAfterMs: 15 * 86400000,
   purgePerRun: 3, jobUidsPerRun: 3, jobLinksPerRun: 3, maxJobIds: 500, maxActiveJobs: 4, jobKeepMs: 2 * 86400000,
   limit: { capacity: 40, perMs: 60000 }, pinLimit: { capacity: 12, perMs: 60000 },
-  autoLockChoices: [0, 1, 5, 15, 30, 60]
+  awayChoices: [0, 30, 60, 300, 600, 900, 1800, -1],   // v2.5.1: the one Auto lock setting, in seconds the app may be away (0 = right after leaving, -1 = never)
+  defaultAway: 60,
+  redeleteBlockMs: 0 * 86400000   // v2.5.1: after an account was reactivated it cannot be deleted again for this long. 0 days while the owner tests; set 7 * 86400000 for production
 };
 const PIN_RE = /^\d{4,8}$/;
 const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -688,9 +690,10 @@ async function checkPin(sec, uid, pin, scope, now = nowMs()) {
 
 async function readLock(sec, uid) {
   const v = (await dbGet(sec, `users/${uid}/lockState`)) || {};
-  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, autoLock: SEC.autoLockChoices.includes(Number(v.autoLock)) ? Number(v.autoLock) : 0 };
+  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, away: SEC.awayChoices.includes(Number(v.away)) && v.away !== undefined && v.away !== null ? Number(v.away) : SEC.defaultAway };
 }
-const ttlOf = (lock) => (lock.autoLock > 0 ? lock.autoLock * 60000 : SEC.sessionDefaultMs);
+// v2.5.1: the server session must outlive the time the app may be away (the app extends it every minute while it is on screen)
+const ttlOf = (lock) => (lock.away < 0 ? SEC.sessionDefaultMs : Math.max(15 * 60000, lock.away * 1000 + 5 * 60000));
 const lockUpdates = (uid, patch) => Object.fromEntries(Object.entries(patch).map(([k, v]) => [`users/${uid}/lockState/${k}`, v]));
 const activityEntry = (uid, type, info, now) => ({ [`activity/${uid}/${randomB64u(9)}`]: { type, ts: now, info } });
 
@@ -716,7 +719,7 @@ async function handlePinSet(request, ctx, env, cors) {           // the first PI
   if ((await dbGet(sec, `secure/${user.uid}`) || {}).pinHash) throw err('pin_exists', { status: 409 });
   const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
   const lock = await readLock(sec, user.uid), enable = body.enable === true;
-  const up = { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, ...lockUpdates(user.uid, { pin: true, app: enable || lock.app, vaultSep: false, hideVault: lock.hideVault, autoLock: lock.autoLock }) };
+  const up = { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, ...lockUpdates(user.uid, { pin: true, app: enable || lock.app, vaultSep: false, hideVault: lock.hideVault, away: lock.away }) };
   const exp = now + ttlOf(lock);
   if (enable) { up[`session/${user.uid}/app`] = exp; Object.assign(up, activityEntry(user.uid, 'lock-on', 'App lock turned on', now)); }
   await dbMulti(sec, up);
@@ -763,7 +766,7 @@ async function handlePinReset(request, ctx, env, cors) {         // forgot PIN: 
 async function handleLockConfig(request, ctx, env, cors) {       // turn the lock on or off, hide the vault entry, change the auto-lock time
   const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
   const lock = await readLock(sec, user.uid), patch = {}, up = {};
-  if (body.autoLock !== undefined) { if (!SEC.autoLockChoices.includes(body.autoLock)) throw err('bad_request', { status: 400 }); patch.autoLock = body.autoLock; }
+  if (body.away !== undefined) { if (!SEC.awayChoices.includes(body.away)) throw err('bad_request', { status: 400 }); patch.away = body.away; }
   if (body.hideVault !== undefined) patch.hideVault = body.hideVault === true;
   if (body.app === false && lock.app) await checkPin(sec, user.uid, body.pin, 'app', now);               // turning the lock OFF needs the PIN itself
   else if (lock.app && Object.keys(patch).length && !((await dbGet(sec, `session/${user.uid}/app`)) > now)) throw err('locked', { status: 403 });
@@ -796,11 +799,19 @@ async function accountSummary(sec, uid) {
   const n = (o) => (o && typeof o === 'object' ? Object.keys(o).length : 0);
   return { folders: n(f), links: n(l), vaultFolders: n(v), joined: Number(p && p.createdAt) || 0, lastLogin: Number(p && p.lastLogin) || 0 };   // counts include the Recycle Bin: "shallow" returns keys only
 }
-async function handleAccountSummary(request, ctx, env, cors) { const { user, sec } = await secureCall(request, ctx, env); return ok({ summary: await accountSummary(sec, user.uid) }, cors); }
+/** v2.5.1: when this account was reactivated lately it cannot be deleted again until this time (0 = no block). */
+async function deleteBlockedUntil(sec, uid) {
+  const at = Number(await dbGet(sec, `users/${uid}/profile/reactivatedAt`)) || 0;
+  const until = at + SEC.redeleteBlockMs;
+  return at && SEC.redeleteBlockMs > 0 ? until : 0;
+}
+async function handleAccountSummary(request, ctx, env, cors) { const { user, sec } = await secureCall(request, ctx, env); return ok({ summary: await accountSummary(sec, user.uid), blockedUntil: await deleteBlockedUntil(sec, user.uid) }, cors); }
 
 async function handleAccountDelete(request, ctx, env, cors) {    // marks the account deleted; everything is removed for good after 15 days by the daily purge
   const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
   if (!fresh(user, now)) throw err('reauth_required', { status: 403 });
+  const blockedUntil = await deleteBlockedUntil(sec, user.uid);
+  if (blockedUntil > now) throw err('delete_blocked', { status: 409, until: blockedUntil });   // v2.5.1: a recovered account cannot be deleted again right away
   const lock = await readLock(sec, user.uid);
   if (lock.app) await checkPin(sec, user.uid, body.pin, 'app', now);
   const summary = await accountSummary(sec, user.uid), deleteAt = now + SEC.deleteAfterMs;
@@ -816,7 +827,7 @@ async function handleAccountReactivate(request, ctx, env, cors) {
   const rec = await dbGet(sec, `deletedAccounts/${user.uid}`);
   if (!rec) throw err('not_deleted', { status: 404 });
   if (!(rec.deleteAt > now)) throw err('expired', { status: 410 });
-  await dbMulti(sec, { [`deletedAccounts/${user.uid}`]: null, [`users/${user.uid}/profile/status`]: 'active', [`users/${user.uid}/profile/deletedAt`]: null, ...activityEntry(user.uid, 'reactivated', 'Account reactivated', now) });
+  await dbMulti(sec, { [`deletedAccounts/${user.uid}`]: null, [`users/${user.uid}/profile/status`]: 'active', [`users/${user.uid}/profile/deletedAt`]: null, [`users/${user.uid}/profile/reactivatedAt`]: now, ...activityEntry(user.uid, 'reactivated', 'Account reactivated', now) });
   return ok({ summary: rec.summary || null }, cors);
 }
 
@@ -1102,7 +1113,7 @@ async function route(request, env, deps = {}) {
     return json({ ok: false, error: 'not_found' }, 404, cors);
   } catch (e) {
     // v2.5.0: the secure routes throw errors that carry an HTTP status (wrong_pin 403, locked_out 429 ...). Messages are short codes, never secrets.
-    if (e && e.status && e.message) return json({ ok: false, error: e.message, retryAfter: e.retryAfter, attemptsLeft: e.attemptsLeft }, e.status, e.retryAfter ? { ...cors, 'Retry-After': String(e.retryAfter) } : cors);
+    if (e && e.status && e.message) return json({ ok: false, error: e.message, retryAfter: e.retryAfter, attemptsLeft: e.attemptsLeft, until: e.until }, e.status, e.retryAfter ? { ...cors, 'Retry-After': String(e.retryAfter) } : cors);
     return json({ ok: false, error: 'internal' }, 500, cors);
   }
 }

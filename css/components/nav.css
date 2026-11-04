@@ -97,3 +97,9 @@
 #app[data-collapsed='true'] .sidebar .pf-text, #app[data-collapsed='true'] .sidebar .pf-more { opacity: 0; pointer-events: none; }
 #app[data-collapsed='true'] .pf-badge { border-color: transparent; }
 #app[data-collapsed='true'] .sidebar .pf-more { display: none; }   /* v2.4.1: it still took 36px of the badge, squeezing the profile link to nothing, so its tooltip opened over the picture */
+/* v2.5.1: Lock now. Icon at the top of Library, Random and Menu on a phone; on a PC it is a row in the sidebar. */
+.lock-btn[hidden] { display: none; }
+@media (min-width: 900px) { .lock-btn.is-phone { display: none; } }
+.lock-row[hidden] { display: none; }
+/* v2.5.1 (owner): the admin shield on the sidebar avatar was clipped by the badge's overflow:hidden and flickered in. The badge no longer clips; only the text column does. */
+.pf-badge { overflow: visible; } .pf-text { overflow: hidden; } .pf-avatar { position: relative; z-index: 1; }

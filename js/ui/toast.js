@@ -5,14 +5,14 @@
  *      v2.3.1: `points` (a number) adds a small diamond icon and the new points value after the text.
  *      v2.3.2 (owner): the SAME message shown again while its toast is still on screen does not add a second toast: the first one gets a count in brackets
  *      ("Points up. (3)"), shows the newest points and starts its timer again; when the toast is gone the count starts over. Every toast has a small close
- *      button and can be swiped away (left, right or down). The time on screen comes from the setting `toast.duration` (default 2.5 s) unless the caller sets one.
+ *      button and can be swiped away (left, right or down). The time on screen comes from the setting `toast.duration` (default 2 s) unless the caller sets one.
  */
 import { h } from '../core/dom.js';
 import { prefs } from '../core/local-prefs.js';
 import { icon } from './icons.js';
 
 const MAX = 2;
-export const TOAST_DEFAULT_MS = 2500;
+export const TOAST_DEFAULT_MS = 2000;   // v2.5.1 (owner): default 2 s (was 2.5 s)
 const SWIPE_X = 70, SWIPE_Y = 36;
 export const toastMs = () => { const v = Number(prefs.get('toast.duration', TOAST_DEFAULT_MS)); return v >= 500 && v <= 30000 ? v : TOAST_DEFAULT_MS; };
 

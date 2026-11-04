@@ -12,7 +12,7 @@ import { extractLinks } from '../../core/extract.js';
 import { startClipboardWatch } from '../../core/clipboard-watch.js';
 import { stashText } from './import-form.js';
 import { plural } from '../../core/format.js';
-import { getSession } from '../../core/session.js';
+import { getSession, subscribeSession } from '../../core/session.js';
 
 const SHOW_MS = 15000;
 
@@ -22,7 +22,10 @@ export function initClipboardSuggest({ router }) {
   function show({ text, links, markSeen }) {
     if (card) return;
     const path = location.pathname;
-    if (path === '/import' || path.startsWith('/login') || getSession().mode === 'none') return;   // already importing, or not signed in
+    const ses = getSession();
+    // v2.5.1 (owner): never offer links while logged out, while the account is deleted (Reactivate page) or while the app lock screen is up
+    const signedIn = (ses.mode === 'account' || ses.mode === 'guest') && (ses.status === undefined || ses.status === 'active');
+    if (path === '/import' || path.startsWith('/login') || path.startsWith('/reactivate') || !signedIn || document.documentElement.dataset.locked) return;
     markSeen();
     card = h('div', { class: 'clip-card', role: 'region', 'aria-label': 'Links found in your clipboard', 'aria-live': 'polite' },
       h('span', { class: 'clip-ic' }, icon('link', { size: 20 })),
@@ -34,6 +37,7 @@ export function initClipboardSuggest({ router }) {
     requestAnimationFrame(() => card?.classList.add('is-in'));
     timer = setTimeout(hide, SHOW_MS);
   }
+  const offSession = subscribeSession((s) => { if (!(s.mode === 'account' || s.mode === 'guest') || (s.status && s.status !== 'active')) hide(); });   // v2.5.1: a card already on screen goes away when the person logs out
   const stop = startClipboardWatch({ onFound: show, enabled: () => prefs.get('lib.clipboard', true) !== false, extract: (t) => extractLinks(t, { bare: false }) });
-  return () => { stop(); hide(); };
+  return () => { stop(); offSession(); hide(); };
 }

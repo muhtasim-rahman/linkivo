@@ -1,5 +1,8 @@
 /**
- * Linkivo — js/features/settings/delete-account.js  (v2.2.4)
+ * Linkivo — js/features/settings/delete-account.js  (v2.2.4, v2.5.1)
+ * v2.5.1 (owner): (1) "Could not delete the account" showed after a successful delete: a second tap (the footer buttons are not disabled by setBusy) sent a second request that failed
+ *          because the first one had already ended the sign-in. Now ONE request at a time (`working`), and nothing can show an error after the account is marked (`finished`).
+ *          (2) A reactivated account cannot be deleted again for a while (the Worker's `redeleteBlockMs`, 0 days while testing): the first step tells the person when it is possible.
  * Purpose: "Delete account" (Settings > Danger zone, last row). There is no automatic deletion yet (it needs the Worker and a service account, v2.5.0), so
  *          the owner checks every request by hand. The flow is built to make that check reliable:
  *            1 Verify: password (with a Forgot password link) or, for Google-only accounts, a Google sign-in popup. A fresh sign-in proves the person holds it.
@@ -56,7 +59,7 @@ export async function openDeleteAccount() {
   await loadCss('/css/pages/settings.css');
   const user = s.user, usesPassword = hasPassword(user);
   const body = h('div', { class: 'da' });
-  let sheet = null, facts = null, verifiedAt = 0;
+  let sheet = null, facts = null, verifiedAt = 0, working = false, finished = false;
   const err = h('p', { class: 'help is-error', role: 'alert' });
 
   /** A button that is text + icon on wide popups and icon only on narrow phones (CSS hides .da-bt under 480px; label stays for screen readers and the tooltip). */
@@ -87,7 +90,11 @@ export async function openDeleteAccount() {
     const run = async () => {
       err.textContent = ''; if (usesPassword && !pass.value) { err.textContent = 'Enter your password.'; return; }
       sheet.setBusy?.(true);
-      try { await reauthenticate(usesPassword ? pass.value : undefined); facts = await accountFacts(); verifiedAt = Date.now(); stepSummary(); }
+      try {
+        await reauthenticate(usesPassword ? pass.value : undefined); facts = await accountFacts(); verifiedAt = Date.now();
+        const blockedUntil = await freshIdToken().then(() => securePost('/account/summary')).then((r) => Number(r && r.blockedUntil) || 0).catch(() => 0);   // a failed look-up never blocks: the Worker checks again on delete
+        if (blockedUntil > Date.now()) stepBlocked(blockedUntil); else stepSummary();
+      }
       catch (e) { err.textContent = friendlyAuthError(e) || 'Could not verify. Try again.'; }
       sheet.setBusy?.(false);
     };
@@ -99,6 +106,14 @@ export async function openDeleteAccount() {
       usesPassword ? h('label', { class: 'acc-field' }, h('span', { class: 'acc-label', text: 'Password' }), pass, forgot) : h('p', { class: 'da-note', text: 'This account signs in with Google. A Google window opens to confirm it is you.' })],
       foot(null, btn(usesPassword ? 'lock' : 'user', usesPassword ? 'Verify' : 'Continue with Google', run, { primary: true })));
     if (usesPassword) pass.focus();
+  }
+
+  /** v2.5.1 (owner): a recovered account cannot be deleted again right away. Shows when it becomes possible. */
+  function stepBlocked(until) {
+    const days = Math.max(1, Math.ceil((until - Date.now()) / 86400000));
+    frame(1, 'Deleting is paused', 'This account was recovered not long ago.', [
+      h('p', { class: 'da-note', text: `You can request deletion again on ${dateTime(until)} (in ${plural(days, 'day')}).` })],
+      foot(null, btn('check', 'Done', () => sheet.close(true), { primary: true })));
   }
 
   function stepSummary() {
@@ -131,21 +146,28 @@ export async function openDeleteAccount() {
     const lockOn = getLock().enabled;
     const pin = lockOn ? h('input', { class: 'input', type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '8', 'aria-label': 'Your PIN', placeholder: 'Your PIN' }) : null;
     const run = async () => {
+      if (working || finished) return;   // one request at a time; a second tap must never send a second delete
       err.textContent = '';
       if (lockOn && !/^\d{4,8}$/.test(pin.value)) { err.textContent = 'Enter your PIN (4 to 8 digits).'; return; }
-      sheet.setBusy?.(true);
+      working = true; sheet.setBusy?.(true);
+      let r = null;
       try {
         await freshIdToken();
-        const r = await securePost('/account/delete', lockOn ? { pin: pin.value } : {});
-        stepDone(r && r.deleteAt);
+        r = await securePost('/account/delete', lockOn ? { pin: pin.value } : {});
       } catch (e) {
+        working = false;
+        if (finished) return;
         const code = e && e.code;
         err.textContent = code === 'reauth_required' ? 'For your safety this needs a sign-in from the last 5 minutes. Go back and verify again.'
           : code === 'wrong_pin' ? `That PIN is not right.${e.attemptsLeft ? ` ${e.attemptsLeft} tries left before a short wait.` : ''}`
           : code === 'locked_out' ? 'Too many wrong PINs. Wait a little and try again.'
+          : code === 'delete_blocked' ? `This account was recovered not long ago. You can request deletion again on ${e.until ? dateTime(e.until) : 'a later day'}.`
           : code === 'not_configured' ? 'Account deletion is not set up on the server yet.' : 'Could not delete the account. Check your connection and try again.';
         sheet.setBusy?.(false);
+        return;
       }
+      finished = true; working = false; sheet.setBusy?.(false);
+      stepDone(r && r.deleteAt);   // (outside the try: a drawing problem here must never look like a failed delete)
     };
     frame(4, 'Delete my account', 'The last step. Nothing is lost today.', [
       h('ul', { class: 'da-list' }, ['Your account is marked as deleted and you are signed out.', 'For 15 days nothing is removed: sign in again and choose Reactivate to get everything back.', 'After 15 days your links, folders and sign-in are deleted for good.'].map((t) => h('li', null, icon('x-circle', { size: 16 }), h('span', { text: t })))),

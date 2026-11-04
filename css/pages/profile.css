@@ -209,3 +209,5 @@ html[data-admin='true'] .pe-prev-chip.admin-chip { display: inline-block; }
 .pf2-acct-b { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--r-ctl, 12px); background: var(--surface); color: var(--text); font: 600 var(--fs-sm) var(--font-brand); cursor: pointer; transition: background-color var(--t-std) var(--ease), border-color var(--t-std) var(--ease); }
 .pf2-acct-b.is-danger { color: var(--danger, #dc2626); }
 @media (hover: hover) { .pf2-acct-b:hover { background: var(--surface-2); } }
+/* v2.5.1 (owner): the Edit profile popup is wider on a PC (the live preview sits beside the form) */
+@media (min-width: 900px) { .sheet.pe-sheet { width: min(900px, calc(100% - 64px)); } }

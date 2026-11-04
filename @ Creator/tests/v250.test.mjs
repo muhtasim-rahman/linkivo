@@ -44,7 +44,7 @@ test('guest lock: change PIN, lock now, turn off, forgot = erase', async () => {
   const { oldBox, newBox } = await L.changePin('4821', '2468'); assert.ok(oldBox && newBox && oldBox.verifier !== newBox.verifier);
   await L.lockNow(); assert.equal(L.isLocked(), true); assert.equal(L.getBox(), null);
   await assert.rejects(L.unlock('4821'), { code: 'wrong_pin' }); await L.unlock('2468'); assert.equal(L.isLocked(), false);
-  await L.setAutoLock(5); assert.equal(prefs.get('guest.lock').autoLock, 5); assert.equal(L.getLock().autoLock, 5);
+  assert.equal(L.getLock().away, 60, 'default 1 minute'); await L.setAway(300); assert.equal(prefs.get('guest.lock').away, 300); assert.equal(L.getLock().away, 300); await assert.rejects(L.setAway(7), { code: 'bad_request' });
   const old = await L.disableLock('2468'); assert.ok(old); assert.equal(L.getLock().enabled, false); assert.equal(prefs.get('guest.lock', null), null);
   await L.enableLock('2468'); L.eraseGuestLock(); assert.equal(L.getLock().enabled, false); assert.equal(prefs.get('guest.lock', null), null);
   L.resetLock(); assert.equal(L.getLock().scope, 'none');

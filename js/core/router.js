@@ -82,6 +82,28 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     requestAnimationFrame(() => { container.style.scrollBehavior = ''; });
   }
 
+  // v2.5.1 (owner: "after unlocking I land on some random place" and "after changing the PIN the page jumps"): suspend() remembers the page AND its scroll position; reevaluate()
+  // mounts the same page again and puts the scroll back. { keepScroll: true } does the same when the page is re-mounted without a suspend (PIN set, changed or removed).
+  let parked = null;
+  const scrollMemo = new Map();   // path+search -> scrollTop when the page was left (kept for this tab only)
+  function restoreScroll(target) {
+    if (!(target > 0)) return;
+    let frames = 0;
+    const step = () => {
+      container.style.scrollBehavior = 'auto'; container.scrollTop = target;
+      if (Math.abs(container.scrollTop - target) < 2 || ++frames > 40) { requestAnimationFrame(() => { container.style.scrollBehavior = ''; }); return; }
+      requestAnimationFrame(step);   // the page may still be filling with rows: try again until it is tall enough (about 0.6 s at most)
+    };
+    requestAnimationFrame(step);
+  }
+  async function reevaluateKeeping({ keepScroll = false } = {}) {
+    const p = parked; parked = null;
+    const target = p ? p.scroll : keepScroll ? container.scrollTop : 0;
+    const path = p ? p.path : current ? fullPath() : location.pathname + location.search;
+    await go(path, { force: true });
+    restoreScroll(target);
+  }
+
   function unmountCurrent() {
     const c = current;
     if (c && c.unmount) { try { const r = c.unmount(); if (r && r.catch) r.catch((e) => log.warn('router', 'unmount failed', e)); } catch (e) { log.warn('router', 'unmount failed', e); } }
@@ -107,6 +129,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     try { mod = await route.load(); } catch (e) { loadError = e; }
     if (mySeq !== seq) return;
 
+    if (current) scrollMemo.set(current.path + current.search, container.scrollTop);   // v2.5.1 (owner): remember where the page was left, for Back
     unmountCurrent();
     resetLayers(); // overlays belong to the page that is leaving
     container.replaceChildren();
@@ -130,6 +153,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
       current.unmount = typeof unmount === 'function' ? unmount : null;
       current.mod = mod;
       container.firstElementChild?.classList.add('page-enter');
+      if (pop) restoreScroll(scrollMemo.get(path + url.search));   // v2.5.1 (owner): Back from a preview lands on the same spot of the folder list
       bus.emit('mounted', { route, params, path });
     } catch (e) {
       log.error('router', 'page failed to load', { path, error: e });
@@ -164,10 +188,10 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     },
     navigate(path, opts = {}) { return go(path, { from: current ? current.path : null, ...opts }); },
     back() { history.back(); },
-    reevaluate() { return go(current ? fullPath() : location.pathname, { force: true }); },
+    reevaluate(opts = {}) { return reevaluateKeeping(opts); },
     /** v2.5.0 (app lock): removes the page on screen from the DOM at once (nothing of the library may stay in it while the app is locked). The path is kept: reevaluate() after the
      *  unlock mounts the same page again. Loads that are still running are cancelled. */
-    suspend() { ++seq; unmountCurrent(); if (current) current.unmount = null; resetLayers(); container.replaceChildren(); },
+    suspend() { parked = { path: current ? fullPath() : location.pathname + location.search, scroll: container.scrollTop }; ++seq; unmountCurrent(); if (current) current.unmount = null; resetLayers(); container.replaceChildren(); },
     /** Does the page on screen take part in pull-to-refresh? (route flag `refresh: true`) */
     canRefresh() { return !!(current && current.route.refresh === true); },
     /** In-app refresh for pull-to-refresh: asks the page module to reload its own data. Resolves 'unsupported' | 'nothing' | 'refreshed' | 'error'. */

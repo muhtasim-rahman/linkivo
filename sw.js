@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.5.0';
+const VERSION = '2.5.1';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -134,6 +134,7 @@ const PRECACHE = [
   '/js/features/auth/account-status.js',
   '/js/features/auth/action-page.js',
   '/js/features/auth/auth-service.js',
+  '/js/features/auth/guest-transfer.js',
   '/js/features/auth/login-page.js',
   '/js/features/check/check-job.js',
   '/js/features/check/check-sheet.js',
@@ -184,6 +185,7 @@ const PRECACHE = [
   '/js/features/lock/lock-controller.js',
   '/js/features/lock/lock-screen.js',
   '/js/features/lock/lock-settings.js',
+  '/js/features/lock/pin-flow.js',
   '/js/features/lock/pin-pad.js',
   '/js/features/lock/pin-sheet.js',
   '/js/features/preview/preview-ctx.js',
@@ -242,6 +244,7 @@ const PRECACHE = [
   '/js/ui/empty-state.js',
   '/js/ui/icons.js',
   '/js/ui/image-menu.js',
+  '/js/ui/lock-button.js',
   '/js/ui/motion.js',
   '/js/ui/paged.js',
   '/js/ui/pick-tile.js',

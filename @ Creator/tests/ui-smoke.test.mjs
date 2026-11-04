@@ -106,7 +106,7 @@ test('toast (v2.3.2): the same message counts up in brackets with the newest poi
   toast('Other'); assert.equal($$('.toast', host).length, 2);
   $('.toast-x', host).click(); await tick(220); assert.equal($$('.toast', host).length, 1, 'close button');
   host.replaceChildren(); toast('Points up.'); assert.equal($('.toast-text', host).textContent, 'Points up.', 'the count starts over once the toast is gone');
-  const { toastMs } = await import('../../js/ui/toast.js'); const { prefs } = await import('../../js/core/local-prefs.js'); prefs.set('toast.duration', '4000'); assert.equal(toastMs(), 4000); prefs.set('toast.duration', 'junk'); assert.equal(toastMs(), 2500); prefs.remove('toast.duration');
+  const { toastMs } = await import('../../js/ui/toast.js'); const { prefs } = await import('../../js/core/local-prefs.js'); prefs.set('toast.duration', '4000'); assert.equal(toastMs(), 4000); prefs.set('toast.duration', 'junk'); assert.equal(toastMs(), 2000); prefs.remove('toast.duration');
 });
 
 test('sheet: focus, Escape, scrim, back layer, inert background, confirm results', async () => {

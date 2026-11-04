@@ -9,6 +9,7 @@
  *          v2.2.3: the install suggestion (a floating card above the bottom bar) lives on this page only.
  * Page module: mount(container, ctx) -> unmount;  refresh()
  */
+import { lockButton } from '../../ui/lock-button.js';
 import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -64,7 +65,7 @@ export async function mount(container, ctx) {
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, refreshButton(() => refresh()), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
+      h('div', { class: 'page-actions' }, lockButton(), refreshButton(() => refresh()), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 

@@ -21,6 +21,7 @@ import { getSession } from '../../core/session.js';
 import { avatar, logOut, toggleTheme } from './shell-parts.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { subscribeAdmin } from '../../core/admin.js';
+import { getLock, subscribeLock, lockNow } from '../../core/lock.js';   // v2.5.1: the sidebar's Lock now row
 import { shownUser } from '../../core/profile-data.js';   // v2.5.0: the saved profile photo and name win over the sign-in provider's
 // ! Unused since v2.2.3: the install banner above every page was removed (owner). Library shows a floating suggestion instead (install-card.js mountInstallSuggest).
 // import { mountInstallBanner } from './install-banner.js';
@@ -74,6 +75,10 @@ export function mountShell({ router }) {
   const themeIcon = h('span', { class: 'nav-ic' });
   const themeRow = h('button', { type: 'button', class: 'nav-item theme-row', role: 'switch', 'data-tip-c': 'Dark mode', on: { click: toggleTheme } }, themeIcon, h('span', { class: 'nav-label', text: 'Dark mode' }), themeSwitch);
 
+  // v2.5.1 (owner): on a PC the lock button lives in the sidebar (phones have an icon at the top of Library, Random and Menu). Shown only while the app lock is on.
+  const lockRow = h('button', { type: 'button', class: 'nav-item lock-row', 'data-tip-c': 'Lock now', hidden: true, on: { click: () => { lockNow().catch(() => {}); } } }, h('span', { class: 'nav-ic' }, icon('lock', { size: 20 })), h('span', { class: 'nav-label', text: 'Lock now' }));
+  const syncLock = () => { lockRow.hidden = !getLock().enabled; }; syncLock(); subscribeLock(syncLock);
+
   // profile badge: avatar + name + masked email + three-dot menu (collapsed: only the round avatar)
   const pfAvatar = h('span', { class: 'pf-avatar' }); const pfName = h('span', { class: 'pf-name' }); const pfMail = h('span', { class: 'pf-mail' });
   const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip-c': 'Profile', 'aria-label': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
@@ -94,7 +99,7 @@ export function mountShell({ router }) {
   sidebar.replaceChildren(
     h('div', { class: 'sb-head' }, slotBtn, sep, brand),
     h('nav', { class: 'sb-nav', 'aria-label': 'Main navigation' }, ...SIDE.map(navLink)),
-    h('div', { class: 'sb-spacer' }), themeRow, badge);
+    h('div', { class: 'sb-spacer' }), lockRow, themeRow, badge);
 
   // ---- bottom bar ----------------------------------------------------------------------------------------------------
   const ring = h('span', { class: 'bar-ring' });

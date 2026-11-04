@@ -89,7 +89,7 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
   });
 
   // ---- look controls ---------------------------------------------------------------------------------------------------------------------
-  const bannerRow = h('div', { class: 'pe-banners', role: 'radiogroup', 'aria-label': 'Banner' });
+  const bannerRow = h('div', { class: 'pe-banners fade-x', role: 'radiogroup', 'aria-label': 'Banner' });
   const bannerBtns = BANNERS.map((id, i) => h('button', { type: 'button', class: 'pe-banner', role: 'radio', 'aria-label': `Banner ${i + 1}`, style: { backgroundImage: `url(${bannerUrl(id)})` }, on: { click: () => { draft.banner = id; markBanners(); paintPreview(); } } }));
   bannerRow.append(...bannerBtns);
   const markBanners = () => bannerBtns.forEach((b, i) => { const on = draft.banner === BANNERS[i]; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });   // in place: the row never jumps
@@ -139,13 +139,17 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
       h('div', { class: 'pe-actions' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet && sheet.requestClose() } }, 'Cancel'), save)));
   paintPreview(); markBanners();
   const body = h('div', null, form, cropHost);
+  // v2.5.1 (owner: "closing without a change still asks"): compare with the draft as it was when the popup opened, not with the saved profile. A profile without a banner or name starts
+  // with defaults in the draft, which the old comparison counted as a change.
+  const base = { ...profile, ...draft };
   sheet = openSheet({ title: 'Edit profile', body, actions: [], wide: true,
     // closing with unsaved changes (X, outside click, Escape, Cancel) asks first; while the crop window is open, closing only leaves the crop
     beforeClose: async () => {
       if (crop) { const c = crop; crop = null; cropHost.hidden = true; form.hidden = false; c.cancel(); return false; }
-      if (saved || busy || !hasChanges(draft, profile, photoChanged())) return true;
+      if (saved || busy || !hasChanges(draft, base, photoChanged())) return true;
       return confirmDialog({ title: 'Discard your changes?', message: 'You have changes that are not saved. If you close now they are lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true });
     },
     onClose: () => { country.destroy(); detachBanners(); ring.fade.destroy(); adminColor && adminColor.fade.destroy(); } });
+  sheet.el.classList.add('pe-sheet');   // v2.5.1: wider on a PC (profile.css)
   return sheet;
 }

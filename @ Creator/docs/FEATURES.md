@@ -226,7 +226,7 @@ Roughly 30+ useful settings grouped in categories, giving users a lot of freedom
 | Library and links | default sort, show favicon, show URL, show points, show added time, confirm before delete, open links in (preview/new tab), default folder for quick-add |
 | Import | include links without https (default off), dedupe on/off, clean tracking parameters, fetch metadata after import, import speed (gentle/normal/fast), clipboard link detection |
 | Random | default mode, point influence, avoid recent (hours), skip disliked, auto-advance seconds, default filters, gentle drift |
-| Security | app lock on/off, change PIN, auto-lock time, lock when app goes to background, separate vault PIN, hide vault unlock entry, forgot PIN |
+| Security | app lock on/off, change PIN, ONE Auto lock setting (v2.5.1: right after closing the app, 30 s, 1, 5, 10, 15, 30 min after closing, never; default 1 min; it counts while the app is minimized or on another tab; saved with the account so it is the same on every device), Lock now (icon on phones in Library, Random and Menu; sidebar row on a PC), separate vault PIN, hide vault unlock entry, forgot PIN |
 | History | record history on/off, auto-delete schedule, clear history |
 | Data | export, backup and restore (encrypted), storage usage, clear cache, Recycle Bin (15 days) |
 | Account and sync | profile, change password, linked providers, guest: log in and sync, delete account, log out |

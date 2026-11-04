@@ -1,0 +1,22 @@
+fix(v2.5.1): PIN popups, auto lock, unlock and Back keep the page, guest links move into the account
+
+- Worker 2.5.1: one Auto lock setting (`away`: right after leaving, 30 s, 1, 5, 10, 15, 30 min, never; default 1 min), session length follows it; a reactivated account cannot be
+  deleted again for `SEC.redeleteBlockMs` (0 days while testing); error bodies carry `until`.
+- PIN flows (turn on, turn off, change, Forgot PIN) are ONE popup each (pin-flow.js); the app restarts only after the popup is gone. Fixes the Forgot PIN button that closed the popup
+  (a blank default button was made from an element passed as an action), the invisible button in the light theme, the page jumps after PIN popups, and the reset link sent without asking.
+- Unlock and Back return to the same page and scroll position (router parked state and scroll memo). Settings > Security rows appear at once after turning the lock on.
+- PIN pad on a PC: mouse and keyboard can be mixed, keys never keep focus, typed digits flash their key, only the newest pad listens to the keyboard.
+- Delete account: one request at a time (no late error after success), blocked step with the date when a recovered account is deleted again too soon.
+- Guest to account: after sign-in a popup moves the guest folders and links into the account through the native restore job; the guest copy is erased after the job is done.
+- Lock now icon at the top of Library, Random and Menu on phones; Lock now row in the sidebar on a PC.
+- Profile page: Security and Delete account buttons removed. Toast default 2 s. Clipboard suggestion never shows while logged out, deleted or locked.
+- Edit profile: no confirmation when nothing changed, wider on a PC, banner row fades at its edges. Random: Back from the playing preview returns to the Random page.
+- Settings install card: perks drop below the text unless the card is 900px wide. Sidebar avatar badge is no longer clipped.
+
+Removed files:
+- none
+
+Owner actions:
+- Paste @ Creator/worker/worker.js (2.5.1) into the Cloudflare Worker and Deploy BEFORE opening the new app; check /health shows 2.5.1.
+- firebase deploy --only hosting, then hard reload twice.
+- Later: set SEC.redeleteBlockMs to 7 * 86400000 in worker.js and paste again.

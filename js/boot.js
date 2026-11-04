@@ -88,7 +88,7 @@ export async function boot() {
   router = createRouter({ routes: ROUTES, container, getSession, isWide: () => (shell ? shell.isWide() : false), onHint: (m) => toast(m, { duration: 2000 }) });
   shell = mountShell({ router });
   installSensitiveGate();
-  startLockWatch({ router, reinit: async () => { await applySession(getSession()); startProfileLook(getSession()); await router.reevaluate(); } });
+  startLockWatch({ router, reinit: async () => { await applySession(getSession()); startProfileLook(getSession()); await router.reevaluate({ keepScroll: true }); } });
   shell.setSession(getSession());
 
   // keep everything in step when the session changes later (sign-in, sign-out, guest entry, deleted status)
@@ -110,6 +110,7 @@ export async function boot() {
   let stopClip = null;
   router.on('mounted', () => {
     document.documentElement.dataset.boot = 'ok'; stopWatchdog(); endSplash();
+    if (getSession().mode === 'account') import('./features/auth/guest-transfer.js').then((m) => m.offerGuestTransfer()).catch(() => {});   // v2.5.1: offer to move the guest links into the account (once per sign-in)
     if (!stopClip) stopClip = initClipboardSuggest({ router });   // v2.2.2: after the app has loaded, suggest importing links found in the clipboard (needs the browser's permission)
   });
   window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));

@@ -7,7 +7,7 @@
  *          GUEST    there is no server: the PIN is checked on the device (a derived verifier) and the device copy is encrypted with the same kind of key. A guest who forgets the PIN
  *                   loses the local data (the screen offers a backup first).
  *          Every page load starts LOCKED while the lock is on (the server session is shared by all devices of an account, so it alone can not tell that THIS tab has the PIN).
- *          The key lives in memory only. State: { scope, ready, enabled, hasPin, vaultSep, hideVault, autoLock, open }.
+ *          The key lives in memory only. State: { scope, ready, enabled, hasPin, vaultSep, hideVault, away, open }.
  * API: loadLock(session, adapter) -> state   getLock() subscribeLock(fn)   isLocked() getBox()
  *      unlock(pin)   verifyPin(pin)   lockNow()   extendSession()   enableLock(pin)   disableLock(pin) -> oldBox   changePin(current, next) -> { oldBox, newBox }   resetPin(next)   setAutoLock(min)
  *      resetLock()   eraseGuestLock()   (errors from the Worker carry code / retryAfter / attemptsLeft; a wrong guest PIN throws the same shape)
@@ -20,7 +20,11 @@ import { lockoutMs } from './lockout.js';
 import { log } from './logger.js';
 
 const GUEST = 'guest.lock', cacheKey = (uid) => `lock.cache.${uid}`, saltKey = (uid) => `lock.salt.${uid}`;
-const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, autoLock: 0, open: true });
+/** Auto-lock choices in seconds (the Worker accepts the same list). 0 = right after the app is left, -1 = never. Default 1 minute. */
+export const AWAY_CHOICES = [0, 30, 60, 300, 600, 900, 1800, -1];
+export const DEFAULT_AWAY = 60;
+const normAway = (v) => (v !== undefined && v !== null && AWAY_CHOICES.includes(Number(v)) ? Number(v) : DEFAULT_AWAY);
+const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, away: DEFAULT_AWAY, open: true });
 let box = null;
 export const getLock = () => store.get();
 export const subscribeLock = (fn) => store.subscribe(fn);
@@ -34,7 +38,7 @@ const accountSalt = (uid) => { let s = prefs.get(saltKey(uid), ''); if (!s) { s 
 export async function loadLock(session, adapter = null) {
   box = null;
   if (session.mode === 'guest') {
-    const g = guestRec(); store.set({ scope: 'guest', uid: '', ready: true, enabled: !!(g && g.verifier), hasPin: !!(g && g.verifier), vaultSep: false, hideVault: false, autoLock: (g && g.autoLock) || 0, open: !(g && g.verifier) });
+    const g = guestRec(); store.set({ scope: 'guest', uid: '', ready: true, enabled: !!(g && g.verifier), hasPin: !!(g && g.verifier), vaultSep: false, hideVault: false, away: normAway(g && g.away), open: !(g && g.verifier) });
     return store.get();
   }
   if (session.mode !== 'account') { store.set({ scope: 'none', uid: '', ready: true, enabled: false, hasPin: false, open: true }); return store.get(); }
@@ -42,7 +46,7 @@ export async function loadLock(session, adapter = null) {
   try { v = adapter ? await adapter.get(`users/${uid}/lockState`) : null; if (v) prefs.set(cacheKey(uid), v); else if (adapter) prefs.remove(cacheKey(uid)); }
   catch (e) { log.warn('lock', 'lock state not read, using the copy on this device', e); v = prefs.get(cacheKey(uid), null); }
   const L = v || {};
-  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, autoLock: Number(L.autoLock) || 0, open: L.app !== true });
+  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, away: normAway(L.away), open: L.app !== true });
   return store.get();
 }
 
@@ -62,6 +66,12 @@ export async function verifyPin(pin) {
   if (s.scope === 'guest') await guestCheck(pin); else await securePost('/pin/verify', { pin, scope: 'app' });
   return true;
 }
+/** v2.5.1: the PIN of the GUEST lock, checked on this device only (used by the guest-to-account transfer while an account is signed in). Resolves with the key, throws wrong_pin / locked_out. */
+export const guestBoxFor = (pin) => guestCheck(pin);
+/** v2.5.1: is there a guest lock record on this device? (the guest copy is encrypted then) */
+export const guestHasLock = () => !!(guestRec() && guestRec().verifier);
+/** v2.5.1: forget the guest lock record (after the guest data was moved to an account). Does not touch the lock state of the signed-in session. */
+export const dropGuestLockRecord = () => { prefs.remove(GUEST); };
 export async function unlock(pin) {
   const s = store.get();
   if (s.scope === 'guest') box = await guestCheck(pin);
@@ -80,7 +90,7 @@ export async function extendSession() {
 }
 export async function enableLock(pin) {
   const s = store.get();
-  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, autoLock: s.autoLock || 0, att: 0, until: 0 }); store.set({ enabled: true, hasPin: true, open: true }); return; }
+  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, away: s.away, att: 0, until: 0 }); store.set({ enabled: true, hasPin: true, open: true }); return; }
   if (!s.hasPin) await securePost('/pin/set', { pin, enable: true }); else { await securePost('/pin/verify', { pin, scope: 'app' }); await securePost('/lock/config', { app: true }); }
   box = await deriveBox(pin, accountSalt(s.uid)); store.set({ enabled: true, hasPin: true, open: true });
 }
@@ -102,11 +112,12 @@ export async function resetPin(next) {
   await securePost('/pin/reset', { pin: next });
   const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); store.set({ hasPin: true, vaultSep: false, open: true });
 }
-export async function setAutoLock(min) {
-  const s = store.get();
-  if (s.scope === 'guest') { const g = guestRec(); if (g) prefs.set(GUEST, { ...g, autoLock: min }); } else await securePost('/lock/config', { autoLock: min });
-  store.set({ autoLock: min });
+/** v2.5.1 (owner): ONE auto-lock setting. `sec` = how long the app may be minimized or on another tab before it locks (0 = at once, -1 = never). Saved with the account (all devices) or this guest. */
+export async function setAway(sec) {
+  const s = store.get(); if (!AWAY_CHOICES.includes(sec)) throw fail('bad_request');
+  if (s.scope === 'guest') { const g = guestRec(); if (g) prefs.set(GUEST, { ...g, away: sec }); } else await securePost('/lock/config', { away: sec });
+  store.set({ away: sec });
 }
 /** Signed out: forget the key and the state, so the next sign-in starts from a clean lock. */
-export function resetLock() { box = null; store.set({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, autoLock: 0, open: true }); }
+export function resetLock() { box = null; store.set({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, away: DEFAULT_AWAY, open: true }); }
 export function eraseGuestLock() { prefs.remove(GUEST); box = null; store.set({ enabled: false, hasPin: false, open: true }); }

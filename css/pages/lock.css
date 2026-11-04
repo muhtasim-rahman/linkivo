@@ -26,3 +26,10 @@
 .pin-sheet { display: grid; justify-items: center; gap: var(--s3); padding-bottom: var(--s3); } .pin-sheet .pin-text { margin: 0; text-align: center; color: var(--sub); font-size: var(--fs-sm); }
 @media (max-height: 640px) { .pin-grid { gap: 10px; grid-template-columns: repeat(3, 56px); } .pin-key { width: 56px; height: 56px; } .lock-mark { display: none; } }
 @media (prefers-reduced-motion: reduce) { .lock, .pin-dots.is-shake { animation: none; } }
+/* v2.5.1: a key typed on the physical keyboard flashes like a press; the PIN flow popup (one popup for all steps) */
+.pin-key.is-hit { background: var(--surface-2); transform: scale(0.93); }
+.pin-key:focus { outline: none; }
+.pf-body { display: grid; gap: var(--s3); } .pf-body .pin-text { margin: 0; color: var(--sub); font-size: var(--fs-sm); }
+.pf-actions { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; }
+.pf-work { display: grid; justify-items: center; gap: var(--s3); padding: var(--s5) 0; color: var(--sub); font-size: var(--fs-sm); text-align: center; }
+.pf-ask { display: grid; gap: var(--s2); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-md, 12px); background: var(--surface-2); font-size: var(--fs-sm); } .pf-ask p { margin: 0; }

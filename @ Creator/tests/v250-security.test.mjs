@@ -62,10 +62,10 @@ test('verify: wrong PIN counts, 5 failures lock for 30 s (429 + Retry-After), th
 
 test('session length follows the auto-lock choice; vault scope opens the vault session too; lock ends sessions; extend only works while unlocked', async () => {
   const fb = setup(); await post(fb, '/pin/set', { pin: '4821', enable: true });
-  assert.equal((await post(fb, '/lock/config', { autoLock: 7 })).status, 400, 'only the listed choices');
-  assert.equal((await post(fb, '/lock/config', { autoLock: 5 })).status, 200); assert.equal(fb.get('users/u1/lockState/autoLock'), 5);
+  assert.equal((await post(fb, '/lock/config', { away: 7 })).status, 400, 'only the listed choices');
+  assert.equal((await post(fb, '/lock/config', { away: 1800 })).status, 200); assert.equal(fb.get('users/u1/lockState/away'), 1800);
   const v = await post(fb, '/pin/verify', { pin: '4821', scope: 'vault' }); const ttl = v.body.vaultExp - Date.now();
-  assert.ok(ttl > 4.9 * 60000 && ttl <= 5 * 60000 + 2000, `ttl ${ttl}`); assert.ok(fb.get('session/u1/vault') > Date.now());
+  assert.ok(ttl > 34.9 * 60000 && ttl <= 35 * 60000 + 2000, `the session outlives the away time (30 min) by 5 minutes: ttl ${ttl}`); assert.ok(fb.get('session/u1/vault') > Date.now());
   const x = await post(fb, '/lock/extend'); assert.equal(x.status, 200); assert.ok(x.body.vaultExp > 0);
   await post(fb, '/lock', { scope: 'vault' }); assert.equal(fb.get('session/u1/vault'), null); assert.ok(fb.get('session/u1/app') > Date.now(), 'locking only the vault keeps the app open');
   await post(fb, '/lock', { scope: 'all' }); assert.equal(fb.get('session/u1'), null);

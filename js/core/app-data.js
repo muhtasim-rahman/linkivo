@@ -4,6 +4,7 @@
  *          Features call getEngine() / getQueue(); nothing else decides which engine is used.
  * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() getImportLog() getHistory() recordOpen(link, src) dataReady() -> boolean
  */
+import { closeVaultLocal } from './vault.js';
 import { createLocalEngine } from '../engine/local-engine.js';
 import { createCloudEngine } from '../engine/cloud-engine.js';
 import { createRtdbAdapter } from '../engine/rtdb-adapter.js';
@@ -115,6 +116,7 @@ export const getSettingsSync = () => settingsSync;
 export const getDevices = () => devices;
 
 export async function teardownData() {
+  closeVaultLocal();   // v2.5.2: logout, account switch and the app lock all empty the vault's memory
   try { (await import('./admin.js')).clearAdmin(); } catch { /* ignore */ }
   try { settingsSync?.dispose(); } catch { /* ignore */ }
   settingsSync = null; for (const off of choiceWatch) { try { off(); } catch { /* ignore */ } } choiceWatch = [];

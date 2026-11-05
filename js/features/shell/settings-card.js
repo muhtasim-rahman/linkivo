@@ -8,10 +8,10 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { attachFade } from '../../ui/edge-fade.js';
-import { SECTIONS } from '../settings/catalog.js';
+import { visibleSections } from '../settings/catalog.js';
 
 export function settingsCard() {
-  const row = h('div', { class: 'sc-chips', role: 'list' }, SECTIONS.map((s) => h('a', { class: 'sc-chip', role: 'listitem', href: `/settings/${s.id}`, 'data-tip': s.desc }, icon(s.icon, { size: 14 }), h('span', { text: s.label }))));
+  const row = h('div', { class: 'sc-chips', role: 'list' }, visibleSections().map((s) => h('a', { class: 'sc-chip', role: 'listitem', href: `/settings/${s.id}`, 'data-tip': s.desc }, icon(s.icon, { size: 14 }), h('span', { text: s.label }))));
   attachFade(row);
   return h('section', { class: 'sc-card', 'aria-label': 'Settings' },
     h('a', { class: 'sc-top', href: '/settings', 'aria-label': 'View all settings' }, h('span', { class: 'sc-ic', 'aria-hidden': 'true' }, icon('settings', { size: 20 })),

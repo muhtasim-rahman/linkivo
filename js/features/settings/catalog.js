@@ -2,32 +2,37 @@
  * Linkivo — js/features/settings/catalog.js  (v2.1.3, v2.2.2)
  * Purpose: the declarative settings registry (D-030). The Settings page, the reset action and (from v2.3.0) Global search all read
  *          this one list, so a setting can not exist in one place and be missing in another. Each version adds the settings of the
- *          features it ships; v2.6.0 audits the catalog (minimum 30).
+ *          features it ships; v2.5.2 audited it for dead settings (the old minimum of 30 was dropped).
  * Entry: { id, section, type: 'seg'|'switch'|'swatch'|'custom', key (pref key), label, desc, default, options:[{value,label}],
  *          sensitive (needs the PIN gate when the app lock exists), keywords, since, custom (name of a custom row) }
- * API: SECTIONS  CATALOG  entriesFor(sectionId)  findSection(id)  findEntry(id)  resettableKeys()
+ * API: SECTIONS  CATALOG  entriesFor(sectionId)  visibleSections()  visibleCatalog()  findSection(id)  findEntry(id)  resettableKeys()
+ *      v2.5.2 (owner 1 and 6): every setting was reviewed and put into the category it belongs to. The order of a section is the order of `LAYOUT` below (one place, so the table in CONTEXT
+ *      and the page can not drift apart). Section ids and setting keys did NOT change, so deep links, search results and synced values keep working.
+ *      `admin: true` on an entry or a section: it is not drawn, searched or counted for anyone except a listed admin (the page redraws when that changes); admins see the shield badge.
  *      `top: true` (v2.2.2): not drawn inside its section; the wide-screen Settings page shows it as a card at the very top (phones have it in the Menu).
  *      `onOn: 'clipboard'` on a switch runs a helper when the switch is turned ON by the user (needs a user gesture, e.g. the clipboard permission prompt).
  *      `tips` on an option: { value: 'text' } shown as a hover tooltip on that option (v2.1.3).
  */
 import { KEYS, ACCENTS } from '../../core/appearance.js';
+import { isAdminAccount } from '../../core/admin.js';
 
 export const SECTIONS = [
-  { id: 'appearance', label: 'Appearance', desc: 'Theme, accent color, text size, motion and start screen', icon: 'palette' },
-  { id: 'behavior', label: 'Behavior', desc: 'How pages and lists respond', icon: 'zap' },
-  { id: 'library', label: 'Library and links', desc: 'How folders and link lists look and behave', icon: 'library' },
+  { id: 'appearance', label: 'Appearance', desc: 'Theme, accent color, text size, motion, start screen and thumbnails', icon: 'palette' },
+  { id: 'behavior', label: 'Behavior', desc: 'The sidebar and bottom bar, notices and what Linkivo looks for on its own', icon: 'zap' },
+  { id: 'library', label: 'Library and links', desc: 'How folders and link lists look, order and open', icon: 'library' },
   { id: 'search', label: 'Search', desc: 'What global search looks through and remembers', icon: 'search' },
   { id: 'random', label: 'Random Discover', desc: 'How the next link is picked, what is skipped and the automatic mode', icon: 'random' },
-  { id: 'preview', label: 'Preview', desc: 'The link preview: tabs, related links, metadata and screenshot services', icon: 'globe' },
-  { id: 'history', label: 'History', desc: 'Where the list of opened links is kept and for how long', icon: 'history' },
-  { id: 'account', label: 'Account and sync', desc: 'Sign-in, security and where your data lives', icon: 'user' },
-  { id: 'security', label: 'Security', desc: 'App lock, PIN and auto-lock', icon: 'lock' },
-  { id: 'data', label: 'Import, export and data', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
+  { id: 'preview', label: 'Preview and metadata', desc: 'The link preview, and the services that fetch titles, pictures and screenshots', icon: 'globe' },
+  { id: 'history', label: 'History and profile', desc: 'Where the list of opened links is kept, for how long, and what Profile shows', icon: 'history' },
+  { id: 'account', label: 'Account and sync', desc: 'Sign-in, devices and where your settings live', icon: 'user' },
+  { id: 'security', label: 'Security', desc: 'App lock, PIN, auto-lock and the locked folders', icon: 'lock' },
+  { id: 'data', label: 'Import, export and backup', desc: 'Import options, export, backup and the Recycle Bin', icon: 'database' },
+  { id: 'admin', label: 'Admin', desc: 'Tools only admins see', icon: 'shield', admin: true },
   { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
   { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
-  { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log, reset', icon: 'terminal' }
+  { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log', icon: 'terminal' }
 ];
-export const findSection = (id) => SECTIONS.find((s) => s.id === id) || null;
+export const findSection = (id) => SECTIONS.find((s) => s.id === id && (!s.admin || isAdminAccount())) || null;
 export const findEntry = (id) => CATALOG.find((e) => e.id === id) || null;
 
 const opt = (...pairs) => pairs.map(([value, label]) => ({ value, label }));
@@ -100,6 +105,7 @@ export const CATALOG = [
 
   // ---- Security (v2.5.0)
   { id: 'appLock', section: 'security', type: 'custom', custom: 'security', label: 'App lock', keywords: ['pin', 'lock', 'passcode', 'security', 'auto-lock', 'privacy', 'password', 'unlock'], since: '2.5.0' },
+  { id: 'gateMode', section: 'security', type: 'seg', key: 'lock.gateMode', label: 'PIN gate', desc: 'How the PIN popup for sensitive actions confirms. Automatic checks as soon as the PIN length is reached. The lock screen is not affected.', default: 'auto', options: opt(['auto', 'Automatic'], ['submit', 'Submit button']), keywords: ['pin', 'confirm', 'submit', 'enter', 'gate', 'sensitive', 'security'], since: '2.5.2' },
 
   // ---- Account and sync
   { id: 'accountInfo', section: 'account', type: 'custom', custom: 'account', label: 'Account', keywords: ['sign in', 'log in', 'log out', 'email', 'guest', 'password', 'verification'], since: '2.1.0' },
@@ -124,5 +130,35 @@ export const CATALOG = [
   { id: 'deleteAccount', section: 'danger', type: 'custom', custom: 'deleteAccount', label: 'Delete account', sensitive: true, keywords: ['remove account', 'close account', 'erase account', 'delete data'], since: '2.2.4' }
 ];
 
-export const entriesFor = (sectionId) => CATALOG.filter((e) => e.section === sectionId);
+/** v2.5.2: the ONE place that says which category a setting lives in and in which order. A setting missing here (or listed twice) is caught by the tests, so none can get lost. */
+export const LAYOUT = {
+  appearance: ['theme', 'accent', 'fontSize', 'density', 'reduceMotion', 'splash', 'uiThumbs'],
+  behavior: ['sidebarCollapsed', 'hideBar', 'toastTime', 'clipboard'],
+  library: ['libView', 'libSort', 'folderView', 'openIn', 'showUrl', 'showPoints', 'confirmDelete'],
+  search: ['searchRecent', 'searchPages'],
+  random: ['rndMode', 'rndAvoid', 'rndSkipDead', 'rndRemember', 'rndMicrolink', 'rndThum'],
+  preview: ['pvTab', 'pvRelated', 'pvMicrolink', 'pvThum', 'metaBrowser'],
+  history: ['histWhere', 'histKeep', 'profileThumbs'],
+  account: ['accountInfo', 'syncPick', 'sync'],
+  security: ['appLock', 'gateMode'],
+  data: ['importData', 'impSpeed', 'impIcons', 'keepAwake', 'impBare', 'impDedupe', 'impClean', 'impEnrich', 'impAutoClear', 'exportData', 'recycleBin'],
+  admin: ['pvAdmin'],
+  danger: ['logout', 'clearCache', 'reset', 'clearLocal', 'deleteAccount'],
+  app: ['appDetails'],
+  advanced: ['worker', 'tester', 'debugLog']
+};
+(function applyLayout() {
+  const pos = new Map(); let n = 0;
+  for (const [section, ids] of Object.entries(LAYOUT)) for (const id of ids) pos.set(id, { section, n: n++ });
+  for (const e of CATALOG) { const p = pos.get(e.id); if (p) e.section = p.section; }
+  CATALOG.sort((a, b) => (pos.has(a.id) ? pos.get(a.id).n : 1e6) - (pos.has(b.id) ? pos.get(b.id).n : 1e6));
+  const admins = new Set(SECTIONS.filter((s) => s.admin).map((s) => s.id));
+  for (const e of CATALOG) if (admins.has(e.section)) e.admin = true;
+})();
+
+const shown = (e) => !e.admin || isAdminAccount();
+export const entriesFor = (sectionId) => CATALOG.filter((e) => e.section === sectionId && shown(e));
+/** What a normal user sees: no admin section and no admin entry (owner 6: hidden completely, not just styled). */
+export const visibleSections = () => SECTIONS.filter((s) => !s.admin || isAdminAccount());
+export const visibleCatalog = () => CATALOG.filter(shown);
 export const resettableKeys = () => CATALOG.filter((e) => e.key).map((e) => e.key);

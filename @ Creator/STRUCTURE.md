@@ -37,12 +37,12 @@ Linkivo/
 │       library/                library-page folder-page link-row link-actions folder-actions folder-style pickers quick-add recycle-bin-page lib-prefs
 │       import/                 import-sheet import-review import-progress import-page import-job parse-client parsers pdf-text zip-reader native-import
 │       export/                 export-sheet export-engine native-format zip-writer formats/(json csv xlsx txt markdown html-bookmarks printable opml common index)
-│       preview search check share    v2.3.0 (done: preview-model/-meta/-tabs/-page, search-core/-store/-page, check-job/-sheet, share-model/-page)      random history profile    v2.4.1 (done: random/random-page + random-filters, history/history-page; engine/picker.js, core/history.js, core/page-state.js; css/pages/random.css, history.css)      vault account    v2.5.0      backup activity stats legal menu    v2.6.0   (folders still empty)
+│       preview search check share    v2.3.0 (done: preview-model/-meta/-tabs/-page, search-core/-store/-page, check-job/-sheet, share-model/-page)      random history profile    v2.4.1 (done: random/random-page + random-filters, history/history-page; engine/picker.js, core/history.js, core/page-state.js; css/pages/random.css, history.css)      vault account    v2.5.2      backup activity stats legal menu    v2.5.2   (folders still empty)
 │
 ├── index.html                  shell + splash markup (generated once from the logo paths)
 ├── sw.js                       update-safe service worker (precache list is generated)
 ├── manifest.webmanifest        PWA manifest
-├── robots.txt  sitemap.xml     SEO (private paths disallowed; only /login listed until v2.6.0)
+├── robots.txt  sitemap.xml     SEO (private paths disallowed; only /login listed until v2.5.2 gives the legal and docs pages content)
 ├── manifest.webmanifest        PWA manifest (192, 384, 512, maskable icons)
 ├── app.json                    app info and version (must equal sw.js VERSION and js/core/app-info.js)
 ├── firebase.json  .firebaserc  hosting (no @ folder deployed, no-cache) + database rules path
@@ -99,3 +99,7 @@ Linkivo/
 | `css/pages/lock.css` | lock screen and keypad |
 | `@ Creator/tests/v250*.test.mjs` `helpers/fake-firebase.mjs` | v2.5.0 tests and the in-memory fake of Firebase, Google token and Identity Toolkit |
 
+## v2.5.2 additions
+- `js/core/overlay-registry.js` (closes every popup on lock), `js/core/vault.js` (vault state, memory-only data, atomic moves).
+- `js/features/vault/` (flows, settings rows, Library entry, /vault page), `js/features/insights/` (Stats, Activity), `js/features/legal/` (Terms, Privacy), `js/features/docs/` (Documentation), `js/features/profile/banner-carousel.js`.
+- `assets/art/banner-7.svg`, `banner-8.svg`. `@ Creator/tests/v252.test.mjs`, `commits/v2.5.2-commit.txt`, `worker/history/worker-v2.5.2.js`.

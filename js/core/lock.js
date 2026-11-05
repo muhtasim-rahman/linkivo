@@ -24,12 +24,23 @@ const GUEST = 'guest.lock', cacheKey = (uid) => `lock.cache.${uid}`, saltKey = (
 export const AWAY_CHOICES = [0, 30, 60, 300, 600, 900, 1800, -1];
 export const DEFAULT_AWAY = 60;
 const normAway = (v) => (v !== undefined && v !== null && AWAY_CHOICES.includes(Number(v)) ? Number(v) : DEFAULT_AWAY);
-const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, away: DEFAULT_AWAY, open: true });
+const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, vaultPrefix: '@', away: DEFAULT_AWAY, open: true });
 let box = null;
 export const getLock = () => store.get();
 export const subscribeLock = (fn) => store.subscribe(fn);
 export const isLocked = () => { const s = store.get(); return s.enabled && !s.open; };
 export const getBox = () => box;
+/** v2.5.2: the Worker answers every vault call with the lock view; this copies the vault fields (code exists, hidden entry, prefix) into the store and the device copy. */
+export function applyServerLock(l) {
+  if (!l) return; const s = store.get(); if (s.scope !== 'account') return;
+  const next = { vaultSep: l.vaultSep === true, hideVault: l.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(l.vaultPrefix) ? l.vaultPrefix : '@' };
+  store.set(next); const c = prefs.get(cacheKey(s.uid), null); if (c) prefs.set(cacheKey(s.uid), { ...c, vaultSep: next.vaultSep, hideVault: next.hideVault, vaultPrefix: next.vaultPrefix });
+}
+/** v2.5.2 (owner 7): the PIN gate can check by itself as soon as the PIN length is reached. The length is learned from every correct PIN, PIN set or PIN change and kept on THIS device only
+ *  (local prefs, not on the server); until it is known the gate waits for the Submit key. */
+const lenKey = (s) => `lock.len.${s.scope === 'guest' ? 'guest' : s.uid}`;
+export const rememberPinLen = (pin) => { const s = store.get(), n = String(pin || '').length; if (s.scope !== 'none' && n >= 4 && n <= 8 && prefs.get(lenKey(s), 0) !== n) prefs.set(lenKey(s), n); };
+export const getPinLen = () => { const s = store.get(); const n = Number(prefs.get(lenKey(s), 0)); return n >= 4 && n <= 8 ? n : 0; };
 const fail = (code, extra = {}) => Object.assign(new Error(code), { code }, extra);
 const guestRec = () => prefs.get(GUEST, null);
 const accountSalt = (uid) => { let s = prefs.get(saltKey(uid), ''); if (!s) { s = newSalt(); prefs.set(saltKey(uid), s); } return s; };
@@ -46,7 +57,7 @@ export async function loadLock(session, adapter = null) {
   try { v = adapter ? await adapter.get(`users/${uid}/lockState`) : null; if (v) prefs.set(cacheKey(uid), v); else if (adapter) prefs.remove(cacheKey(uid)); }
   catch (e) { log.warn('lock', 'lock state not read, using the copy on this device', e); v = prefs.get(cacheKey(uid), null); }
   const L = v || {};
-  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, away: normAway(L.away), open: L.app !== true });
+  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(L.vaultPrefix) ? L.vaultPrefix : '@', away: normAway(L.away), open: L.app !== true });
   return store.get();
 }
 
@@ -64,6 +75,7 @@ async function guestCheck(pin) {                         // a guest's PIN: locko
 export async function verifyPin(pin) {
   const s = store.get();
   if (s.scope === 'guest') await guestCheck(pin); else await securePost('/pin/verify', { pin, scope: 'app' });
+  rememberPinLen(pin);
   return true;
 }
 /** v2.5.1: the PIN of the GUEST lock, checked on this device only (used by the guest-to-account transfer while an account is signed in). Resolves with the key, throws wrong_pin / locked_out. */
@@ -76,7 +88,7 @@ export async function unlock(pin) {
   const s = store.get();
   if (s.scope === 'guest') box = await guestCheck(pin);
   else { await securePost('/pin/verify', { pin, scope: 'app' }); box = await deriveBox(pin, accountSalt(s.uid)); }
-  store.set({ open: true }); return true;
+  rememberPinLen(pin); store.set({ open: true }); return true;
 }
 /** Ends the session on the server (best effort) and forgets the key. The caller clears the screen and the data layer. */
 export async function lockNow() {
@@ -90,9 +102,9 @@ export async function extendSession() {
 }
 export async function enableLock(pin) {
   const s = store.get();
-  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, away: s.away, att: 0, until: 0 }); store.set({ enabled: true, hasPin: true, open: true }); return; }
+  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, away: s.away, att: 0, until: 0 }); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true }); return; }
   if (!s.hasPin) await securePost('/pin/set', { pin, enable: true }); else { await securePost('/pin/verify', { pin, scope: 'app' }); await securePost('/lock/config', { app: true }); }
-  box = await deriveBox(pin, accountSalt(s.uid)); store.set({ enabled: true, hasPin: true, open: true });
+  box = await deriveBox(pin, accountSalt(s.uid)); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true });
 }
 export async function disableLock(pin) {
   const s = store.get(), old = box;
@@ -102,15 +114,15 @@ export async function disableLock(pin) {
 }
 export async function changePin(current, next) {
   const s = store.get(), oldBox = box;
-  if (s.scope === 'guest') { await guestCheck(current); const salt = newSalt(); box = await deriveBox(next, salt); prefs.set(GUEST, { ...guestRec(), salt, verifier: box.verifier, att: 0, until: 0 }); return { oldBox, newBox: box }; }
+  if (s.scope === 'guest') { await guestCheck(current); const salt = newSalt(); box = await deriveBox(next, salt); prefs.set(GUEST, { ...guestRec(), salt, verifier: box.verifier, att: 0, until: 0 }); rememberPinLen(next); return { oldBox, newBox: box }; }
   await securePost('/pin/change', { kind: 'main', current, pin: next });
-  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); return { oldBox, newBox: box };
+  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); rememberPinLen(next); return { oldBox, newBox: box };
 }
 /** Forgot PIN (accounts): the Worker needs a fresh sign-in. The stored copy was made with the old key, so the device discards it and downloads again. */
 export async function resetPin(next) {
   const s = store.get(); if (s.scope !== 'account') throw fail('guest_cannot_reset');
   await securePost('/pin/reset', { pin: next });
-  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); store.set({ hasPin: true, vaultSep: false, open: true });
+  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); rememberPinLen(next); store.set({ hasPin: true, open: true });
 }
 /** v2.5.1 (owner): ONE auto-lock setting. `sec` = how long the app may be minimized or on another tab before it locks (0 = at once, -1 = never). Saved with the account (all devices) or this guest. */
 export async function setAway(sec) {

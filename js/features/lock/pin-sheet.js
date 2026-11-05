@@ -9,6 +9,12 @@ import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
 import { openSheet } from '../../ui/sheet.js';
 import { buildPinPad, isWeakPin } from './pin-pad.js';
+import { prefs } from '../../core/local-prefs.js';
+import { getPinLen } from '../../core/lock.js';
+
+/** v2.5.2 (owner 7): Settings > Security > "PIN gate": 'auto' (default) checks as soon as the PIN length is reached, 'submit' waits for the Submit key. Only the gate popups, never the lock screen. */
+export const GATE_MODE_KEY = 'lock.gateMode';
+export const gateMode = () => (prefs.get(GATE_MODE_KEY, 'auto') === 'submit' ? 'submit' : 'auto');
 
 /** One place that turns an error from the Worker or the guest check into words. `wait` > 0 means the keypad should wait that many seconds. */
 export function describeError(e) {
@@ -28,7 +34,8 @@ export async function askPin({ title = 'Enter your PIN', text = '', verify = nul
   return new Promise((resolve) => {
     let sheet = null, done = false;
     const finish = (v) => { if (done) return; done = true; resolve(v); };
-    const pad = buildPinPad({ submitLabel: 'Continue', onSubmit: async (pin) => {
+    const auto = gateMode() === 'auto';
+    const pad = buildPinPad({ submitLabel: 'Continue', autoAt: auto ? getPinLen : 0, autoMax: auto, onSubmit: async (pin) => {
       if (!verify) { finish(pin); sheet && sheet.close(); return; }
       try { await verify(pin); finish(pin); sheet && sheet.close(); }
       catch (e) { const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }

@@ -16,6 +16,7 @@
  */
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers, handlePop } from './nav-stack.js';   // v2.3.1: handlePop lets Back close an open overlay first
+import { closeAllOverlays } from './overlay-registry.js';   // v2.5.2: the lock must close every popup
 import { createEmitter } from './events.js';
 import { pageMeta, applyPageMeta } from './page-meta.js';
 import { log } from './logger.js';
@@ -191,7 +192,7 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     reevaluate(opts = {}) { return reevaluateKeeping(opts); },
     /** v2.5.0 (app lock): removes the page on screen from the DOM at once (nothing of the library may stay in it while the app is locked). The path is kept: reevaluate() after the
      *  unlock mounts the same page again. Loads that are still running are cancelled. */
-    suspend() { parked = { path: current ? fullPath() : location.pathname + location.search, scroll: container.scrollTop }; ++seq; unmountCurrent(); if (current) current.unmount = null; resetLayers(); container.replaceChildren(); },
+    suspend() { closeAllOverlays(); parked = { path: current ? fullPath() : location.pathname + location.search, scroll: container.scrollTop }; ++seq; unmountCurrent(); if (current) current.unmount = null; resetLayers(); container.replaceChildren(); },
     /** Does the page on screen take part in pull-to-refresh? (route flag `refresh: true`) */
     canRefresh() { return !!(current && current.route.refresh === true); },
     /** In-app refresh for pull-to-refresh: asks the page module to reload its own data. Resolves 'unsupported' | 'nothing' | 'refreshed' | 'error'. */

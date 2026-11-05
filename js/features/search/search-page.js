@@ -13,11 +13,14 @@ import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
 import { prefs } from '../../core/local-prefs.js';
 import { getEngine } from '../../core/app-data.js';
+import { getLock } from '../../core/lock.js';
+import { vaultOn, vaultCodeMatch, openVault } from '../../core/vault.js';
+import { toast } from '../../ui/toast.js';
 import { plural } from '../../core/format.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { faviconUrl, linkTitle, safeHref, folderTile } from '../library/folder-style.js';
 import { createThumb } from '../../ui/thumb.js';
-import { CATALOG, SECTIONS } from '../settings/catalog.js';
+import { visibleCatalog, visibleSections } from '../settings/catalog.js';
 import { appPages } from './search-pages.js';
 import { staggerIn } from '../../ui/motion.js';
 import { createIndex, searchFolders, searchSettings, searchPages, tokens, highlightParts, readHistory, pushHistory, removeHistory } from './search-core.js';
@@ -28,6 +31,8 @@ const SHOW = { pages: 3, settings: 3, folders: 4, links: 8 }, STEP = 10, RECENT 
 let lastQuery = '';   // kept while the app stays open, so Back from a result returns to the same search
 const index = createIndex();
 
+/** v2.5.2 (owner 8): text that LOOKS like (the start of) a vault code. It still searches like any text, but it is never remembered (history, last query), so a typed code leaves no trace. */
+const codeLike = (t) => { if (!vaultOn()) return false; const p = getLock().vaultPrefix; return t.length > 1 && t[0] === p && /^\d{1,6}$/.test(t.slice(1)); };
 const marked = (text, words) => highlightParts(text, words).map((p) => (p.hit ? h('mark', { text: p.text }) : p.text));
 
 export async function mount(container, ctx) {
@@ -43,10 +48,10 @@ export async function mount(container, ctx) {
   const onScroll = () => headEl.classList.toggle('is-stuck', container.scrollTop > 6);
   container.addEventListener('scroll', onScroll, { passive: true });
 
-  const keep = (q) => { if (prefs.get('search.recent', true) !== false) pushHistory(store, q); };   // v2.3.1: setting "Remember recent searches"
+  const keep = (q) => { if (codeLike(q)) return; if (prefs.get('search.recent', true) !== false) pushHistory(store, q); };   // v2.3.1: setting "Remember recent searches"
   const openFrom = (e, q) => { keep(q); return e; };
 
-  function setQuery(q) { st.q = q; lastQuery = q; st.shown = { ...SHOW }; clear.hidden = !q; paint({ fresh: !st.had }); }   // rows rise in when results APPEAR (from the recent list or an empty result); later keystrokes just update them
+  function setQuery(q) { st.q = q; lastQuery = codeLike(q) ? '' : q; st.shown = { ...SHOW }; clear.hidden = !q; paint({ fresh: !st.had }); }   // rows rise in when results APPEAR (from the recent list or an empty result); later keystrokes just update them
 
   const added = [];   // v2.3.1: the rows that are new in this paint (all of them for a new query, only the newly shown ones after "See more")
   function group(title, count, items, kind, shown) {
@@ -59,7 +64,7 @@ export async function mount(container, ctx) {
   }
   const li = (...kids) => h('li', null, ...kids);
 
-  const pages = appPages(SECTIONS);
+  const pages = appPages(visibleSections());
   function paint({ fresh = false } = {}) {
     const q = st.q.trim(), ws = tokens(q);
     st.fresh = fresh; added.length = 0;
@@ -68,11 +73,11 @@ export async function mount(container, ctx) {
     const pgs = withApp ? searchPages(pages, q, 12) : [];
     const links = engine ? index.search(engine.listLinks(), q, 400) : [];
     const folders = engine ? searchFolders(engine.listFolders(), q) : [];
-    const sets = withApp ? searchSettings(CATALOG, SECTIONS, q) : [];
+    const sets = withApp ? searchSettings(visibleCatalog(), visibleSections(), q) : [];
     const tab = prefs.get('lib.openIn', 'preview') === 'tab';
     const nodes = [];
     if (pgs.length) nodes.push(group('Pages', pgs.length, pgs.slice(0, st.shown.pages).map((r) => li(h('a', { class: 'sp-item', href: r.page.path, on: { click: (e) => openFrom(e, q) } }, h('span', { class: 'sp-ic' }, icon(r.page.icon, { size: 18 })), h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(r.page.label, ws)), h('span', { class: 'sp-sub', text: r.page.desc }))))), 'pages', st.shown.pages));
-    if (sets.length) nodes.push(group('Settings', sets.length, sets.slice(0, st.shown.settings).map((r) => li(h('a', { class: 'sp-item', href: `/settings/${r.section}?focus=${encodeURIComponent(r.entry.id)}`, on: { click: (e) => openFrom(e, q) } }, h('span', { class: 'sp-ic' }, icon(SECTIONS.find((s) => s.id === r.section)?.icon || 'settings', { size: 18 })), h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(r.entry.label, ws)), h('span', { class: 'sp-sub', text: r.sectionLabel }))))), 'settings', st.shown.settings));
+    if (sets.length) nodes.push(group('Settings', sets.length, sets.slice(0, st.shown.settings).map((r) => li(h('a', { class: 'sp-item', href: `/settings/${r.section}?focus=${encodeURIComponent(r.entry.id)}`, on: { click: (e) => openFrom(e, q) } }, h('span', { class: 'sp-ic' }, icon(visibleSections().find((s) => s.id === r.section)?.icon || 'settings', { size: 18 })), h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(r.entry.label, ws)), h('span', { class: 'sp-sub', text: r.sectionLabel }))))), 'settings', st.shown.settings));
     if (folders.length) nodes.push(group('Folders', folders.length, folders.slice(0, st.shown.folders).map((r) => li(h('a', { class: 'sp-item', href: `/folder/${encodeURIComponent(r.folder.id)}`, on: { click: (e) => openFrom(e, q) } }, folderTile(r.folder, 32), h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(r.folder.name, ws)), h('span', { class: 'sp-sub', text: plural(r.folder.lc || 0, 'link') }))))), 'folders', st.shown.folders));
     if (links.length) nodes.push(group('Links', links.length, links.slice(0, st.shown.links).map(({ link: l }) => {
       const f = engine.getFolder(l.fid);
@@ -100,7 +105,17 @@ export async function mount(container, ctx) {
   }
 
   let timer = 0;
-  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => setQuery(input.value), 70); clear.hidden = !input.value; });
+  // v2.5.2 (owner 8): the vault code is recognised by its SHAPE only, locally. Until <prefix><6 digits> is complete nothing leaves the device. A complete code is tried at once (no Enter),
+  // the box is emptied right away, and a wrong code looks exactly like a search without results: no message, no sign that a vault exists. The Worker counts the miss like any wrong PIN.
+  async function tryVaultCode(code) {
+    try { await openVault(code, { adapter: engine.adapter, uid: getLock().uid }); toast('Locked folders are open.'); router.navigate('/vault'); }
+    catch { /* silent on purpose */ }
+  }
+  input.addEventListener('input', () => {
+    const code = vaultOn() ? vaultCodeMatch(input.value, getLock().vaultPrefix) : null;
+    if (code) { clearTimeout(timer); input.value = ''; clear.hidden = true; setQuery(''); tryVaultCode(code); return; }
+    clearTimeout(timer); timer = setTimeout(() => setQuery(input.value), 70); clear.hidden = !input.value;
+  });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(timer); setQuery(input.value); keep(input.value); input.blur(); } });
   const off = registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { e.preventDefault(); input.focus(); input.select(); } }, { keys: '/', desc: 'Focus the search field', run: (e) => { e.preventDefault(); input.focus(); } }]);
   const offEngine = engine ? engine.subscribe((e) => { if (e.type === 'change' && st.q.trim()) paint(); }) : () => {};   // a data change repaints without the rise animation

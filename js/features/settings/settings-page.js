@@ -14,7 +14,9 @@ import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
-import { SECTIONS, findSection, entriesFor } from './catalog.js';
+import { visibleSections, findSection, entriesFor } from './catalog.js';
+import { adminChip } from '../../ui/admin-badge.js';
+import { subscribeAdmin } from '../../core/admin.js';
 import { renderControl } from './controls.js';
 import { renderCustom } from './custom-rows.js';
 import { installCard } from '../shell/install-card.js';
@@ -41,16 +43,22 @@ export async function mount(container, ctx) {
 
   const body = h('div', { class: 'set-body' });
   const navLinks = new Map();
-  const nav = h('nav', { class: 'set-nav fade-x', 'aria-label': 'Settings categories' }, SECTIONS.map((s) => {
-    const b = h('button', { type: 'button', class: 'set-nav-item', on: { click: () => scrollTo(s.id, true) } }, icon(s.icon, { size: 20 }), h('span', { text: s.label }));
-    navLinks.set(s.id, b);
-    return b;
-  }));
+  const nav = h('nav', { class: 'set-nav fade-x', 'aria-label': 'Settings categories' });
+  // v2.5.2: the category list is drawn from the VISIBLE sections, so a normal user never gets an Admin chip (and an admin who switches to Normal user loses it at once)
+  function drawNav() {
+    navLinks.clear();
+    nav.replaceChildren(...visibleSections().map((s) => {
+      const b = h('button', { type: 'button', class: 'set-nav-item', on: { click: () => scrollTo(s.id, true) } }, icon(s.icon, { size: 20 }), h('span', { text: s.label }), s.admin ? adminChip() : null);
+      navLinks.set(s.id, b);
+      return b;
+    }));
+  }
+  drawNav();
 
   // v2.2.2 (owner): on wide screens the install card and a Recycle Bin card sit at the very top (phones have both in the Menu page)
   const topCards = h('div', { class: 'set-top' }, profileCard(ctx.router), installCard(), historyCard(), binCard());   // v2.3.0 (owner): the profile card is first, above the install card
   function renderSections() {
-    body.replaceChildren(topCards, ...SECTIONS.map((s) => {
+    body.replaceChildren(topCards, ...visibleSections().map((s) => {
       const group = h('div', { class: 'group' });
       for (const e of entriesFor(s.id)) {
         if (e.top) continue;   // v2.2.2: drawn as a card at the top of the page (wide screens)
@@ -60,10 +68,11 @@ export async function mount(container, ctx) {
         if (Array.isArray(node)) group.append(...node); else group.appendChild(node);
       }
       return h('section', { class: ['set-sec', s.id === 'danger' && 'is-danger'], id: 'sec-' + s.id, 'aria-labelledby': 'h-' + s.id },
-        h('header', { class: 'set-sec-head' }, h('h2', { class: 'set-h', id: 'h-' + s.id }, h('span', { class: 'set-h-ic' }, icon(s.icon, { size: 20 })), s.label), h('p', { class: 'set-sub', text: s.desc })), group);
+        h('header', { class: 'set-sec-head' }, h('h2', { class: 'set-h', id: 'h-' + s.id }, h('span', { class: 'set-h-ic' }, icon(s.icon, { size: 20 })), s.label, s.admin ? adminChip() : null), h('p', { class: 'set-sub', text: s.desc })), group);
     }), h('div', { class: 'set-logout' }, logoutButton(ctx.router)));   // v2.3.0 (owner): the same Log out button as the bottom of the Menu page
   }
   renderSections();
+  const offAdmin = subscribeAdmin(() => { drawNav(); renderSections(); spy(); });   // admin status arrives after the page opens, or the person switches to Normal user
 
   function scrollTo(id, smooth) {
     const el = document.getElementById('sec-' + id);
@@ -79,7 +88,7 @@ export async function mount(container, ctx) {
   function spy() {
     frame = 0;
     const base = container.getBoundingClientRect().top;
-    const tops = SECTIONS.map((s) => { const el = document.getElementById('sec-' + s.id); return { id: s.id, top: el ? el.getBoundingClientRect().top - base : Infinity }; });
+    const tops = visibleSections().map((s) => { const el = document.getElementById('sec-' + s.id); return { id: s.id, top: el ? el.getBoundingClientRect().top - base : Infinity }; });
     const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 4 && container.scrollTop > 0;
     const id = activeSection(tops, atBottom);
     if (id === current) return;
@@ -108,5 +117,5 @@ export async function mount(container, ctx) {
     return true;
   }
   if (target) requestAnimationFrame(() => { if (!(ctx.query && ctx.query.focus && focusSetting(ctx.query.focus))) scrollTo(target.id, false); spy(); });
-  return () => { container.removeEventListener('scroll', onScroll); detachFade(); if (frame) cancelAnimationFrame(frame); };
+  return () => { offAdmin && offAdmin(); container.removeEventListener('scroll', onScroll); detachFade(); if (frame) cancelAnimationFrame(frame); };
 }

@@ -1,7 +1,7 @@
 # MASTER PROMPT: Linkivo v2 build agent
 
 You are the senior engineer and designer building **Linkivo v2**, a fast, private, public-use link manager (PWA, plain JavaScript, Firebase + one Cloudflare Worker, all free tiers) for the owner, Muhtasim Rahman (Turzo), a student developer in Bangladesh.
-You build ONE version per chat. Each version must be complete, tested and free of known errors, so the next chat can continue from it without repairs.
+You build ONE version per chat. Each version must be complete, tested and free of known errors, so the next chat can continue from it without repairs. v2.5 is the final major version: there is no v2.6, and v2.5.3 and later are patches that follow the owner's own prompts.
 
 The owner starts a version with a short message such as:
 - `Start v2.3.0` build that version.
@@ -100,7 +100,7 @@ Next: ...
 
 Large versions can exceed one chat. Plan to fit: write compact, reusable code, avoid re-printing files, keep the worklog.
 - If you realize mid-way that the version will not fit, tell the owner at once (Bangla), and stop at the end of the last slice that is **fully working and tested**. Deliver that state with `Status: PARTIAL` in `CONTEXT-v2.0_to_v2.5.md`, the list of remaining slices, and a zip that still deploys cleanly (unfinished features absent or behind flags, never half-wired).
-- The owner then starts a new chat with `Continue vX.Y.0`; the next delivery is `vX.Y.1` and completes the version.
+- The owner then starts a new chat with `Continue vX.Y.0`; the next delivery is `vX.Y.1` and completes the version. In the final line (v2.5.x) a PARTIAL delivery also ends with a ready-to-paste prompt for the next patch that lists the exact remaining slices and all context it needs.
 - Never use partial delivery as an excuse to skip slices you could have finished.
 
 ## 7. Owner test checklist (include in every summary)

@@ -1,0 +1,17 @@
+feat(v2.5.2): vault, owner change list, Activity, Stats, Terms, Privacy, Docs (PARTIAL final stage)
+
+- Planning files: v2.5 is the final major version; v2.6.0 items moved into v2.5.2 (PLAN, MASTER-PROMPT, RULES, README, STRUCTURE).
+- Lock: closing every popup, sheet and menu when the app locks (core/overlay-registry.js; router.suspend and lockApp call it); regression tests.
+- Forgot password confirmation extracted (buildForgotPassword) and tested; PIN gate mode setting (auto / Submit) with the PIN length learned per device.
+- Collapsed sidebar: the avatar opens the account menu. Admin-only settings hidden from normal users, shield badge for admins.
+- Settings re-organised into 14 categories (LAYOUT table in catalog.js); section ids and setting keys unchanged.
+- Edit profile: wider left column, banner carousel (one banner per arrow, selected centred), two new SVG banners (b7, b8) in the middle of the list.
+- Vault: Worker 2.5.2 (/vault/set, open, extend, reset, remove; six-digit code, shared lockout, 15 minute session), core/vault.js (memory only, atomic moves), search-bar code (<symbol><6 digits>), Security rows, Library entry, /vault pages, Move to locked folders, first-time PIN gate before deleting a folder.
+- New pages: Activity (/profile/activity), Stats (/profile/stats), Terms, Privacy, Documentation (/docs, /docs/:topic).
+
+Removed files:
+- none
+
+Owner actions:
+- Paste @ Creator/worker/worker.js (2.5.2) into the Cloudflare Worker and Deploy BEFORE using this app.
+- firebase deploy --only hosting; hard reload twice. Rules are unchanged (no rules deploy needed).

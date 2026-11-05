@@ -16,9 +16,6 @@ const COPY = {
   search: { art: 'search', title: 'Search everything', text: 'One search across folders, links and settings arrives in v2.3.0.' },
   random: { art: 'random', title: 'Random Discover', text: 'Open a surprise from your own links, weighted by what you like. Arrives in v2.4.0.' },
   history: { art: 'library', title: 'History', text: 'Links you opened will be listed here by day. History arrives in v2.4.0.' },
-  terms: { art: 'library', title: 'Terms', text: 'The terms of use arrive in v2.6.0.' },
-  privacy: { art: 'library', title: 'Privacy', text: 'The privacy notice arrives in v2.6.0.' },
-  docs: { art: 'library', title: 'Documentation', text: 'A full guide to every feature arrives in v2.6.0.' },
   lost: { art: 'lost', title: 'This page does not exist', text: 'The address may be mistyped, or the page may have moved.' }
 };
 

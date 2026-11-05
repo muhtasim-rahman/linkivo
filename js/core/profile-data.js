@@ -7,7 +7,9 @@
  */
 import { prefs } from './local-prefs.js';
 
-export const BANNERS = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
+// v2.5.2 (owner 3): two new banners (b7 constellation of links, b8 contour sunset) sit in the MIDDLE of the list. Ids are stored in profiles, so b1 to b6 keep their pictures and
+// only the ORDER changed; the first one (the default) is still b1.
+export const BANNERS = ['b1', 'b2', 'b3', 'b7', 'b8', 'b4', 'b5', 'b6'];
 export const bannerUrl = (id) => `/assets/art/banner-${BANNERS.includes(id) ? id.slice(1) : '1'}.svg`;
 const pad = (n) => String(n).padStart(2, '0');
 /** The pattern the owner asked for: user name, uid, date and time (readable in the imgbb gallery). */

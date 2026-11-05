@@ -149,3 +149,14 @@ The Worker (service account, rules bypassed) writes `users/<uid>/lockState`, `se
 | Q8 | owner | `session/u1/vault` open and the app gate satisfied | `vault/u1/*`, `users/u1/vaultCount` | read, write | allow |
 | Q9 | owner | `status = deleted`, any session | every data tree, `jobs/u1`, `importLog`, `devices` | read, write | deny; `users/u1/profile` and `deletedAccounts/u1/summary` stay readable |
 Rules Playground (owner), only if you want to confirm on the live database: with the app lock turned on and the session ended (tap Lock now), simulate a read at `/folders/<your uid>` as yourself: denied; at `/users/<your uid>/lockState`: allowed.
+
+### v2.5.2 additions (rules file unchanged; the vault tree and its gates already existed from v2.5.0)
+| # | who | state | path | op | expect |
+|---|---|---|---|---|---|
+| V1 | owner | app lock off, no vault session | `vault/u1/folders`, `vault/u1/links` | read, write | deny (the vault session is always required) |
+| V2 | owner | vault session open, app lock on and its session closed | `vault/u1/*` | read, write | deny |
+| V3 | owner | both sessions open | `vault/u1/links/<id>` with a record that fails the normal link validation | write | deny (vault validation equals the normal tree's) |
+| V4 | owner | both sessions open | one multi-path update: `vault/u1/links/<id>` = record AND `links/u1/<id>` = null | write | allow (a move into the vault is ONE update) |
+| V5 | owner | vault session open | `secure/u1/vaultHash`, `session/u1/vault` | read, write | deny (Worker only) |
+| V6 | other user | any | `vault/u1/*`, `users/u1/lockState` | read | deny |
+Worker (tested with a fake Firebase, owner must try on the real one): `/vault/set` needs the main PIN when there is one; `/vault/open` counts a wrong code toward the same lockout as a wrong PIN; `/pin/verify` refuses scope vault; `/pin/reset` keeps the vault code; `/vault/remove` refuses a non-empty vault.

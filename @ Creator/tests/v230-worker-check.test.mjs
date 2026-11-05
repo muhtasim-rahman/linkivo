@@ -25,7 +25,7 @@ test('/check: ok, dead, unsure and invalid in one call; HEAD first, GET only whe
     throw new Error('unexpected ' + url);
   };
   const r = await call(req({ urls: ['https://alive.test/a', 'https://headless.test/b', 'https://gone.test/c', 'https://robot.test/d', 'ftp://x.test/e'] }), f);
-  assert.equal(r.status, 200); const body = await r.json(); assert.equal(body.ok, true); assert.equal(body.version, '2.5.1');   // v2.4.3: the Worker version
+  assert.equal(r.status, 200); const body = await r.json(); assert.equal(body.ok, true); assert.equal(body.version, '2.5.2');   // v2.4.3: the Worker version
   const by = Object.fromEntries(body.results.map((x) => [x.url.split('/')[2] || x.url, x]));
   assert.equal(by['alive.test'].state, 'ok'); assert.equal(by['headless.test'].state, 'ok'); assert.equal(by['gone.test'].state, 'dead'); assert.equal(by['gone.test'].status, 404);
   assert.equal(by['robot.test'].state, 'unsure'); assert.equal(body.results.find((x) => x.url.startsWith('ftp')).state, 'invalid');

@@ -18,6 +18,7 @@
  */
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
+import { trackOverlay } from '../core/overlay-registry.js';
 import { icon } from './icons.js';
 
 const OPEN = new WeakMap();   // anchor -> handle of the menu that is open on it (v2.2.3: pressing the anchor again closes it)
@@ -77,6 +78,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
   function onScroll(e) { if (!menu.contains(e.target)) close(); }   // v2.2.1: scrolling INSIDE a long menu must not close it
   function close() {
     if (!menu.isConnected) return;
+    untrack();
     layer?.remove();
     menu.remove(); backdrop?.remove();
     if (OPEN.get(anchor) === handle) OPEN.delete(anchor);
@@ -87,6 +89,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
     if (returnTo && returnTo.isConnected && returnTo.focus) returnTo.focus({ preventScroll: true });
     if (onClose) onClose();
   }
+  let untrack = () => {};
   const handle = { close, isOpen: () => menu.isConnected };
   OPEN.set(anchor, handle);
   if (backdrop) document.body.appendChild(backdrop);
@@ -97,6 +100,7 @@ export function openMenu(anchor, items, { align = 'end', onClose, minWidth = 0 }
   addEventListener('resize', onResize);
   document.addEventListener('scroll', onScroll, true);
   layer = pushLayer(() => { layer = null; close(); });
+  untrack = trackOverlay(close);
   (menu.querySelector('.pop-item[aria-checked="true"]') || menu.querySelector('.pop-item'))?.focus({ preventScroll: true });
   return handle;
 }

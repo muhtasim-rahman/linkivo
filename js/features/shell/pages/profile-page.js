@@ -52,7 +52,7 @@ export async function mount(container, ctx) {
     const edit = guest ? null : h('button', { type: 'button', class: 'pf2-edit', 'aria-label': 'Edit profile', on: { click: openEdit } }, icon('edit', { size: 16 }), h('span', { text: 'Edit profile' }));
     const badges = [];
     if (!guest && me.user.emailVerified) badges.push(h('span', { class: 'pf2-badge is-verified' }, icon('check-circle', { size: 14 }), 'Verified'));
-    badges.push(adminChip());
+    badges.push(adminChip('Admin'));
     if (guest) badges.push(h('span', { class: 'pf2-badge' }, 'Guest mode'));
     const uidBtn = guest ? null : h('button', { type: 'button', class: 'pf2-uid', 'aria-label': 'Copy your account id', 'data-tip': 'Tap to copy', on: { click: copyUid } }, h('span', { class: 'pf2-uid-k', text: 'ID' }), h('code', { text: uid }), icon('copy', { size: 14 }));
     hero.replaceChildren(...[banner, edit, h('div', { class: 'pf2-id' }, avatar(name, true, photo, !guest),
@@ -146,7 +146,7 @@ export async function mount(container, ctx) {
 
   // ---- shortcuts, data, share -----------------------------------------------------------------------------------------------------------
   const tile = (ic, label, onClick, href) => h(href ? 'a' : 'button', { class: 'pf2-tile', href, type: href ? null : 'button', on: href ? {} : { click: onClick } }, h('span', { class: 'pf2-tile-ic' }, icon(ic, { size: 22 })), h('span', { class: 'pf2-tile-l', text: label }));
-  const tiles = [tile('history', 'History', null, '/profile/history'), tile('random', 'Random', null, '/random'), tile('search', 'Search', null, '/search'), tile('import', 'Import', null, '/import'),
+  const tiles = [tile('history', 'History', null, '/profile/history'), tile('clock', 'Activity', null, '/profile/activity'), tile('points', 'Stats', null, '/profile/stats'), tile('random', 'Random', null, '/random'), tile('search', 'Search', null, '/search'), tile('import', 'Import', null, '/import'),
     tile('download', 'Export', () => import('../../export/export-sheet.js').then((m) => m.openExport({ engine }))),   // v2.4.3 (owner): the export popup opens right here
     tile('trash', 'Recycle Bin', null, '/settings/recycle-bin'), ...(guest ? [] : [tile('users', 'Switch', () => import('../switch-account.js').then((m) => m.openSwitchAccount(ctx.router)))]), tile('settings', 'Settings', null, '/settings')];
   const dataBox = h('section', { class: 'pf2-sec', 'aria-labelledby': 'pf2-data-h' });

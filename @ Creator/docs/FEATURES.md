@@ -121,7 +121,7 @@ The last used options are remembered per format. Default file name: `linkivo-<sc
 ### Formats
 | Format | File | Notes |
 |---|---|---|
-| **Linkivo backup (main)** | `.linkivo.json` | Database-shaped: folders, links, points, flags, tags, notes, metadata; optional history and non-sensitive settings; vault only when chosen. Re-imports through the **fast path**. Optional passphrase encryption arrives in v2.6.0. |
+| **Linkivo backup (main)** | `.linkivo.json` | Database-shaped: folders, links, points, flags, tags, notes, metadata; optional history and non-sensitive settings; vault only when chosen. Re-imports through the **fast path**. Optional passphrase encryption is an open item (see CONTEXT). |
 | JSON (readable) | `.json` | Array of objects with the chosen fields; flat or grouped by folder. |
 | CSV | `.csv` | UTF-8 with optional BOM (Excel friendly); delimiter comma, semicolon or tab; chosen columns. |
 | Excel | `.xlsx` | One sheet or one sheet per folder, styled header, sensible column widths, clickable URLs. |
@@ -130,7 +130,7 @@ The last used options are remembered per format. Default file name: `linkivo-<sc
 | HTML bookmarks | `.html` | Standard Netscape bookmarks file that every browser can import; folders become bookmark folders. |
 | Printable page | `.html` | Clean, self-contained, grouped, print-friendly, light or dark. |
 | OPML | `.opml` | Outline for readers and outliners. |
-| PDF | `.pdf` | Formatted document. v2.6.0. |
+| PDF | `.pdf` | Formatted document. Not built yet (open item, see CONTEXT). |
 
 ### Formatting options (shown per format)
 Fields to include (title, URL, domain, description, tags, folder, added date, points, favourite and read-later flags), sort order, grouping (by folder, by domain, flat), date format, skip blocked links, only favourites or only a tag, file name pattern, line template, numbering, separators, Markdown style (list or table), printable theme, line endings.
@@ -218,7 +218,7 @@ Comprehensive profile page (designer's choice of contents): account info (masked
 
 ## 15. Settings
 
-Roughly 30+ useful settings grouped in categories, giving users a lot of freedom. Declared in one registry (`js/features/settings/catalog.js`): id, section, type, default, sensitive flag, search keywords, version introduced. Suggested catalog (final list is audited in v2.6.0, minimum 30):
+Many useful settings grouped in categories (v2.5.2: the "30+" count goal was dropped; 14 categories, every setting wired), giving users a lot of freedom. Declared in one registry (`js/features/settings/catalog.js`): id, section, type, default, sensitive flag, search keywords, version introduced. Suggested catalog (audited in v2.5.2 for dead settings; the minimum-30 goal was dropped):
 
 | Section | Settings |
 |---|---|
@@ -243,12 +243,12 @@ Rules: sensitive settings are PIN-gated (5-minute window). Settings must be sear
 
 ## 17. Extra features (all approved)
 
-Web Share Target (share a link from another Android app into Linkivo), dead-link checker, smart duplicate detection, tags and read-later, quick-add (clipboard detection and shortcut), encrypted backup and restore (optional passphrase on the native backup format, v2.6.0), activity log, undo for bulk actions.
+Web Share Target (share a link from another Android app into Linkivo), dead-link checker, smart duplicate detection, tags and read-later, quick-add (clipboard detection and shortcut), encrypted backup and restore (optional passphrase on the native backup format, open item), activity log, undo for bulk actions.
 
-## 18. Pages: Terms, Privacy, Documentation (last step, v2.6.0)
+## 18. Pages: Terms, Privacy, Documentation (built in v2.5.2)
 
 Terms and Privacy: simple design. Documentation: fully designed, well structured (how to use every feature). Privacy text must honestly say: the app owner can technically see stored data in the database; guest data never leaves the device; during metadata lookup a link is sent to the app's server but not stored by the lookup.
-A final advanced `README.md` for GitHub is delivered in v2.6.0.
+A final advanced `README.md` for GitHub is an open item (see CONTEXT).
 
 ## 19. Explicitly out of scope (for now)
 

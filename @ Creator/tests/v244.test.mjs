@@ -37,7 +37,7 @@ test('countries: all of them with flags, Palestine yes, Israel never', async () 
 
 test('profile: ten colours, six banners, new fields are cleaned, the admin badge colour is applied and removed', async () => {
   const P = await import('../../js/core/profile-data.js');
-  assert.equal(P.PALETTE.length, 10); assert.equal(P.BANNERS.length, 6); for (const n of [1, 2, 3, 4, 5, 6]) assert.ok(fs.existsSync(new URL(`assets/art/banner-${n}.svg`, root)));
+  assert.equal(P.PALETTE.length, 10); assert.equal(P.BANNERS.length, 8); for (const n of [1, 2, 3, 4, 5, 6]) assert.ok(fs.existsSync(new URL(`assets/art/banner-${n}.svg`, root)));
   assert.deepEqual(P.cleanProfile({ ring: '#ff0000', adminColor: 'red', birthday: '2008-03-05', city: ' Dhaka ' }), { ring: '#ff0000', birthday: '2008-03-05', city: 'Dhaka' });
   assert.deepEqual(P.cleanProfile({ birthday: 'yesterday', ring: '' }), { ring: null });
   const el = document.createElement('div'); P.applyProfileLook({ adminColor: '#8b5cf6' }, el); assert.equal(el.style.getPropertyValue('--admin-badge-bg'), '#8b5cf6');   // v2.5.0: the colour is for the shield on the photo, not the word badge
@@ -72,7 +72,7 @@ test('thumbnails: saved image, then saved screenshot, then the site icon; off sw
 });
 
 test('menu settings card: one scrollable line of chips built from the sections, each opens its section', async () => {
-  const { settingsCard } = await import('../../js/features/shell/settings-card.js'); const { SECTIONS } = await import('../../js/features/settings/catalog.js');
+  const { settingsCard } = await import('../../js/features/shell/settings-card.js'); const { visibleSections } = await import('../../js/features/settings/catalog.js'); const SECTIONS = visibleSections();
   const el = settingsCard(); const chips = [...el.querySelectorAll('.sc-chip')];
   assert.equal(chips.length, SECTIONS.length); assert.deepEqual(chips.map((c) => c.getAttribute('href')), SECTIONS.map((s) => `/settings/${s.id}`)); assert.ok(el.querySelector('.sc-chips.fade-x'));
   assert.match(read('css/pages/pages.css'), /--sc-blue: #3b82f6/); assert.match(read('css/pages/pages.css'), /html\[data-theme='dark'\] \.sc-card/);
@@ -98,6 +98,6 @@ test('rules and settings: new profile fields, the thumbnail switch, versions', a
   const { buildRules } = await import(new URL('@ Creator/tools/gen-rules.mjs', root)); const prof = buildRules().rules.users.$uid.profile;
   for (const k of ['headline', 'city', 'birthday', 'languages', 'interests', 'pronouns', 'ring', 'adminColor']) assert.ok(prof[k] && /auth\.uid === \$uid/.test(prof[k]['.write']), k);
   assert.equal(fs.readFileSync(new URL('@ Creator/rules/database.rules.json', root), 'utf8'), JSON.stringify(buildRules(), null, 2) + '\n');
-  const { CATALOG } = await import('../../js/features/settings/catalog.js'); const e = CATALOG.find((x) => x.id === 'uiThumbs'); assert.ok(e && e.key === 'ui.thumbs' && e.section === 'library' && e.default === true);
+  const { CATALOG } = await import('../../js/features/settings/catalog.js'); const e = CATALOG.find((x) => x.id === 'uiThumbs'); assert.ok(e && e.key === 'ui.thumbs' && e.section === 'appearance' && e.default === true);
   assert.match(read('app.json'), /"version": "2\.\d+\.\d+"/); assert.match(read('sw.js'), /VERSION = '2\.\d+\.\d+'/); assert.match(read('js/core/app-info.js'), /version: '2\.\d+\.\d+'/);   // v2.5.0: no pinned number
 });

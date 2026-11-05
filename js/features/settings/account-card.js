@@ -29,7 +29,7 @@ export function methodState(user) { return { password: hasPassword(user), google
 function guestRows(router) {
   return [
     row('Guest mode', 'Your links are stored only on this device. If browser data is cleared they can not be recovered.', h('span', { class: 'tag', text: 'This device' })),
-    row('Back up your links', 'Log in to keep them in your account. Backup and moving guest data to an account arrive in v2.5.0 and v2.6.0.', null),
+    row('Back up your links', 'Log in to keep them in your account; your guest links move over when you do. You can also export a backup in Import, export and backup.', null),
     actionRow('login', 'Log in', 'Moving guest data into an account arrives in v2.5.0.', () => logOut(router, { guest: true }))
   ];
 }

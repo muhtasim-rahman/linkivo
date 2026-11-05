@@ -33,6 +33,7 @@ import { mountDock } from '../../ui/dock.js';
 import { mountInstallSuggest } from '../shell/install-card.js';
 import { isFresh as isFreshShare } from '../share/share-model.js';
 import { prefs as prefsStore } from '../../core/local-prefs.js';
+import { mountVaultEntry } from '../vault/vault-entry.js';
 
 const SORTS = { manual: 'Default order', name: 'Name A to Z', recent: 'Recently changed', links: 'Most links', new: 'Newest first', old: 'Oldest first' };
 const FILTERS = { all: 'All folders', pinned: 'Pinned', filled: 'With links', empty: 'Empty' };
@@ -93,6 +94,8 @@ export async function mount(container, ctx) {
     body.replaceChildren(h('div', { class: ['lib-grid', wide && 'is-list'], role: 'list' }, nodes.map((n) => { n.setAttribute('role', 'listitem'); return n; })));
   }
 
+  // v2.5.2: Locked folders line at the bottom (only when the account has a code and the entry is not hidden, or the vault is open)
+  const vaultEntry = mountVaultEntry({ router }); body.after(vaultEntry.el);
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
     viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.view, st.view); update(); });
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready' || ev.type === 'sync') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
@@ -111,7 +114,7 @@ export async function mount(container, ctx) {
   update();
   // v2.2.3 (owner): the install suggestion shows HERE only (not on other pages), as a dock that follows the bottom bar
   const suggest = mountInstallSuggest({ mountDock, page });
-  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
+  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); vaultEntry.destroy(); };
 }
 
 export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }

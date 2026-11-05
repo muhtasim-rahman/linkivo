@@ -14,6 +14,7 @@
 import { h } from '../core/dom.js';
 import { pushLayer } from '../core/nav-stack.js';
 import { icon } from './icons.js';
+import { trackOverlay } from '../core/overlay-registry.js';
 
 let openCount = 0;
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -26,6 +27,7 @@ export function openSheet({ title = '', body = null, actions = [], wide = false,
   const app = document.getElementById('app');
   let closed = false;
   let layer = null;
+  let untrack = () => {};
   const titleId = 'sheet-title-' + Math.random().toString(36).slice(2, 8);
 
   const api = {
@@ -33,6 +35,7 @@ export function openSheet({ title = '', body = null, actions = [], wide = false,
     close(result) {
       if (closed) return;
       closed = true;
+      untrack();
       layer?.remove();
       overlay.classList.add('is-leaving');
       document.removeEventListener('keydown', onKey, true);
@@ -101,6 +104,7 @@ export function openSheet({ title = '', body = null, actions = [], wide = false,
     layer = pushLayer(onBack); api.requestClose();
   };
   layer = pushLayer(onBack);
+  untrack = trackOverlay(() => api.close());   // v2.5.2: the app lock closes every sheet at once, without asking "discard changes?"
   attachDrag();
   queueMicrotask(() => (sheet.querySelector('[autofocus], input, select, textarea') || sheet.querySelector('.sheet-foot .btn-primary') || sheet).focus({ preventScroll: true }));
   return api;

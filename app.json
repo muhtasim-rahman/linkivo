@@ -1,8 +1,8 @@
 {
   "name": "Linkivo",
   "tagline": "Manage your links",
-  "version": "2.5.1",
-  "buildDate": "2026-11-04",
+  "version": "2.5.2",
+  "buildDate": "2026-11-05",
   "stage": "library",
   "developer": {
     "name": "Muhtasim Rahman",

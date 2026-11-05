@@ -1,8 +1,8 @@
 /**
  * Linkivo — js/core/activity.js  (v2.2.0)
  * Purpose: activity-log HOOKS. Features call logActivity(type, info) when something notable happens (import, export, delete, restore, merge).
- *          Entries are kept on this device in the scope database (store "meta", key "activity", newest 500). The Activity page and the cloud
- *          copy (tree activity/<uid>, already in the rules) arrive in v2.6.0; until then this only collects.
+ *          Entries are kept on this device in the scope database (store "meta", key "activity", newest 500). The Activity page (v2.5.2) shows them together with the
+ *          security events the Worker writes to activity/<uid>.
  * API: logActivity(engine, type, info) -> Promise<void>   listActivity(engine) -> Promise<[{ type, info, ts }]>   ACTIVITY_LIMIT
  *      Types used in v2.2.0: import export delete restore merge duplicate folder-delete empty-bin
  */

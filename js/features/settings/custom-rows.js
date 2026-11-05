@@ -66,7 +66,7 @@ function accountOld({ router }) {
   if (s.mode === 'guest') {
     return [
       row('Guest mode', 'Your links are stored only on this device. If browser data is cleared they can not be recovered.', h('span', { class: 'tag', text: 'This device' })),
-      row('Back up your links', 'Log in to keep them in your account. Backup and moving guest data to an account arrive in v2.5.0 and v2.6.0.', null),
+      row('Back up your links', 'Log in to keep them in your account; your guest links move over when you do. You can also export a backup in Import, export and backup.', null),
       h('button', { type: 'button', class: 'row', on: { click: () => logOut(router, { guest: true }) } }, h('span', { class: 'row-ic' }, icon('login')), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: 'Log in' }), h('span', { class: 'row-desc', text: 'Moving guest data into an account arrives in v2.5.0.' })))
     ];
   }

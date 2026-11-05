@@ -16,6 +16,8 @@ import { teardownData } from '../../core/app-data.js';
 import { loadFirebase } from '../../core/firebase-loader.js';
 import { createRtdbAdapter } from '../../engine/rtdb-adapter.js';
 import { toast } from '../../ui/toast.js';
+import { closeAllOverlays } from '../../core/overlay-registry.js';
+import { closeVaultLocal } from '../../core/vault.js';
 import { endSplash } from '../splash/splash.js';
 import { showLockScreen } from './lock-screen.js';
 import { askPin } from './pin-sheet.js';
@@ -49,6 +51,8 @@ export async function ensureUnlocked(session) {
 export async function lockApp(router, reinit) {
   const st = getLock(); if (!st.enabled || screen) return;
   if (st.open) await lockNow();   // (Settings > Lock now already did this; the page and data still have to go)
+  closeVaultLocal();   // v2.5.2: the vault's memory goes first; lockNow() ends the server sessions
+  closeAllOverlays();   // v2.5.2 (owner 4): no popup, sheet or menu may stay open, or be reachable behind the lock screen
   router.suspend(); await teardownData();
   const session = getSession();
   screen = await showLockScreen({ session, router, onUnlocked: async () => { markVerified(); screen = null; await reinit(); } });

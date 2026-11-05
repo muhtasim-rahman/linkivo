@@ -13,6 +13,9 @@ import { plural } from '../../core/format.js';
 import { logActivity } from '../../core/activity.js';
 import { openFolderForm, openFolderPicker } from './pickers.js';
 import { pref, LIB } from './lib-prefs.js';
+import { requireSensitive } from '../../core/sensitive.js';
+import { vaultOn, getVault, moveIntoVault } from '../../core/vault.js';
+import { getLock } from '../../core/lock.js';
 
 export async function togglePin(engine, f) { await engine.updateFolder(f.id, { pinned: f.pinned ? null : true }); toast(f.pinned ? 'Unpinned.' : 'Pinned to the top.'); }
 export const editFolder = (engine, f) => openFolderForm({ engine, folder: f });
@@ -33,7 +36,21 @@ function typedConfirm(f) {
   });
 }
 
+/** Folder + links -> the vault (core/vault.js moves them in atomic chunks). The links leave the normal library, the device copy and the search index at once. */
+export async function moveToVault(engine, router, f) {
+  const ok = await confirmDialog({ title: `Lock "${f.name}"?`, message: `The folder and its ${plural(f.lc || 0, 'link')} move behind your code. They disappear from Library, search and exports until you unlock locked folders.`, confirmLabel: 'Move to locked folders' });
+  if (!ok) return false;
+  try {
+    const n = await moveIntoVault(f.id, { adapter: engine.adapter, uid: getLock().uid }, engine, (d, t) => { if (t > 100) toast(`Moving ${d} of ${t} links...`); });
+    toast(`Locked "${f.name}" (${plural(n, 'link')}).`);
+    if (router.current()?.route.id === 'folder') router.navigate('/library', { replace: true });
+    return true;
+  } catch { toast('Could not move it. Nothing was lost: try again.', { type: 'error' }); return false; }
+}
+
+let folderDeleteAsked = false;   // v2.5.2: the PIN gate for deleting a folder is asked the FIRST time after logging in (the 5-minute window then covers the rest); a page reload counts as a new login
 export async function deleteFolder(engine, f) {
+  if (!folderDeleteAsked) { if (!(await requireSensitive('delete-folder'))) return false; folderDeleteAsked = true; }
   const needsName = (f.lc || 0) > 0 && pref(LIB.confirmDelete);
   const ok = needsName ? await typedConfirm(f) : await confirmDialog({ title: 'Delete this folder?', message: `"${f.name}" moves to the Recycle Bin for 15 days.`, confirmLabel: 'Delete folder', danger: true });
   if (!ok) return false;
@@ -64,6 +81,7 @@ export function folderMenuItems({ engine, router, folder: f, onSelectMode = null
     { separator: true },
     { label: 'Duplicate', icon: 'copy', onSelect: () => duplicateFolder(engine, f) },
     { label: 'Merge into...', icon: 'merge', onSelect: () => mergeFolder(engine, f) },
+    vaultOn() && getVault().open && { label: 'Move to locked folders', icon: 'lock', onSelect: () => moveToVault(engine, router, f) },   // v2.5.2: only while the vault is open
     { label: 'Delete', icon: 'trash', danger: true, onSelect: async () => { if (await deleteFolder(engine, f) && router.current()?.route.id === 'folder') router.navigate('/library', { replace: true }); } }
   ].filter(Boolean);
 }

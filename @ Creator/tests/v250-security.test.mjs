@@ -60,35 +60,53 @@ test('verify: wrong PIN counts, 5 failures lock for 30 s (429 + Retry-After), th
   assert.equal((await post(fb, '/pin/verify', { pin: '4821' }, { uid: 'u2' })).body.error, 'no_pin', 'another account has its own PIN state');
 });
 
-test('session length follows the auto-lock choice; vault scope opens the vault session too; lock ends sessions; extend only works while unlocked', async () => {
+test('session length follows the auto-lock choice; the vault has its own 15 minute session; lock ends sessions; extend only works while unlocked', async () => {
   const fb = setup(); await post(fb, '/pin/set', { pin: '4821', enable: true });
   assert.equal((await post(fb, '/lock/config', { away: 7 })).status, 400, 'only the listed choices');
   assert.equal((await post(fb, '/lock/config', { away: 1800 })).status, 200); assert.equal(fb.get('users/u1/lockState/away'), 1800);
-  const v = await post(fb, '/pin/verify', { pin: '4821', scope: 'vault' }); const ttl = v.body.vaultExp - Date.now();
-  assert.ok(ttl > 34.9 * 60000 && ttl <= 35 * 60000 + 2000, `the session outlives the away time (30 min) by 5 minutes: ttl ${ttl}`); assert.ok(fb.get('session/u1/vault') > Date.now());
-  const x = await post(fb, '/lock/extend'); assert.equal(x.status, 200); assert.ok(x.body.vaultExp > 0);
+  const v = await post(fb, '/pin/verify', { pin: '4821' }); const ttl = v.body.appExp - Date.now();
+  assert.ok(ttl > 34.9 * 60000 && ttl <= 35 * 60000 + 2000, `the session outlives the away time (30 min) by 5 minutes: ttl ${ttl}`);
+  assert.equal((await post(fb, '/pin/verify', { pin: '4821', scope: 'vault' })).status, 400, 'the vault does not open through /pin/verify any more');
+  assert.equal(fb.get('session/u1/vault'), null);
+  assert.equal((await post(fb, '/vault/set', { code: '482913', current: '4821' })).status, 200);
+  const o = await post(fb, '/vault/open', { code: '482913' }); const vt = o.body.vaultExp - Date.now(); assert.ok(vt > 14.9 * 60000 && vt <= 15 * 60000 + 2000, 'vault ttl ' + vt);
+  const x = await post(fb, '/lock/extend'); assert.equal(x.status, 200); assert.ok(x.body.appExp > 0);
+  assert.equal((await post(fb, '/vault/extend')).status, 200); T.resetCaches();
   await post(fb, '/lock', { scope: 'vault' }); assert.equal(fb.get('session/u1/vault'), null); assert.ok(fb.get('session/u1/app') > Date.now(), 'locking only the vault keeps the app open');
+  assert.equal((await post(fb, '/vault/extend')).status, 403, 'nothing to extend once the vault is locked');
   await post(fb, '/lock', { scope: 'all' }); assert.equal(fb.get('session/u1'), null);
   const late = await post(fb, '/lock/extend'); assert.equal(late.status, 403); assert.equal(late.body.error, 'locked');
 });
 
-test('change PIN: needs the current PIN; separate vault PIN needs the main PIN and then replaces it for the vault only; null goes back to the main PIN', async () => {
+test('change PIN: needs the current PIN, format checked, the vault is not touched by it', async () => {
   const fb = setup(); await post(fb, '/pin/set', { pin: '4821' });
   assert.equal((await post(fb, '/pin/change', { kind: 'main', current: '0000', pin: '5555' })).status, 403);
   assert.equal((await post(fb, '/pin/change', { kind: 'main', current: '4821', pin: '55' })).status, 400);
+  assert.equal((await post(fb, '/pin/change', { kind: 'vault', current: '4821', pin: '555555' })).status, 400, 'the vault code has its own routes');
   assert.equal((await post(fb, '/pin/change', { kind: 'main', current: '4821', pin: '5555' })).status, 200);
   assert.equal((await post(fb, '/pin/verify', { pin: '4821' })).status, 403); assert.equal((await post(fb, '/pin/verify', { pin: '5555' })).status, 200);
-  T.resetCaches();
-  assert.equal((await post(fb, '/pin/change', { kind: 'vault', current: '1234', pin: '7777' })).status, 403, 'main PIN is the proof');
-  assert.equal((await post(fb, '/pin/change', { kind: 'vault', current: '5555', pin: '7777' })).status, 200); assert.equal(fb.get('users/u1/lockState/vaultSep'), true);
-  assert.equal((await post(fb, '/pin/verify', { pin: '5555', scope: 'vault' })).status, 403, 'the main PIN no longer opens the vault');
-  assert.equal((await post(fb, '/pin/verify', { pin: '7777', scope: 'vault' })).status, 200);
-  assert.equal((await post(fb, '/pin/verify', { pin: '7777', scope: 'app' })).status, 403, 'and the vault PIN does not open the app');
+});
+test('vault code: six digits, needs the main PIN to turn on, then its own code; the main PIN never opens it; shared lockout; remove needs an empty vault', async () => {
+  const fb = setup(); await post(fb, '/pin/set', { pin: '5555' });
+  for (const bad of ['12345', '1234567', 'abcdef', '111111', '123456', 654321, null]) assert.equal((await post(fb, '/vault/set', { code: bad, current: '5555' })).status, 400, String(bad));
+  assert.equal((await post(fb, '/vault/set', { code: '482913', current: '1234' })).status, 403, 'the main PIN is the proof');
   T.resetCaches(); fb.set('secure/u1/att', 0); fb.set('secure/u1/lockUntil', 0);
-  assert.equal((await post(fb, '/pin/change', { kind: 'vault', current: '9999', pin: null })).status, 403);
-  assert.equal((await post(fb, '/pin/change', { kind: 'vault', current: '7777', pin: null })).status, 200);
-  assert.equal(fb.get('secure/u1/vaultHash'), null); assert.equal(fb.get('users/u1/lockState/vaultSep'), false);
-  assert.equal((await post(fb, '/pin/verify', { pin: '5555', scope: 'vault' })).status, 200);
+  assert.equal((await post(fb, '/vault/set', { code: '482913', current: '5555', prefix: '#' })).status, 200);
+  assert.equal(fb.get('users/u1/lockState/vaultSep'), true); assert.equal(fb.get('users/u1/lockState/vaultPrefix'), '#'); assert.ok(!JSON.stringify(fb.tree).includes('482913'), 'the code is nowhere in the clear');
+  assert.equal((await post(fb, '/vault/open', { code: '555555' })).status, 403); assert.equal(fb.get('secure/u1/att'), 1, 'a wrong code counts toward the same lockout as a wrong PIN');
+  assert.equal((await post(fb, '/vault/open', { code: '5555' })).status, 400, 'the main PIN has the wrong shape for a vault code');
+  assert.equal((await post(fb, '/vault/open', { code: '482913' })).status, 200); assert.equal(fb.get('secure/u1/att'), 0);
+  assert.equal((await post(fb, '/pin/verify', { pin: '482913' })).status, 403, 'and the vault code does not open the app');
+  T.resetCaches(); fb.set('secure/u1/att', 0); fb.set('secure/u1/lockUntil', 0);
+  assert.equal((await post(fb, '/vault/set', { code: '913482', current: '000000' })).status, 403, 'changing needs the current vault code');
+  T.resetCaches(); fb.set('secure/u1/att', 0); fb.set('secure/u1/lockUntil', 0);
+  assert.equal((await post(fb, '/vault/set', { code: '913482', current: '482913' })).status, 200);
+  assert.equal((await post(fb, '/vault/open', { code: '913482' })).status, 200);
+  fb.set('vault/u1/links/v1', { url: 'https://v.test', fid: 'vf', ts: 1, up: 1 });
+  const full = await post(fb, '/vault/remove', { code: '913482' }); assert.equal(full.status, 409); assert.equal(full.body.error, 'vault_not_empty'); assert.ok(fb.get('vault/u1/links/v1'), 'nothing was deleted');
+  fb.set('vault/u1/links/v1', null);
+  assert.equal((await post(fb, '/vault/remove', { code: '913482' })).status, 200); assert.equal(fb.get('users/u1/lockState/vaultSep'), false); assert.equal(fb.get('secure/u1/vaultHash'), null);
+  assert.equal((await post(fb, '/vault/open', { code: '913482' })).status, 409, 'no vault: the same error the app shows as an ordinary search');
 });
 
 test('lock config: turning the lock off needs the PIN; other changes need an open session when the lock is on', async () => {
@@ -106,8 +124,8 @@ test('lock config: turning the lock off needs the PIN; other changes need an ope
   const fb2 = setup(); assert.equal((await post(fb2, '/lock/config', { app: true })).body.error, 'no_pin');
 });
 
-test('forgot PIN: needs a sign-in made in the last 5 minutes; keeps every folder and link; the old PIN stops working; a vault PIN is dropped', async () => {
-  const fb = setup(); await post(fb, '/pin/set', { pin: '4821', enable: true }); await post(fb, '/pin/change', { kind: 'vault', current: '4821', pin: '7777' });
+test('forgot PIN: needs a sign-in made in the last 5 minutes; keeps every folder and link; the old PIN stops working; the vault code is NOT touched', async () => {
+  const fb = setup(); await post(fb, '/pin/set', { pin: '4821', enable: true }); await post(fb, '/vault/set', { code: '482913', current: '4821' });
   fb.set('links/u1/l1', { url: 'https://a.test', fid: 'f', ts: 1, up: 1 }); fb.set('vault/u1/links/v1', { url: 'https://v.test', fid: 'vf', ts: 1, up: 1 });
   const before = JSON.stringify([fb.get('links/u1'), fb.get('vault/u1')]);
   await post(fb, '/lock', { scope: 'all' });
@@ -115,9 +133,14 @@ test('forgot PIN: needs a sign-in made in the last 5 minutes; keeps every folder
   assert.equal((await post(fb, '/pin/reset', { pin: '24' })).status, 400);
   const r = await post(fb, '/pin/reset', { pin: '2468' }); assert.equal(r.status, 200);
   assert.equal(JSON.stringify([fb.get('links/u1'), fb.get('vault/u1')]), before, 'no data was touched');
-  assert.equal(fb.get('secure/u1/vaultHash'), null); assert.equal(fb.get('users/u1/lockState/vaultSep'), false); assert.equal(fb.get('users/u1/lockState/app'), true, 'the lock stays on');
+  assert.ok(fb.get('secure/u1/vaultHash'), 'the vault code stays'); assert.equal(fb.get('users/u1/lockState/vaultSep'), true); assert.equal(fb.get('users/u1/lockState/app'), true, 'the lock stays on');
   assert.equal(fb.get('session/u1/vault'), null, 'the vault is still locked'); assert.ok(fb.get('session/u1/app') > Date.now());
-  assert.equal((await post(fb, '/pin/verify', { pin: '4821' })).status, 403); assert.equal((await post(fb, '/pin/verify', { pin: '2468', scope: 'vault' })).status, 200);
+  assert.equal((await post(fb, '/pin/verify', { pin: '4821' })).status, 403); assert.equal((await post(fb, '/vault/open', { code: '482913' })).status, 200);
+  const stale2 = await post(fb, '/vault/reset', { code: '135790' }, { authAgeSec: 3600 }); assert.equal(stale2.status, 403);
+  assert.equal((await post(fb, '/vault/reset', { code: '135790' })).status, 200); assert.equal(fb.get('session/u1/vault'), null, 'a reset closes the vault session');
+  assert.equal((await post(fb, '/vault/open', { code: '482913' })).status, 403); assert.equal((await post(fb, '/vault/open', { code: '135790' })).status, 200);
+  assert.equal(JSON.stringify(fb.get('vault/u1')), JSON.stringify(JSON.parse(before)[1]), 'a forgotten vault code loses no locked folder or link');
+
   assert.ok(Object.values(fb.get('activity/u1')).some((a) => a.type === 'pin-reset'));
   fb.set('secure/u1/att', 9); fb.set('secure/u1/lockUntil', Date.now() + 99999); T.resetCaches();
   assert.equal((await post(fb, '/pin/reset', { pin: '1357' })).status, 200); assert.equal(fb.get('secure/u1/lockUntil'), 0, 'a reset also clears a lockout');
@@ -129,6 +152,7 @@ function accountData(fb, uid = 'u1') {
   for (const l of ['l1', 'l2', 'l3']) fb.set(`links/${uid}/${l}`, { url: `https://${l}.test`, fid: 'a', ts: 1, up: 1 });
   fb.set(`vault/${uid}/folders/v1`, { name: 'v', ts: 1, up: 1 }); fb.set(`history/${uid}/h1`, { lid: 'l1', ts: 1 });
 }
+
 
 test('account delete: fresh sign-in (and the PIN when the lock is on), summary counts, marked deleted for 15 days, reactivate restores, an expired one is refused', async () => {
   const fb = setup(); accountData(fb);

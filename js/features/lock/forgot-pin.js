@@ -26,35 +26,40 @@ async function eraseGuestData() {
   db.close && db.close();
 }
 
-export async function runForgotPin({ session }) {
-  if (session.mode === 'guest') {
-    const ok = await confirmDialog({ title: 'Erase this device\'s data?', danger: true, confirmLabel: 'Erase and remove the lock',
-      message: 'Guest data only exists on this device and is protected by your PIN. Without the PIN it can not be read, so the only way to open Linkivo again is to erase it. This can not be undone. Log in to an account next time to keep your links safe.' });
-    if (!ok) return false;
-    try { await eraseGuestData(); eraseGuestLock(); toast('Guest data erased. The lock is off.'); return true; } catch { toast('Could not erase the data. Try again.', { type: 'error' }); return false; }
-  }
-  const flow = await openPinFlow({ title: 'Reset your PIN' });
-  const user = session.user, usesPassword = hasPassword(user);
-  // step 1: what happens, then confirm it is the owner (password, or the Google window)
-  const pass = h('input', { class: 'input', id: 'fp-pass', type: 'password', autocomplete: 'current-password', placeholder: 'Your account password', spellcheck: 'false', 'aria-label': 'Account password' });
+
+/**
+ * v2.5.2 (owner 2): "Forgot password?" never sends anything by itself. Clicking it only opens the question "Send a password reset link to a***@x.com?" with Send link and Cancel
+ * (inline, because a second popup on top of the PIN popup closed the first one in v2.4.3). Only Send link calls `send`. Returns the two elements; `deps` lets tests replace the sender.
+ */
+export function buildForgotPassword(user, deps = {}) {
+  const send = deps.send || sendReset, allowed = deps.allowed || sendAllowed, say = deps.toast || toast;
   const ask = h('div', { class: 'pf-ask', hidden: true });
   const forgot = h('button', { type: 'button', class: 'link', text: 'Forgot password?' });
-  forgot.addEventListener('click', () => {   // v2.5.1: ask first, then send
+  forgot.addEventListener('click', () => {
     const mail = maskEmail(user.email);
-    const yes = h('button', { type: 'button', class: 'btn btn-sm btn-primary', text: 'Send link' }), no = h('button', { type: 'button', class: 'btn btn-sm', text: 'Cancel' });
+    const yes = h('button', { type: 'button', class: 'btn btn-sm btn-primary pf-send', text: 'Send link' }), no = h('button', { type: 'button', class: 'btn btn-sm pf-cancel', text: 'Cancel' });
     no.addEventListener('click', () => { ask.hidden = true; });
     yes.addEventListener('click', async () => {
       yes.disabled = true;
-      const g = sendAllowed('reset', user.email);
-      if (!g.ok) toast(`A link was sent recently. Try again in ${friendlyWait(g.waitMs)}.`, { type: 'error' });
-      else { try { await sendReset(user.email); toast(`Reset link sent to ${mail}.`); } catch (e) { toast(friendlyAuthError(e) || 'Could not send the link.', { type: 'error' }); } }
+      const g = allowed('reset', user.email);
+      if (!g.ok) say(`A link was sent recently. Try again in ${friendlyWait(g.waitMs)}.`, { type: 'error' });
+      else { try { await send(user.email); say(`Reset link sent to ${mail}.`); } catch (e) { say(friendlyAuthError(e) || 'Could not send the link.', { type: 'error' }); } }
       ask.hidden = true;
     });
     ask.replaceChildren(h('p', { text: `Send a password reset link to ${mail}?` }), h('div', { class: 'pf-actions' }, no, yes)); ask.hidden = false;
   });
+  return { forgot, ask };
+}
+
+/** v2.5.2: the "sign in again" step shared by Forgot PIN and Forgot vault code. Resolves true once the password (or the Google window) was accepted and a fresh token exists. */
+export async function confirmItsYou(flow, user, text) {
+  const usesPassword = hasPassword(user);
+  // step 1: what happens, then confirm it is the owner (password, or the Google window)
+  const pass = h('input', { class: 'input', id: 'fp-pass', type: 'password', autocomplete: 'current-password', placeholder: 'Your account password', spellcheck: 'false', 'aria-label': 'Account password' });
+  const { forgot, ask } = buildForgotPassword(user);
   pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.closest('.pf-body').querySelector('.pf-go').click(); } });
   const verified = await stageForm(flow, {
-    text: 'You will sign in again to prove it is you, then choose a new PIN. Your folders, links and everything else stay exactly as they are.',
+    text,
     kids: usesPassword ? [h('div', { class: 'acc-field' }, h('label', { class: 'acc-label', for: 'fp-pass', text: 'Password' }), pass, forgot), ask] : [h('p', { class: 'pin-text', text: 'This account signs in with Google. A Google window opens to confirm it is you.' })],
     go: { label: usesPassword ? 'Continue' : 'Continue with Google', onClick: async (api) => {
       if (usesPassword && !pass.value) { api.error('Enter your password.'); return false; }
@@ -63,6 +68,18 @@ export async function runForgotPin({ session }) {
       return true;
     } }
   });
+  return verified;
+}
+
+export async function runForgotPin({ session }) {
+  if (session.mode === 'guest') {
+    const ok = await confirmDialog({ title: 'Erase this device\'s data?', danger: true, confirmLabel: 'Erase and remove the lock',
+      message: 'Guest data only exists on this device and is protected by your PIN. Without the PIN it can not be read, so the only way to open Linkivo again is to erase it. This can not be undone. Log in to an account next time to keep your links safe.' });
+    if (!ok) return false;
+    try { await eraseGuestData(); eraseGuestLock(); toast('Guest data erased. The lock is off.'); return true; } catch { toast('Could not erase the data. Try again.', { type: 'error' }); return false; }
+  }
+  const flow = await openPinFlow({ title: 'Reset your PIN' });
+  const verified = await confirmItsYou(flow, session.user, 'You will sign in again to prove it is you, then choose a new PIN. Your folders, links and everything else stay exactly as they are.');
   if (!verified) return false;
   // step 2: the new PIN (twice), then the Worker resets it
   flow.setTitle('Choose a new PIN');

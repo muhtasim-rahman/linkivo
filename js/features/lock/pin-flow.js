@@ -39,12 +39,12 @@ export async function openPinFlow({ title = '' } = {}) {
   return flow;
 }
 
-export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue', check = null } = {}) {
+export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue', check = null, digits = 0 } = {}) {   // digits: a fixed length (the 6-digit vault code, v2.5.2)
   return new Promise((resolve) => {
     const lead = h('p', { class: 'pin-text', text });
     let settled = false;
     const end = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const pad = buildPinPad({ submitLabel, onSubmit: async (pin) => {
+    const pad = buildPinPad({ submitLabel, min: digits || 4, max: digits || 8, onSubmit: async (pin) => {
       try {
         const bad = check ? await check(pin) : '';
         if (bad) { pad.shake(); pad.message(bad, 'error'); return; }
@@ -58,14 +58,14 @@ export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue
   });
 }
 
-export async function stageCreate(flow, { text = 'Use 4 to 8 digits. Pick something others can not guess.' } = {}) {
+export async function stageCreate(flow, { text = 'Use 4 to 8 digits. Pick something others can not guess.', digits = 0 } = {}) {
   let notice = '';
   for (;;) {
-    const first = await stagePad(flow, { text, notice, check: async (p) => (isWeakPin(p) ? 'Choose a PIN that is harder to guess (not 1111 or 1234).' : '') });
+    const first = await stagePad(flow, { text, notice, digits, check: async (p) => (isWeakPin(p) ? 'Choose a PIN that is harder to guess (not 1111 or 1234).' : '') });
     if (first === null) return null;
     notice = '';
     let mismatch = false;
-    const again = await stagePad(flow, { text: 'Enter the same PIN again to confirm it.', check: async (p) => { if (p !== first) { mismatch = true; return ''; } return ''; } });
+    const again = await stagePad(flow, { text: 'Enter the same PIN again to confirm it.', digits, check: async (p) => { if (p !== first) { mismatch = true; return ''; } return ''; } });
     if (again === null) return null;
     if (!mismatch && again === first) return first;
     notice = 'The two PINs were different. Start again.';

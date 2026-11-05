@@ -93,6 +93,10 @@
 html[data-admin='true'] .avatar .avatar-admin { display: grid; }
 .admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text);   /* v2.5.0: the word badge always follows the accent */ font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
+/* v2.5.2 (owner 6): the shield badge: round, primary colour, the same as the avatar shield; it takes the admin badge colour when one was chosen */
+.admin-chip.is-shield { width: 20px; height: 20px; padding: 0; border-radius: 50%; background: var(--admin-badge-bg, var(--accent)); color: var(--admin-badge-fg, var(--accent-fg)); }
+html[data-admin='true'] .admin-chip.is-shield { display: inline-grid; place-items: center; }
+.admin-chip.is-shield svg { display: block; }
 
 /* ---- v2.4.1: Profile sections and the recently opened list ---- */
 .pf-sec { margin: var(--s5) 0 var(--s2); font: 650 var(--fs-sm) / 1.2 var(--font-brand); letter-spacing: 0.02em; text-transform: uppercase; color: var(--sub); }
@@ -130,3 +134,23 @@ html[data-theme='dark'] .sc-card { --sc-blue: #60a5fa; background: color-mix(in 
 .sc-chip svg { color: color-mix(in srgb, var(--sc-blue) 80%, var(--text)); }
 @media (hover: hover) { .sc-chip:hover { background: color-mix(in srgb, var(--sc-blue) 18%, var(--surface)); text-decoration: none; } }
 .sc-chip:active { transform: scale(0.97); }
+
+/* v2.5.2: Stats, Activity, legal pages (plain, readable, no cards-in-cards) */
+.st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--s3); margin-bottom: var(--s5); }
+.st-stat { display: grid; gap: 2px; padding: var(--s3) var(--s4); border-radius: 14px; background: var(--surface-2, var(--surface)); }
+.st-n { font-size: 1.6rem; font-weight: 700; line-height: 1.1; } .st-l { color: var(--sub); font-size: 0.85rem; }
+.st-sec, .ac-sec { margin-bottom: var(--s5); } .st-h, .ac-h, .legal-h { font-size: 0.95rem; margin: 0 0 var(--s2); color: var(--sub); font-weight: 600; }
+.st-list, .ac-list { list-style: none; margin: 0; padding: 0; } .st-list li { display: flex; justify-content: space-between; gap: var(--s3); padding: 10px 0; border-bottom: 1px solid var(--line); }
+.st-c { font-variant-numeric: tabular-nums; color: var(--sub); }
+.st-bars { display: flex; align-items: flex-end; gap: var(--s3); height: 120px; } .st-bar { flex: 1; display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 4px; height: 100%; }
+.st-fill { align-self: end; width: 100%; max-width: 40px; min-height: 3px; border-radius: 6px 6px 2px 2px; background: var(--accent); } .st-m { font-size: 0.75rem; color: var(--sub); }
+.ac-row { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--s3); padding: 10px 0; border-bottom: 1px solid var(--line); } .ac-t { font-weight: 600; } .ac-i { grid-column: 1; color: var(--sub); font-size: 0.9rem; overflow-wrap: anywhere; } .ac-w { grid-row: 1; grid-column: 2; color: var(--sub); font-size: 0.8rem; }
+.legal { max-width: 68ch; } .legal-p { line-height: 1.65; margin: 0 0 var(--s4); }
+.vault-list { display: grid; } .vault-bar { margin-bottom: var(--s3); } .vault-folder .vault-open { text-align: left; }
+.dc-wrap { display: grid; gap: var(--s5); } @media (min-width: 860px) { .dc-wrap { grid-template-columns: 240px minmax(0, 1fr); align-items: start; } .dc-nav { position: sticky; top: var(--s4); } }
+.dc-nav { display: flex; gap: 4px; overflow-x: auto; } @media (min-width: 860px) { .dc-nav { flex-direction: column; overflow: visible; } }
+.dc-link { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 12px; white-space: nowrap; color: var(--text); } .dc-link.is-on { background: var(--accent-soft); font-weight: 600; }
+.dc-main { max-width: 70ch; } .dc-lead { font-size: 1.05rem; color: var(--sub); margin: 0 0 var(--s5); } .dc-title { margin: 0 0 var(--s2); font-size: 1.5rem; }
+.dc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s3); } .dc-card { display: grid; gap: 6px; padding: var(--s4); border-radius: 14px; background: var(--surface-2); color: var(--text); }
+.dc-card-t { font-weight: 600; } .dc-card-s { color: var(--sub); font-size: 0.9rem; line-height: 1.45; }
+.dc-h { margin: var(--s5) 0 var(--s2); font-size: 1.05rem; } .dc-items { margin: 0; padding-left: 1.2em; line-height: 1.7; } .dc-pager { display: flex; justify-content: space-between; gap: var(--s3); margin-top: var(--s6, 32px); flex-wrap: wrap; }

@@ -83,17 +83,24 @@ export function mountShell({ router }) {
   const pfAvatar = h('span', { class: 'pf-avatar' }); const pfName = h('span', { class: 'pf-name' }); const pfMail = h('span', { class: 'pf-mail' });
   const pfLink = h('a', { class: 'pf-link', href: '/profile', 'data-tip-c': 'Profile', 'aria-label': 'Profile' }, pfAvatar, h('span', { class: 'pf-text' }, pfName, pfMail));
   let menuHandle = null;
-  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'data-tip': 'Account menu', 'data-tip-pos': 'top', 'aria-haspopup': 'menu', on: { click: () => {
+  // v2.5.2 (owner 5): one function opens the account menu from either anchor. While the sidebar is collapsed the three-dot button is hidden, so a click on the
+  // round avatar opens THIS menu (Profile is its first row) instead of going straight to /profile.
+  const toggleAccountMenu = (anchor) => {
     // second press closes the menu (it used to close and re-open at once)
     if (menuHandle && menuHandle.isOpen()) { menuHandle.close(); menuHandle = null; return; }
-    menuHandle = openMenu(more, [
+    menuHandle = openMenu(anchor, [
       { label: 'Profile', icon: 'user', onSelect: () => router.navigate('/profile') },
       { label: 'Settings', icon: 'settings', onSelect: () => router.navigate('/settings') },
       ...(getSession().mode === 'account' ? [{ label: 'Switch account', icon: 'users', onSelect: () => import('./switch-account.js').then((m) => m.openSwitchAccount(router)) }] : []),   // v2.3.1
       { separator: true },
       { label: 'Log out', icon: 'logout', danger: true, onSelect: () => logOut(router) }
     ], { align: 'start' });
-  } } }, icon('more', { size: 18 }));
+  };
+  const more = h('button', { type: 'button', class: 'pf-more', 'aria-label': 'Account menu', 'data-tip': 'Account menu', 'data-tip-pos': 'top', 'aria-haspopup': 'menu', on: { click: () => toggleAccountMenu(more) } }, icon('more', { size: 18 }));
+  pfLink.addEventListener('click', (e) => {
+    if (app.dataset.collapsed !== 'true' || e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;   // expanded, or "open in a new tab": the link works as before
+    e.preventDefault(); toggleAccountMenu(pfLink);
+  });
   const badge = h('div', { class: 'pf-badge' }, pfLink, more);
 
   sidebar.replaceChildren(

@@ -83,7 +83,7 @@ test('Settings catalog: Random keeps six defaults, no Open History row, Preview 
 });
 
 test('Admin chip is a plain element that css shows only for admins', async () => {
-  const { adminChip } = await import('../../js/ui/admin-badge.js'); const el = adminChip(); assert.equal(el.className, 'admin-chip'); assert.equal(el.textContent, 'Admin');
+  const { adminChip } = await import('../../js/ui/admin-badge.js'); const el = adminChip(); assert.equal(el.className, 'admin-chip is-shield'); assert.equal(el.textContent, ''); assert.equal(adminChip('Admin').textContent, 'Admin');   // v2.5.2: the shield icon replaces the word
   assert.match(read('css/pages/pages.css') + read('css/components/kit.css') + read('css/pages/settings.css'), /html\[data-admin[^\]]*\] \.admin-chip|\.admin-chip/);
 });
 

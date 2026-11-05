@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.5.1';
+const VERSION = '2.5.2';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -104,6 +104,7 @@ const PRECACHE = [
   '/js/core/meta-fallback.js',
   '/js/core/microlink.js',
   '/js/core/nav-stack.js',
+  '/js/core/overlay-registry.js',
   '/js/core/page-meta.js',
   '/js/core/page-state.js',
   '/js/core/profile-data.js',
@@ -118,6 +119,7 @@ const PRECACHE = [
   '/js/core/update.js',
   '/js/core/url-tools.js',
   '/js/core/utils.js',
+  '/js/core/vault.js',
   '/js/core/wake-lock.js',
   '/js/core/worker-client.js',
   '/js/engine/chunker.js',
@@ -138,6 +140,8 @@ const PRECACHE = [
   '/js/features/auth/login-page.js',
   '/js/features/check/check-job.js',
   '/js/features/check/check-sheet.js',
+  '/js/features/docs/docs-content.js',
+  '/js/features/docs/docs-page.js',
   '/js/features/export/export-engine.js',
   '/js/features/export/export-sheet.js',
   '/js/features/export/formats/common.js',
@@ -170,6 +174,10 @@ const PRECACHE = [
   '/js/features/import/pdf-text.js',
   '/js/features/import/restore-popup.js',
   '/js/features/import/zip-reader.js',
+  '/js/features/insights/activity-page.js',
+  '/js/features/insights/stats-core.js',
+  '/js/features/insights/stats-page.js',
+  '/js/features/legal/legal-page.js',
   '/js/features/library/folder-actions.js',
   '/js/features/library/folder-page.js',
   '/js/features/library/folder-style.js',
@@ -193,6 +201,7 @@ const PRECACHE = [
   '/js/features/preview/preview-model.js',
   '/js/features/preview/preview-page.js',
   '/js/features/preview/preview-tabs.js',
+  '/js/features/profile/banner-carousel.js',
   '/js/features/profile/country-picker.js',
   '/js/features/profile/image-crop.js',
   '/js/features/profile/profile-edit.js',
@@ -236,6 +245,10 @@ const PRECACHE = [
   '/js/features/shell/update-prompt.js',
   '/js/features/splash/splash-start.js',
   '/js/features/splash/splash.js',
+  '/js/features/vault/vault-entry.js',
+  '/js/features/vault/vault-flows.js',
+  '/js/features/vault/vault-page.js',
+  '/js/features/vault/vault-settings.js',
   '/js/main.js',
   '/js/ui/admin-badge.js',
   '/js/ui/confirm.js',

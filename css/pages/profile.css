@@ -185,9 +185,11 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 /* ---- v2.5.0: Edit profile = live preview + controls (two columns on wide screens) ---- */
 .pe { grid-template-columns: minmax(0, 1fr); align-items: start; }
 .pe-side, .pe-main { display: grid; gap: var(--s4); min-width: 0; align-content: start; }
-@media (min-width: 720px) { .pe { grid-template-columns: 270px minmax(0, 1fr); gap: var(--s5); } .pe-side { position: sticky; top: 0; } }
+/* v2.5.2 (owner 3): the LEFT column is wider (it was 270px): 330px from 720px, 380px from 900px */
+@media (min-width: 720px) { .pe { grid-template-columns: 330px minmax(0, 1fr); gap: var(--s5); } .pe-side { position: sticky; top: 0; } }
+@media (min-width: 900px) { .pe { grid-template-columns: 380px minmax(0, 1fr); } }
 .pe-prev { position: relative; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; padding-bottom: var(--s3); }
-.pe-prev-cover { height: 72px; background: var(--accent-soft) center / cover no-repeat; transition: background-image var(--t-std) var(--ease); }
+.pe-prev-cover { height: 88px; background: var(--accent-soft) center / cover no-repeat; transition: background-image var(--t-std) var(--ease); }
 .pe-prev-id { display: flex; align-items: flex-end; gap: var(--s3); margin: -30px var(--s3) 0; min-width: 0; }
 .pe-av { position: relative; flex: none; display: block; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; box-shadow: 0 0 0 3px var(--surface); }
 .pe-av .avatar { width: 68px; height: 68px; padding: 3px; font-size: 24px; display: grid; }
@@ -210,4 +212,15 @@ html[data-admin='true'] .pe-prev-chip.admin-chip { display: inline-block; }
 .pf2-acct-b.is-danger { color: var(--danger, #dc2626); }
 @media (hover: hover) { .pf2-acct-b:hover { background: var(--surface-2); } }
 /* v2.5.1 (owner): the Edit profile popup is wider on a PC (the live preview sits beside the form) */
-@media (min-width: 900px) { .sheet.pe-sheet { width: min(900px, calc(100% - 64px)); } }
+@media (min-width: 900px) { .sheet.pe-sheet { width: min(1000px, calc(100% - 64px)); } }
+
+/* v2.5.2 (owner 3): banner carousel. The selected banner is centred (the track slides under a fixed window), the others sit left and right, smaller and quieter. */
+.pe-car { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 2px; outline: none; }
+.pe-car:focus-visible .pe-car-view { box-shadow: 0 0 0 2px var(--accent); border-radius: 12px; }
+.pe-car-view { overflow: hidden; padding: 8px 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); touch-action: pan-y; }
+.pe-car-track { display: flex; column-gap: 10px; width: max-content; transition: transform 320ms var(--ease); will-change: transform; }
+.pe-car .pe-banner { flex: none; width: 148px; height: 64px; border-radius: 12px; transform: scale(0.84); opacity: 0.62; transition: transform 320ms var(--ease), opacity 320ms var(--ease), border-color var(--t-std) var(--ease), box-shadow var(--t-std) var(--ease); }
+.pe-car .pe-banner.is-on { transform: scale(1); opacity: 1; }
+.pe-car-nav { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--text); }
+.pe-car-nav:disabled { opacity: 0.3; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .pe-car-track, .pe-car .pe-banner { transition: none; } }

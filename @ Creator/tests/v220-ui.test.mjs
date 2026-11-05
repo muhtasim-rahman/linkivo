@@ -170,7 +170,7 @@ test('recycle bin: deleted folder and link, restore, delete forever, empty state
 
 test('settings: Library and Data sections, rows work', async () => {
   await router.navigate('/settings'); await tick(30);
-  const labels = $$('.set-nav-item').map((n) => n.textContent); assert.ok(labels.some((l) => l.includes('Library and links')) && labels.some((l) => l.includes('Import, export and data')));
+  const labels = $$('.set-nav-item').map((n) => n.textContent); assert.ok(labels.some((l) => l.includes('Library and links')) && labels.some((l) => l.includes('Import, export and backup')));
   assert.ok($('[data-setting="libView"]') && $('[data-setting="impSpeed"]') && $('[data-setting="recycleBin"], .row'));
   click($('[data-setting="impBare"] button')); assert.equal(prefs.get('import.bare'), true); click($('[data-setting="impBare"] button')); assert.equal(prefs.get('import.bare'), false);
   const { CATALOG } = await import('../../js/features/settings/catalog.js'); assert.ok(CATALOG.length >= 30, `catalog has ${CATALOG.length} entries`);

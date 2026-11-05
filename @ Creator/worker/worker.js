@@ -36,7 +36,7 @@
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.5.1';
+const VERSION = '2.5.2';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -619,9 +619,12 @@ const SEC = {
   limit: { capacity: 40, perMs: 60000 }, pinLimit: { capacity: 12, perMs: 60000 },
   awayChoices: [0, 30, 60, 300, 600, 900, 1800, -1],   // v2.5.1: the one Auto lock setting, in seconds the app may be away (0 = right after leaving, -1 = never)
   defaultAway: 60,
+  vaultTtlMs: 15 * 60000,             // v2.5.2: a vault session lasts 15 minutes and is extended while the vault is open on screen
   redeleteBlockMs: 0 * 86400000   // v2.5.1: after an account was reactivated it cannot be deleted again for this long. 0 days while the owner tests; set 7 * 86400000 for production
 };
 const PIN_RE = /^\d{4,8}$/;
+const VAULT_RE = /^\d{6}$/;                       // v2.5.2: the vault code is exactly six digits (the app shows it after a prefix symbol in the search box)
+const VAULT_PREFIXES = ['@', '#', '%', '$', '!'];
 const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const LID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const enc = (s) => new TextEncoder().encode(s);
@@ -674,14 +677,14 @@ async function hashPin(env, uid, salt, pin, kind) {
 }
 const checkFormat = (pin) => { if (typeof pin !== 'string' || !PIN_RE.test(pin)) throw err('bad_pin', { status: 400 }); };
 
-/** Checks a PIN for scope "app" (the main PIN) or "vault" (the separate vault PIN when there is one, otherwise the main PIN). Counts failures, answers 429 while locked out. */
+/** Checks a PIN for scope "app" (the main PIN, 4 to 8 digits) or "vault" (the separate six-digit vault code; there is no fallback to the main PIN since v2.5.2). Both share ONE failure counter. Counts failures, answers 429 while locked out. */
 async function checkPin(sec, uid, pin, scope, now = nowMs()) {
-  checkFormat(pin);
+  if (scope === 'vault') { if (typeof pin !== 'string' || !VAULT_RE.test(pin)) throw err('bad_pin', { status: 400 }); } else checkFormat(pin);
   const s = (await dbGet(sec, `secure/${uid}`)) || {};
   if (s.lockUntil > now) throw err('locked_out', { status: 429, retryAfter: Math.ceil((s.lockUntil - now) / 1000) });
-  const own = scope === 'vault' && s.vaultHash;
+  const own = scope === 'vault';   // v2.5.2: the vault never falls back to the main PIN
   const hash = own ? s.vaultHash : s.pinHash, salt = own ? s.vaultSalt : s.pinSalt;
-  if (!hash) throw err('no_pin', { status: 409 });
+  if (!hash) throw err(own ? 'no_vault' : 'no_pin', { status: 409 });
   if (safeEqual(await hashPin(sec.env, uid, salt, pin, own ? 'vault' : 'main'), hash)) { if (s.att || s.lockUntil) await dbMulti(sec, { [`secure/${uid}/att`]: 0, [`secure/${uid}/lockUntil`]: 0 }); return s; }
   const att = (s.att || 0) + 1, wait = lockoutMs(att);
   await dbMulti(sec, { [`secure/${uid}/att`]: att, [`secure/${uid}/lockUntil`]: wait ? now + wait : 0 });   // absolute values, never an increment
@@ -690,7 +693,7 @@ async function checkPin(sec, uid, pin, scope, now = nowMs()) {
 
 async function readLock(sec, uid) {
   const v = (await dbGet(sec, `users/${uid}/lockState`)) || {};
-  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, away: SEC.awayChoices.includes(Number(v.away)) && v.away !== undefined && v.away !== null ? Number(v.away) : SEC.defaultAway };
+  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, vaultPrefix: VAULT_PREFIXES.includes(v.vaultPrefix) ? v.vaultPrefix : '@', away: SEC.awayChoices.includes(Number(v.away)) && v.away !== undefined && v.away !== null ? Number(v.away) : SEC.defaultAway };
 }
 // v2.5.1: the server session must outlive the time the app may be away (the app extends it every minute while it is on screen)
 const ttlOf = (lock) => (lock.away < 0 ? SEC.sessionDefaultMs : Math.max(15 * 60000, lock.away * 1000 + 5 * 60000));
@@ -719,7 +722,7 @@ async function handlePinSet(request, ctx, env, cors) {           // the first PI
   if ((await dbGet(sec, `secure/${user.uid}`) || {}).pinHash) throw err('pin_exists', { status: 409 });
   const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
   const lock = await readLock(sec, user.uid), enable = body.enable === true;
-  const up = { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, ...lockUpdates(user.uid, { pin: true, app: enable || lock.app, vaultSep: false, hideVault: lock.hideVault, away: lock.away }) };
+  const up = { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, ...lockUpdates(user.uid, { pin: true, app: enable || lock.app, hideVault: lock.hideVault, away: lock.away }) };
   const exp = now + ttlOf(lock);
   if (enable) { up[`session/${user.uid}/app`] = exp; Object.assign(up, activityEntry(user.uid, 'lock-on', 'App lock turned on', now)); }
   await dbMulti(sec, up);
@@ -728,29 +731,22 @@ async function handlePinSet(request, ctx, env, cors) {           // the first PI
 
 async function handlePinVerify(request, ctx, env, cors) {        // a correct PIN opens a session; the database rules check it on every read and write
   const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
-  const scope = body.scope === 'vault' ? 'vault' : 'app';
-  await checkPin(sec, user.uid, body.pin, scope, now);
+  if (body.scope === 'vault') throw err('bad_request', { status: 400 });   // v2.5.2: the vault opens through /vault/open only
+  await checkPin(sec, user.uid, body.pin, 'app', now);
   const lock = await readLock(sec, user.uid), exp = now + ttlOf(lock);
-  const up = { [`session/${user.uid}/app`]: exp }; if (scope === 'vault') up[`session/${user.uid}/vault`] = exp;
-  await dbMulti(sec, up);
-  return ok({ appExp: exp, vaultExp: scope === 'vault' ? exp : 0, lock }, cors);
+  await dbMulti(sec, { [`session/${user.uid}/app`]: exp });
+  return ok({ appExp: exp, vaultExp: 0, lock }, cors);
 }
 
-async function handlePinChange(request, ctx, env, cors) {        // kind main: new main PIN. kind vault: a separate vault PIN (pin null = back to the main PIN)
+async function handlePinChange(request, ctx, env, cors) {        // the main PIN only (v2.5.2: the vault code has its own routes, /vault/*)
   const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
-  const kind = body.kind === 'vault' ? 'vault' : 'main', lock = await readLock(sec, user.uid);
-  if (kind === 'vault' && body.pin === null) {
-    if (!lock.vaultSep) throw err('no_separate_pin', { status: 409 });
-    await checkPin(sec, user.uid, body.current, 'vault', now);
-    await dbMulti(sec, { [`secure/${user.uid}/vaultHash`]: null, [`secure/${user.uid}/vaultSalt`]: null, ...lockUpdates(user.uid, { vaultSep: false }) });
-    return ok({ lock: { ...lock, vaultSep: false } }, cors);
-  }
+  if (body.kind === 'vault') throw err('bad_request', { status: 400 });
+  const lock = await readLock(sec, user.uid);
   checkFormat(body.pin);
-  await checkPin(sec, user.uid, body.current, kind === 'vault' && lock.vaultSep ? 'vault' : 'app', now);   // creating a separate vault PIN asks for the main PIN
-  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, kind);
-  const up = kind === 'main' ? { [`secure/${user.uid}/pinHash`]: hash, [`secure/${user.uid}/pinSalt`]: salt } : { [`secure/${user.uid}/vaultHash`]: hash, [`secure/${user.uid}/vaultSalt`]: salt, ...lockUpdates(user.uid, { vaultSep: true }) };
-  await dbMulti(sec, up);
-  return ok({ lock: { ...lock, vaultSep: kind === 'vault' ? true : lock.vaultSep } }, cors);
+  await checkPin(sec, user.uid, body.current, 'app', now);
+  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
+  await dbMulti(sec, { [`secure/${user.uid}/pinHash`]: hash, [`secure/${user.uid}/pinSalt`]: salt });
+  return ok({ lock }, cors);
 }
 
 async function handlePinReset(request, ctx, env, cors) {         // forgot PIN: a fresh sign-in is the proof, the data is untouched (it is gated, not encrypted by the PIN)
@@ -758,9 +754,9 @@ async function handlePinReset(request, ctx, env, cors) {         // forgot PIN: 
   if (!fresh(user, now)) throw err('reauth_required', { status: 403 });
   checkFormat(body.pin);
   const lock = await readLock(sec, user.uid), salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.pin, 'main');
-  await dbMulti(sec, { [`secure/${user.uid}`]: { pinHash: hash, pinSalt: salt, att: 0, lockUntil: 0 }, [`session/${user.uid}`]: { app: now + ttlOf(lock) },
-    ...lockUpdates(user.uid, { pin: true, vaultSep: false }), ...activityEntry(user.uid, 'pin-reset', 'PIN reset after signing in again', now) });
-  return ok({ appExp: now + ttlOf(lock), lock: { ...lock, pin: true, vaultSep: false } }, cors);
+  await dbMulti(sec, { [`secure/${user.uid}/pinHash`]: hash, [`secure/${user.uid}/pinSalt`]: salt, [`secure/${user.uid}/att`]: 0, [`secure/${user.uid}/lockUntil`]: 0, [`session/${user.uid}/app`]: now + ttlOf(lock),
+    ...lockUpdates(user.uid, { pin: true }), ...activityEntry(user.uid, 'pin-reset', 'PIN reset after signing in again', now) });
+  return ok({ appExp: now + ttlOf(lock), lock: { ...lock, pin: true } }, cors);
 }
 
 async function handleLockConfig(request, ctx, env, cors) {       // turn the lock on or off, hide the vault entry, change the auto-lock time
@@ -768,6 +764,7 @@ async function handleLockConfig(request, ctx, env, cors) {       // turn the loc
   const lock = await readLock(sec, user.uid), patch = {}, up = {};
   if (body.away !== undefined) { if (!SEC.awayChoices.includes(body.away)) throw err('bad_request', { status: 400 }); patch.away = body.away; }
   if (body.hideVault !== undefined) patch.hideVault = body.hideVault === true;
+  if (body.vaultPrefix !== undefined) { if (!VAULT_PREFIXES.includes(body.vaultPrefix)) throw err('bad_request', { status: 400 }); patch.vaultPrefix = body.vaultPrefix; }
   if (body.app === false && lock.app) await checkPin(sec, user.uid, body.pin, 'app', now);               // turning the lock OFF needs the PIN itself
   else if (lock.app && Object.keys(patch).length && !((await dbGet(sec, `session/${user.uid}/app`)) > now)) throw err('locked', { status: 403 });
   if (body.app === true) { if (!lock.pin) throw err('no_pin', { status: 409 }); patch.app = true; up[`session/${user.uid}/app`] = now + ttlOf({ ...lock, ...patch }); }
@@ -792,6 +789,68 @@ async function handleLockExtend(request, ctx, env, cors) {       // keeps a sess
   await dbMulti(sec, up);
   return ok({ appExp: exp, vaultExp: sess.vault > now ? exp : 0 }, cors);
 }
+
+/* ---- v2.5.2: the vault (locked folders). A separate six-digit code, checked here, never stored in the clear; the SAME failure counter as the main PIN. A correct code opens `session/<uid>/vault`,
+   which the database rules require for every read and write under vault/<uid>. Accounts only (a guest has no token). */
+const weakVault = (c) => /^(\d)\1+$/.test(c) || '0123456789876543210'.includes(c);
+const vaultView = (lock) => ({ vaultSep: lock.vaultSep, hideVault: lock.hideVault, vaultPrefix: lock.vaultPrefix });
+
+async function handleVaultSet(request, ctx, env, cors) {          // create the code (needs the main PIN when there is one) or change it (needs the current vault code)
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  if (typeof body.code !== 'string' || !VAULT_RE.test(body.code) || weakVault(body.code)) throw err('bad_pin', { status: 400 });
+  const lock = await readLock(sec, user.uid), up = {};
+  if (lock.vaultSep) await checkPin(sec, user.uid, body.current, 'vault', now);
+  else if (lock.pin) await checkPin(sec, user.uid, body.current, 'app', now);
+  if (body.prefix !== undefined) { if (!VAULT_PREFIXES.includes(body.prefix)) throw err('bad_request', { status: 400 }); up.vaultPrefix = body.prefix; }
+  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.code, 'vault');
+  await dbMulti(sec, { [`secure/${user.uid}/vaultHash`]: hash, [`secure/${user.uid}/vaultSalt`]: salt, ...lockUpdates(user.uid, { vaultSep: true, ...up }), [`session/${user.uid}/vault`]: null,
+    ...activityEntry(user.uid, lock.vaultSep ? 'vault-code' : 'vault-on', lock.vaultSep ? 'Locked folders code changed' : 'Locked folders turned on', now) });
+  return ok({ lock: { ...lock, ...vaultView(lock), vaultSep: true, ...up } }, cors);
+}
+
+async function handleVaultOpen(request, ctx, env, cors) {         // a right code opens the vault session; a wrong one counts like any wrong PIN
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const lock = await readLock(sec, user.uid);
+  if (!lock.vaultSep) throw err('no_vault', { status: 409 });
+  if (lock.app && !((await dbGet(sec, `session/${user.uid}/app`)) > now)) throw err('locked', { status: 403 });   // the app lock comes first
+  await checkPin(sec, user.uid, body.code, 'vault', now);
+  const exp = now + SEC.vaultTtlMs;
+  await dbMulti(sec, { [`session/${user.uid}/vault`]: exp });
+  return ok({ vaultExp: exp }, cors);
+}
+
+async function handleVaultExtend(request, ctx, env, cors) {       // keeps an open vault session alive while it is on screen
+  const { user, sec, now } = await secureCall(request, ctx, env);
+  if (!((await dbGet(sec, `session/${user.uid}/vault`)) > now)) throw err('locked', { status: 403 });
+  const exp = now + SEC.vaultTtlMs;
+  await dbMulti(sec, { [`session/${user.uid}/vault`]: exp });
+  return ok({ vaultExp: exp }, cors);
+}
+
+async function handleVaultReset(request, ctx, env, cors) {        // forgot the code: a fresh sign-in is the proof, every locked folder and link is kept
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  if (!fresh(user, now)) throw err('reauth_required', { status: 403 });
+  if (typeof body.code !== 'string' || !VAULT_RE.test(body.code) || weakVault(body.code)) throw err('bad_pin', { status: 400 });
+  const lock = await readLock(sec, user.uid);
+  if (!lock.vaultSep) throw err('no_vault', { status: 409 });
+  const salt = randomB64u(), hash = await hashPin(env, user.uid, salt, body.code, 'vault');
+  await dbMulti(sec, { [`secure/${user.uid}/vaultHash`]: hash, [`secure/${user.uid}/vaultSalt`]: salt, [`secure/${user.uid}/att`]: 0, [`secure/${user.uid}/lockUntil`]: 0, [`session/${user.uid}/vault`]: null,
+    ...activityEntry(user.uid, 'vault-reset', 'Locked folders code reset after signing in again', now) });
+  return ok({ lock: { ...lock, ...vaultView(lock) } }, cors);
+}
+
+async function handleVaultRemove(request, ctx, env, cors) {       // turn the vault off: the code is needed and the vault must be empty (nothing can be left behind a code nobody has)
+  const { user, body, sec, now } = await secureCall(request, ctx, env, SEC.pinLimit);
+  const lock = await readLock(sec, user.uid);
+  if (!lock.vaultSep) throw err('no_vault', { status: 409 });
+  await checkPin(sec, user.uid, body.code, 'vault', now);
+  const [f, l] = await Promise.all([dbGet(sec, `vault/${user.uid}/folders`, '?shallow=true'), dbGet(sec, `vault/${user.uid}/links`, '?shallow=true')]);
+  if ((f && Object.keys(f).length) || (l && Object.keys(l).length)) throw err('vault_not_empty', { status: 409 });
+  await dbMulti(sec, { [`secure/${user.uid}/vaultHash`]: null, [`secure/${user.uid}/vaultSalt`]: null, [`session/${user.uid}/vault`]: null, [`vault/${user.uid}`]: null,
+    ...lockUpdates(user.uid, { vaultSep: false, hideVault: false }), ...activityEntry(user.uid, 'vault-off', 'Locked folders turned off', now) });
+  return ok({ lock: { ...lock, vaultSep: false, hideVault: false } }, cors);
+}
+
 
 /* ---- account lifecycle */
 async function accountSummary(sec, uid) {
@@ -934,6 +993,7 @@ async function scheduled(event, env, deps = {}) {
 }
 
 const SECURE_ROUTES = { '/pin/set': handlePinSet, '/pin/verify': handlePinVerify, '/pin/change': handlePinChange, '/pin/reset': handlePinReset, '/lock/config': handleLockConfig, '/lock': handleLock, '/lock/extend': handleLockExtend,
+  '/vault/set': handleVaultSet, '/vault/open': handleVaultOpen, '/vault/extend': handleVaultExtend, '/vault/reset': handleVaultReset, '/vault/remove': handleVaultRemove,
   '/account/summary': handleAccountSummary, '/account/delete': handleAccountDelete, '/account/reactivate': handleAccountReactivate, '/jobs/enqueue': handleJobsEnqueue, '/jobs/cancel': handleJobsCancel };
 
 /* ------------------------------------------------------------------------------------------------------------- routes */

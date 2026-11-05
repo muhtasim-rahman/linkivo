@@ -23,7 +23,7 @@ Theme: system by default, user override. Respect `prefers-reduced-motion`. Keep 
 
 ## 3. Typography
 
-Three roles, clearly different, loaded from Google Fonts with `display=swap` and real fallback stacks (cached by the service worker; self-hosting is an optional v2.6.0 improvement):
+Three roles, clearly different, loaded from Google Fonts with `display=swap` and real fallback stacks (cached by the service worker; self-hosting is an optional later improvement, see CONTEXT):
 - **Outfit** (600 to 700): brand, page titles, big numbers.
 - **Figtree** (400 to 600): all interface text.
 - **JetBrains Mono** (400 to 500): URLs, domains, IDs, counts in details views.

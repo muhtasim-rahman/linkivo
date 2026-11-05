@@ -24,14 +24,14 @@ A fast, private, public-use link manager for people with hundreds or thousands o
 | Account deletion | Marked deleted, recoverable for 15 days with an extra reactivate step, then purged with the Auth user |
 | Metadata | Worker-first (complete in v2.1.0), fallbacks by descending free limit, fetched title wins unless user edited, video/thumbnail/screenshot at preview time |
 | Navigation | Mobile floating glass bottom bar; PC collapsible sidebar; URL per page; back button follows a parent chain |
-| Export | One main native format (database-shaped, re-imports through a fast path) plus formatted exports (JSON, CSV, Excel, TXT, Markdown, HTML bookmarks, printable HTML, OPML; PDF in v2.6.0) |
+| Export | One main native format (database-shaped, re-imports through a fast path) plus formatted exports (JSON, CSV, Excel, TXT, Markdown, HTML bookmarks, printable HTML, OPML; PDF in v2.5.2) |
 | Updates | Network-first service worker, no-cache headers, auto-update, install banner (7-day hide) and install status in Settings |
 | Language | English only. No emojis. Icons only |
 | Dropped | Weekly refresh-all, incognito/"Private open", profile picture upload, admin panel (data model is admin-ready) |
 
 ## 4. Versions
 
-`v2.0.0` is this setup (structure, docs, rules, tooling, icons, migration service worker). The app is built in six stages, each in its own chat, each COMPLETE and verified before the next starts. Patch releases `v2.X.Y` (Y >= 1) are for bug fixes only.
+`v2.0.0` is this setup (structure, docs, rules, tooling, icons, migration service worker). The app is built in five stages (v2.1.0 to v2.5.0), each in its own chat, each COMPLETE and verified before the next starts. **v2.5 is the final major version; there is no v2.6. Everything that was planned for v2.6.0 is finished in v2.5.2, and v2.5.x (x >= 3) are patches written by the owner's own prompts.** Patch releases `v2.X.Y` (Y >= 1) are for fixes; v2.5.1 and v2.5.2 also carried owner-approved features.
 
 | Version | Name | Core outcome |
 |---|---|---|
@@ -41,7 +41,8 @@ A fast, private, public-use link manager for people with hundreds or thousands o
 | v2.3.0 | Preview and search | Rich preview with tabs, global search, dead-link checker, Share Target |
 | v2.4.0 | Random Discover and history | Points engine, merged filter panel, History page inside Profile |
 | v2.5.0 | Security and account | App lock, vault, forgot PIN, account lifecycle, guest sync, background jobs |
-| v2.6.0 | Settings and final | Full settings catalog, backup, activity log, stats, menu, legal and docs pages, README, hardening |
+| v2.5.1 | Fix round | Owner fixes on v2.5.0, guest links move into the account |
+| v2.5.2 | Final stage | Vault, background-job button, everything still open from v2.0 to v2.5, backup polish, PDF export, Activity log, Stats, Menu, legal and docs pages, README, hardening, final QA |
 
 ### v2.1.0 Foundation and shell
 Slices (build in this order, run `check.mjs` after each):
@@ -75,9 +76,9 @@ First action: guide the owner step by step to create the Firebase service accoun
 Slices: (1) Worker routes: `/pin/*`, `/lock`, `/account/*`, cron (2) Rules activation of app-lock and vault gates and re-test matrix (3) App lock UX: PIN pad, lockout feedback, auto-lock, lock on background, cache encryption at rest (4) Vault: move to/from vault (job), memory-only vault data, unlock entry at the bottom of Library, hide option with search-bar PIN (5) Sensitive-action gate with the 5-minute window; wire it to logout, reset settings, delete folder (first time after login), delete account, security settings (6) Forgot PIN flow (re-auth then reset; guest: erase local data) (7) Account deletion, summary, recovery step on login, purge cron (8) Guest to account sync with merge, progress, resume, wipe (9) Background enrichment jobs by cron when the app is closed (10) Profile page: account section, delete account, security entry points (11) Update the Privacy-related facts in CONTEXT (12) QA.
 Acceptance: with the app lock ON, a direct database read without a session is denied (rules matrix); wrong PIN lockout works; forgot-PIN keeps all data; vault data is absent from DOM, cache and search while locked; delete then reactivate restores everything; guest sync moves all data and clears local; cron purges only expired accounts.
 
-### v2.6.0 Settings and final
-Slices: (1) Complete the settings catalog (minimum 30 settings, every setting wired and tested, sensitive ones PIN-gated, searchable) (2) Optional passphrase encryption for the native backup format, restore flow polish and backup reminders (works for guests too), and PDF export (3) Activity log page (4) Stats (5) Mobile Menu page and PC banners (app info, developer) (6) Terms and Privacy (simple), Documentation (fully designed, covers every feature) (7) Advanced `README.md` (8) Hardening: accessibility pass, performance pass (10k-link library, Lighthouse budget), security review against `RULES.md`, rules and Worker final review, CSP evaluation, optional font self-hosting (9) Final QA of the whole app, CONTEXT final.
-Acceptance: every feature in `FEATURES.md` exists and is reachable; no dead settings; docs describe the real app; `check.mjs` passes; a fresh clone deploys with the documented steps only.
+### v2.5.2 Final stage (replaces the former v2.6.0)
+Scope, in slices (one gate run per slice): (A) everything still open from v2.5.0: Vault with its own 6-digit code unlocked from the search bar, move to and from the vault as a job, memory-only vault data, hide option, vault state synced on the server for accounts, background-jobs button, first-time PIN gate before deleting a folder (B) everything still open from v2.0 to v2.4 found by checking the acceptance lines and `docs/FEATURES.md` against the code (C) the former v2.6.0 items that still matter: optional passphrase encryption for the native backup, restore polish and backup reminders (guests too), PDF export, Activity log page, Stats, Menu page and PC banners (app info, developer), Terms and Privacy (simple), Documentation page (fully designed), advanced `README.md`, hardening (accessibility, performance with 10,000 links, security review against `RULES.md` section 3, rules and Worker final review, CSP evaluation, optional font self-hosting), SEO items of `RULES.md` section 9, final QA and final CONTEXT (D) settings: the catalog already has every section; the former "30+ settings" goal is DROPPED, only features built in this version register settings, and no setting may be dead (E) the owner's change list (settings re-organised into clearer categories, Forgot password confirmation, Edit profile layout and banners, lock closes every overlay, sidebar profile click, admin-only settings hidden from normal users, PIN gate confirm mode, search-bar vault code).
+Acceptance: the v2.5.0 acceptance lines above hold; every feature in `FEATURES.md` exists and is reachable; no dead settings; docs describe the real app; `check.mjs` passes; a fresh clone deploys with the documented steps only. Anything that truly does not fit is listed exactly for v2.5.3 (a patch by the owner's prompt).
 
 ## 5. Feature placement matrix
 
@@ -90,10 +91,11 @@ Acceptance: every feature in `FEATURES.md` exists and is reachable; no dead sett
 | Import (paste and files), native fast import, enrichment, Recycle Bin, export system (native + formatted), duplicates, tags, read later, quick-add | v2.2.0 |
 | Preview, global search, dead-link checker, Share Target | v2.3.0 |
 | Random Discover, points engine, History page | v2.4.0 |
-| App lock, vault, forgot PIN, account deletion and recovery, guest sync, background jobs | v2.5.0 |
-| Settings catalog (complete), encrypted backup, activity log, stats, menu, legal/docs, README | v2.6.0 |
+| App lock, forgot PIN, account deletion and recovery, background-job routes | v2.5.0 |
+| Guest to account move | v2.5.1 |
+| Vault, job button, encrypted backup, PDF export, activity log, stats, menu, legal/docs, README, hardening | v2.5.2 |
 
-Settings are registered in the registry by the version that introduces the feature; v2.6.0 completes and audits the catalog.
+Settings are registered in the registry by the version that introduces the feature; v2.5.2 audits the catalog for dead settings (no count goal).
 
 ## 6. Dependencies and risks
 

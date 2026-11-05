@@ -6,7 +6,7 @@
  * Purpose: the PIN keypad used by the lock screen and by every place that asks for a PIN (4 to 8 digits). Big round keys (56px, comfortable for a thumb), dots that grow as digits
  *          are typed, a check key (or Enter, or the 8th digit) to send, backspace, and the physical keyboard works too. After a wrong PIN the dots shake once; while the app is
  *          locked out the keys are disabled and a countdown is shown. The PIN is only ever held in memory here, in a variable that is cleared after use.
- * API: buildPinPad({ onSubmit(pin) -> Promise, min = 4, max = 8, submitLabel }) -> { el, reset(), message(text, kind?), shake(), lockFor(seconds, text?), setBusy(bool), focus() }
+ * API: buildPinPad({ onSubmit(pin) -> Promise, min = 4, max = 8, submitLabel, autoAt (length or () => length, v2.5.2), autoMax (default true) }) -> { el, reset(), message(text, kind?), shake(), lockFor(seconds, text?), setBusy(bool), focus() }
  *      isWeakPin(pin) -> boolean   (pure, tested: all the same digit, or a straight run up or down)
  */
 import { h } from '../../core/dom.js';
@@ -21,7 +21,7 @@ export function isWeakPin(pin) {
 }
 
 const pads = [];   // every live pad, newest last (see docKey)
-export function buildPinPad({ onSubmit, min = 4, max = 8, submitLabel = 'Unlock' } = {}) {
+export function buildPinPad({ onSubmit, min = 4, max = 8, submitLabel = 'Unlock', autoAt = 0, autoMax = true } = {}) {
   let value = '', busy = false, until = 0, timer = 0, api = null;
   const dots = h('div', { class: 'pin-dots', role: 'img' });
   const msg = h('p', { class: 'pin-msg', role: 'status', 'aria-live': 'polite' });
@@ -41,7 +41,9 @@ export function buildPinPad({ onSubmit, min = 4, max = 8, submitLabel = 'Unlock'
     for (const k of keys) k.disabled = off;
     go.disabled = off || value.length < min; back.disabled = off || !value.length;
   }
-  function add(d) { if (busy || until > Date.now() || value.length >= max) return; value += d; message(''); paint(); if (value.length === max) submit(); }
+  function add(d) { if (busy || until > Date.now() || value.length >= max) return; value += d; message(''); paint();
+    const at = typeof autoAt === 'function' ? autoAt() : autoAt;   // v2.5.2: the PIN gate can check as soon as the known PIN length is reached
+    if ((at && value.length === at) || (autoMax && value.length === max)) submit(); }
   async function submit() {
     if (busy || value.length < min || until > Date.now()) return;
     const pin = value; busy = true; paint();

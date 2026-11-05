@@ -17,7 +17,7 @@ import { openSheet } from '../../ui/sheet.js';
 import { confirmDialog } from '../../ui/confirm.js';
 import { toast } from '../../ui/toast.js';
 import { attachFade } from '../../ui/edge-fade.js';
-import { attachScrollRow } from '../../ui/scroll-row.js';
+import { buildBannerCarousel } from './banner-carousel.js';
 import { openMenu } from '../../ui/popover.js';
 import { setSession } from '../../core/session.js';
 import { BANNERS, PALETTE, bannerUrl, photoFileName, saveProfile, applyProfileLook, isColor, readableOn } from '../../core/profile-data.js';
@@ -89,12 +89,9 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
   });
 
   // ---- look controls ---------------------------------------------------------------------------------------------------------------------
-  const bannerRow = h('div', { class: 'pe-banners fade-x', role: 'radiogroup', 'aria-label': 'Banner' });
-  const bannerBtns = BANNERS.map((id, i) => h('button', { type: 'button', class: 'pe-banner', role: 'radio', 'aria-label': `Banner ${i + 1}`, style: { backgroundImage: `url(${bannerUrl(id)})` }, on: { click: () => { draft.banner = id; markBanners(); paintPreview(); } } }));
-  bannerRow.append(...bannerBtns);
-  const markBanners = () => bannerBtns.forEach((b, i) => { const on = draft.banner === BANNERS[i]; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });   // in place: the row never jumps
-  const bannerBox = h('div', { class: 'pe-brow' }, bannerRow);
-  const detachBanners = attachScrollRow(bannerRow);
+  // v2.5.2 (owner 3): a carousel; the chosen banner stays in the centre and the arrows move ONE banner (the old scrolling row is gone, its CSS `.pe-banners` is now unused)
+  const car = buildBannerCarousel({ ids: BANNERS, urlOf: bannerUrl, get: () => draft.banner, set: (id) => { draft.banner = id; paintPreview(); } });
+  const bannerBox = h('div', { class: 'pe-brow' }, car.el);
   const ring = colorRow({ label: 'Photo ring colour', get: () => draft.ring, set: (v) => { draft.ring = v; paintPreview(); } });
   const adminColor = isAdmin ? colorRow({ label: 'Admin badge colour', get: () => draft.adminColor, set: (v) => { draft.adminColor = v; paintPreview(); } }) : null;
   const look = h('div', { class: 'pe-look' },
@@ -137,7 +134,7 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
         field('Languages', 'languages', { max: 80, ph: 'e.g. Bangla, English' }), field('Website', 'site', { max: 200, ph: 'https://' })),
       h('p', { class: 'pe-note', text: 'Your profile details are private. Only you and the Linkivo admin can see them.' }),
       h('div', { class: 'pe-actions' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet && sheet.requestClose() } }, 'Cancel'), save)));
-  paintPreview(); markBanners();
+  paintPreview(); car.mark();
   const body = h('div', null, form, cropHost);
   // v2.5.1 (owner: "closing without a change still asks"): compare with the draft as it was when the popup opened, not with the saved profile. A profile without a banner or name starts
   // with defaults in the draft, which the old comparison counted as a change.
@@ -149,7 +146,7 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
       if (saved || busy || !hasChanges(draft, base, photoChanged())) return true;
       return confirmDialog({ title: 'Discard your changes?', message: 'You have changes that are not saved. If you close now they are lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true });
     },
-    onClose: () => { country.destroy(); detachBanners(); ring.fade.destroy(); adminColor && adminColor.fade.destroy(); } });
+    onClose: () => { country.destroy(); car.destroy(); ring.fade.destroy(); adminColor && adminColor.fade.destroy(); } });
   sheet.el.classList.add('pe-sheet');   // v2.5.1: wider on a PC (profile.css)
   return sheet;
 }

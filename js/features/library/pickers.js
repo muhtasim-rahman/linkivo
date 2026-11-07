@@ -55,7 +55,7 @@ export function openFolderForm({ engine, folder = null }) {
   });
 }
 
-export function openFolderPicker({ engine, title = 'Choose a folder', exclude = [], allowNew = true, confirmLabel = '' }) {
+export function openFolderPicker({ engine, title = 'Choose a folder', exclude = [], allowNew = true, confirmLabel = '', noLocked = false }) {   // v2.5.3: noLocked = import, quick-add and share never target a locked folder (their data would be kept on this device while it is saved)
   return new Promise((resolve) => {
     let picked = null;
     const skip = new Set(exclude);
@@ -63,7 +63,7 @@ export function openFolderPicker({ engine, title = 'Choose a folder', exclude = 
     const search = h('input', { class: 'input', type: 'search', placeholder: 'Search folders', 'aria-label': 'Search folders', autocomplete: 'off' });
     function render() {
       const q = search.value.trim().toLowerCase();
-      const rows = engine.listFolders().filter((f) => !skip.has(f.id) && (!q || f.name.toLowerCase().includes(q)));
+      const rows = engine.listFolders().filter((f) => !skip.has(f.id) && !(noLocked && f.lk) && (!q || f.name.toLowerCase().includes(q)));
       list.replaceChildren(...rows.map((f) => h('button', { type: 'button', class: 'picker-row', role: 'option', on: { click: () => { picked = f.id; sheet.close(); } } },
         folderTile(f, 32), h('span', { class: 'picker-name', text: f.name }), h('span', { class: 'picker-sub', text: plural(f.lc || 0, 'link') }))));
       if (!rows.length) list.replaceChildren(h('p', { class: 'help', text: q ? 'No folder matches.' : 'No folders yet. Create one.' }));

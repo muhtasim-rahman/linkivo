@@ -29,7 +29,7 @@ import { adminChip } from '../../ui/admin-badge.js';
 import { isAdminAccount, isAdminView, subscribeAdmin, getAdminViewMode, setAdminView, hideAdmin } from '../../core/admin.js';
 import { KEEP_OPTIONS } from '../../core/history.js';
 import { createSelect } from '../../ui/select.js';
-import { securityRows } from '../lock/lock-settings.js';
+import { securityRows } from '../lock/security-popups.js';
 
 const row = (label, desc, end, opts = {}) => h('div', { class: ['row', opts.stack && 'is-stack'] }, h('span', { class: 'row-main' }, h('span', { class: 'row-label' }, label, opts.admin ? adminChip() : null), desc && h('span', { class: 'row-desc', text: desc })), end && h('span', { class: 'row-end' }, end));
 

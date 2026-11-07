@@ -19,11 +19,12 @@ const LAST = 'lib.lastFolder';
 export function openQuickAdd({ engine, queue = null, fid = null }) {
   return new Promise((resolve) => {
     let saved = null;
-    let target = fid && engine.getFolder(fid) ? fid : (engine.getFolder(prefs.get(LAST, '')) ? prefs.get(LAST, '') : engine.listFolders()[0]?.id || null);
+    const plain = (id) => { const f = id && engine.getFolder(id); return f && !f.lk && !f.del ? id : null; };   // v2.5.3: never a locked folder
+    let target = plain(fid) || plain(prefs.get(LAST, '')) || (engine.listFolders().find((f) => !f.lk) || {}).id || null;
     const url = h('input', { class: 'input', type: 'text', inputmode: 'url', placeholder: 'Paste a link or type a domain', 'aria-label': 'Link', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
     const title = h('input', { class: 'input', type: 'text', placeholder: 'Title (optional, fetched for you)', 'aria-label': 'Title', maxlength: '300', autocomplete: 'off' });
     const note = h('p', { class: 'help', role: 'status' });
-    const folderBtn = h('button', { type: 'button', class: 'btn btn-ghost qa-folder', on: { click: async () => { const f = await openFolderPicker({ engine, title: 'Save to' }); if (f) { target = f; paint(); } } } });
+    const folderBtn = h('button', { type: 'button', class: 'btn btn-ghost qa-folder', on: { click: async () => { const f = await openFolderPicker({ engine, noLocked: true, title: 'Save to' }); if (f) { target = f; paint(); } } } });
     const hit = () => extractLinks(url.value.trim(), { bare: true })[0] || null;
 
     function paint() {

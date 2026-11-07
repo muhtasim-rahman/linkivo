@@ -24,3 +24,6 @@
 .btn-primary.is-loading::after { border-color: var(--accent-fg) transparent var(--accent-fg) transparent; }
 .link-btn { color: var(--accent-text); font-weight: 560; padding: var(--s2) 0; min-height: var(--ctl-h); }
 @media (hover: hover) { .link-btn:hover { text-decoration: underline; text-underline-offset: 3px; } }
+
+/* v2.5.3 accessibility: on a touch screen the small button is a full 44px target too (it was 34px) */
+@media (hover: none) and (pointer: coarse) { .btn-sm { min-height: 44px; } }

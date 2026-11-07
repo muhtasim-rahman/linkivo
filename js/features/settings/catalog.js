@@ -30,7 +30,7 @@ export const SECTIONS = [
   { id: 'admin', label: 'Admin', desc: 'Tools only admins see', icon: 'shield', admin: true },
   { id: 'danger', label: 'Danger zone', desc: 'Actions that reset settings, sign you out or erase data on this device', icon: 'alert' },
   { id: 'app', label: 'App', desc: 'Version, links and the developer', icon: 'install' },
-  { id: 'advanced', label: 'Advanced', desc: 'Metadata tester, storage tools, debug log', icon: 'terminal' }
+  { id: 'advanced', label: 'Testing', desc: 'Metadata tester, service status, debug log and points display. Only admins see this.', icon: 'terminal', admin: true }   // v2.5.3 (owner): was "Advanced"; everything in it is a testing tool, so it is admin only (the id and the setting keys stay)
 ];
 export const findSection = (id) => SECTIONS.find((s) => s.id === id && (!s.admin || isAdminAccount())) || null;
 export const findEntry = (id) => CATALOG.find((e) => e.id === id) || null;
@@ -60,7 +60,7 @@ export const CATALOG = [
   // v2.2.2 (owner): "Link order" was removed. Pinned links always stay on top; the order below them is the Sort control of the folder page.
   { id: 'openIn', section: 'library', type: 'seg', key: 'lib.openIn', label: 'Open links in', desc: 'Preview shows the page, video, photo and details inside Linkivo. New tab opens the site itself.', default: 'preview', options: opt(['preview', 'Preview'], ['tab', 'New tab']), keywords: ['preview', 'open', 'new tab', 'click'], since: '2.3.0' },
   { id: 'showUrl', section: 'library', type: 'switch', key: 'lib.showUrl', label: 'Show the domain on links', desc: 'The site name under each link title.', default: true, keywords: ['domain', 'host', 'url'], since: '2.2.0' },
-  { id: 'showPoints', section: 'library', type: 'switch', key: 'lib.showPoints', label: 'Show points on links', desc: 'The weight Random Discover uses. Useful while you tune it.', default: false, keywords: ['points', 'score', 'random'], since: '2.2.0' },
+  { id: 'showPoints', section: 'library', type: 'switch', key: 'lib.showPoints', label: 'Show points on links', desc: 'The weight Random Discover uses. Useful while you tune it.', default: false, keywords: ['points', 'score', 'random'], admin: true, since: '2.2.0' },
   { id: 'confirmDelete', section: 'library', type: 'switch', key: 'lib.confirmDelete', label: 'Type the name to delete a folder with links', desc: 'Off asks a simple yes or no. Deleted folders stay in the Recycle Bin for 15 days either way.', default: true, keywords: ['delete', 'confirm', 'safety'], since: '2.2.0' },
   { id: 'clipboard', section: 'library', type: 'switch', key: 'lib.clipboard', onOn: 'clipboard', label: 'Look in the clipboard for links', desc: 'Once your browser allows clipboard access, links you copied are suggested for import when the app opens, and fill the Add link field. Works in Chrome and Edge; other browsers cannot read the clipboard quietly.', default: true, keywords: ['paste', 'clipboard', 'quick add', 'import', 'suggestion'], since: '2.2.0' },
 
@@ -83,7 +83,7 @@ export const CATALOG = [
   { id: 'rndMicrolink', section: 'random', type: 'switch', key: 'random.microlink', label: 'Use Microlink in Random', desc: 'Off by default: Random opens many links quickly and Microlink has a small daily allowance. Without it a link still opens from what is saved and the other services.', default: false, keywords: ['microlink', 'random', 'metadata', 'limit'], since: '2.4.2' },
   { id: 'rndThum', section: 'random', type: 'switch', key: 'random.thum', label: 'Use thum.io in Random', desc: 'Off by default for the same reason: the screenshot service has a small allowance. WordPress mShots is used instead.', default: false, keywords: ['thum', 'screenshot', 'random', 'limit'], since: '2.4.2' },
   { id: 'histKeep', section: 'history', type: 'custom', custom: 'historyKeep', key: 'history.keep', label: 'Keep history for', default: '7d', keywords: ['history', 'time', 'delete', 'clear', 'days'], since: '2.4.1' },
-  { id: 'uiThumbs', section: 'library', type: 'switch', key: 'ui.thumbs', label: 'Show thumbnails in lists', desc: 'Folders, Favourites, History, Search and Profile show a saved thumbnail, else a saved screenshot, else the site icon. Only pictures already saved on this device are used (no extra requests). Off: the site icon only.', default: true, keywords: ['thumbnail', 'picture', 'image', 'favicon', 'screenshot', 'list', 'cards'], since: '2.4.4' },
+  { id: 'uiThumbs', section: 'library', type: 'switch', key: 'ui.thumbs', label: 'Show thumbnails in lists', desc: 'Folders, Favourites, History, Search and Profile show the page picture, else a screenshot of the page, else the site icon. Screenshots are loaded only for rows you scroll to. Off: the site icon only.', default: true, keywords: ['thumbnail', 'picture', 'image', 'favicon', 'screenshot', 'list', 'cards'], since: '2.4.4' },
   { id: 'profileThumbs', section: 'history', type: 'switch', key: 'profile.thumbs', label: 'Show thumbnails in Profile', desc: 'The Profile sliders (Top favourites, Recently opened) show a thumbnail or screenshot instead of the site icon. Needs "Show thumbnails in lists" (Library and links) to be on as well.', default: true, keywords: ['profile', 'thumbnail', 'history', 'picture', 'slider'], since: '2.4.3' },
   { id: 'histWhere', section: 'history', type: 'seg', key: 'history.where', label: 'Where history is kept', desc: 'This device keeps it private to this browser. Account shows the same list on every device you sign in on (guests always use this device). Each place has its own list.', default: 'local', options: opt(['local', 'This device'], ['account', 'My account']), keywords: ['history', 'sync', 'local', 'cloud'], since: '2.4.1' },
   // v2.4.2 (owner): the "Open History" row is gone from this section (History has its own page and entries in the Menu and Profile).
@@ -99,12 +99,13 @@ export const CATALOG = [
   { id: 'impEnrich', section: 'data', type: 'switch', key: 'import.enrich', label: 'Fetch titles after importing', desc: 'Reads each page title and description in the background through the metadata service.', default: true, keywords: ['import', 'metadata', 'title'], since: '2.2.0' },
   { id: 'impAutoClear', section: 'data', type: 'switch', key: 'import.autoClear', label: 'Auto delete recent imports', desc: 'Removes entries of the Recent imports list that are older than 7 days. Your imported links are never touched.', default: false, keywords: ['import', 'history', 'recent', 'log', 'clear', 'delete', '7 days'], since: '2.2.3' },
   { id: 'metaBrowser', section: 'data', type: 'switch', key: 'meta.browserFallback', label: 'Use extra metadata services from this device', desc: 'When the Worker cannot read a page, this device asks free public services itself (Dub, Jina Reader, AllOrigins, Microlink). They see the link, so turn this off if that matters to you.', default: true, keywords: ['metadata', 'fallback', 'privacy', 'title', 'favicon'], since: '2.1.3' },   // v2.2.3: moved out of Advanced (that section will be removed)
+  { id: 'backupRemind', local: true, section: 'data', type: 'seg', key: 'backup.remind', label: 'Backup reminder', desc: 'A reminder when the app opens if you have not made a Linkivo backup for this long. Once a day at most. Guests too: your links live only on this device.', default: '30', options: opt(['off', 'Off'], ['7', 'Weekly'], ['14', '2 weeks'], ['30', 'Monthly']), keywords: ['backup', 'remind', 'reminder', 'export', 'save', 'copy'], since: '2.5.3' },
   { id: 'impSpeed', section: 'data', type: 'seg', key: 'import.speed', label: 'Import speed', desc: 'Fast writes more groups of 100 links at once. Gentle is kinder to a weak connection.', default: 'normal', options: opt(['gentle', 'Gentle'], ['normal', 'Normal'], ['fast', 'Fast']), keywords: ['import', 'speed', 'parallel'], since: '2.2.0' },
   { id: 'exportData', section: 'data', type: 'custom', custom: 'exportData', label: 'Export library', keywords: ['export', 'backup', 'download', 'json', 'csv', 'excel'], since: '2.2.0' },
   { id: 'recycleBin', section: 'data', type: 'custom', custom: 'recycleBin', top: true, label: 'Recycle Bin', keywords: ['deleted', 'restore', 'trash', 'bin'], since: '2.2.0' },
 
   // ---- Security (v2.5.0)
-  { id: 'appLock', section: 'security', type: 'custom', custom: 'security', label: 'App lock', keywords: ['pin', 'lock', 'passcode', 'security', 'auto-lock', 'privacy', 'password', 'unlock'], since: '2.5.0' },
+  { id: 'appLock', section: 'security', type: 'custom', custom: 'security', label: 'App lock', keywords: ['pin', 'lock', 'passcode', 'security', 'auto-lock', 'privacy', 'password', 'unlock', 'vault', 'folder lock', 'locked folders', 'hide folders', 'code', 'secret'], since: '2.5.0' },
   { id: 'gateMode', section: 'security', type: 'seg', key: 'lock.gateMode', label: 'PIN gate', desc: 'How the PIN popup for sensitive actions confirms. Automatic checks as soon as the PIN length is reached. The lock screen is not affected.', default: 'auto', options: opt(['auto', 'Automatic'], ['submit', 'Submit button']), keywords: ['pin', 'confirm', 'submit', 'enter', 'gate', 'sensitive', 'security'], since: '2.5.2' },
 
   // ---- Account and sync
@@ -141,7 +142,7 @@ export const LAYOUT = {
   history: ['histWhere', 'histKeep', 'profileThumbs'],
   account: ['accountInfo', 'syncPick', 'sync'],
   security: ['appLock', 'gateMode'],
-  data: ['importData', 'impSpeed', 'impIcons', 'keepAwake', 'impBare', 'impDedupe', 'impClean', 'impEnrich', 'impAutoClear', 'exportData', 'recycleBin'],
+  data: ['importData', 'impSpeed', 'impIcons', 'keepAwake', 'impBare', 'impDedupe', 'impClean', 'impEnrich', 'impAutoClear', 'exportData', 'backupRemind', 'recycleBin'],
   admin: ['pvAdmin'],
   danger: ['logout', 'clearCache', 'reset', 'clearLocal', 'deleteAccount'],
   app: ['appDetails'],

@@ -160,3 +160,15 @@ Rules Playground (owner), only if you want to confirm on the live database: with
 | V5 | owner | vault session open | `secure/u1/vaultHash`, `session/u1/vault` | read, write | deny (Worker only) |
 | V6 | other user | any | `vault/u1/*`, `users/u1/lockState` | read | deny |
 Worker (tested with a fake Firebase, owner must try on the real one): `/vault/set` needs the main PIN when there is one; `/vault/open` counts a wrong code toward the same lockout as a wrong PIN; `/pin/verify` refuses scope vault; `/pin/reset` keeps the vault code; `/vault/remove` refuses a non-empty vault.
+
+### v2.5.3 additions (rules file unchanged; the locked-folder design uses the same vault tree)
+| # | who | state | path | op | expect |
+|---|---|---|---|---|---|
+| W1 | owner | vault session open | `vault/u1/links/<id>` with every field set (`pn`, `fv`, `rl`, tags, `pt` 40, `del`) | write | allow (soft delete happens inside the vault tree, so the record must stay valid with `del`) |
+| W2 | owner | vault session open | `vault/u1/folders/<id>` with `pinned`, `lc`, `del` | write | allow |
+| W3 | owner | no vault session or an ended one | `vault/u1/links/<id>` | write, delete | deny |
+| W4 | owner | no vault session | `links/u1/<id>` = null, `folders/u1/<id>` = null (the removal half of LOCKING a folder) | write | allow |
+| W5 | owner | vault session open | `vault/u1/links/<id>` = null (the removal half of REMOVING a lock) | write | allow |
+| W6 | owner | vault session ended (after Lock now or expiry) | `vault/u1/links`, `vault/u1/folders` | read | deny (closing the vault closes the data on the server too) |
+| W7 | owner | any | a path `vault/u1/linkMeta/<id>` | write | not used by the client (page data of a locked link is kept in memory only) |
+Owner check on the live database (Rules Playground): W3 and W6 are the two that matter, simulate a read of `/vault/<your uid>/links` as yourself with the vault locked: it must be denied.

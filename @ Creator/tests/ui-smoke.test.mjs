@@ -218,14 +218,14 @@ test('settings page: sections, controls write prefs, reset restores defaults', a
   setSession({ mode: 'guest', user: null, status: 'active' });
   const router = mk({ routes: ROUTES, container, getSession }); await router.start();
   await router.navigate('/settings'); await tick(5);
-  assert.equal($$('.set-nav .set-nav-item').length, 13, 'category list (v2.2.3: + Danger zone, v2.3.1: + Search, Preview, v2.4.1: + Random Discover, History, v2.5.0: + Security)'); assert.equal($$('.set-sec').length, 13, 'one page, one section per category');
+  assert.equal($$('.set-nav .set-nav-item').length, 12, 'category list (v2.2.3: + Danger zone, v2.3.1: + Search, Preview, v2.4.1: + Random Discover, History, v2.5.0: + Security; v2.5.3: Testing is admin only, so a guest sees 12)'); assert.equal($$('.set-sec').length, 12, 'one page, one section per category (Testing is admin only)');
   assert.equal($('.page-head.is-stack .page-title').textContent, 'Settings'); assert.ok($('.page-head.is-stack .page-sub'), 'title and subtitle on separate lines');
   await router.navigate('/settings/appearance'); await tick(5);
   $$('[data-setting="theme"] button').find((b) => b.textContent === 'Dark').click(); assert.equal(prefs.get('ui.theme'), 'dark'); assert.equal(document.documentElement.dataset.theme, 'dark');
   $$('[data-setting="accent"] button')[2].click(); assert.equal(prefs.get('ui.accent'), 'violet');
   $('[data-setting="hideBar"] button').click(); assert.equal(prefs.get('ui.hideBar'), false);
   await router.navigate('/settings/advanced'); await tick(5);
-  assert.equal($$('.set-sec').length, 13, 'still one page'); assert.ok($('.mt-tester') && $('textarea')); assert.ok($$('.row').length >= 4);
+  assert.equal($$('.set-sec').length, 12, 'still one page'); assert.ok(!$('.mt-tester'), 'v2.5.3: the Testing section is admin only: a guest never gets the tester'); assert.ok($$('.row').length >= 4);
   const resetRow = $$('.row.is-caution').find((r) => /Reset all settings/.test(r.textContent))   /* v2.3.0: reset is yellow-orange (is-caution), no longer red */; resetRow.click(); await tick(10);
   $$('.sheet-foot button').find((b) => b.textContent === 'Reset settings' || b.textContent === 'Reset all settings').click(); await tick(250);
   assert.equal(prefs.get('ui.theme'), null); assert.equal(prefs.get('ui.accent'), null);

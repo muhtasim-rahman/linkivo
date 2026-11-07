@@ -7,10 +7,11 @@ import markdown from './markdown.js';
 import bookmarks from './html-bookmarks.js';
 import webpage from './webpage.js';
 import print from './print.js';
+import pdf from './pdf.js';   // v2.5.3
 // ! printable.js (v2.2.0) is no longer listed: Web page and Print replace it. Kept on disk, unused; safe to delete in a later cleanup.
 import opml from './opml.js';
 
-export const FORMATS = [webpage, print, xlsx, csv, json, txt, markdown, bookmarks, opml];
+export const FORMATS = [webpage, print, pdf, xlsx, csv, json, txt, markdown, bookmarks, opml];
 export const getFormat = (id) => FORMATS.find((f) => f.id === id) || null;
 /** Default option values of a format, merged with remembered ones. */
 export function defaultOptions(fmt, saved = {}) { const o = {}; for (const opt of fmt.options) o[opt.id] = opt.id in saved ? saved[opt.id] : opt.default; return o; }

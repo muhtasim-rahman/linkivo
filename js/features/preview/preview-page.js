@@ -34,7 +34,7 @@ import { buildPanel } from './preview-tabs.js';
 import { ensureMeta, fetchStatus, wantsMicrolink } from './preview-meta.js';
 import { setInRandom } from './preview-ctx.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
-import { shotQuota } from '../../core/admin.js';
+import { shotQuota, isAdminView } from '../../core/admin.js';
 
 const K_LAST = 'preview.tab', K_USE = 'preview.tabUse', K_DEF = 'preview.defaultTab';
 /** v2.3.1: the tab that opens first: the setting "Tab that opens first" when it is not "Last used" and exists for this link, else the old rule (last used, most used, first). */
@@ -67,7 +67,7 @@ export async function mount(container, ctx) {
   const root = h('div', { class: 'pv page-enter' }, h('div', { class: 'pv-wrap' }, head, h('div', { class: 'pv-main' }, h('div', { class: 'pv-col' }, fetching, stage, bar), side)));
   container.appendChild(root);
   document.documentElement.dataset.pv = '1';   // lifts the toasts above the action bar on wide screens (toast.css)
-  const paintFetch = () => { const st = fetchStatus.get(), on = st.lid === lid && !!st.engine; fetching.hidden = !on; fetching.replaceChildren(...(on ? [h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { text: `Data Fetching (${st.engine})` })] : [])); };
+  const paintFetch = () => { const st = fetchStatus.get(), on = st.lid === lid && !!st.engine; fetching.hidden = !on; fetching.replaceChildren(...(on ? [h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { text: isAdminView() ? `Data Fetching (${st.engine})` : 'Loading details' })] : [])); };
   const offFetch = fetchStatus.subscribe(paintFetch);
   stage.append(tabsEl, panel);
   if (emb && emb.float) { try { stage.appendChild(emb.float()); } catch { /* optional */ } }   // v2.4.2: Random's floating group, bottom right of the preview area

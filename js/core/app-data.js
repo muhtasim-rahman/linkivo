@@ -4,7 +4,9 @@
  *          Features call getEngine() / getQueue(); nothing else decides which engine is used.
  * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() getImportLog() getHistory() recordOpen(link, src) dataReady() -> boolean
  */
-import { closeVaultLocal } from './vault.js';
+import { closeVaultLocal, bindVaultEngine } from './vault.js';
+import { registerVaultMoveJob } from '../features/vault/lock-job.js';   // v2.5.3
+import { toast } from '../ui/toast.js';
 import { createLocalEngine } from '../engine/local-engine.js';
 import { createCloudEngine } from '../engine/cloud-engine.js';
 import { createRtdbAdapter } from '../engine/rtdb-adapter.js';
@@ -45,6 +47,9 @@ export async function initData(session) {
     else { const firebase = await loadFirebase(); engine = await createCloudEngine({ uid: session.user.uid, adapter: createRtdbAdapter({ firebase }), db }); }
     queue = createJobQueue({ db: engine.db, now: () => engine.now() });
     registerCheckJob({ queue, engine, check: checkLinks }); // v2.3.0: dead-link checker (must be registered before start() resumes jobs)
+    bindVaultEngine(engine);   // v2.5.3: locked folders live in this engine while the vault is open
+    registerVaultMoveJob({ queue, engine, getHistory: () => history });
+    engine.subscribe((e) => { if (e.type === 'vault-failed') { closeVaultLocal(); toast('Locked folders were closed because they could not be saved. Unlock again and retry.', { type: 'error' }); } });
     registerImportJobs({ queue, engine, fetchMeta }); // v2.2.0: import and title-fetch handlers must exist before start() resumes interrupted jobs
     await queue.start();
     pruneJobs(queue).catch(() => {});
@@ -117,6 +122,7 @@ export const getDevices = () => devices;
 
 export async function teardownData() {
   closeVaultLocal();   // v2.5.2: logout, account switch and the app lock all empty the vault's memory
+  bindVaultEngine(null);
   try { (await import('./admin.js')).clearAdmin(); } catch { /* ignore */ }
   try { settingsSync?.dispose(); } catch { /* ignore */ }
   settingsSync = null; for (const off of choiceWatch) { try { off(); } catch { /* ignore */ } } choiceWatch = [];

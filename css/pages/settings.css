@@ -25,7 +25,7 @@
   .settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: var(--s8); align-items: start; --set-bar-h: 0px; }
   .set-body { margin-top: 0; }
   .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
-  .set-nav { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
+  .set-nav, .set-nav.fade-x { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
   .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }
   @media (hover: hover) { .set-nav-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); } }
   .set-nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent-text); }

@@ -86,7 +86,7 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
 
   async function record({ link, src }) {
     try {
-      if (!link || !link.id || keepMs(getKeep(), isAdmin()) === 0) return null;   // history is off
+      if (!link || !link.id || link.lk || keepMs(getKeep(), isAdmin()) === 0) return null;   // history is off; v2.5.3: a locked link leaves no trace
       if (!loaded) await load();
       const t = now();
       const last = items.find((e) => e.lid === link.id && e.src === src);
@@ -104,6 +104,15 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
     items = items.filter((e) => !set.has(e.id)); emit();
     await persist({ del: [...set] });
   }
+  /** v2.5.3: a link was locked: every entry about it goes, from the active list AND from this device's copy (the other store may hold entries too). */
+  async function forgetLinks(lids) {
+    const set = new Set(lids); if (!set.size) return 0;
+    const gone = items.filter((e) => set.has(e.lid)).map((e) => e.id);
+    items = items.filter((e) => !set.has(e.lid)); emit();
+    try { if (gone.length) await persist({ del: gone }); } catch (e) { log.warn('history', 'could not forget locked links', e); }
+    try { if (where() === 'account') { const local = (await db.getAll('history')).filter((e) => set.has(e.lid)).map((e) => e.id); if (local.length) await db.deleteMany('history', local); } } catch { /* ignore */ }
+    return gone.length;
+  }
   async function clear() {
     items = []; emit();
     if (where() === 'account') {
@@ -117,7 +126,7 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
   }
 
   return {
-    where, load, prune, record, remove, clear,
+    where, load, prune, record, remove, clear, forgetLinks,
     list: () => items,
     isLoaded: () => loaded,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }

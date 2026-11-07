@@ -16,6 +16,7 @@ import { icon } from '../../ui/icons.js';
 import { openMenu } from '../../ui/popover.js';
 import { createSelect } from '../../ui/select.js';
 import { refreshButton } from '../../ui/refresh-button.js';
+import { jobsButton } from '../jobs/jobs-panel.js';   // v2.5.3: Background jobs
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { openShortcutHelp } from '../../ui/shortcut-help.js';
 import { emptyState } from '../../ui/empty-state.js';
@@ -33,7 +34,6 @@ import { mountDock } from '../../ui/dock.js';
 import { mountInstallSuggest } from '../shell/install-card.js';
 import { isFresh as isFreshShare } from '../share/share-model.js';
 import { prefs as prefsStore } from '../../core/local-prefs.js';
-import { mountVaultEntry } from '../vault/vault-entry.js';
 
 const SORTS = { manual: 'Default order', name: 'Name A to Z', recent: 'Recently changed', links: 'Most links', new: 'Newest first', old: 'Oldest first' };
 const FILTERS = { all: 'All folders', pinned: 'Pinned', filled: 'With links', empty: 'Empty' };
@@ -66,7 +66,7 @@ export async function mount(container, ctx) {
   const body = h('div', { class: 'lib-body' });
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
-      h('div', { class: 'page-actions' }, lockButton(), refreshButton(() => refresh()), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
+      h('div', { class: 'page-actions' }, lockButton(), jobsButton({ queue: getQueue(), engine }), refreshButton(), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
         h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 
@@ -76,6 +76,7 @@ export async function mount(container, ctx) {
     return h('div', { class: ['fcard-wrap', wide && 'is-row', virtual && 'is-virtual'], style: { '--fc': colorOf(f) } },
       h('a', { class: 'fcard', href: `/folder/${f.id}` }, folderTile(f, 36),
         h('span', { class: 'fcard-text' }, h('span', { class: 'fcard-name', text: f.name }), h('span', { class: 'fcard-meta', text: `${plural(f.lc || 0, 'link')}${!virtual && f.up ? '  \u00b7  ' + relativeTime(f.up) : ''}` })),
+        f.lk && h('span', { class: 'fcard-lock', 'aria-label': 'Locked folder', 'data-tip': 'Locked folder' }, icon('lock', { size: 13 })),   // v2.5.3: a small mark on folders that are behind the code (shown only while they are unlocked)
         f.pinned && h('span', { class: 'fcard-pin', 'aria-label': 'Pinned' }, icon('pin', { size: 14 }))), more);
   }
 
@@ -94,8 +95,6 @@ export async function mount(container, ctx) {
     body.replaceChildren(h('div', { class: ['lib-grid', wide && 'is-list'], role: 'list' }, nodes.map((n) => { n.setAttribute('role', 'listitem'); return n; })));
   }
 
-  // v2.5.2: Locked folders line at the bottom (only when the account has a code and the entry is not hidden, or the vault is open)
-  const vaultEntry = mountVaultEntry({ router }); body.after(vaultEntry.el);
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
     viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.view, st.view); update(); });
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready' || ev.type === 'sync') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
@@ -114,7 +113,7 @@ export async function mount(container, ctx) {
   update();
   // v2.2.3 (owner): the install suggestion shows HERE only (not on other pages), as a dock that follows the bottom bar
   const suggest = mountInstallSuggest({ mountDock, page });
-  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); vaultEntry.destroy(); };
+  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
 }
 
-export async function refresh() { try { await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }
+export async function refresh() { /* v2.5.3: the router rebuilds the page after the app-wide refresh (core/refresh.js); nothing page-specific is left to do */ }

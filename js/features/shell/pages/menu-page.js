@@ -15,6 +15,9 @@ import { KEYS } from '../../../core/appearance.js';
 import { profileCard, logoutButton } from '../shell-parts.js';   // v2.3.0: avatar and logOut moved into the shared profileCard and logoutButton
 import { installCard } from '../install-card.js';
 import { binCard } from '../bin-card.js';
+import { unlockCard } from '../../vault/unlock-card.js';   // v2.5.3
+import { jobsButton } from '../../jobs/jobs-panel.js';
+import { getQueue, getEngine } from '../../../core/app-data.js';
 import { historyCard } from '../history-card.js';   // v2.4.2
 import { settingsCard } from '../settings-card.js';   // v2.4.2
 import { appInfoCard, appLinkButtons } from '../../settings/about-card.js';
@@ -39,10 +42,11 @@ export async function mount(container, ctx = {}) {
   await Promise.all([loadCss('/css/pages/pages.css'), loadCss('/css/pages/settings.css')]);
   const hide = findEntry('hideBar');
   container.appendChild(h('div', { class: 'page page-enter' },
-    h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('div', { class: 'page-actions' }, lockButton(), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 })))),   // v2.2.4: gear = all settings
+    h('header', { class: 'page-head menu-head' }, h('h1', { class: 'page-title', text: 'Menu' }), h('div', { class: 'page-actions' }, lockButton(), jobsButton({ queue: getQueue(), engine: getEngine() }), h('a', { class: 'btn-icon', href: '/settings', 'aria-label': 'Settings', 'data-tip': 'Settings' }, icon('settings', { size: 22 })))),   // v2.2.4: gear = all settings
     h('div', { class: 'menu-list' },
       profileCard(ctx.router),   // v2.3.0: shared with the wide Settings page
       installCard(),
+      unlockCard(),   // v2.5.3: Locked folders: Unlock / Lock now (nothing for guests or when the code is not set)
       h('section', { class: 'menu-quick', 'aria-labelledby': 'menu-quick-h' },
         h('h2', { class: 'menu-h', id: 'menu-quick-h' }, h('span', { class: 'set-h-ic' }, icon('zap', { size: 18 })), 'Quick settings'),
         h('div', { class: 'group' }, themeRow(), hide && renderControl(hide), linkRow('database', 'Import and export', 'Backup, restore, export formats', '/settings/data'))),

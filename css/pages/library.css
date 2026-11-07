@@ -134,3 +134,8 @@
 .vlist.is-grid .lrow.is-card .lmore { position: absolute; top: 6px; right: 6px; margin: 0; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 84%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .vlist.is-grid .lrow.is-card .lcheck { left: 8px; top: 8px; }
 .vlist.is-grid .lrow.is-card.is-selected .lcover { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* v2.5.3: the small lock mark on locked folders (shown only while they are unlocked) */
+.fcard-lock { position: absolute; right: 46px; top: 36px; color: var(--accent); display: grid; }
+.fcard-wrap.is-row .fcard-lock { position: static; }
+.fp-lock { display: inline-grid; vertical-align: middle; margin-left: 8px; color: var(--accent); }

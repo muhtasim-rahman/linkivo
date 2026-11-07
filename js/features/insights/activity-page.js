@@ -5,6 +5,7 @@
  * Page module: mount(container, ctx) -> unmount
  */
 import { h } from '../../core/dom.js';
+import { refreshButton } from '../../ui/refresh-button.js';
 import { loadCss } from '../../core/css-loader.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { getEngine } from '../../core/app-data.js';
@@ -19,7 +20,7 @@ export const activityTitle = (type) => LABEL[type] || String(type).replace(/-/g,
 export async function mount(container) {
   await loadCss('/css/pages/pages.css');
   const engine = getEngine(), body = h('div', { class: 'ac-body' });
-  container.appendChild(h('div', { class: 'page page-enter activity' }, h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Activity' })), body));
+  container.appendChild(h('div', { class: 'page page-enter activity' }, h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Activity' }), h('div', { class: 'page-actions' }, refreshButton())), body));
   if (!engine) { body.appendChild(emptyState({ art: 'lost', title: 'Your data is not ready', text: 'Wait a moment and try again.', actions: [] })); return () => {}; }
   let rows = await listActivity(engine);
   const lock = getLock();

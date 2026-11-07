@@ -1,0 +1,21 @@
+feat(v2.5.3): final version, locked folders rebuilt, Security popups, jobs panel, backup, SEO and README
+
+- Locked folders now live inside the engine while unlocked: they appear everywhere (Library, search, Random, Preview, Profile, Stats) with a lock icon and are absent from memory, cache, history and exports while locked; atomic cross-tree moves; locking is a persisted job
+- Settings > Security: one card, two popup rows (App lock, Folder Lock); app PIN opens a popup, not asked again for 30 seconds; unlock card in Menu and Settings, search-box code with Enter and an unlock animation; stay-unlocked time 2 to 60 minutes or until reload
+- Testing section (was Advanced) and every testing aid admin only; small accent admin badge; thumbnail fix with screenshot fallback; no fade on the wide settings column; demo code @000000; one app-wide refresh for every page
+- Background jobs panel with hand-over of title fetching to the Worker; passphrase-protected backup, restore prompt, backup reminder, PDF export
+- Home page with its own title and description, static SEO pages (home, docs and topics, privacy, terms, sign-in noindex), share image, sitemap, robots, CSP report-only, manifest screenshots
+- README with hero image and gallery, docs banners, hardening pass (touch targets, 10,000-link tests, security review), 440 tests, rules matrix W1 to W7
+- The owner's image set is kept in "@ Creator/reference/Linkivo images"
+
+Removed files:
+- js/features/lock/lock-settings.js
+- js/features/vault/vault-entry.js
+- js/features/vault/vault-page.js
+- js/features/vault/vault-settings.js
+- @ Creator/reference/: nothing removed (the two HTML files shown earlier were never placed there)
+
+Owner actions:
+- firebase deploy --only hosting (new static pages, cleanUrls). Worker 2.5.2 is unchanged: no paste. Rules unchanged.
+- After deploy: check the shared title of https://linkivo.web.app/, look for Content-Security-Policy-Report-Only lines in the console, then enforce or keep.
+- SEC.redeleteBlockMs is still 0 for testing: set 7 days when testing is over.

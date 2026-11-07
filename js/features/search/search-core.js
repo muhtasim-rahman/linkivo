@@ -37,6 +37,8 @@ export function createIndex() {
   };
   return {
     size: () => rec.size,
+    /** v2.5.3: the vault closed: the words of its links must not stay in this index (rebuilt lazily from the open library on the next search). */
+    clear: () => rec.clear(),
     search(links, query, limit = 200) {
       const ws = tokens(query); if (!ws.length) return [];
       const live = new Set(), out = [];

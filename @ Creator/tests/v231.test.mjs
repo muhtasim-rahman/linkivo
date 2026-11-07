@@ -79,7 +79,7 @@ test('catalog: every keyed setting appears in the sync popup list; theme is loca
   const st = { get: (k, f) => f, set() {}, remove() {} };
   const groups = SC.syncGroups(CATALOG, SECTIONS, st), ids = new Set(groups.flatMap((g) => g.entries.map((x) => x.entry.id)));
   for (const e of CATALOG) if (e.key && !e.device) assert.ok(ids.has(e.id), `${e.id} is listed`);
-  assert.equal(CATALOG.filter((e) => e.local).length >= 1 && CATALOG.filter((e) => e.local).length <= 4, true, 'a few device-only defaults (v2.4.1: + where History is kept)');
+  assert.equal(CATALOG.filter((e) => e.local).length >= 1 && CATALOG.filter((e) => e.local).length <= 5, true, 'a few device-only defaults (v2.4.1: + where History is kept; v2.5.3: + the backup reminder)');
   assert.ok(SECTIONS.some((s) => s.id === 'search') && SECTIONS.some((s) => s.id === 'preview'));
 });
 

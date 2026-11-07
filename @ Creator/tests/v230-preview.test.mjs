@@ -85,7 +85,7 @@ test('Preview page: opens from the cache, shows only the working tabs, remembers
   assert.equal($('.pv-tab[aria-selected="true"]').dataset.tab, 'photo'); assert.ok($('.pv-img'));
   assert.equal(document.getElementById('app').dataset.nobar, undefined);   // the shell is not mounted in this test; the route flag is checked below
   assert.equal(ROUTES.find((r) => r.id === 'link').nobar, true);
-  $('.pv-tab[data-tab="details"]').click(); await tick(5); assert.ok($('.pv-kv') && $('.pv-log li.is-ok'));
+  $('.pv-tab[data-tab="details"]').click(); await tick(5); assert.ok($('.pv-kv')); assert.ok(!$('.pv-log'), 'v2.5.3: how the details were found is a testing tool: a normal user does not see it');
   assert.equal(prefs.get('preview.tab'), 'details', 'tab memory');
   $('.pv-act[aria-label="Add to favourites"]').click(); await tick(20); assert.equal(e.getLink(ids[0]).fv, true);
   assert.ok($('.pv-act.is-on'), 'bar follows the change');

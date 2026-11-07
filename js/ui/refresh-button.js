@@ -7,8 +7,9 @@
 import { h } from '../core/dom.js';
 import { icon } from './icons.js';
 import { log } from '../core/logger.js';
+import { refreshApp } from '../core/refresh.js';
 
-export function refreshButton(run) {
+export function refreshButton(run = refreshApp) {   // v2.5.3: the default is the app-wide refresh (sync, then rebuild the page)
   let busy = false;
   const btn = h('button', { type: 'button', class: 'btn-icon only-wide', 'aria-label': 'Refresh', 'data-tip': 'Refresh', on: { click: async () => {
     if (busy) return; busy = true; btn.classList.add('is-spinning');

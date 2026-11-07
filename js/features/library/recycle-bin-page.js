@@ -44,7 +44,7 @@ export async function mount(container, ctx) {
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search the Recycle Bin', 'aria-label': 'Search the Recycle Bin', autocomplete: 'off' });
   const sub = h('p', { class: 'page-sub' }), body = h('div', { class: 'fp-body' }), bar = h('div', { class: 'selbar', role: 'toolbar', 'aria-label': 'Selected items', hidden: true });
   const emptyBtn = h('button', { type: 'button', class: 'btn btn-sm btn-danger', on: { click: emptyBin } }, icon('trash', { size: 16 }), 'Empty bin');
-  page.append(h('header', { class: 'page-head is-stack' }, h('div', { class: 'lib-headrow' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to settings', on: { click: () => ctx.router.navigate('/settings') } }, icon('arrow-left', { size: 20 })), h('h1', { class: 'page-title', text: 'Recycle Bin' }), refreshButton(async () => { await engine.flush?.(); update(); }), emptyBtn), sub),
+  page.append(h('header', { class: 'page-head is-stack' }, h('div', { class: 'lib-headrow' }, h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to settings', on: { click: () => ctx.router.navigate('/settings') } }, icon('arrow-left', { size: 20 })), h('h1', { class: 'page-title', text: 'Recycle Bin' }), refreshButton(), emptyBtn), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search)), body);
   const unDock = mountDock(bar);
   let vl = null, lastQ = '';

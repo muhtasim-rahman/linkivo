@@ -22,7 +22,7 @@ import { keepAwakeWhile } from '../../core/wake-lock.js';
 import { getQueue } from '../../core/app-data.js';
 import { FORMATS } from './parsers.js';
 import { createParseClient } from './parse-client.js';
-import { readBackupText } from './native-import.js';
+import { readBackupAny } from './backup-open.js';
 import { startImport } from './import-job.js';
 import { buildRows, sortRows } from './import-review.js';
 import { createBackupPanel, runRestore } from './import-backup.js';
@@ -68,7 +68,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
   const queue = getQueue();
   const parser = createParseClient();
   const st = { tab: files.length ? 'files' : 'paste', text: '', paste: [], files: [], backup: null, q: '', sort: 'order', rows: [], view: [], manual: new Map(), off: new Set(), seq: 0,
-    target: fid && engine.getFolder(fid) ? fid : (engine.getFolder(prefs.get('lib.lastFolder', '')) ? prefs.get('lib.lastFolder', '') : engine.listFolders()[0]?.id || null),
+    target: (() => { const ok = (id) => { const f = id && engine.getFolder(id); return f && !f.lk && !f.del ? id : null; }; return ok(fid) || ok(prefs.get('lib.lastFolder', '')) || (engine.listFolders().find((f) => !f.lk) || {}).id || null; })(),   // v2.5.3: never a locked folder
     opts: { bare: pref(LIB.impBare), dedupe: pref(LIB.impDedupe), clean: pref(LIB.impClean), enrich: pref(LIB.impEnrich), icons: pref(LIB.impIcons) } };
   let startedCb = () => {}, busy = false, destroyed = false, detachChips = () => {};
   const targetName = () => (st.target && engine.getFolder(st.target)?.name) || 'a new folder "Imported links"';
@@ -94,7 +94,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
   const backup = createBackupPanel({ onChange: () => paintAction() });
 
   // ---- options ------------------------------------------------------------------------------------------------------
-  const folderBtn = h('button', { type: 'button', class: 'btn imp-folder', on: { click: async () => { const f = await openFolderPicker({ engine, title: 'Import into' }); if (f) { st.target = f; paintOpts(); } } } });
+  const folderBtn = h('button', { type: 'button', class: 'btn imp-folder', on: { click: async () => { const f = await openFolderPicker({ engine, noLocked: true, title: 'Import into' }); if (f) { st.target = f; paintOpts(); } } } });
   const sw = (key, label, hint) => h('label', { class: 'imp-sw' }, h('input', { type: 'checkbox', checked: st.opts[key], on: { change: (e) => { st.opts[key] = e.target.checked; if (key === 'bare') reparse(); else rebuild(); } } }), h('span', { class: 'imp-sw-t' }, h('span', { text: label }), hint && h('span', { class: 'help', text: hint })));
   const optsBody = h('div', { class: 'imp-opts-body' });
   const optsBox = compact ? h('details', { class: 'imp-card imp-opts' }, h('summary', { text: 'Options' }), optsBody) : h('section', { class: 'imp-card imp-opts', 'aria-label': 'Options' }, optsBody);
@@ -194,7 +194,8 @@ export function createImportForm({ engine, router = null, fid = null, files = []
         if (file.size < 200e6) {
           const head = await file.slice(0, 600).text();
           if (/^\s*\{/.test(head) && (head.includes('linkivo-backup') || head.includes('"Linkivo"'))) {
-            const r = readBackupText(await file.text());
+            const r = await readBackupAny(await file.text());
+            if (r.cancelled) { entry.status = 'empty'; entry.warnings.push(`${file.name}: not opened.`); paintFiles(); continue; }
             if (r.ok) { st.backup = { name: file.name, backup: r.backup }; entry.status = 'backup'; backup.show(file.name, r.backup); paintFiles(); paintOpts(); rebuild(); continue; }
             entry.warnings.push(`${file.name}: ${r.error}`);
           }
@@ -210,7 +211,7 @@ export function createImportForm({ engine, router = null, fid = null, files = []
 
   // ---- start ------------------------------------------------------------------------------------------------------
   async function ensureTarget() {
-    if (st.target && engine.getFolder(st.target)) return st.target;
+    if (st.target && engine.getFolder(st.target) && !engine.getFolder(st.target).lk) return st.target;
     const f = await engine.createFolder({ name: 'Imported links', color: '#2563eb', icon: 'import', order: engine.listFolders().length }); st.target = f.id; return f.id;
   }
   async function proceed() {

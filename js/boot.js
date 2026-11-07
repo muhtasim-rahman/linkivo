@@ -20,9 +20,11 @@ import { initTaskChip } from './ui/task-chip.js';
 import { prefs } from './core/local-prefs.js';
 import { loadProfile, cachedProfile, applyProfileLook } from './core/profile-data.js';
 import { ensureUnlocked, startLockWatch, installSensitiveGate } from './features/lock/lock-controller.js';   // v2.5.0 app lock
+import { setRefreshHandler, refreshApp } from './core/refresh.js';
 import { initPullRefresh } from './ui/pull-refresh.js';
 import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
+import { initBackupReminder } from './features/export/backup-reminder.js';
 import { initClipboardSuggest } from './features/import/clipboard-suggest.js';
 
 /**
@@ -62,7 +64,7 @@ export async function boot() {
     if (s.mode === 'none') checkedUid = null;
     if (s.mode === 'guest' || (s.mode === 'account' && s.status === 'active')) {
       if (!(await ensureUnlocked(s))) { lastKey = keyOf(getSession()); return; }   // v2.5.0: with the app lock on nothing starts before the PIN (every page load asks)
-      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => job.type === 'check' ? import('./features/check/check-sheet.js').then((m) => m.openCheckSheet({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) : import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
+      try { await initData(s); destroyChip?.(); destroyChip = getQueue() ? initTaskChip({ queue: getQueue(), onOpen: (job) => job.type === 'check' ? import('./features/check/check-sheet.js').then((m) => m.openCheckSheet({ queue: getQueue(), engine: getEngine(), router, jobId: job.id })) : job.type !== 'import' ? import('./features/jobs/jobs-panel.js').then((m) => m.openJobsPanel({ queue: getQueue(), engine: getEngine() })) : import('./features/import/import-progress.js').then((m) => m.openJobDetails({ queue: getQueue(), engine: getEngine(), router, jobId: job.id, autoClose: true })) }) : null; }
       catch (e) { toast('Storage could not start. Reload the page.', { type: 'error' }); }
     } else { destroyChip?.(); destroyChip = null; await teardownData(); await ensureUnlocked(s); }   // (the last call only forgets the lock when signed out)
     lastKey = keyOf(getSession());
@@ -101,16 +103,18 @@ export async function boot() {
   // Pull down at the top of a page that can change (library, folder, history, profile: route flag `refresh`) = in-app refresh of that page's
   // data. No setting, no app reload, no splash, no update check (updates have their own checks). Pages without the flag ignore the gesture.
   initPullRefresh({ scroller: container, enabled: () => getSession().mode !== 'none' && router.canRefresh(),
-    onRefresh: async () => {
-      // v2.4.2 (owner): every content page takes part. A page without its own refresh() syncs the account instead (guests have nothing to sync).
-      const r = await Promise.all([router.refreshCurrent(), sleep(500)]).then((x) => x[0]);
-      if (r === 'nothing') { const e = getEngine(); if (e && e.syncNow) await e.syncNow().catch(() => {}); }
-    } });
+    onRefresh: () => refreshApp() });
+  // v2.5.3 (owner): ONE refresh for the gesture, the header icon and the menus: sync the account, then rebuild the page from the current data (like a reload of that page)
+  setRefreshHandler(async () => {
+    await Promise.all([(async () => { const e = getEngine(); if (e && e.syncNow) await e.syncNow().catch(() => {}); })(), sleep(450)]);
+    if (router.canRefresh()) await router.refreshCurrent();
+  });
 
-  let stopClip = null;
+  let stopClip = null, stopRemind = null;
   router.on('mounted', () => {
     document.documentElement.dataset.boot = 'ok'; stopWatchdog(); endSplash();
     if (getSession().mode === 'account') import('./features/auth/guest-transfer.js').then((m) => m.offerGuestTransfer()).catch(() => {});   // v2.5.1: offer to move the guest links into the account (once per sign-in)
+    if (!stopRemind) stopRemind = initBackupReminder({ engine: getEngine });   // v2.5.3: once per app start, after the page is up
     if (!stopClip) stopClip = initClipboardSuggest({ router });   // v2.2.2: after the app has loaded, suggest importing links found in the clipboard (needs the browser's permission)
   });
   window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));

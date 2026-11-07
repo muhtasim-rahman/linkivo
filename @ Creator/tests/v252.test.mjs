@@ -180,96 +180,9 @@ test('vault code shape: <prefix> + exactly six digits, nothing else; one fixed p
   for (const bad of ['@48291', '@4829133', '482913', '#482913', '@48291a', '@ 82913', ' @482913', '@482913 ', '@@82913', '', null, undefined, '@４８２９１３']) assert.equal(vaultCodeMatch(bad, '@'), null, String(bad));
 });
 
-test('vault: wrong code throws and leaves nothing in memory; right code loads memory only; close empties it; no IndexedDB/localStorage use (source contract)', async () => {
-  const V = await import('../../js/core/vault.js'); const W = await import('../../js/core/worker-client.js');
-  const src = read('js/core/vault.js'); assert.doesNotMatch(src, /indexedDB|openDbSafe|localStorage|prefs\./, 'memory only: no device storage');
-  assert.deepEqual(V.vaultFolders(), []); assert.deepEqual(V.vaultLinks('f1'), []);
-  const tree = { 'vault/u1/folders': { f1: { name: 'Secret', ts: 1, up: 1 } }, 'vault/u1/links': { l1: { url: 'https://a.test', fid: 'f1', ts: 1, up: 1 } } };
-  const adapter = { get: async (p) => tree[p] || null, update: async () => {}, now: () => 5 };
-  const calls = []; const realFetch = globalThis.fetch;
-  globalThis.fetch = async (url, init) => { calls.push(String(url)); const bad = JSON.parse(init.body).code === '000000'; return new Response(JSON.stringify(bad ? { ok: false, error: 'wrong_pin' } : { ok: true, vaultExp: Date.now() + 9e5 }), { status: bad ? 403 : 200, headers: { 'content-type': 'application/json' } }); };
-  try {
-    await assert.rejects(() => V.openVault('000000', { adapter, uid: 'u1' }));
-    assert.equal(V.getVault().open, false); assert.deepEqual(V.vaultFolders(), []);
-  } finally { globalThis.fetch = realFetch; }
-});
+// v2.5.3: the v2.5.2 vault tests (separate page, memory-only module, Library entry, Settings rows, moves through the vault module) described a design that was replaced;
+// their replacements are in v253-vault.test.mjs and v253-ui.test.mjs.
 
-test('vault: while closed the memory is empty and every list answers empty; closeVaultLocal empties an open one', async () => {
-  const V = await import('../../js/core/vault.js');
-  const { createStore } = await import('../../js/core/events.js');
-  assert.equal(V.getVault().open, false); assert.deepEqual(V.getVault().folders, []); assert.deepEqual(V.getVault().links, []);
-  V.closeVaultLocal(); assert.equal(V.getVault().open, false);
-  await assert.rejects(() => V.moveOutOfVault('f1', { adapter: {}, uid: 'u1' }), /vault_locked/, 'nothing moves while locked');
-  await assert.rejects(() => V.deleteInVault(['l1'], { adapter: {}, uid: 'u1' }), /vault_locked/);
-});
-
-test('vault moves: every chunk writes the copies and removes the originals in ONE update; the original folder goes last; a failed chunk keeps the folder', async () => {
-  const V = await import('../../js/core/vault.js');
-  const updates = []; const tree = { 'vault/u1/folders': {}, 'vault/u1/links': {} };
-  let failOn = -1;
-  const adapter = { now: () => 99, get: async (p) => tree[p] || null, update: async (u) => { if (updates.length === failOn) throw Object.assign(new Error('x'), { fatal: true }); updates.push(u); } };
-  const links = Array.from({ length: 250 }, (_, i) => ({ id: `l${i}`, url: `https://x.test/${i}`, fid: 'f1', ts: 1, up: 1 }));
-  const engine = { getFolder: (id) => ({ id, name: 'Work', ts: 1, up: 1, lc: 250 }), listLinks: () => links };
-  // open the vault through the Worker stub
-  const realFetch = globalThis.fetch; globalThis.fetch = async () => new Response(JSON.stringify({ ok: true, vaultExp: Date.now() + 9e5 }), { status: 200, headers: { 'content-type': 'application/json' } });
-  try {
-    await V.openVault('482913', { adapter, uid: 'u1' });
-    const prog = []; const n = await V.moveIntoVault('f1', { adapter, uid: 'u1' }, engine, (d, t) => prog.push([d, t]));
-    assert.equal(n, 250); assert.equal(updates.length, 4, '3 chunks of links (100+100+50) and the final folder removal');
-    for (const u of updates.slice(0, 3)) { const keys = Object.keys(u); assert.ok(keys.some((k) => k === 'vault/u1/folders/f1')); for (const k of keys.filter((k) => k.startsWith('vault/u1/links/'))) { const id = k.split('/').pop(); assert.equal(u[`links/u1/${id}`], null, 'the original is removed in the SAME update'); assert.equal(u[`linkMeta/u1/${id}`], null, 'and so is its page data'); } }
-    assert.deepEqual(updates[3], { 'folders/u1/f1': null }, 'the folder is removed last');
-    assert.equal(prog.at(-1)[0], 250);
-    assert.ok(!JSON.stringify(updates).includes('"id"'), 'the id lives in the key, not in the record');
-    // a failing chunk: the folder is NOT removed
-    updates.length = 0; failOn = 1;
-    await assert.rejects(() => V.moveIntoVault('f1', { adapter, uid: 'u1' }, engine), /move_failed/);
-    assert.ok(!updates.some((u) => 'folders/u1/f1' in u), 'nothing removed the original folder after a failure');
-  } finally { globalThis.fetch = realFetch; V.closeVaultLocal(); }
-});
-
-test('search box: the code is recognised locally, the box is cleared at once, nothing is remembered; wrong code is silent (source contract)', () => {
-  const src = read('js/features/search/search-page.js');
-  assert.match(src, /vaultCodeMatch\(input\.value, getLock\(\)\.vaultPrefix\)/); assert.match(src, /input\.value = ''; clear\.hidden = true; setQuery\(''\); tryVaultCode\(code\)/);
-  assert.match(src, /catch \{ \/\* silent on purpose \*\/ \}/); assert.match(src, /const keep = \(q\) => \{ if \(codeLike\(q\)\) return;/); assert.match(src, /lastQuery = codeLike\(q\) \? '' : q/);
-  assert.ok(src.indexOf('vaultOn()') < src.indexOf('tryVaultCode(code)'), 'checked only when the account has a vault');
-});
-
-test('lock and logout empty the vault memory (source contract); the vault page needs an open vault', async () => {
-  assert.match(read('js/features/lock/lock-controller.js'), /closeVaultLocal\(\);/); assert.match(read('js/core/app-data.js'), /closeVaultLocal\(\);/);
-  assert.match(read('js/features/vault/vault-page.js'), /if \(!getVault\(\)\.open\) \{ router\.navigate\('\/library'/);
-  const { default: routes } = { default: read('js/features/shell/routes.js') }; assert.match(routes, /pattern: '\/vault'/); assert.match(routes, /pattern: '\/vault\/:fid'/);
-});
-
-test('Library entry: hidden when there is no code, when hidden, and for guests; Unlock when locked and visible; Open when open', async () => {
-  const L = await import('../../js/core/lock.js'); const V = await import('../../js/core/vault.js');
-  const { mountVaultEntry } = await import('../../js/features/vault/vault-entry.js');
-  await L.loadLock({ mode: 'account', user: { uid: 'u9' }, status: 'active' }, { get: async () => ({ vaultSep: true, hideVault: false, vaultPrefix: '#' }) });
-  const e = mountVaultEntry({ router: { navigate() {} } }); document.body.appendChild(e.el);
-  assert.equal(e.el.hidden, false); assert.match(e.el.textContent, /Tap to unlock/); assert.equal(L.getLock().vaultPrefix, '#');
-  L.applyServerLock({ vaultSep: true, hideVault: true, vaultPrefix: '#' }); assert.equal(e.el.hidden, true, 'hidden entry: the search box is the only way in');
-  L.applyServerLock({ vaultSep: false, hideVault: false, vaultPrefix: '#' }); assert.equal(e.el.hidden, true, 'no code: nothing');
-  e.destroy(); e.el.remove(); L.resetLock();
-  await L.loadLock({ mode: 'guest', user: null, status: 'active' }); const g = mountVaultEntry({ router: {} }); assert.equal(g.el.hidden, true, 'a guest has no locked folders'); g.destroy(); L.resetLock();
-});
-
-test('Security settings: vault rows by state (guest note, set up, then the full set), through the sensitive gate', async () => {
-  const L = await import('../../js/core/lock.js'); const { vaultRows } = await import('../../js/features/vault/vault-settings.js');
-  const row = (l, d, end) => { const r = document.createElement('div'); r.dataset.label = l; r.textContent = l; if (end) r.appendChild(end); return r; };
-  const ctx = { row, guard: async (f) => f(), withRow: (r) => r, toggle: () => document.createElement('button'), redraw() {} };
-  await L.loadLock({ mode: 'guest', user: null, status: 'active' }); assert.deepEqual(vaultRows(ctx).map((r) => r.dataset.label), ['Locked folders']); L.resetLock();
-  await L.loadLock({ mode: 'account', user: { uid: 'u8' }, status: 'active' }, { get: async () => ({}) }); let rows = vaultRows(ctx); assert.equal(rows.length, 1); assert.match(rows[0].textContent, /Set up/); L.resetLock();
-  await L.loadLock({ mode: 'account', user: { uid: 'u8' }, status: 'active' }, { get: async () => ({ vaultSep: true }) }); rows = vaultRows(ctx).map((r) => r.dataset.label);
-  assert.deepEqual(rows, ['Locked folders', 'Code symbol', 'Hide the unlock entry', 'Change code', 'Forgot the code?', 'Turn off locked folders']); L.resetLock();
-  assert.match(read('js/features/vault/vault-settings.js'), /requireSensitive\('security'\)/);
-});
-
-test('folder delete: the PIN gate is asked the first time only; Move to locked folders needs an open vault (source contract)', () => {
-  const src = read('js/features/library/folder-actions.js');
-  assert.match(src, /if \(!folderDeleteAsked\) \{ if \(!\(await requireSensitive\('delete-folder'\)\)\) return false; folderDeleteAsked = true; \}/);
-  assert.match(src, /vaultOn\(\) && getVault\(\)\.open && \{ label: 'Move to locked folders'/);
-});
-
-// ---- C: Stats, Activity, Terms, Privacy, Documentation ----------------------------------------------------------------------------------
 test('stats: totals, flags, tops and six months are counted from live links only', async () => {
   const { computeStats, dayLabel } = await import('../../js/features/insights/stats-core.js');
   const now = Date.UTC(2026, 10, 5, 12); const d = (m, day = 10) => Date.UTC(2026, m, day);
@@ -293,7 +206,7 @@ test('Documentation: every topic has a title, a lead and parts; ids are unique; 
   assert.ok(TOPICS.length >= 12); assert.equal(new Set(TOPICS.map((t) => t.id)).size, TOPICS.length);
   for (const t of TOPICS) { assert.ok(t.title && t.lead && t.parts.length, t.id); assert.doesNotMatch(JSON.stringify(t), /[\u{1F300}-\u{1FAFF}]/u, 'no emojis'); }
   assert.ok(findTopic('security')); assert.equal(findTopic('nope'), null);
-  const sec = JSON.stringify(findTopic('security')); assert.match(sec, /@482913/); assert.match(sec, /search box/);
+  const sec = JSON.stringify(findTopic('security')); assert.match(sec, /@000000/); assert.match(sec, /search box/);
   const { mount } = await import('../../js/features/docs/docs-page.js'); const c = document.createElement('div');
   await mount(c, { params: {} }); assert.equal(c.querySelectorAll('.dc-card').length, TOPICS.length);
   const c2 = document.createElement('div'); await mount(c2, { params: { topic: 'import' } }); assert.match(c2.textContent, /chunks of 100/); assert.equal(c2.querySelectorAll('h1').length, 1);

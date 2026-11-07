@@ -12,6 +12,8 @@
  *      engine.status() -> { kind, persistent, state: 'idle'|'syncing'|'offline'|'error', pending }   engine.flush()   engine.dispose()
  */
 import { Engine } from './engine.js';
+import { attachVault, detachVault, lockFolders, unlockFolders, reconcileVault } from './vault-layer.js';
+import { sanitizePatch, LINK_META } from './schema.js';
 import { openDbSafe } from './idb.js';
 import { log } from '../core/logger.js';
 import { withTimeout } from '../core/utils.js';
@@ -31,7 +33,17 @@ export class CloudEngine extends Engine {
     this.seq = 0;
     this.retryTimer = null;
     this._onOnline = () => this.flush();
+    this.vaultCapable = true;     // v2.5.3: an account can hold locked folders (a guest engine cannot)
+    this.vmeta = new Map();       // page data of OPEN locked links: memory only
   }
+
+  // ---- v2.5.3: locked folders (js/engine/vault-layer.js) -----------------------------------------------------------
+  attachVault(data) { return attachVault(this, data); }
+  detachVault() { return detachVault(this); }
+  lockFolders(fids, onProgress) { return lockFolders(this, fids, onProgress); }
+  unlockFolders(fids, onProgress) { return unlockFolders(this, fids, onProgress); }
+  reconcileVault() { return reconcileVault(this); }
+  isLocked(kind, id) { return this.lk[kind === 'folder' ? 'folders' : 'links'].has(id); }
 
   status() { return { kind: 'cloud', persistent: !!this.db.persistent, state: this.syncState, pending: this.pending, lastSync: this.lastSync || 0 }; }   // v2.2.4: lastSync = when a sync last finished
   _setState(state) { if (state !== this.syncState) { if (state === 'idle' && this.syncState === 'syncing') this.lastSync = Date.now(); this.syncState = state; this.bus.emit('event', { type: 'sync', state, pending: this.pending }); } }
@@ -56,23 +68,46 @@ export class CloudEngine extends Engine {
 
   /** v2.3.0: extra page data is not synced down with the lists (it is heavy): read it from the database when this device has none, then keep it locally. */
   async getLinkMeta(id) {
+    if (this.lk.links.has(id)) return this.vmeta.get(id) || null;   // v2.5.3: a locked link's page data never touches the cache or the normal tree
     const local = await super.getLinkMeta(id); if (local) return local;
     if (!this.links.has(id) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return null;
     try { const v = await this.adapter.get(`linkMeta/${this.uid}/${id}`); if (!v || typeof v !== 'object') return null; const rec = { id, ...v }; await this.db.put('linkMeta', rec).catch(() => {}); return rec; } catch { return null; }
   }
 
+  async peekLinkMeta(id) { return this.lk.links.has(id) ? (this.vmeta.get(id) || null) : super.peekLinkMeta(id); }
+  async saveLinkMeta(entries) {
+    const mine = entries.filter(([id]) => this.lk.links.has(id)), rest = entries.filter(([id]) => !this.lk.links.has(id));
+    let n = 0;
+    for (const [id, raw] of mine) { if (!this.links.has(id)) continue; const { set } = sanitizePatch(LINK_META, { ...raw, checkedAt: this.now() }); if (Object.keys(set).length > 1) { this.vmeta.set(id, { id, ...set }); n++; } }
+    return n + (rest.length ? await super.saveLinkMeta(rest) : 0);
+  }
+  async _dropLinkMeta(ids) { for (const id of ids) this.vmeta.delete(id); await super._dropLinkMeta(ids.filter((id) => !this.lk.links.has(id))); }
+
   // ---- writes ------------------------------------------------------------------------------------------------------
+  /** v2.5.3: where does this entry go? `from` is explicit for the removal half of a cross-tree move; a write follows its own marker; a removal follows the lk sets. */
+  _dest(e) { return e.from || (e.rec ? (e.rec.lk ? 'vault' : 'normal') : (this.lk[e.tree] && this.lk[e.tree].has(e.id) ? 'vault' : 'normal')); }
+  _path(e, dest) { return dest === 'vault' ? `vault/${this.uid}/${e.tree}/${e.id}` : `${e.tree}/${this.uid}/${e.id}`; }
+
   async _persistChunk(entries) {
-    await super._persistChunk(entries); // local cache first: a reload right now must not lose anything
-    const updates = {};
-    for (const e of entries) {
-      if (!e.rec) updates[`${e.tree}/${this.uid}/${e.id}`] = null;
-      else { const { id, ...value } = e.rec; updates[`${e.tree}/${this.uid}/${e.id}`] = value; }
+    const routed = entries.map((e) => ({ e, dest: this._dest(e) }));
+    const normal = routed.filter((r) => r.dest === 'normal').map((r) => r.e);
+    await super._persistChunk(normal); // local cache first (normal data only: a locked record is never written to this device)
+    const updates = {}; let vault = false;
+    for (const { e, dest } of routed) {
+      if (dest === 'vault') vault = true;
+      if (!e.rec) updates[this._path(e, dest)] = null;
+      else { const { id, lk, ...value } = e.rec; updates[this._path(e, dest)] = value; }
     }
+    if (vault) { await this._sendVault(updates); return; }   // vault writes need the live session: no outbox (it would outlive the session)
     const item = { id: `${String(this.now()).padStart(14, '0')}-${++this.seq}`, updates };
     await this.db.put('outbox', item); // durable before the network is touched
     this.pending++;
     await this._sendOutboxItem(item);
+  }
+
+  async _sendVault(updates) {
+    try { await this._withRetry(() => this.adapter.update(updates)); }
+    catch (e) { log.warn('cloud', 'locked folders could not be saved', { code: e && e.code }); if (!this._vfail) { this._vfail = true; setTimeout(() => { this._vfail = false; }, 3000); this.bus.emit('event', { type: 'vault-failed', code: e && e.code }); } throw e; }   // once per burst: the chunk runner retries, the person should see ONE message
   }
 
   async _sendOutboxItem(item) {
@@ -160,6 +195,7 @@ export class CloudEngine extends Engine {
 
   _applyRemote(tree, id, val) {
     if (!val || typeof val !== 'object') return;
+    if (this.lk[tree].has(id)) return;   // v2.5.3: this record lives in the vault tree now; a normal-tree event about the same id is the other half of a move
     const map = tree === 'folders' ? this.folders : this.links;
     const local = map.get(id);
     if (local && local.up >= val.up) return; // our own echo, or a newer local edit
@@ -171,6 +207,7 @@ export class CloudEngine extends Engine {
   }
 
   _applyRemoteRemoval(tree, id) {
+    if (this.lk[tree].has(id)) return;   // v2.5.3: our own move into the vault removes the normal-tree record: the locked copy must stay in memory
     if (tree === 'folders') { if (!this.folders.delete(id)) return; } else { if (!this.links.has(id)) return; this._unindexLink(id); }
     this.db.deleteMany(tree, [id]).catch(() => {});
     this._queueEvent(tree, id);

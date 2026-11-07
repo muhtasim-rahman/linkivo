@@ -114,3 +114,8 @@
 
 /* v2.4.3: Import page header row with the settings icon */
 .imp-headrow { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); } .imp-headrow .page-title { margin: 0; min-width: 0; }
+
+/* v2.5.3: passphrase for the Linkivo backup */
+.ex-secret { display: grid; gap: var(--s2); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
+.ex-secret[hidden], .ex-secret-fields[hidden] { display: none; }
+.ex-secret-fields { display: grid; gap: var(--s2); }

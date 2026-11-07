@@ -9,12 +9,14 @@
  *      plan = { items, updates, folderIds, createdFolders, skipped }
  */
 import { validateBackup } from '../export/native-format.js';
+import { isEncryptedBackup } from '../export/backup-crypto.js';
 import { newId } from '../../core/utils.js';
 import { dedupeKey } from '../../core/url-tools.js';
 
 export function readBackupText(text) {
   let obj;
   try { obj = JSON.parse(text); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
+  if (isEncryptedBackup(obj)) return { ok: false, encrypted: true, envelope: obj, error: 'This backup is protected with a passphrase.' };   // v2.5.3: backup-open.js asks for it
   return validateBackup(obj);
 }
 
@@ -28,7 +30,7 @@ const RESTORE_FIELDS = ['url', 'host', 'title', 'desc', 'kw', 'pt', 'oc', 'lo', 
 
 export async function planRestore(engine, backup, { folderMode = 'merge', duplicates = 'skip' } = {}) {
   const t = engine.now();
-  const byName = new Map(engine.listFolders().map((f) => [f.name.trim().toLowerCase(), f.id]));
+  const byName = new Map(engine.listFolders().filter((f) => !f.lk).map((f) => [f.name.trim().toLowerCase(), f.id]));
   const folderMap = new Map(); const createdFolders = [];
   for (const f of backup.folders) {
     const key = f.name.trim().toLowerCase();

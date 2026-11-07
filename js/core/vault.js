@@ -1,31 +1,41 @@
 /**
- * Linkivo — js/core/vault.js  (v2.5.2)
- * Purpose: the vault ("locked folders"). Its data lives in its own database tree (vault/<uid>/...) which the rules open only while a vault session is on, and on the device it exists
- *          ONLY in this module's memory: no IndexedDB, no cache, no search index, no export, no DOM unless the vault page is open. Closing the vault (button, app lock, logout,
- *          a long time in the background, a failed keep-alive) empties the memory.
- *          The code is a prefix symbol plus six digits typed into the search box (for example @482913). `vaultCodeMatch` recognises that SHAPE locally; nothing is sent
- *          anywhere until it matches. Accounts only: a guest has no server to hold the vault session.
- * API: VAULT_PREFIXES  vaultCodeMatch(text, prefix) -> six digits | null   vaultOn() -> boolean
- *      getVault() subscribeVault(fn)   openVault(code, ctx) -> true   closeVault({ remote })   closeVaultLocal()   (ctx = { adapter, uid })
- *      vaultFolders() vaultLinks(fid)   moveIntoVault(fid, ctx, engine, onProgress) -> n   moveOutOfVault(fid, ctx, onProgress) -> n   deleteInVault(ids, ctx)   renameVaultFolder(fid, name, ctx)
- *      Moves are ATOMIC per chunk of 100 (the copy and the removal are one multi-path update), run in parallel, and remove the original folder last: an interrupted move never loses a link; running it again finishes it.
+ * Linkivo — js/core/vault.js  (v2.5.3, rewritten: locked folders are part of the normal library while open)
+ * Purpose: the SESSION of the locked folders ("vault"). A separate code (a prefix symbol plus six digits, e.g. @000000) is checked by the Worker, which opens a vault session that the
+ *          database rules require for everything under vault/<uid>. This module opens and closes that session and hands the data to the engine: open = the locked folders and links
+ *          appear everywhere (Library, folder view, search, Random, Preview, Profile, Stats) with a small lock icon; closed = they are not in memory at all. The data is never written
+ *          to this device (no cache, no index, no history, no export). Accounts only: a guest has no server to hold the session.
+ *          How long it stays open is the person's choice (setting `vault.keep`): until the app is closed or reloaded, or 2 / 5 / 10 / 20 / 30 / 60 minutes. The app lock, logout and a
+ *          failed keep-alive close it at once.
+ * API: VAULT_PREFIXES  KEEP_OPTIONS  keepSetting()  vaultCodeMatch(text, prefix) -> six digits | null   vaultOn() -> boolean   bindVaultEngine(engine)
+ *      getVault() -> { open, exp }   subscribeVault(fn)   openVault(code) -> true (throws on a wrong code: callers must NOT say why)   closeVault({ remote })   closeVaultLocal()
+ *      onVaultOpen(fn) -> off   (jobs that were waiting for the vault resume here)   vaultCall(path, body)
  */
 import { createStore } from './events.js';
 import { getLock, applyServerLock } from './lock.js';
 import { securePost } from './worker-client.js';
-import { chunk, runParallel } from '../engine/chunker.js';
+import { prefs } from './local-prefs.js';
 import { log } from './logger.js';
 
 export const VAULT_PREFIXES = ['@', '#', '%', '$', '!'];
-const KEEP_ALIVE_MS = 60000, BACKGROUND_CLOSE_MS = 120000;
-const mem = createStore({ open: false, exp: 0, folders: [], links: [] });
+export const KEEP_KEY = 'vault.keep';
+/** How long the vault stays open after the code (owner, v2.5.3). 'reload' = until the app is closed or reloaded. */
+export const KEEP_OPTIONS = [{ value: 'reload', label: 'Until I close or reload the app' }, { value: '2', label: '2 minutes' }, { value: '5', label: '5 minutes' }, { value: '10', label: '10 minutes' }, { value: '20', label: '20 minutes' }, { value: '30', label: '30 minutes' }, { value: '60', label: '1 hour' }];
+export const keepSetting = () => { const v = String(prefs.get(KEEP_KEY, '10')); return KEEP_OPTIONS.some((o) => o.value === v) ? v : '10'; };
+
+const KEEP_ALIVE_MS = 60000;
+const mem = createStore({ open: false, exp: 0 });
+const openHooks = new Set();
+let eng = null, keepAlive = null, expiryTimer = null, visHandler = null;
 export const getVault = () => mem.get();
 export const subscribeVault = (fn) => mem.subscribe(fn);
+export const onVaultOpen = (fn) => { openHooks.add(fn); return () => openHooks.delete(fn); };
+/** The data layer tells this module which engine holds the records. */
+export function bindVaultEngine(engine) { eng = engine && engine.vaultCapable ? engine : null; }
 
-/** True when this person can use a vault at all: a signed-in account that has set a vault code. Guests: never. */
+/** True when this person can use locked folders at all: a signed-in account that has set a code. Guests: never. */
 export const vaultOn = () => { const l = getLock(); return l.scope === 'account' && l.vaultSep === true; };
 
-/** The shape check that decides whether a search text is a vault code: exactly <prefix><six digits>. Local, no network, no side effects. */
+/** The shape check that decides whether a search text is a code: exactly <prefix><six digits>. Local, no network, no side effects. */
 export function vaultCodeMatch(text, prefix = '@') {
   const t = String(text ?? '');
   if (t.length !== 7 || t[0] !== prefix) return null;
@@ -33,11 +43,17 @@ export function vaultCodeMatch(text, prefix = '@') {
   return /^\d{6}$/.test(digits) ? digits : null;
 }
 
-let keepAlive = null, hiddenTimer = null, visHandler = null;
-const stopTimers = () => { clearInterval(keepAlive); keepAlive = null; clearTimeout(hiddenTimer); hiddenTimer = null; if (visHandler && typeof document !== 'undefined') { document.removeEventListener('visibilitychange', visHandler); visHandler = null; } };
+function stopTimers() {
+  clearInterval(keepAlive); keepAlive = null; clearTimeout(expiryTimer); expiryTimer = null;
+  if (visHandler && typeof document !== 'undefined') { document.removeEventListener('visibilitychange', visHandler); visHandler = null; }
+}
 
 /** Forgets everything on this device (also called by the app lock and by logout). Does not talk to the server. */
-export function closeVaultLocal() { stopTimers(); mem.set({ open: false, exp: 0, folders: [], links: [] }); }
+export function closeVaultLocal() {
+  stopTimers();
+  if (eng) { try { eng.detachVault(); } catch (e) { log.warn('vault', 'detach failed', e); } }
+  mem.set({ open: false, exp: 0 });
+}
 
 /** Locks the vault: memory first (so nothing stays on screen while the network answers), then the server session. */
 export async function closeVault({ remote = true } = {}) {
@@ -46,76 +62,31 @@ export async function closeVault({ remote = true } = {}) {
 }
 
 const rec = (id, r) => ({ id, ...r });
-async function load({ adapter, uid }) {
-  const [f, l] = await Promise.all([adapter.get(`vault/${uid}/folders`), adapter.get(`vault/${uid}/links`)]);
-  mem.set({ folders: Object.entries(f || {}).map(([id, r]) => rec(id, r)).filter((x) => !x.del), links: Object.entries(l || {}).map(([id, r]) => rec(id, r)).filter((x) => !x.del) });
+async function load(engine) {
+  const uid = getLock().uid;
+  const [f, l] = await Promise.all([engine.adapter.get(`vault/${uid}/folders`), engine.adapter.get(`vault/${uid}/links`)]);
+  engine.attachVault({ folders: Object.entries(f || {}).map(([id, r]) => rec(id, r)), links: Object.entries(l || {}).map(([id, r]) => rec(id, r)) });
 }
 
-/** Verifies the code with the Worker (a wrong one counts toward the lockout like any PIN), then loads the vault into memory. Throws on a wrong code; callers must NOT show why. */
-export async function openVault(code, ctx) {
+/** Verifies the code with the Worker (a wrong one counts toward the lockout like any PIN), loads the vault into the engine and starts the timers. Throws on a wrong code. */
+export async function openVault(code) {
+  if (!eng) throw Object.assign(new Error('vault_unsupported'), { code: 'unsupported' });
   const r = await securePost('/vault/open', { code });
-  mem.set({ open: true, exp: r.vaultExp || 0 });
-  try { await load(ctx); } catch (e) { closeVaultLocal(); throw e; }
+  try { await load(eng); } catch (e) { closeVaultLocal(); throw e; }
   stopTimers();
+  const keep = keepSetting(), exp = keep === 'reload' ? 0 : Date.now() + Number(keep) * 60000;
+  mem.set({ open: true, exp, serverExp: r.vaultExp || 0 });
+  if (exp) expiryTimer = setTimeout(() => closeVault(), exp - Date.now());
   keepAlive = setInterval(async () => { try { await securePost('/vault/extend'); } catch { closeVaultLocal(); } }, KEEP_ALIVE_MS);   // the session ends by itself when the app stops asking
   if (typeof document !== 'undefined') {
-    visHandler = () => { if (document.hidden) hiddenTimer = setTimeout(() => closeVault(), BACKGROUND_CLOSE_MS); else { clearTimeout(hiddenTimer); hiddenTimer = null; } };
+    // a phone may suspend the timers: when the page is visible again the session is checked at once (a dead session closes the vault) and a passed expiry time is honoured
+    visHandler = async () => { if (document.hidden || !mem.get().open) return; const e = mem.get().exp; if (e && Date.now() >= e) { closeVault(); return; } try { await securePost('/vault/extend'); } catch { closeVaultLocal(); } };
     document.addEventListener('visibilitychange', visHandler);
   }
+  eng.reconcileVault().catch((e) => log.warn('vault', 'unfinished move not completed', e));
+  eng.purgeExpired().catch(() => {});   // locked items deleted more than 15 days ago go for good, like everything else
+  for (const fn of [...openHooks]) { try { fn(); } catch (e) { log.warn('vault', 'open hook failed', e); } }
   return true;
-}
-
-export const vaultFolders = () => (mem.get().open ? mem.get().folders.slice().sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name))) : []);
-export const vaultLinks = (fid) => (mem.get().open ? mem.get().links.filter((l) => l.fid === fid) : []);
-
-const strip = ({ id, ...r }) => r;
-const requireOpen = () => { if (!mem.get().open) throw Object.assign(new Error('vault_locked'), { code: 'locked' }); };
-
-/** Shared engine of both moves. Every chunk (100 links) is ONE multi-path update that writes the copies AND removes the originals, and carries the folder record too (idempotent),
- *  so chunks can run in parallel and in any order. The original FOLDER is removed last, only when no chunk failed; a failure therefore leaves everything still reachable. */
-async function moveChunks({ links, folderPath, folderRec, folderGone, toPath, fromPath, extraFrom = [], adapter, onProgress }) {
-  const now = adapter.now(), parts = chunk(links, 100), total = links.length; let done = 0;
-  const jobs = parts.length ? parts : [[]];
-  const res = await runParallel(jobs, async (part) => {
-    const up = { [folderPath]: { ...folderRec, up: now } };
-    for (const l of part) { up[toPath(l.id)] = { ...strip(l), up: now }; up[fromPath(l.id)] = null; for (const x of extraFrom) up[x(l.id)] = null; }
-    await adapter.update(up); done += part.length; onProgress(done, total);
-  });
-  if (res.failed.length) throw Object.assign(new Error('move_failed'), { code: 'move_failed', failed: res.failed.length });
-  await adapter.update({ [folderGone]: null });
-  return total;
-}
-
-/** Normal folder (with its links) -> vault. Its page data (linkMeta) is dropped: it would be a readable trace of a locked link. */
-export async function moveIntoVault(fid, ctx, engine, onProgress = () => {}) {
-  requireOpen();
-  const { adapter, uid } = ctx, folder = engine.getFolder(fid); if (!folder) return 0;
-  const n = await moveChunks({ links: engine.listLinks({ fid }), folderPath: `vault/${uid}/folders/${fid}`, folderRec: strip(folder), folderGone: `folders/${uid}/${fid}`,
-    toPath: (id) => `vault/${uid}/links/${id}`, fromPath: (id) => `links/${uid}/${id}`, extraFrom: [(id) => `linkMeta/${uid}/${id}`], adapter, onProgress });
-  await load(ctx); return n;
-}
-
-/** Vault folder (with its links) -> the normal library. */
-export async function moveOutOfVault(fid, ctx, onProgress = () => {}) {
-  requireOpen();
-  const { adapter, uid } = ctx, folder = mem.get().folders.find((f) => f.id === fid); if (!folder) return 0;
-  const n = await moveChunks({ links: mem.get().links.filter((l) => l.fid === fid), folderPath: `folders/${uid}/${fid}`, folderRec: strip(folder), folderGone: `vault/${uid}/folders/${fid}`,
-    toPath: (id) => `links/${uid}/${id}`, fromPath: (id) => `vault/${uid}/links/${id}`, adapter, onProgress });
-  await load(ctx); return n;
-}
-
-/** Permanent removal inside the vault (there is no Recycle Bin for locked data: a bin would be a second copy outside the code). */
-export async function deleteInVault(ids, ctx) {
-  requireOpen(); const { adapter, uid } = ctx, up = {};
-  for (const id of ids) up[`vault/${uid}/links/${id}`] = null;
-  for (const part of chunk(Object.keys(up), 100)) await adapter.update(Object.fromEntries(part.map((k) => [k, null])));
-  await load(ctx);
-}
-
-export async function renameVaultFolder(fid, name, ctx) {
-  requireOpen(); const f = mem.get().folders.find((x) => x.id === fid); if (!f) return;
-  await ctx.adapter.update({ [`vault/${ctx.uid}/folders/${fid}`]: { ...strip(f), name: String(name).slice(0, 80), up: ctx.adapter.now() } });
-  await load(ctx);
 }
 
 /** The Worker call for every vault change that needs it; keeps the lock store in step. */

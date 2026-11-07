@@ -111,3 +111,7 @@ Settings are registered in the registry by the version that introduces the featu
 2. Agent follows `MASTER-PROMPT-v2.0_to_v2.5.md`: reads the docs, verifies the previous version is complete, builds slice by slice, runs `node "@ Creator/tools/check.mjs"`, packs with `bash "@ Creator/tools/pack.sh"`.
 3. Agent delivers: the zip, `@ Creator/commits/vX.Y.Z-commit.txt`, updated `CONTEXT-v2.0_to_v2.5.md`, changed docs/rules/Worker, and a chat summary (what was built, how to test, removed files, owner actions, next version).
 4. Owner extracts the zip into the project root, deletes files listed under "Removed files", tests, commits, deploys, saves the zip into `@ Versions`.
+
+### v2.5.3 Final version (owner prompt, 2026-11-07)
+Locked folders rebuilt inside the engine (open = normal data with a lock icon, closed = absent everywhere), Security popups with a 30 second PIN window, Testing section admin only, one refresh, thumbnails fix, Background jobs panel, persisted vault move, passphrase backup, backup reminder, PDF export, README, hardening, SEO (home page, static public pages, share image) and the audit. Details and decisions D-185 to D-198: CONTEXT entry v2.5.3. After this version nothing is planned; changes come as patches v2.5.4+.
+

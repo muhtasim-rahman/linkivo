@@ -23,7 +23,7 @@ test('auto lock: the choices, the default of 1 minute, and what a guest stores',
   L.eraseGuestLock(); L.resetLock();
 });
 test('the settings list has ONE auto lock row and no separate "lock when I leave" switch', () => {
-  const src = read('js/features/lock/lock-settings.js');
+  const src = read('js/features/lock/security-popups.js');   // v2.5.3: the rows moved into the App lock popup
   assert.match(src, /'Auto lock'/); assert.doesNotMatch(src, /Lock when I leave/); assert.doesNotMatch(src, /lock\.onHide/);
   const labels = ['Right after closing the app', '30 seconds after closing', '1 minute after closing', '5 minutes after closing', '10 minutes after closing', '15 minutes after closing', '30 minutes after closing', 'Never'];
   for (const l of labels) assert.ok(src.includes(l), l);

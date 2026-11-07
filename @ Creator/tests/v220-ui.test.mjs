@@ -145,7 +145,7 @@ test('export popup: backup tile first, icon tiles, per-format options, live page
   w.HTMLAnchorElement.prototype.click = function () {};
   openExport({ engine, scope: { type: 'folders', fids: [B.id] }, title: 'Export \"Tools\"' }); await waitFor(() => $('.ex-grid .ex-fmt'));
   assert.equal($('.ex-native strong').textContent, 'Linkivo backup'); assert.match($('.ex-native').textContent, /Recommended/);
-  assert.deepEqual($$('.ex-fmt span').map((n) => n.textContent), ['Web page', 'Print', 'Excel', 'CSV', 'JSON', 'Text', 'Markdown', 'HTML bookmarks', 'OPML']);
+  assert.deepEqual($$('.ex-fmt span').map((n) => n.textContent), ['Web page', 'Print', 'PDF', 'Excel', 'CSV', 'JSON', 'Text', 'Markdown', 'HTML bookmarks', 'OPML']);
   click($$('.ex-fmt').find((b) => b.textContent === 'Web page')); await waitFor(() => $('.ex-frame')); assert.match($('.ex-frame').getAttribute('srcdoc'), /Fav one|fav\.test/); assert.ok($$('.ex-seg').length >= 2, 'layout and theme are icon choices'); assert.ok($$('.ex-dot').length === 6, 'accent colors');
   click($$('.ex-fmt').find((b) => b.textContent === 'Print')); await waitFor(() => $$('.ex-seg').some((s) => /A4/.test(s.textContent))); assert.ok($$('.ex-seg').some((s) => /Portrait/.test(s.textContent)));
   click($$('.ex-fmt').find((b) => b.textContent === 'CSV')); await waitFor(() => $('.ex-preview') && /Title,URL/.test($('.ex-preview').textContent));

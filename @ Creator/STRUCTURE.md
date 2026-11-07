@@ -103,3 +103,11 @@ Linkivo/
 - `js/core/overlay-registry.js` (closes every popup on lock), `js/core/vault.js` (vault state, memory-only data, atomic moves).
 - `js/features/vault/` (flows, settings rows, Library entry, /vault page), `js/features/insights/` (Stats, Activity), `js/features/legal/` (Terms, Privacy), `js/features/docs/` (Documentation), `js/features/profile/banner-carousel.js`.
 - `assets/art/banner-7.svg`, `banner-8.svg`. `@ Creator/tests/v252.test.mjs`, `commits/v2.5.2-commit.txt`, `worker/history/worker-v2.5.2.js`.
+
+## v2.5.3 additions (final version)
+- Added: `js/engine/vault-layer.js` (locked records inside the engine), `js/core/{refresh,security-gate,seo-pages}.js`, `js/features/vault/{vault-unlock,lock-job,unlock-card}.js`, `js/features/lock/security-popups.js`, `js/features/jobs/jobs-panel.js`, `js/features/export/{backup-crypto,backup-reminder,pdf-writer}.js` and `formats/pdf.js`, `js/features/import/backup-open.js`, `js/ui/unlock-burst.js`, `css/components/unlock-burst.css`.
+- Removed: `js/features/lock/lock-settings.js`, `js/features/vault/{vault-entry,vault-page,vault-settings}.js` (and the `/vault` routes). `js/features/vault/` now holds `vault-flows`, `vault-unlock`, `lock-job`, `unlock-card`.
+- Generated (do not edit by hand): `login.html`, `terms.html`, `privacy.html`, `docs.html`, `docs/<topic>.html`, the SEO block of `index.html`, `sitemap.xml` (`node "@ Creator/tools/gen-seo.mjs"`), the precache list in `sw.js`, the CSP header in `firebase.json` (`gen-csp.mjs`); the gate checks all of them.
+- Assets: `assets/showcase/*.webp` (docs banners and README), `assets/social/og-*.jpg` (share images, `og-default.jpg` is the default). Source artwork: `@ Creator/reference/Linkivo images/` (SVG, PNG, JPG; not deployed, pushed to GitHub).
+- Tests: `@ Creator/tests/v253-{vault,ui,backup,perf,rules}.test.mjs`. `@ Creator/commits/v2.5.3-commit.txt`.
+

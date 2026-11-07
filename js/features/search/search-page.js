@@ -14,7 +14,9 @@ import { loadCss } from '../../core/css-loader.js';
 import { prefs } from '../../core/local-prefs.js';
 import { getEngine } from '../../core/app-data.js';
 import { getLock } from '../../core/lock.js';
-import { vaultOn, vaultCodeMatch, openVault } from '../../core/vault.js';
+import { vaultOn, vaultCodeMatch, getVault, subscribeVault } from '../../core/vault.js';
+import { tryCode } from '../vault/vault-unlock.js';
+import { playUnlockBurst } from '../../ui/unlock-burst.js';
 import { toast } from '../../ui/toast.js';
 import { plural } from '../../core/format.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
@@ -30,6 +32,7 @@ let phoneFocused = false;   // lives until the page is reloaded (a module variab
 const SHOW = { pages: 3, settings: 3, folders: 4, links: 8 }, STEP = 10, RECENT = 5;
 let lastQuery = '';   // kept while the app stays open, so Back from a result returns to the same search
 const index = createIndex();
+subscribeVault((v) => { if (!v.open) index.clear(); });   // v2.5.3: links of an open vault are searchable; when it closes their words leave the index at once
 
 /** v2.5.2 (owner 8): text that LOOKS like (the start of) a vault code. It still searches like any text, but it is never remembered (history, last query), so a typed code leaves no trace. */
 const codeLike = (t) => { if (!vaultOn()) return false; const p = getLock().vaultPrefix; return t.length > 1 && t[0] === p && /^\d{1,6}$/.test(t.slice(1)); };
@@ -82,7 +85,7 @@ export async function mount(container, ctx) {
     if (links.length) nodes.push(group('Links', links.length, links.slice(0, st.shown.links).map(({ link: l }) => {
       const f = engine.getFolder(l.fid);
       const a = h('a', { class: 'sp-item', href: tab ? safeHref(l.url) : `/link/${encodeURIComponent(l.id)}`, target: tab ? '_blank' : null, rel: tab ? 'noopener noreferrer' : null, 'data-native': tab ? '' : null, on: { click: (e) => openFrom(e, q) } },
-        createThumb({ engine, id: l.id, host: l.host, favicon: faviconUrl(l.host), variant: 'sm' }),   // v2.4.4: thumbnail, else screenshot, else the site icon
+        createThumb({ engine, id: l.id, host: l.host, url: l.url, favicon: faviconUrl(l.host), variant: 'sm' }),   // v2.4.4: thumbnail, else screenshot, else the site icon
         h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(linkTitle(l), ws)), h('span', { class: 'sp-sub' }, marked(l.host || l.url, ws), f ? ` \u00b7 ${f.name}` : '')));
       return li(a);
     }), 'links', st.shown.links));
@@ -105,18 +108,20 @@ export async function mount(container, ctx) {
   }
 
   let timer = 0;
-  // v2.5.2 (owner 8): the vault code is recognised by its SHAPE only, locally. Until <prefix><6 digits> is complete nothing leaves the device. A complete code is tried at once (no Enter),
-  // the box is emptied right away, and a wrong code looks exactly like a search without results: no message, no sign that a vault exists. The Worker counts the miss like any wrong PIN.
+  // v2.5.3 (owner): the code (symbol + six digits, e.g. @000000) is recognised by its SHAPE only, locally, and tried when Enter is pressed. Until then it is an ordinary search text (never
+  // remembered, see codeLike). The box is emptied right away; a wrong code looks exactly like a search without results: no message, no sign that locked folders exist. The Worker counts the miss
+  // like any wrong PIN. A right code shows a toast and a short unlock animation on this page.
   async function tryVaultCode(code) {
-    try { await openVault(code, { adapter: engine.adapter, uid: getLock().uid }); toast('Locked folders are open.'); router.navigate('/vault'); }
-    catch { /* silent on purpose */ }
+    if (getVault().open) { toast('Locked folders are already unlocked.'); return; }
+    if (await tryCode(code)) { toast('Locked folders are unlocked.'); playUnlockBurst(container); paint(); }
   }
-  input.addEventListener('input', () => {
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => setQuery(input.value), 70); clear.hidden = !input.value; });
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
     const code = vaultOn() ? vaultCodeMatch(input.value, getLock().vaultPrefix) : null;
-    if (code) { clearTimeout(timer); input.value = ''; clear.hidden = true; setQuery(''); tryVaultCode(code); return; }
-    clearTimeout(timer); timer = setTimeout(() => setQuery(input.value), 70); clear.hidden = !input.value;
+    if (code) { e.preventDefault(); clearTimeout(timer); input.value = ''; clear.hidden = true; setQuery(''); input.blur(); tryVaultCode(code); return; }
+    clearTimeout(timer); setQuery(input.value); keep(input.value); input.blur();
   });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(timer); setQuery(input.value); keep(input.value); input.blur(); } });
   const off = registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { e.preventDefault(); input.focus(); input.select(); } }, { keys: '/', desc: 'Focus the search field', run: (e) => { e.preventDefault(); input.focus(); } }]);
   const offEngine = engine ? engine.subscribe((e) => { if (e.type === 'change' && st.q.trim()) paint(); }) : () => {};   // a data change repaints without the rise animation
   paint();

@@ -11,6 +11,8 @@
  *         v2.2.0: updateFolders(ids, patch) duplicateFolder(id) mergeFolders(ids, targetId) recount(fids) linksOfImport(imp) copyLinks(ids, fid)
  *         getSetting(key, fallback) setSetting(key, value)
  * Events: subscribe(fn) -> off ; fn({type:'change', folders:[ids], links:[ids]} | {type:'ready'} | {type:'sync', state, pending})
+ * v2.5.3 locked folders: records of an OPEN vault live in the same maps with the in-memory marker `lk: true` (never stored under that name). The engine routes their writes to
+ *         vault/<uid>/... (cloud engine) and keeps them out of the device cache; see js/engine/vault-layer.js. Moving a link between a locked and a normal folder is a cross-tree move.
  * Deleting is SOFT (field "del" = time, kept 15 days in the Recycle Bin). A folder delete also marks its links with the same time,
  * so restoring the folder brings back exactly those links. Folder link counts ("lc") are written as absolute values.
  */
@@ -23,6 +25,13 @@ import { log } from '../core/logger.js';
 import { FOLDER, LINK, LINK_META, sanitizeFolder, sanitizeLink, sanitizePatch } from './schema.js';
 
 export const CHUNK_SIZE = 100;
+/** Packs groups of entries into chunks of at most `size` entries without splitting a group (a group that is bigger than `size` gets its own chunk). */
+export function packGroups(groups, size = CHUNK_SIZE) {
+  const out = []; let cur = [];
+  for (const g of groups) { if (cur.length && cur.length + g.length > size) { out.push(cur); cur = []; } cur.push(...g); }
+  if (cur.length) out.push(cur);
+  return out;
+}
 
 export class Engine {
   constructor({ kind, db, now = Date.now, sleep }) {
@@ -34,6 +43,7 @@ export class Engine {
     this.links = new Map();
     this.keyIndex = new Map(); // dedupe key -> link id (live links only)
     this.settings = new Map();
+    this.lk = { folders: new Set(), links: new Set() };   // v2.5.3: ids that currently live in the vault tree (only while it is open)
     this.bus = createEmitter();
     this.ready = false;
     this._chain = Promise.resolve();
@@ -94,7 +104,14 @@ export class Engine {
   }
   _newChanges() { return { folders: new Map(), links: new Map() }; }
   _putFolder(ch, rec) { this.folders.set(rec.id, rec); ch.folders.set(rec.id, rec); }
-  _putLink(ch, rec) { this._indexLink(rec); ch.links.set(rec.id, rec); }
+  /** v2.5.3: a link belongs to the vault exactly when its folder does. A change of that moves the record to the other tree (ch.cross says from where; the commit writes both sides in ONE update). */
+  _putLink(ch, rec) {
+    const f = this.folders.get(rec.fid), want = !!(f && f.lk), was = this.lk.links.has(rec.id);
+    if (want !== was && this.links.has(rec.id)) (ch.cross ||= new Map()).set(rec.id, was ? 'vault' : 'normal');
+    if (want) { this.lk.links.add(rec.id); if (!rec.lk) rec = { ...rec, lk: true }; }
+    else { this.lk.links.delete(rec.id); if (rec.lk) { const { lk, ...rest } = rec; rec = rest; } }
+    this._indexLink(rec); ch.links.set(rec.id, rec);
+  }
 
   /** Writes the real link count of every folder touched by this batch (absolute value, never incremented). */
   _recount(ch, fids) {
@@ -120,11 +137,11 @@ export class Engine {
 
   /** Commits run one after another (so two writes to the same record keep their order); chunks inside a commit run in parallel. */
   _commit(ch, { chained = true } = {}) {
-    const entries = [];
-    for (const [id, rec] of ch.folders) entries.push({ tree: 'folders', id, rec });
-    for (const [id, rec] of ch.links) entries.push({ tree: 'links', id, rec });
+    const groups = [];
+    for (const [id, rec] of ch.folders) groups.push([{ tree: 'folders', id, rec }]);
+    for (const [id, rec] of ch.links) { const g = [{ tree: 'links', id, rec }], from = ch.cross && ch.cross.get(id); if (from && rec) g.push({ tree: 'links', id, rec: null, from }); groups.push(g); }   // a cross-tree move never splits across chunks
     const run = async () => {
-      const res = await runParallel(chunk(entries, CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 4, sleep: this.sleep });
+      const res = await runParallel(packGroups(groups, CHUNK_SIZE), (c) => this._persistChunk(c), { concurrency: 4, sleep: this.sleep });
       if (res.failed.length) { const e = new Error(`${res.failed.length} chunk(s) could not be saved`); e.failed = res.failed; throw e; }
     };
     // chained=false (v2.2.0 import): the chunks of one import touch only NEW records, so they may be written while other chunks are still in flight.

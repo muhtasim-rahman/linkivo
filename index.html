@@ -3,10 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <title>Linkivo: manage your links</title>
-  <meta name="description" content="Linkivo is a fast, private link manager. Save, organise and rediscover thousands of links and bookmarks, in a browser or as an installed app.">
+  <!-- seo:start (written by "@ Creator/tools/gen-seo.mjs": do not edit between the markers) -->
+  <title>Linkivo: save, organise and rediscover your links</title>
+  <meta name="description" content="A fast, private link manager. Organise thousands of links in folders, import from anywhere, search everything, rediscover old saves and export in any format. Free.">
   <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://linkivo.web.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Linkivo">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:title" content="Linkivo: save, organise and rediscover your links">
+  <meta property="og:description" content="A fast, private link manager. Organise thousands of links in folders, import from anywhere, search everything, rediscover old saves and export in any format. Free.">
+  <meta property="og:url" content="https://linkivo.web.app/">
+  <meta property="og:image" content="https://linkivo.web.app/assets/social/og-default.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Linkivo: save, organise, rediscover your links. Folders, smart import, search and a private vault.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:creator" content="@mdturzo999">
+  <meta name="twitter:title" content="Linkivo: save, organise and rediscover your links">
+  <meta name="twitter:description" content="A fast, private link manager. Organise thousands of links in folders, import from anywhere, search everything, rediscover old saves and export in any format. Free.">
+  <meta name="twitter:image" content="https://linkivo.web.app/assets/social/og-default.jpg">
+  <meta name="twitter:image:alt" content="Linkivo: save, organise, rediscover your links. Folders, smart import, search and a private vault.">
+  <meta name="twitter:url" content="https://linkivo.web.app/">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Linkivo","url":"https://linkivo.web.app/","description":"A fast, private link manager. Organise thousands of links in folders, import from anywhere, search everything, rediscover old saves and export in any format. Free.","applicationCategory":"ProductivityApplication","operatingSystem":"Any (web browser, installable app)","browserRequirements":"Requires JavaScript","image":"https://linkivo.web.app/assets/social/og-default.jpg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Folders, tags, favourites and read later","Smart import from pasted text, files and browser bookmarks","Fast search across links, folders and settings","Random Discover brings old saves back","App lock and locked folders behind a separate code","Export to JSON, CSV, Excel, PDF, HTML, Markdown and more, with an optional passphrase-protected backup","Works in the browser and as an installed app, light and dark"],"author":{"@type":"Person","name":"Muhtasim Rahman","alternateName":"Turzo","url":"https://mdturzo.web.app","sameAs":["https://github.com/muhtasim-rahman"]},"inLanguage":"en"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Linkivo","url":"https://linkivo.web.app/","inLanguage":"en","publisher":{"@type":"Person","name":"Muhtasim Rahman","alternateName":"Turzo","url":"https://mdturzo.web.app","sameAs":["https://github.com/muhtasim-rahman"]}}</script>
+  <!-- seo:end -->
   <meta name="author" content="Muhtasim Rahman">
+  <meta name="keywords" content="link manager, bookmark manager, save links, organise links, link organiser, read later, private bookmarks, PWA">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
   <meta name="application-name" content="Linkivo">
   <meta name="apple-mobile-web-app-title" content="Linkivo">
   <meta name="mobile-web-app-capable" content="yes">
@@ -15,20 +41,6 @@
   <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
-  <link rel="canonical" href="https://linkivo.web.app/login">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Linkivo">
-  <meta property="og:title" content="Linkivo: manage your links">
-  <meta property="og:description" content="A fast, private link manager for people with hundreds or thousands of links.">
-  <meta property="og:url" content="https://linkivo.web.app/login">
-  <meta property="og:image" content="https://linkivo.web.app/assets/icons/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="The Linkivo logo: a padlock shackle over two linked rings">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Linkivo: manage your links">
-  <meta name="twitter:description" content="A fast, private link manager for people with hundreds or thousands of links.">
-  <meta name="twitter:image" content="https://linkivo.web.app/assets/icons/og-image.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/icons/favicon.ico" sizes="48x48">
@@ -72,11 +84,11 @@
   <link rel="modulepreload" href="/js/core/local-prefs.js">
   <link rel="modulepreload" href="/js/core/utils.js">
   <link rel="modulepreload" href="/js/main.js">
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"WebApplication","name":"Linkivo","url":"https://linkivo.web.app/","description":"A fast, private link manager for people with hundreds or thousands of links.","applicationCategory":"ProductivityApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Muhtasim Rahman","url":"https://mdturzo.web.app"}}
-  </script>
 </head>
 <body>
+  <!-- seo:body -->
+  <noscript><main class="seo-noscript" style="max-width:720px;margin:40px auto;padding:0 20px;font:16px/1.6 system-ui,sans-serif"><h1>Linkivo: save, organise and rediscover your links</h1><p>A fast, private link manager. Organise thousands of links in folders, import from anywhere, search everything, rediscover old saves and export in any format. Free.</p><ul><li>Folders, tags, favourites and read later</li><li>Smart import from pasted text, files and browser bookmarks</li><li>Fast search across links, folders and settings</li><li>Random Discover brings old saves back</li><li>App lock and locked folders behind a separate code</li><li>Export to JSON, CSV, Excel, PDF, HTML, Markdown and more, with an optional passphrase-protected backup</li><li>Works in the browser and as an installed app, light and dark</li></ul><p>Linkivo needs JavaScript to run. Enable it, or read the <a href="/docs">documentation</a>.</p><nav aria-label="Linkivo"><a href="/">Home</a> <a href="/docs">Documentation</a> <a href="/privacy">Privacy</a> <a href="/terms">Terms</a> <a href="/login">Sign in</a></nav></main></noscript>
+  <!-- /seo:body -->
   <div id="app" data-chrome="none">
     <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
     <div class="app-main">

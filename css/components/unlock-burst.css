@@ -1,0 +1,11 @@
+/* v2.5.3: the unlock animation on the search page (js/ui/unlock-burst.js) */
+.ub { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; transition: opacity .26s ease; }
+.ub.is-out { opacity: 0; }
+.ub-svg { width: 76px; height: 76px; color: var(--accent); filter: drop-shadow(0 6px 18px var(--accent-soft)); animation: ub-pop .5s cubic-bezier(.2, .9, .3, 1.2) both; }
+.ub-shackle { transform-box: fill-box; transform-origin: 100% 100%; animation: ub-open .55s .32s cubic-bezier(.3, 1.4, .5, 1) both; }
+.ub-ring { position: absolute; width: 76px; height: 76px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: ub-ring 1.1s .3s ease-out both; }
+.ub-ring.is-late { animation-delay: .5s; }
+@keyframes ub-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ub-open { from { transform: translateY(0) rotate(0); } to { transform: translateY(-5px) rotate(-28deg); } }
+@keyframes ub-ring { from { transform: scale(.7); opacity: .55; } to { transform: scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ub-svg, .ub-shackle, .ub-ring { animation: none; } .ub-shackle { transform: translateY(-5px) rotate(-28deg); } .ub-ring { display: none; } }

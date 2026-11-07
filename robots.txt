@@ -1,6 +1,10 @@
-# Linkivo: the sign-in page is public; every page that shows a person's own data is private and marked noindex inside the app too.
+# Linkivo (v2.5.3)
+# Public and indexable: the home page, /docs and each documentation topic, /privacy and /terms (listed in sitemap.xml).
+# The sign-in page (/login) is public but marked noindex inside the page, so crawlers must be allowed to read it.
+# Every page that shows a person's own data is private: blocked here and marked noindex inside the app as well.
 User-agent: *
 Allow: /
+Allow: /docs
 Disallow: /library
 Disallow: /folder/
 Disallow: /link/
@@ -12,5 +16,7 @@ Disallow: /settings
 Disallow: /menu
 Disallow: /share
 Disallow: /reactivate
+Disallow: /admin-reset
+Disallow: /auth/
 
 Sitemap: https://linkivo.web.app/sitemap.xml

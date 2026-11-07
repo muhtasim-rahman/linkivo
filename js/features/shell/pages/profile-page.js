@@ -22,6 +22,7 @@ import { avatar, logOut } from '../shell-parts.js';
 import { adminChip } from '../../../ui/admin-badge.js';
 import { settingsShortcut } from '../../../ui/settings-shortcut.js';
 import { shotFromMeta } from './profile-thumbs.js';
+import { shotFallback, SHOT_W } from '../../../ui/thumb.js';
 import { loadProfile, cachedProfile, bannerUrl, applyProfileLook, formatBirthday } from '../../../core/profile-data.js';
 import { attachFade } from '../../../ui/edge-fade.js';
 import { findCountry, flagUrl } from '../../../core/countries.js';
@@ -113,9 +114,9 @@ export async function mount(container, ctx) {
   async function card(e, sub, mySeq) {
     const live = engine && engine.getLink(e.lid), meta = thumbsOn() && engine && live ? await engine.peekLinkMeta(e.lid) : null;
     if (mySeq !== token) return null;
-    const sources = thumbsOn() ? [meta && /^https?:/.test(meta.image || '') ? meta.image : '', shotFromMeta(meta)].filter(Boolean) : [];
+    const sources = thumbsOn() ? [meta && /^https?:/.test(meta.image || '') ? meta.image : '', shotFromMeta(meta), live ? shotFallback(e.url) : ''].filter(Boolean) : [];   // v2.5.3: page image, then screenshot, then a free screenshot of the page; the site icon stays underneath
     const pic = h('span', { class: ['pf2-pic', !thumbsOn() && 'is-icon'] }, h('span', { class: 'pf2-pic-fav' }, e.host ? h('img', { src: faviconUrl(e.host), alt: '', width: '28', height: '28', loading: 'lazy', referrerpolicy: 'no-referrer', on: { error: (ev) => ev.target.remove() } }) : icon('globe', { size: 24 })));
-    const tryNext = () => { const src = sources.shift(); if (!src) return; const im = h('img', { class: 'pf2-thumb', src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => { im.remove(); tryNext(); }, { once: true }); pic.prepend(im); };
+    const tryNext = () => { const src = sources.shift(); if (!src) return; const im = h('img', { class: 'pf2-thumb', src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }); im.addEventListener('error', () => { im.remove(); tryNext(); }, { once: true }); if (src.includes('/mshots/v1/')) im.addEventListener('load', () => { if (im.naturalWidth !== SHOT_W) { im.remove(); tryNext(); } }, { once: true }); pic.prepend(im); };
     tryNext();
     return h(live ? 'a' : 'div', { class: ['pf2-card', !live && 'is-gone'], role: 'listitem', href: live ? `/link/${encodeURIComponent(e.lid)}` : null }, pic, h('span', { class: 'pf2-card-t', text: e.title || e.host || e.url }), h('span', { class: 'pf2-card-u', text: sub }));
   }

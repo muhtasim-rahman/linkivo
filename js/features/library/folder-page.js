@@ -13,12 +13,13 @@
 import { settingsShortcut } from '../../ui/settings-shortcut.js';
 import { h, clear } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
+import { isAdminView } from '../../core/admin.js';
 import { openMenu } from '../../ui/popover.js';
 import { createSelect } from '../../ui/select.js';
 import { attachScrollRow } from '../../ui/scroll-row.js';
 import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
-import { refreshButton } from '../../ui/refresh-button.js';   // ! unused since v2.4.3: Refresh lives in the three-dot menu
+import { refreshApp } from '../../core/refresh.js';   // v2.5.3: the three-dot menu Refresh uses the app-wide refresh
 import { createPager } from '../../ui/paged.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { openShortcutHelp } from '../../ui/shortcut-help.js';
@@ -106,7 +107,7 @@ export async function mount(container, ctx) {
   let vl = null;
   const paintHead = () => {
     const f = folder(); if (!f) return;
-    title.textContent = f.name; title.dataset.len = lenClass(f.name); title.title = f.name; document.title = `${f.name} - Folder | Linkivo`;   // v2.2.2
+    title.textContent = f.name; if (f.lk) title.append(h('span', { class: 'fp-lock', 'aria-label': 'Locked folder', 'data-tip': 'Locked folder' }, icon('lock', { size: 16 }))); title.dataset.len = lenClass(f.name); title.title = f.name; document.title = `${f.name} - Folder | Linkivo`;   // v2.2.2
     tile.replaceChildren(folderTile(f, 44)); page.style.setProperty('--fc', colorOf(f));
     sub.textContent = plural(sourceLinks().length, 'link');
     viewBtn.replaceChildren(icon(st.view === 'grid' ? 'list' : 'grid', { size: 20 })); viewBtn.setAttribute('aria-label', st.view === 'grid' ? 'Switch to list' : 'Switch to grid');
@@ -121,7 +122,8 @@ export async function mount(container, ctx) {
       ...top.map(([d, n]) => h('button', { type: 'button', class: ['chip', st.domain === d && 'is-on'], 'aria-pressed': String(st.domain === d), on: { click: () => { st.domain = st.domain === d ? null : d; update(); } } }, d, h('span', { class: 'chip-n', text: String(n) }))));
   }
 
-  const show = () => ({ url: pref(LIB.showUrl), points: pref(LIB.showPoints), added: pref(LIB.showAdded) });
+  const show = () => ({ url: pref(LIB.showUrl), points: pref(LIB.showPoints) && isAdminView(),   // v2.5.3: the points display is a testing aid: admins only
+     added: pref(LIB.showAdded) });
   const renderRow = (l) => createLinkRow(l, { card: st.view === 'grid', selecting: st.selecting, selected: st.selected.has(l.id), show: show(), engine });
 
   function paintBar() {
@@ -177,7 +179,7 @@ export async function mount(container, ctx) {
     const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;   // v2.2.2: the header's select icon is hidden on phones, so the menu offers it
     const pick = phone ? [{ label: st.view === 'grid' ? 'List view' : 'Grid view', icon: st.view === 'grid' ? 'list' : 'grid', onSelect: toggleView }, { label: st.selecting ? 'Done selecting' : 'Select links', icon: 'check-square', onSelect: () => setSelecting(!st.selecting) }, { separator: true }] : [];
     const rnd = !isFav && phone && isEnabled('randomFromFolder') ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${encodeURIComponent(fid)}`) }] : [];   // phones: Random is the FIRST item
-    const refreshItem = { label: 'Refresh', icon: 'refresh', onSelect: () => refresh() }, settingsItem = [{ separator: true }, { label: 'Folder settings', icon: 'settings', onSelect: () => router.navigate('/settings/library') }];
+    const refreshItem = { label: 'Refresh', icon: 'refresh', onSelect: () => { reshuffle && reshuffle(); refreshApp(); } }, settingsItem = [{ separator: true }, { label: 'Folder settings', icon: 'settings', onSelect: () => router.navigate('/settings/library') }];
     const items = isFav ? [...rnd, refreshItem, ...pick, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking favourites' }) }, { label: 'Export favourites', icon: 'download', onSelect: () => import('../export/export-sheet.js').then((m) => m.openExport({ engine, scope: { type: 'favourites' }, title: 'Export favourites' })) }, ...settingsItem]
       : [...rnd, refreshItem, ...pick, ...(isEnabled('randomFromFolder') && !phone ? [{ label: 'Random from this folder', icon: 'random', onSelect: () => router.navigate(`/random?folder=${fid}`) }] : []), { label: 'Add link', icon: 'plus', onSelect: () => openQuickAdd({ engine, queue, fid }) }, { label: 'Check links', icon: 'refresh', onSelect: () => runCheck({ engine, queue, router, ids: sourceLinks().map((l) => l.id), title: 'Checking folder' }) }, { separator: true }, ...folderMenuItems({ engine, router, folder: f }), ...settingsItem];
     moreBtn._m = openMenu(moreBtn, items);
@@ -224,4 +226,4 @@ export async function mount(container, ctx) {
 }
 
 let reshuffle = null;   // set by the mounted page: a Refresh gives the Random sort a new order (owner)
-export async function refresh() { try { reshuffle && reshuffle(); await getEngine()?.flush?.(); } catch { toast('Could not refresh.', { type: 'error' }); } }
+export async function refresh() { try { reshuffle && reshuffle(); } catch { /* ignore */ } }   // v2.5.3: the page is rebuilt by the router afterwards

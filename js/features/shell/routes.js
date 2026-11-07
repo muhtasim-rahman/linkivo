@@ -11,10 +11,13 @@ const folderPage = () => import('../library/folder-page.js');
 const importPage = () => import('../import/import-page.js');
 const recyclePage = () => import('../library/recycle-bin-page.js');
 
+import { HOME_TITLE, HOME_DESC } from '../../core/seo-pages.js';
 export const ROUTES = [
-  { id: 'root', pattern: '/', title: '', parent: null, guard: 'open', redirect: (s) => (s.mode === 'none' ? '/login' : '/library'), load: stub },
+  // v2.5.3 (owner): the home page has its own address, title and description. Before, "/" sent a visitor to /login, so a crawler (and a link preview) saw the sign-in page's title. Now a signed-out visitor stays on "/"
+  // (the sign-in screen is the front door) and a signed-in one is sent to the library by the guard.
+  { id: 'root', pattern: '/', fullTitle: HOME_TITLE, title: 'Home', desc: HOME_DESC, index: true, parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
   { id: 'admin-reset', pattern: '/admin-reset', title: 'Admin reset', parent: null, guard: 'open', shell: false, load: () => import('./pages/admin-reset-page.js') },   // v2.4.4: clears the device flag "Normal user"
-  { id: 'login', pattern: '/login', title: 'Sign in', desc: 'Sign in to Linkivo or try it as a guest. A fast, private link manager for your folders, links and bookmarks.', index: true, parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
+  { id: 'login', pattern: '/login', title: 'Sign in', desc: 'Sign in to Linkivo with Google or email, or try it as a guest. Your links stay yours.', follow: true, parent: null, guard: 'public', shell: false, load: () => import('../auth/login-page.js') },
   // v2.2.2: Linkivo's own page for the links in Firebase emails (password reset, verification). Used once Firebase's "Customize action URL" points here.
   { id: 'auth-action', pattern: '/auth/action', title: 'Account action', parent: null, guard: 'open', shell: false, load: () => import('../auth/action-page.js') },
   { id: 'reactivate', pattern: '/reactivate', title: 'Account scheduled for deletion', parent: null, guard: 'auth', shell: false, load: () => import('./pages/reactivate-page.js') },
@@ -33,14 +36,12 @@ export const ROUTES = [
   { id: 'menu', pattern: '/menu', title: 'Menu', parent: '/library', guard: 'auth', refresh: true, tab: 'menu', load: () => import('./pages/menu-page.js') },
   { id: 'profile', pattern: '/profile', title: 'Profile', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', tab: 'menu', refresh: true, load: () => import('./pages/profile-page.js') },
   { id: 'settings', pattern: '/settings', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', refresh: true, tab: 'settings', load: settings },
-  { id: 'vault', pattern: '/vault', title: 'Locked folders', parent: '/library', guard: 'auth', tab: 'library', load: () => import('../vault/vault-page.js') },   // v2.5.2: only while the vault is open
-  { id: 'vault-folder', pattern: '/vault/:fid', title: 'Locked folder', parent: '/vault', guard: 'auth', tab: 'library', load: () => import('../vault/vault-page.js') },
   { id: 'recycle-bin', pattern: '/settings/recycle-bin', title: 'Recycle Bin', parent: '/settings', guard: 'auth', refresh: true, tab: 'settings', load: recyclePage },
   { id: 'settings-section', pattern: '/settings/:section', title: 'Settings', parent: (p, env) => (env.isWide ? '/library' : '/menu'), guard: 'auth', refresh: true, tab: 'settings', load: settings },
 
-  { id: 'terms', pattern: '/terms', title: 'Terms', desc: 'The terms of use for Linkivo.', parent: '/library', guard: 'open', load: () => import('../legal/legal-page.js') },
-  { id: 'privacy', pattern: '/privacy', title: 'Privacy', desc: 'How Linkivo handles your data: what is stored, where, and who can see it.', parent: '/library', guard: 'open', load: () => import('../legal/legal-page.js') },
-  { id: 'docs', pattern: '/docs', title: 'Documentation', desc: 'A guide to every Linkivo feature: import, folders, search, random discover, vault and backup.', parent: '/library', guard: 'open', load: () => import('../docs/docs-page.js') },
-  { id: 'docs-topic', pattern: '/docs/:topic', title: 'Documentation', parent: '/docs', guard: 'open', load: () => import('../docs/docs-page.js') },
+  { id: 'terms', pattern: '/terms', title: 'Terms', fullTitle: 'Terms of use - Linkivo', desc: 'The terms of use for Linkivo, a free link manager by Muhtasim Rahman.', index: true, parent: '/library', guard: 'open', load: () => import('../legal/legal-page.js') },
+  { id: 'privacy', pattern: '/privacy', title: 'Privacy', fullTitle: 'Privacy - Linkivo', desc: 'How Linkivo handles your data: what is stored, where, who can see it, and how to export or delete everything.', index: true, image: '/assets/social/og-vault.jpg', imageAlt: 'Linkivo privacy: locked folders behind a code', parent: '/library', guard: 'open', load: () => import('../legal/legal-page.js') },
+  { id: 'docs', pattern: '/docs', title: 'Documentation', fullTitle: 'Documentation - Linkivo', desc: 'A guide to every Linkivo feature: folders, import, search, Random Discover, locked folders, backup and settings.', index: true, image: '/assets/social/og-overview.jpg', parent: '/library', guard: 'open', load: () => import('../docs/docs-page.js') },
+  { id: 'docs-topic', pattern: '/docs/:topic', title: 'Documentation', index: true, parent: '/docs', guard: 'open', load: () => import('../docs/docs-page.js') },
   { id: 'not-found', pattern: '*', title: 'Page not found', parent: '/library', guard: 'open', stub: 'lost', load: () => import('./pages/not-found-page.js') }   // v2.4.2: its own centred page
 ];

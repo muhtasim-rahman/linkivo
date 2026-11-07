@@ -47,8 +47,8 @@ On PC the app information and developer banners are placed under Settings for no
 - Folders in grid or list view. Each shows: name, custom color, category icon, link count, last-updated time, three-dot menu.
 - A system folder named **Favourites** is always present (virtual: it lists every favourited link across folders).
 - Top: a folder-only search bar (compact). On the same line: filter and sort icons.
-- Folder three-dot menu: pin to top, rename, change color/icon, import to this folder, export this folder (opens the export popup of section 6b with this folder preselected), delete folder (asks for the PIN on the first folder deletion after login; if no PIN exists, the user types the folder name to confirm), move to vault, and other useful options (duplicate, merge into another folder, select links).
-- If any vault folder exists, a small "unlock vault" option sits at the bottom of the page (see section 9; it can be hidden by a setting).
+- Folder three-dot menu: pin to top, rename, change color/icon, import to this folder, export this folder (opens the export popup of section 6b with this folder preselected), delete folder (asks for the PIN on the first folder deletion after login; if no PIN exists, the user types the folder name to confirm), lock folder / remove lock (accounts), and other useful options (duplicate, merge into another folder, select links).
+- Locked folders (section 9) appear here only while unlocked, with a small lock icon.
 
 ## 4. Folder view (links inside a folder)
 
@@ -130,7 +130,7 @@ The last used options are remembered per format. Default file name: `linkivo-<sc
 | HTML bookmarks | `.html` | Standard Netscape bookmarks file that every browser can import; folders become bookmark folders. |
 | Printable page | `.html` | Clean, self-contained, grouped, print-friendly, light or dark. |
 | OPML | `.opml` | Outline for readers and outliners. |
-| PDF | `.pdf` | Formatted document. Not built yet (open item, see CONTEXT). |
+| PDF | `.pdf` | Built in v2.5.3: A4 or Letter, heading per folder, clickable links, page numbers; non-Latin text is drawn as small pictures by the browser. |
 
 ### Formatting options (shown per format)
 Fields to include (title, URL, domain, description, tags, folder, added date, points, favourite and read-later flags), sort order, grouping (by folder, by domain, flat), date format, skip blocked links, only favourites or only a tag, file name pattern, line template, numbering, separators, Markdown style (list or table), printable theme, line endings.
@@ -181,9 +181,9 @@ Freeze the final numbers with the owner at the start of v2.4.0.
 ## 9. Security: app lock and vault
 
 - **App lock** is OFF by default. Each user has their own PIN (stored server-side as a peppered hash; see `ARCHITECTURE.md`). When it is ON, **no user data can be read or written until the PIN is verified** (enforced by database rules through a server-issued unlock session, not only by the UI).
-- **Vault**: folders can be moved to the vault. While the vault is locked, **vault folders' data cannot be read or written** (not in the database, not in the local cache, not in the DOM, not in search, not in history).
-- One shared PIN for all vault folders. By default it is the SAME PIN as the app lock. In Settings the user can set a separate vault PIN. If no PIN exists when the first folder is moved to the vault, ask the user to create one.
-- Unlock entry: a small "unlock vault" option at the bottom of Library, with a **setting to hide it**. When hidden, the user types the correct PIN into the **search bar**; on a correct PIN the folder-unlock option appears.
+- **Locked folders ("Folder Lock (Vault)")**, final design (v2.5.3, owner): accounts only. A separate code (a symbol @ # % $ ! plus six digits, example `@000000`) is checked on the server, which opens a vault session that the database rules require for `vault/<uid>`. A folder is locked from its own menu; its links move with it. While locked, the folder and its links exist **nowhere**: not in Library, search, history, Random, Stats, Recycle Bin, exports, the device cache or memory. Once unlocked they appear **normally in every part of the app** with a small lock icon, and lock again when the app is closed or reloaded or after the chosen time (2, 5, 10, 20, 30, 60 minutes, setting "Stay unlocked for"). There is no vault page.
+- Unlock: the "Locked folders" card at the top of Menu (phone) and Settings (wide), or the code typed into the search box followed by Enter (toast plus a short unlock animation). A setting "Unlock only through the search box" hides the card while locked. Locked folders are never import, quick-add or share targets and never part of an export (a file would be an unlocked copy). The Activity log never records their names.
+- **Security settings layout**: Settings > Security is one card with two rows, App lock and Folder Lock (Vault); each opens a popup with all of that feature's settings. With the app lock on, opening a popup asks for the PIN once and then not again for 30 seconds. Common settings follow below the card.
 - Forgetting the PIN must **never lose data** and must be easy to resolve: "Forgot PIN" asks the user to re-authenticate (Google popup or password) and then set a new PIN. Guests have no server: for guests, forgot PIN means erasing local data (offer a backup export first).
 - **Sensitive settings** (security, account, data deletion, exports of vault, etc.) need PIN verification when the app lock is on. After one successful verification, no further PIN prompt for **5 minutes** while the app stays open.
 - Logging out, resetting settings and deleting the account ask for confirmation and, when the app lock is on, the PIN.
@@ -279,3 +279,12 @@ Admin panel (the data model stays admin-ready), profile picture upload, push not
 - **Password reset**: confirmation, PIN gate when the lock is on, one email per address every 5 minutes, 5 per hour per device; verification email: 2 minutes. Same limits on the login page.
 - **Metadata**: Worker first, then this device asks Dub, Jina Reader, AllOrigins, JSONLink and Microlink when the Worker result is weak; floor = title from the URL plus the favicon. Switch in Settings > Advanced. Settings > App warns when the deployed Worker is older than the app expects.
 - **Theme switch**: one cross-fade, all colors together.
+
+## v2.5.3 additions (final polish, owner)
+
+- **Backup passphrase**: the Linkivo backup can be encrypted in the browser (AES-GCM, PBKDF2-SHA256 600,000 rounds); file `.linkivo.enc.json`; import asks for the passphrase. **Backup reminder** (Off, weekly, 2 weeks, monthly; guests too).
+- **Background jobs**: a clock icon in the Library and Menu headers opens the panel: local jobs (Pause, Resume, Stop, Retry, Remove) and the server's jobs; "Keep going in the background" hands a title fetch to the Worker.
+- **One refresh** (pull down, header icon, folder menu): syncs, then rebuilds the page from the current data.
+- **Thumbnails in lists**: page image, then screenshot, then a free screenshot of the page (shown only for rows in view), then the site icon.
+- **Testing** (formerly Advanced) and every other testing aid (points display, how details were found, service names) are **admin only**; admin badges are small and in the accent colour.
+- **SEO**: the home page `/` has its own title, description and canonical; every public page (home, docs and each topic, privacy, terms) has static HTML with its own tags and structured data (`@ Creator/tools/gen-seo.mjs`); share image `assets/social/og-default.jpg`; sitemap and robots; CSP in report-only mode (`gen-csp.mjs`).

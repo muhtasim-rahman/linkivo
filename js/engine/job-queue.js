@@ -57,9 +57,9 @@ export function createJobQueue({ db, now = Date.now, concurrency = 1 }) {
       const want = wants.get(job.id);
       job.status = want === 'pause' ? 'paused' : want === 'stop' ? 'stopped' : 'done';
     } catch (e) {
-      job.status = wants.get(job.id) === 'stop' ? 'stopped' : 'failed';
+      job.status = wants.get(job.id) === 'stop' ? 'stopped' : e && e.pause ? 'paused' : 'failed';   // v2.5.3: a handler may ask to be paused (the locked folders must be unlocked first)
       job.error = String(e && e.message ? e.message : e).slice(0, 200);
-      log.error('jobs', `job ${job.type} failed`, e);
+      if (!(e && e.pause)) log.error('jobs', `job ${job.type} failed`, e);
     }
     wants.delete(job.id);
     await save(job);

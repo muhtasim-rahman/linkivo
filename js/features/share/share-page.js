@@ -41,9 +41,9 @@ export async function mount(container, ctx) {
   }
 
   const st = { fid: prefs.get(LAST_FOLDER, null), picked: new Set(items.map((_, i) => i)) };
-  if (!st.fid || !engine.getFolder(st.fid) || engine.getFolder(st.fid).del) st.fid = (engine.listFolders()[0] || {}).id || null;
+  if (!st.fid || !engine.getFolder(st.fid) || engine.getFolder(st.fid).del || engine.getFolder(st.fid).lk) st.fid = (engine.listFolders().find((f) => !f.lk) || {}).id || null;
   const title = h('input', { class: 'input', type: 'text', value: sharedTitle, placeholder: 'Title (optional)', maxlength: '300', 'aria-label': 'Title', autocomplete: 'off' });
-  const folderBtn = h('button', { type: 'button', class: 'row sh-folder', 'aria-label': 'Choose folder', on: { click: async () => { const f = await openFolderPicker({ engine, title: 'Save to folder' }); if (f) { st.fid = typeof f === 'string' ? f : f.id; paintFolder(); } } } });
+  const folderBtn = h('button', { type: 'button', class: 'row sh-folder', 'aria-label': 'Choose folder', on: { click: async () => { const f = await openFolderPicker({ engine, noLocked: true, title: 'Save to folder' }); if (f) { st.fid = typeof f === 'string' ? f : f.id; paintFolder(); } } } });
   const saveBtn = h('button', { type: 'button', class: 'btn btn-primary sh-save', on: { click: save } });
   const note = h('p', { class: 'help is-error', role: 'alert' });
   function paintFolder() {
@@ -56,7 +56,7 @@ export async function mount(container, ctx) {
     note.textContent = '';
     if (!st.picked.size) return;
     let fid = st.fid;
-    if (!fid) { const f = await openFolderPicker({ engine, title: 'Save to folder' }); if (!f) return; fid = typeof f === 'string' ? f : f.id; st.fid = fid; }
+    if (!fid) { const f = await openFolderPicker({ engine, noLocked: true, title: 'Save to folder' }); if (!f) return; fid = typeof f === 'string' ? f : f.id; st.fid = fid; }
     saveBtn.disabled = true;
     try {
       const chosen = items.filter((_, i) => st.picked.has(i)), t = items.length === 1 ? title.value.trim() : '';

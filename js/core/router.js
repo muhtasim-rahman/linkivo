@@ -116,7 +116,8 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     const match = compiled.match(path);
     if (!match) { log.error('router', 'no route table match', { path }); return; }
     const { route, params } = match;
-    if (route.redirect) return go(route.redirect(getSession()), { from, depth: depth + 1 });
+    const rd = route.redirect ? route.redirect(getSession()) : null;   // v2.5.3: a redirect function may answer null = no redirect (the home page opens for a signed-out visitor)
+    if (rd) return go(rd, { from, depth: depth + 1 });
     const redirect = resolveGuard(route, getSession());
     if (redirect && redirect !== path) {
       if (depth > 5) { log.error('router', 'redirect loop', { path, redirect }); return; }
@@ -199,9 +200,11 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     async refreshCurrent() {
       const c = current;
       if (!c || c.route.refresh !== true) return 'unsupported';
-      if (!c.mod || typeof c.mod.refresh !== 'function') return 'nothing'; // layout only for now: pages add refresh() with their data
-      try { await c.mod.refresh({ params: c.params, query: Object.fromEntries(new URLSearchParams(c.search)), path: c.path, from: c.from, router }); return 'refreshed'; }
-      catch (e) { log.warn('router', 'refresh failed', e); return 'error'; }
+            try {
+        if (c.mod && typeof c.mod.refresh === 'function') await c.mod.refresh({ params: c.params, query: Object.fromEntries(new URLSearchParams(c.search)), path: c.path, from: c.from, router });
+        await reevaluateKeeping({ keepScroll: true });   // v2.5.3 (owner): the page is built again from the current data, exactly like a reload of this page (a page that only re-read some of its data kept stale parts)
+        return 'refreshed';
+      } catch (e) { log.warn('router', 'refresh failed', e); return 'error'; }
     },
     current: () => current,
     parentPath,

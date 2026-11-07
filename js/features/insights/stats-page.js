@@ -5,6 +5,7 @@
  * Page module: mount(container, ctx) -> unmount
  */
 import { h } from '../../core/dom.js';
+import { refreshButton } from '../../ui/refresh-button.js';
 import { loadCss } from '../../core/css-loader.js';
 import { emptyState } from '../../ui/empty-state.js';
 import { getEngine } from '../../core/app-data.js';
@@ -17,7 +18,7 @@ const list = (title, rows, empty) => h('section', { class: 'st-sec' }, h('h2', {
 export async function mount(container) {
   await loadCss('/css/pages/pages.css');
   const engine = getEngine();
-  const page = h('div', { class: 'page page-enter stats' }, h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Stats' })));
+  const page = h('div', { class: 'page page-enter stats' }, h('header', { class: 'page-head' }, h('h1', { class: 'page-title', text: 'Stats' }), h('div', { class: 'page-actions' }, refreshButton())));
   container.appendChild(page);
   if (!engine) { page.appendChild(emptyState({ art: 'lost', title: 'Your data is not ready', text: 'Wait a moment and try again.', actions: [] })); return () => {}; }
   const body = h('div', { class: 'st-body' }); page.appendChild(body);

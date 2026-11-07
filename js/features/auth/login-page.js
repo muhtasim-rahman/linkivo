@@ -33,7 +33,7 @@ const HIGHLIGHTS = [
   ['install', 'Works offline', 'Install it as an app on your phone or PC; it updates itself.']
 ];
 
-const brand = () => h('a', { class: 'auth-brand', href: '/login', 'aria-label': 'Linkivo' }, h('img', { class: 'auth-tile', src: '/assets/brand/logo-tile.svg', alt: '', width: 36, height: 36 }), h('span', { class: 'wordmark' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
+const brand = () => h('a', { class: 'auth-brand', href: '/', 'aria-label': 'Linkivo' }, h('img', { class: 'auth-tile', src: '/assets/brand/logo-tile.svg', alt: '', width: 36, height: 36 }), h('span', { class: 'wordmark' }, 'l', h('i', { text: 'i' }), 'nk', h('i', { text: 'i' }), 'vo'));
 
 export async function mount(container) {
   await loadCss('/css/pages/auth.css');

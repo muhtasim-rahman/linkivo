@@ -14,7 +14,7 @@ import { icon } from '../../ui/icons.js';
 import { safeHref } from '../library/folder-style.js';
 import { bulk } from '../library/link-actions.js';
 import { frameState, videoSource, audioSource, pdfSource, mshotUrl, thumUrl, detailsRows, parseLog } from './preview-model.js';
-import { canUseThum, countThum, shotQuota } from '../../core/admin.js';
+import { canUseThum, countThum, shotQuota, isAdminView } from '../../core/admin.js';
 import { thumAllowed } from './preview-ctx.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
 
@@ -101,9 +101,11 @@ function detailsTab(ctx) {
     body.replaceChildren(
       error && h('p', { class: 'help is-error', role: 'alert', text: error }),
       h('dl', { class: 'kv pv-kv' }, rows.flatMap((r) => [h('dt', { text: r.label }), h('dd', { class: r.mono ? 'is-mono' : null }, r.link && r.link !== '#' ? h('a', { href: r.link, target: '_blank', rel: 'noopener noreferrer', text: r.value }) : r.value)])),
+      ...(isAdminView() ? [   // v2.5.3 (owner): how the details were found (services, timings, Microlink quota) is a testing tool: admins only
       h('h3', { class: 'pv-h3', text: 'How these details were found' }),
       h('p', { class: 'pv-hint', text: mlEnabled() ? `Microlink: ${mlQuota().left} of ${mlQuota().limit} lookups left today.` : 'Microlink is switched off.' }),
-      log.length ? h('ul', { class: 'pv-log' }, log.map((x) => h('li', { class: x.ok ? 'is-ok' : 'is-bad' }, icon(x.ok ? 'check-circle' : 'x-circle', { size: 16 }), h('span', { class: 'pv-log-e', text: x.engine }), h('span', { class: 'pv-log-m', text: x.ok ? `${x.ms} ms` : (x.error || 'failed') })))) : h('p', { class: 'muted', text: meta && meta.checkedAt ? 'No log was kept for this link.' : 'The details have not been fetched yet.' }),
+      log.length ? h('ul', { class: 'pv-log' }, log.map((x) => h('li', { class: x.ok ? 'is-ok' : 'is-bad' }, icon(x.ok ? 'check-circle' : 'x-circle', { size: 16 }), h('span', { class: 'pv-log-e', text: x.engine }), h('span', { class: 'pv-log-m', text: x.ok ? `${x.ms} ms` : (x.error || 'failed') })))) : h('p', { class: 'muted', text: meta && meta.checkedAt ? 'No log was kept for this link.' : 'The details have not been fetched yet.' })
+      ] : []),
       h('div', { class: 'pv-det-actions' }, h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => ctx.refetch() } }, icon('refresh', { size: 16 }), 'Refresh details'), h('button', { type: 'button', class: 'btn btn-sm', on: { click: () => bulk.editLink(ctx.engine, [link.id]) } }, icon('edit', { size: 16 }), 'Edit link')));
   };
   paint();

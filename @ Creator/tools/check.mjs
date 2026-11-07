@@ -100,7 +100,7 @@ if (app.version) {
 }
 
 // ---- 5b. Generated files must be current (v2.1.0): sw.js precache list, database rules, app-info version --------------
-for (const tool of ['gen-precache.mjs', 'gen-rules.mjs']) {
+for (const tool of ['gen-precache.mjs', 'gen-rules.mjs', 'gen-seo.mjs', 'gen-csp.mjs']) {   // v2.5.3: gen-seo = static SEO of the public pages
   const f = path.join(root, '@ Creator/tools', tool);
   if (!fs.existsSync(f)) continue;
   const r = spawnSync(process.execPath, [f, '--check'], { encoding: 'utf8' });

@@ -19,6 +19,8 @@ import { plural, formatBytes } from '../../core/format.js';
 import { logActivity } from '../../core/activity.js';
 import appInfo from '../../core/app-info.js';
 import { FORMATS, getFormat, defaultOptions } from './formats/index.js';
+import { passphraseProblem } from './backup-crypto.js';
+import { markBackupDone } from './backup-reminder.js';
 import { NATIVE_ID, collect, runExport, previewExport, previewHtml } from './export-engine.js';
 import { pref, setPref, LIB } from '../library/lib-prefs.js';
 
@@ -30,7 +32,7 @@ export function downloadBlob(blob, name) {
 }
 
 const NATIVE = { id: NATIVE_ID, label: 'Linkivo backup', icon: 'shield', ext: 'linkivo.json', options: [] };
-const ICONS = { json: 'code', csv: 'table', xlsx: 'table', txt: 'file', md: 'file', bookmarks: 'bookmark', opml: 'share' };
+const ICONS = { pdf: 'file', json: 'code', csv: 'table', xlsx: 'table', txt: 'file', md: 'file', bookmarks: 'bookmark', opml: 'share' };
 const GROUPS = { content: ['Content', 'list'], layout: ['Layout', 'panel'], style: ['Style', 'palette'], order: ['Order', 'sort'], filter: ['Filter', 'filter'] };
 const GROUP_BY_ID = { sort: 'order', group: 'order', dateFormat: 'order', skipBlocked: 'filter', onlyFavourites: 'filter', onlyTag: 'filter', delimiter: 'style', lineEnding: 'style', bom: 'style', pretty: 'style', header: 'layout', sheets: 'layout' };
 /** Which group an option belongs to: its own `group`, else by id, else by control type. Pure, tested. */
@@ -62,7 +64,7 @@ function control(opt, value, set) {
 export async function openExport({ engine, scope = { type: 'all' }, title = 'Export' }) {
   await Promise.all([loadCss('/css/pages/data.css'), loadCss('/css/pages/library.css')]);   // library.css: the chip look
   let { links, folders } = collect(engine, scope);
-  const allFolders = scope.type === 'all' ? engine.listFolders() : [];   // v2.2.3: the folder chips exist only when the whole library is the scope
+  const allFolders = scope.type === 'all' ? engine.listFolders().filter((f) => !f.lk) : [];   // v2.5.3: locked folders are never exported   // v2.2.3: the folder chips exist only when the whole library is the scope
   const picked = new Set(allFolders.map((f) => f.id));
   if (!links.length && scope.type !== 'folders' && scope.type !== 'all') { toast('There are no links to export.'); return; }
   const all = [NATIVE, ...FORMATS];
@@ -78,6 +80,13 @@ export async function openExport({ engine, scope = { type: 'all' }, title = 'Exp
   const fileInput = h('input', { class: 'input', type: 'text', placeholder: 'linkivo-{scope}-{date}', 'aria-label': 'File name', maxlength: '80', on: { input: (e) => { fileName = e.target.value; } } });
   const go = h('button', { type: 'button', class: 'btn btn-primary' });
   const scopeRow = h('div', { class: 'ex-scope' });
+  // v2.5.3: optional passphrase for the Linkivo backup. The passphrase lives only in these two fields and is wiped when the popup closes; it is never saved with the remembered options.
+  const secret = { on: false };
+  const pass1 = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', 'aria-label': 'Passphrase', placeholder: 'Passphrase (8 or more characters)' }), pass2 = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', 'aria-label': 'Repeat passphrase', placeholder: 'Repeat passphrase' });
+  const secretErr = h('p', { class: 'help is-error', role: 'alert', 'aria-live': 'polite' });
+  const secretFields = h('div', { class: 'ex-secret-fields', hidden: true }, pass1, pass2, secretErr, h('p', { class: 'help', text: 'The file is encrypted on this device. Linkivo cannot recover a lost passphrase, so keep it somewhere safe.' }));
+  const secretBox = h('div', { class: 'ex-secret', hidden: true }, h('label', { class: 'ex-toggle' }, h('input', { type: 'checkbox', on: { change: (e) => { secret.on = e.target.checked; secretFields.hidden = !secret.on; secretErr.textContent = ''; if (secret.on) pass1.focus(); } } }), h('span', { text: 'Protect with a passphrase' })), secretFields);
+  const wipeSecret = () => { pass1.value = ''; pass2.value = ''; };
   const folderBox = h('div', { class: 'ex-folders', role: 'group', 'aria-label': 'Folders to export', hidden: allFolders.length < 2 });
   const paintScope = () => scopeRow.replaceChildren(h('span', { class: 'ex-chip' }, icon('folder', { size: 16 }), plural(folders.length, 'folder')), h('span', { class: 'ex-chip' }, icon('link', { size: 16 }), plural(links.length, 'link')));
   /** Pure-ish: every folder selected = the whole library; fewer = just those folders. */
@@ -115,6 +124,7 @@ export async function openExport({ engine, scope = { type: 'all' }, title = 'Exp
   }
   function paint() {
     const f = cur(); opts = fmtId === NATIVE_ID ? {} : defaultOptions(f, saved()[fmtId] || {});
+    secretBox.hidden = fmtId !== NATIVE_ID;
     nativeTile.setAttribute('aria-checked', String(fmtId === NATIVE_ID)); nativeTile.classList.toggle('is-on', fmtId === NATIVE_ID);
     grid.replaceChildren(...FORMATS.map((x) => h('button', { type: 'button', class: ['ex-fmt', x.id === fmtId && 'is-on'], role: 'radio', 'aria-checked': String(x.id === fmtId), 'data-tip': x.desc || x.label, on: { click: () => pick(x.id) } }, icon(iconOf(x), { size: 22 }), h('span', { text: x.label }))));
     const groups = new Map();
@@ -127,15 +137,20 @@ export async function openExport({ engine, scope = { type: 'all' }, title = 'Exp
     preview();
   }
   go.addEventListener('click', async () => {
+    if (fmtId === NATIVE_ID && secret.on) {
+      const bad = passphraseProblem(pass1.value) || (pass1.value !== pass2.value ? 'The two passphrases are not the same.' : '');
+      if (bad) { secretErr.textContent = bad; return; }
+    }
     go.disabled = true; go.textContent = 'Preparing...';
     try {
-      const r = await runExport({ engine, scope, formatId: fmtId, options: { ...opts, fileName: fileName.trim() || undefined }, app: appInfo.version });
-      downloadBlob(r.blob, r.name); await logActivity(engine, 'export', `${r.count} links as ${fmtId}`);
-      toast(`Exported ${plural(r.count, 'link')} (${formatBytes(r.size)}).`); sheet.close();
+      const r = await runExport({ engine, scope, formatId: fmtId, options: { ...opts, fileName: fileName.trim() || undefined, passphrase: fmtId === NATIVE_ID && secret.on ? pass1.value : undefined }, app: appInfo.version });
+      downloadBlob(r.blob, r.name); await logActivity(engine, 'export', `${r.count} links as ${fmtId}${r.encrypted ? ' (protected)' : ''}`);
+      if (fmtId === NATIVE_ID) markBackupDone();   // v2.5.3: the backup reminder counts from here
+      toast(`Exported ${plural(r.count, 'link')} (${formatBytes(r.size)}).`); wipeSecret(); sheet.close();
     } catch (e) { toast('The export failed. Try another format.', { type: 'error' }); go.disabled = false; go.textContent = `Export ${plural(links.length, 'link')}`; }
   });
-  const body = h('div', { class: 'form ex' }, scopeRow, folderBox, nativeTile, grid, previewBox, optsBox, h('div', { class: 'imp-foot' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet.close() } }, 'Cancel'), go));
-  const sheet = openSheet({ title, wide: true, body, actions: [] });
+  const body = h('div', { class: 'form ex' }, scopeRow, folderBox, nativeTile, grid, previewBox, secretBox, optsBox, h('div', { class: 'imp-foot' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet.close() } }, 'Cancel'), go));
+  const sheet = openSheet({ title, wide: true, body, actions: [], onClose: wipeSecret });
   paintScope(); if (allFolders.length > 1) paintFolders();
   paint();
 }

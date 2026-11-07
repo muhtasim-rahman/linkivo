@@ -88,15 +88,15 @@
 
 /* ---- v2.3.2: admin badge. <html data-admin> is set by core/admin.js for accounts listed in `admins`. ---- */
 .avatar { position: relative; overflow: visible; }
-.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 18px; height: 18px; overflow: visible; border-radius: 50%; place-items: center; background: var(--admin-badge-bg, var(--accent)); color: var(--admin-badge-fg, var(--accent-fg)); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
-.avatar.is-lg .avatar-admin { width: 22px; height: 22px; }
+.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 16px; height: 16px; overflow: visible; border-radius: 50%; place-items: center; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
+.avatar.is-lg .avatar-admin { width: 20px; height: 20px; }
 html[data-admin='true'] .avatar .avatar-admin { display: grid; }
 .admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text);   /* v2.5.0: the word badge always follows the accent */ font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
 /* v2.5.2 (owner 6): the shield badge: round, primary colour, the same as the avatar shield; it takes the admin badge colour when one was chosen */
-.admin-chip.is-shield { width: 20px; height: 20px; padding: 0; border-radius: 50%; background: var(--admin-badge-bg, var(--accent)); color: var(--admin-badge-fg, var(--accent-fg)); }
+.admin-chip.is-shield { width: 16px; height: 16px; margin-left: 6px; padding: 0; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }   /* v2.5.3 (owner): small and calm, in the accent colour (was a solid 20px disc) */
 html[data-admin='true'] .admin-chip.is-shield { display: inline-grid; place-items: center; }
-.admin-chip.is-shield svg { display: block; }
+.admin-chip.is-shield svg { display: block; width: 10px; height: 10px; }
 
 /* ---- v2.4.1: Profile sections and the recently opened list ---- */
 .pf-sec { margin: var(--s5) 0 var(--s2); font: 650 var(--fs-sm) / 1.2 var(--font-brand); letter-spacing: 0.02em; text-transform: uppercase; color: var(--sub); }
@@ -154,3 +154,36 @@ html[data-theme='dark'] .sc-card { --sc-blue: #60a5fa; background: color-mix(in 
 .dc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s3); } .dc-card { display: grid; gap: 6px; padding: var(--s4); border-radius: 14px; background: var(--surface-2); color: var(--text); }
 .dc-card-t { font-weight: 600; } .dc-card-s { color: var(--sub); font-size: 0.9rem; line-height: 1.45; }
 .dc-h { margin: var(--s5) 0 var(--s2); font-size: 1.05rem; } .dc-items { margin: 0; padding-left: 1.2em; line-height: 1.7; } .dc-pager { display: flex; justify-content: space-between; gap: var(--s3); margin-top: var(--s6, 32px); flex-wrap: wrap; }
+
+/* v2.5.3: the Locked folders card (Menu and Settings top) */
+.vault-card-box[hidden] { display: none; }
+button.vault-card { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.vault-card .row-main { min-width: 0; }
+.vault-card .btn { flex: none; margin-left: auto; }
+
+/* v2.5.3: Background jobs panel and its header button */
+.jobs-btn { position: relative; }
+.jobs-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.jobs-panel { display: grid; gap: var(--s4); padding-bottom: var(--s4); }
+.jobs-h { margin: 0 0 var(--s2); font: 650 var(--fs-xs) var(--font-brand); color: var(--sub); text-transform: uppercase; letter-spacing: .04em; }
+.jobs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.jobs-row { display: grid; gap: var(--s2); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
+.jobs-head { display: flex; justify-content: space-between; gap: var(--s3); align-items: baseline; }
+.jobs-st { color: var(--sub); font-size: var(--fs-sm); white-space: nowrap; }
+.jobs-row.is-failed .jobs-st { color: var(--danger); }
+.jobs-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.jobs-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 240ms var(--ease); }
+.jobs-bar i.is-busy { animation: jobs-slide 1.2s ease-in-out infinite; width: 40% !important; }
+.jobs-err { margin: 0; color: var(--danger); font-size: var(--fs-sm); }
+.jobs-sub { margin: 0; color: var(--sub); font-size: var(--fs-sm); }
+.jobs-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.jobs-empty { display: grid; justify-items: center; gap: var(--s2); padding: var(--s8) var(--s4); text-align: center; color: var(--sub); }
+@keyframes jobs-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .jobs-bar i.is-busy { animation: none; width: 100% !important; opacity: .5; } }
+
+/* v2.5.3: documentation banners. The artwork is light, so it sits in a framed card: in the dark theme the frame (border, soft glow) separates it from the page instead of a white block floating on black. */
+.dc-fig { margin: 0 0 var(--s5); border: 1px solid var(--line); border-radius: var(--r-group); overflow: hidden; background: #fff; box-shadow: var(--shadow-1, 0 1px 3px rgba(12, 22, 41, .08)); }
+.dc-fig img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; }
+html[data-theme="dark"] .dc-fig { box-shadow: 0 0 0 1px rgba(255, 255, 255, .04), 0 10px 30px rgba(0, 0, 0, .45); }
+html[data-theme="dark"] .dc-fig img { filter: brightness(.94) saturate(.96); }
+@media (max-width: 560px) { .dc-fig { margin-inline: calc(var(--s3) * -1); border-radius: var(--r-card, 12px); border-inline: 0; } }

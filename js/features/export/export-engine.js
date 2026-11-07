@@ -9,6 +9,7 @@
  *      previewExport({ engine, scope, formatId, options }) -> Promise<string>      NATIVE_ID
  */
 import { buildBackup } from './native-format.js';
+import { encryptBackup } from './backup-crypto.js';
 import { getFormat } from './formats/index.js';
 import { fileName } from './formats/common.js';
 
@@ -16,9 +17,9 @@ export const NATIVE_ID = 'linkivo';
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
 export function collect(engine, scope = { type: 'all' }) {
-  const folders = engine.listFolders();
+  const folders = engine.listFolders().filter((f) => !f.lk);   // v2.5.3: locked folders are never written into a file (a file would be an unlocked copy)
   const order = new Map(folders.map((f, i) => [f.id, i]));
-  let links = engine.listLinks();
+  let links = engine.listLinks().filter((l) => !l.lk);
   let label = 'library';
   if (scope.type === 'folders') { const set = new Set(scope.fids || []); links = links.filter((l) => set.has(l.fid)); label = set.size === 1 ? slug(engine.getFolder([...set][0])?.name) || 'folder' : 'folders'; }
   else if (scope.type === 'links') { const set = new Set(scope.lids || []); links = links.filter((l) => set.has(l.id)); label = 'selected'; }
@@ -35,6 +36,11 @@ export async function runExport({ engine, scope, formatId, options = {}, app = '
   const { folders, links, items, label } = collect(engine, scope);
   if (formatId === NATIVE_ID) {
     const backup = buildBackup({ folders, links, source: engine.kind === 'guest' ? 'guest' : 'account', app, now });
+    // v2.5.3: with a passphrase the whole backup text is encrypted in the browser (backup-crypto.js); the file then ends in .linkivo.enc.json
+    if (options.passphrase) {
+      const blob = new Blob([JSON.stringify(await encryptBackup(JSON.stringify(backup), options.passphrase, { now }))], { type: 'application/json' });
+      return { blob, name: fileName(options.fileName, label, 'linkivo.enc.json', now), count: links.length, size: blob.size, folders: folders.length, encrypted: true };
+    }
     const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
     return { blob, name: fileName(options.fileName, label, 'linkivo.json', now), count: links.length, size: blob.size, folders: folders.length };
   }

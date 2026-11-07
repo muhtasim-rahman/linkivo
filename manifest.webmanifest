@@ -83,5 +83,21 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "screenshots": [
+    {
+      "src": "/assets/showcase/library.webp",
+      "sizes": "1200x630",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Your library: folders, search and links in one place"
+    },
+    {
+      "src": "/assets/showcase/overview.webp",
+      "sizes": "1200x630",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Smart import, global search, Random Discover and locked folders"
+    }
+  ]
 }

@@ -111,3 +111,10 @@ Not automated, owner must run: Back on a real phone (folder filters and scroll a
 Automated: Auto lock choices and default, Worker `away` validation and session length, re-delete block, PIN pad keyboard rules, one-popup create PIN, guest-to-account pipeline (in-memory engines), source checks for the fixed bugs.
 Checked by hand in headless Chromium (guest mode): lock on, Lock now, unlock keeps URL and scroll, change PIN, auto lock on leaving, mixed mouse and keyboard PIN entry, Lock icon on 390 px and sidebar row on 1280 px.
 Owner must run: account mode (turn lock on and off, change PIN on two devices, Forgot PIN with the password, delete then recover then try to delete again, guest sign-in then Move to my account with a guest PIN and without), light theme on the lock screen and the Forgot popup, Settings install card on a PC, sidebar as admin, Random preview then Back, folder list then preview then Back.
+
+## v2.5.3 tests (five files, 440 tests in the whole suite)
+- `v253-vault.test.mjs` (16): lock and unlock moves, nothing in the device cache or normal tree, detach forgets, edits go to `vault/`, cross-tree moves are ONE update, reconcile, memory-only page data, failure tells the app once, history, job pause.
+- `v253-ui.test.mjs` (19): removed files, Security popups and the 30 second gate, Testing admin only, badge and fade CSS, thumbnails, refresh, jobs panel hand-over, backup reminder, passphrase prompt, SEO (home meta, static pages equal browser meta, sitemap, robots, hosting).
+- `v253-backup.test.mjs` (8): AES-GCM round trip, tamper and weak-header refusal, export with passphrase, PDF structure, writer helpers. `v253-rules.test.mjs` (4). `v253-perf.test.mjs` (6): 10,000 links, numbers are printed.
+- Not provable here (owner checklist in the chat summary): real Firebase and Worker, real phone, Google sign-in with the popups, the PDF canvas path for Bangla, Lighthouse.
+

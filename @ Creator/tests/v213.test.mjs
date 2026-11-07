@@ -245,7 +245,7 @@ test('worker client: weak Worker results are rescued, strong ones are not, faile
 });
 
 // ---------------------------------------------------------------- router: pull-to-refresh hook
-test('router: refreshCurrent only works on flagged routes and calls the page refresh() without re-mounting', async () => {
+test('router: refreshCurrent only works on flagged routes, calls the page refresh() and (v2.5.3) rebuilds the page like a reload', async () => {
   const { createRouter } = await imp('js/core/router.js');
   const { setSession, getSession } = await imp('js/core/session.js');
   setSession({ mode: 'guest', user: null, status: 'active', ready: true });
@@ -262,8 +262,8 @@ test('router: refreshCurrent only works on flagged routes and calls the page ref
   await router.start();
   await router.navigate('/folder/abc'); await tick(5);
   assert.equal(router.canRefresh(), true); assert.equal(await router.refreshCurrent(), 'refreshed'); assert.ok(log.includes('refresh:folder:abc'));
-  assert.equal(log.filter((l) => l === 'mount:folder').length, 1, 'refresh does not re-mount the page');
-  await router.navigate('/library'); await tick(5); assert.equal(router.canRefresh(), true); assert.equal(await router.refreshCurrent(), 'nothing', 'layout only: no refresh() yet');
+  assert.equal(log.filter((l) => l === 'mount:folder').length, 2, 'v2.5.3: the page is mounted again from the current data');
+  await router.navigate('/library'); await tick(5); assert.equal(router.canRefresh(), true); assert.equal(await router.refreshCurrent(), 'refreshed', 'v2.5.3: a page without its own refresh() is rebuilt too');
   await router.navigate('/settings'); await tick(5); assert.equal(router.canRefresh(), false); assert.equal(await router.refreshCurrent(), 'unsupported', 'Settings does not take part even if the module has refresh()');
   assert.ok(!log.includes('refresh:settings:'));
   router.destroy();

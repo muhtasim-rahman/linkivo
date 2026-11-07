@@ -87,7 +87,7 @@ test('profile helpers: birthday text, readable badge colour, ring and badge vari
 test('one ring and one admin shield colour in the CSS; the Edit popup has the live preview and no nested label fields; pronouns are gone from the card', () => {
   const nav = read('css/components/nav.css'), pages = read('css/pages/pages.css'), prof = read('css/pages/profile.css'), edit = read('js/features/profile/profile-edit.js'), page = read('js/features/shell/pages/profile-page.js');
   assert.match(nav, /background: var\(--avatar-ring/); assert.doesNotMatch(prof, /outline: 3px solid var\(--ring/);
-  assert.match(pages, /\.avatar-admin \{[^}]*var\(--admin-badge-bg/); assert.match(pages, /\.admin-chip \{[^}]*background: var\(--accent-soft\)/);
+  assert.match(pages, /\.avatar-admin \{[^}]*var\(--accent\)/); assert.match(pages, /\.admin-chip \{[^}]*background: var\(--accent-soft\)/);
   assert.match(edit, /pe-prev/); assert.match(edit, /paintPreview/); assert.match(edit, /class: 'pe-f' \}, h\('label', \{ class: 'pe-l', for: id/); assert.doesNotMatch(edit, /h\('label', \{ class: 'pe-f' \}/);
   assert.doesNotMatch(page, /pronouns/); assert.match(page, /formatBirthday/); assert.match(page, /See more/);
   const order = ['pf2-bio', 'pf2-site', 'infoList()', 'uidBtn'].map((k) => page.indexOf(k, page.indexOf('pf2-bio is-empty')));

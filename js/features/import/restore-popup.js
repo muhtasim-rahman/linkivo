@@ -11,7 +11,7 @@ import { openSheet } from '../../ui/sheet.js';
 import { toast } from '../../ui/toast.js';
 import { loadCss } from '../../core/css-loader.js';
 import { getQueue } from '../../core/app-data.js';
-import { readBackupText } from './native-import.js';
+import { readBackupAny } from './backup-open.js';
 import { createBackupPanel, runRestore } from './import-backup.js';
 import { openJobDetails } from './import-progress.js';
 
@@ -36,7 +36,8 @@ export async function openRestorePopup({ engine, router = null, file = null }) {
       note.textContent = ''; backup = null; panel.hide(); go.disabled = true;
       if (f.size > 200e6) { note.textContent = 'This file is too large to be a Linkivo backup.'; return; }
       try {
-        const r = readBackupText(await f.text());
+        const r = await readBackupAny(await f.text());
+        if (r.cancelled) return;
         if (!r.ok) { note.textContent = /JSON/.test(r.error || '') ? 'This is not a Linkivo backup. To import other files, use Import links.' : r.error; return; }
         backup = r.backup; panel.show(f.name, backup); go.disabled = false; drop.hidden = true;
       } catch { note.textContent = 'The file could not be read.'; }

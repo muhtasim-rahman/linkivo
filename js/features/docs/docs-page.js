@@ -2,6 +2,7 @@
  * Linkivo — js/features/docs/docs-page.js  (v2.5.2)
  * Purpose: /docs (topic index) and /docs/:topic (one article with the topic list beside it on wide screens and Previous / Next at the end). Public, indexable, one h1.
  * Page module: mount(container, ctx)
+ * UNUSED since v2.5.4 (owner): Documentation, Privacy and Terms are separate static pages now (js/features/public/public-render.js, written by gen-seo.mjs). The router no longer renders this page: a link to it opens the static page in a new tab. Kept, not deleted, so the older tests and the history stay readable; safe to remove in a later cleanup.
  */
 import { applyPageMeta, pageMeta } from '../../core/page-meta.js';
 import { topicMeta, topicBanner } from '../../core/seo-pages.js';

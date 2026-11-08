@@ -14,10 +14,10 @@ const { buildPinPad } = await import('../../js/features/lock/pin-pad.js');
 const { prefs } = await import('../../js/core/local-prefs.js');
 
 // ---- Auto lock: one setting ---------------------------------------------------------------------------------------------------------
-test('auto lock: the choices, the default of 1 minute, and what a guest stores', async () => {
-  assert.deepEqual(L.AWAY_CHOICES, [0, 30, 60, 300, 600, 900, 1800, -1]); assert.equal(L.DEFAULT_AWAY, 60);
-  await L.loadLock({ mode: 'guest', user: null, status: 'active' }); assert.equal(L.getLock().away, 60);
-  await L.enableLock('4821'); assert.equal(prefs.get('guest.lock').away, 60);
+test('auto lock: the choices, the default of 2 minutes (v2.5.4), and what a guest stores', async () => {
+  assert.deepEqual(L.AWAY_CHOICES, [0, 30, 60, 120, 300, 600, 900, 1800, -1]); assert.equal(L.DEFAULT_AWAY, 120);
+  await L.loadLock({ mode: 'guest', user: null, status: 'active' }); assert.equal(L.getLock().away, 120);
+  await L.enableLock('4821'); assert.equal(prefs.get('guest.lock').away, 120);
   await L.setAway(-1); assert.equal(L.getLock().away, -1); await L.setAway(0); assert.equal(prefs.get('guest.lock').away, 0);
   await assert.rejects(L.setAway(45), { code: 'bad_request' });
   L.eraseGuestLock(); L.resetLock();

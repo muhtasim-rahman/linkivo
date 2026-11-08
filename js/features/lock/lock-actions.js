@@ -37,7 +37,7 @@ export async function enableLockFlow() {
 
 export async function disableLockFlow() {
   const flow = await openPinFlow({ title: 'Turn off app lock' });
-  const pin = await stagePad(flow, { text: 'Enter your PIN to turn the lock off.', check: async (p) => { await verifyPin(p); return ''; } }); if (!pin) return false;
+  const pin = await stagePad(flow, { text: 'Enter your PIN to turn the lock off.', known: true, check: async (p) => { await verifyPin(p); return ''; } }); if (!pin) return false;
   flow.working('Turning off the lock...');
   try {
     await teardownData();
@@ -49,7 +49,7 @@ export async function disableLockFlow() {
 
 export async function changePinFlow() {
   const flow = await openPinFlow({ title: 'Change PIN' });
-  const current = await stagePad(flow, { text: 'Enter your current PIN.', check: async (p) => { await verifyPin(p); return ''; } }); if (!current) return false;
+  const current = await stagePad(flow, { text: 'Enter your current PIN.', known: true, check: async (p) => { await verifyPin(p); return ''; } }); if (!current) return false;
   flow.setTitle('Choose a new PIN');
   const next = await stageCreate(flow); if (!next) return false;
   flow.working('Changing your PIN...');

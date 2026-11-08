@@ -20,6 +20,7 @@ import { withTimeout } from '../core/utils.js';
 
 const TREES = ['folders', 'links'];
 const RETRY_MS = 30000;
+const SEND_WAIT_MS = 2500;   // v2.5.4: how long one write waits for the server before the action carries on (see _persistChunk)
 
 export class CloudEngine extends Engine {
   constructor({ uid, adapter, db, sleep }) {
@@ -102,7 +103,9 @@ export class CloudEngine extends Engine {
     const item = { id: `${String(this.now()).padStart(14, '0')}-${++this.seq}`, updates };
     await this.db.put('outbox', item); // durable before the network is touched
     this.pending++;
-    await this._sendOutboxItem(item);
+    // v2.5.4 (owner: offline, only some actions worked): the change is already safe on this device (cache and outbox). With the data connection on but no internet the send never answers, and every
+    // action that awaited it hung. Wait a moment for the answer, then let the action finish; the send goes on in the background and the retry timer covers a failure.
+    await new Promise((resolve) => { const t = setTimeout(resolve, SEND_WAIT_MS); if (t && t.unref) t.unref(); this._sendOutboxItem(item).catch(() => {}).finally(() => { clearTimeout(t); resolve(); }); });
   }
 
   async _sendVault(updates) {

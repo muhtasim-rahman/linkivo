@@ -9,3 +9,10 @@
 @keyframes ub-open { from { transform: translateY(0) rotate(0); } to { transform: translateY(-5px) rotate(-28deg); } }
 @keyframes ub-ring { from { transform: scale(.7); opacity: .55; } to { transform: scale(2.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ub-svg, .ub-shackle, .ub-ring { animation: none; } .ub-shackle { transform: translateY(-5px) rotate(-28deg); } .ub-ring { display: none; } }
+
+/* v2.5.4: inside the search placeholder: the slot keeps its size, its own icon steps aside, the padlock and the rings fill the slot area */
+.sp-empty-ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; }
+.sp-empty-ic.is-unlocking > svg:not(.ub-svg) { opacity: 0; transition: opacity .2s ease; }
+.ub.is-inline { position: absolute; inset: -40px; z-index: 1; }
+.ub.is-inline .ub-svg { width: 64px; height: 64px; }
+.ub.is-inline .ub-ring { width: 64px; height: 64px; }

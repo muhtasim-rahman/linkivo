@@ -15,8 +15,8 @@ import { VAULT_PREFIXES } from '../../core/vault.js';
 import { openPinFlow, stagePad, stageCreate, stageForm } from '../lock/pin-flow.js';
 import { confirmItsYou } from '../lock/forgot-pin.js';
 
-/** What the code LOOKS like (owner, v2.5.3: shown as @000000). It is only a shape example: choose your own six digits. */
-export const codeExample = (prefix = '@') => `${prefix}000000`;
+/** What the code LOOKS like (owner, v2.5.3: shown as %000000 since v2.5.4). It is only a shape example: choose your own six digits. */
+export const codeExample = (prefix = '%') => `${prefix}000000`;
 const message = (e) => {
   if (e && e.code === 'vault_not_empty') return 'Move every locked folder out first, then turn locked folders off.';
   if (e && e.code === 'reauth_required') return 'Please try again: confirm it is you once more.';
@@ -29,11 +29,11 @@ export async function setupVaultFlow() {
   const flow = await openPinFlow({ title: 'Set up folder lock' });
   let current;
   if (getLock().hasPin) {
-    current = await stagePad(flow, { text: 'Step 1 of 3. Enter your app PIN to continue.', check: async (p) => { await verifyPin(p); return ''; } });
+    current = await stagePad(flow, { text: 'Step 1 of 3. Enter your app PIN to continue.', known: true, check: async (p) => { await verifyPin(p); return ''; } });
     if (!current) return false;
   }
   flow.setTitle('Choose a symbol');
-  let prefix = getLock().vaultPrefix || '@';
+  let prefix = getLock().vaultPrefix || '%';
   const chips = h('div', { class: 'seg vault-prefix', role: 'radiogroup', 'aria-label': 'Code symbol' }, VAULT_PREFIXES.map((p) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(p === prefix), 'aria-label': `Symbol ${p}`, on: { click: () => { prefix = p; for (const b of chips.children) b.setAttribute('aria-checked', String(b.textContent === p)); ex.textContent = codeExample(p); } } }, p)));
   const ex = h('strong', { class: 'vault-ex', text: codeExample(prefix) });
   const go = await stageForm(flow, { text: 'Step 2 of 3. The code starts with a symbol. You will type the symbol and your six digits into the search box to unlock, for example:', kids: [h('p', { class: 'vault-ex-wrap' }, ex), chips], go: { label: 'Continue', onClick: () => true } });

@@ -7,7 +7,7 @@
  *          when the History page opens. Everything runs in the background: a failure here never breaks opening a link.
  * API: KEEP_OPTIONS  keepMs(value, isAdmin) -> ms | Infinity | 0 (0 = history is off)   MAX_ENTRIES
  *      createHistory({ db, adapter?, uid?, now, getKeep, getWhere, isAdmin }) -> service:
- *        record({ link, src }) -> Promise<entry|null>     list() -> entry[] (newest first)     load() -> Promise<void> (re-reads the active store)
+ *        record({ link, src }) -> Promise<entry|null>   (v2.5.4: a locked link is kept in memory only)     wipeLocked()     list() -> entry[] (newest first)     load() -> Promise<void> (re-reads the active store)
  *        remove(ids) -> Promise<void>     clear() -> Promise<void>     prune() -> Promise<number>     subscribe(fn) -> off     where() -> 'local'|'account'
  * Rules for the schema live in engine/schema.js (HISTORY) and the database rules (history/$uid/$hid), both from v2.1.0.
  */
@@ -42,6 +42,7 @@ const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
 export function createHistory({ db, adapter = null, uid = null, now = () => Date.now(), getKeep = () => '7d', getWhere = () => 'local', isAdmin = () => false }) {
   const subs = new Set();
   let items = [];     // newest first, the ACTIVE store only
+  let vitems = [];    // v2.5.4 (owner): opens of LOCKED links, kept in MEMORY only while the locked folders are unlocked (never written anywhere, wiped when they lock), so History shows them after an unlock
   let loaded = false;
   const where = () => (adapter && uid && getWhere() === 'account' ? 'account' : 'local');
   const cap = () => (isAdmin() ? MAX_ENTRIES.admin : MAX_ENTRIES.user);
@@ -86,7 +87,13 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
 
   async function record({ link, src }) {
     try {
-      if (!link || !link.id || link.lk || keepMs(getKeep(), isAdmin()) === 0) return null;   // history is off; v2.5.3: a locked link leaves no trace
+      if (!link || !link.id || keepMs(getKeep(), isAdmin()) === 0) return null;   // history is off
+      if (link.lk) {   // v2.5.4: a locked link is listed in memory only, while the vault is open; nothing is stored, so a locked vault leaves no trace
+        const tv = now(), lastV = vitems.find((e) => e.lid === link.id && e.src === src);
+        if (lastV && tv - lastV.ts < REPEAT_MS) return null;
+        const ev = { id: newId(tv), lid: clip(link.id, HISTORY.fields.lid.max), url: clip(link.url, 2048), title: clip(link.title, 300), host: clip(link.host, 253), fid: clip(link.fid, 40), src: clip(src, 10), ts: tv, lk: true };
+        vitems.unshift(ev); emit(); return ev;
+      }
       if (!loaded) await load();
       const t = now();
       const last = items.find((e) => e.lid === link.id && e.src === src);
@@ -101,12 +108,14 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
 
   async function remove(ids) {
     const set = new Set(ids); if (!set.size) return;
+    vitems = vitems.filter((e) => !set.has(e.id));
     items = items.filter((e) => !set.has(e.id)); emit();
     await persist({ del: [...set] });
   }
   /** v2.5.3: a link was locked: every entry about it goes, from the active list AND from this device's copy (the other store may hold entries too). */
   async function forgetLinks(lids) {
     const set = new Set(lids); if (!set.size) return 0;
+    vitems = vitems.filter((e) => !set.has(e.lid));
     const gone = items.filter((e) => set.has(e.lid)).map((e) => e.id);
     items = items.filter((e) => !set.has(e.lid)); emit();
     try { if (gone.length) await persist({ del: gone }); } catch (e) { log.warn('history', 'could not forget locked links', e); }
@@ -114,7 +123,7 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
     return gone.length;
   }
   async function clear() {
-    items = []; emit();
+    items = []; vitems = []; emit();
     if (where() === 'account') {
       // the rules allow writes per entry (history/<uid>/<id>), not on the whole list, so delete in rounds of the newest entries until none are left
       for (let round = 0; round < 40; round++) {
@@ -127,7 +136,9 @@ export function createHistory({ db, adapter = null, uid = null, now = () => Date
 
   return {
     where, load, prune, record, remove, clear, forgetLinks,
-    list: () => items,
+    /** v2.5.4: the locked folders were locked again: their entries leave the list (they only ever existed in memory). */
+    wipeLocked() { if (vitems.length) { vitems = []; emit(); } },
+    list: () => (vitems.length ? [...vitems, ...items].sort((a, b) => b.ts - a.ts) : items),
     isLoaded: () => loaded,
     subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
   };

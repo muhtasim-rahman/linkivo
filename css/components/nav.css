@@ -85,9 +85,13 @@
 .pf-more[aria-expanded='true'] { background: var(--accent-soft); color: var(--text); }
 @media (hover: hover) { .pf-more:hover { background: var(--accent-soft); color: var(--text); } }
 .avatar { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; padding: 2px; border-radius: 50%; background: var(--avatar-ring, linear-gradient(135deg, var(--brand-a), var(--brand-b))); }   /* v2.5.0: THE one ring around a photo; --avatar-ring is the person's own colour (applyProfileLook) */
-.avatar span { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); font: 700 14px / 1 var(--font-brand); color: var(--text); }
+.avatar > span:not(.avatar-admin) { position: relative; overflow: hidden; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--surface); font: 700 14px / 1 var(--font-brand); color: var(--text); }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.avatar.is-lg { width: 60px; height: 60px; padding: 3px; } .avatar.is-lg span { font-size: 22px; }
+.avatar.is-lg { width: 60px; height: 60px; padding: 3px; } .avatar.is-lg > span:not(.avatar-admin) { font-size: 22px; }
+/* v2.5.4 (owner): the admin shield on the avatar. It lives HERE (not in pages.css) so it is styled on every page; it takes the colour chosen in Edit profile (--admin-badge-bg / -fg, set by applyProfileLook). */
+.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 16px; height: 16px; overflow: visible; border-radius: 50%; place-items: center; background: var(--admin-badge-bg, var(--accent)); color: var(--admin-badge-fg, var(--accent-fg)); box-shadow: 0 0 0 2px var(--surface); }
+.avatar.is-lg .avatar-admin { width: 20px; height: 20px; }
+html[data-admin='true'] .avatar .avatar-admin { display: grid; }
 .pf-text { min-width: 0; display: grid; line-height: 1.25; transition: opacity 140ms var(--ease); }
 .pf-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-mail { color: var(--sub); font-size: var(--fs-xs); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

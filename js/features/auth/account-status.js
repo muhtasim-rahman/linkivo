@@ -12,6 +12,11 @@ import { withTimeout } from '../../core/utils.js';
  * made while offline never settles. Now: offline -> 'active' at once (the data rules still protect the data); online -> the read has a 4 s limit and the
  * lastLogin write is sent without waiting for it.
  */
+/** v2.5.4: accounts whose profile record was created during THIS start, i.e. a brand-new sign-up. The welcome flow (profile, then the intro video) reads and clears it. */
+const fresh = new Set();
+export const isNewAccount = (uid) => fresh.has(uid);
+export const clearNewAccount = (uid) => { fresh.delete(uid); };
+
 export async function loadAccountStatus(fb, user) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'active';
   const d = fb.mods.database;
@@ -22,7 +27,7 @@ export async function loadAccountStatus(fb, user) {
     if (profile && profile.status === 'deleted') return 'deleted';
     const now = Date.now();
     const updates = { [`${base}/lastLogin`]: now };
-    if (!profile || !profile.createdAt) { updates[`${base}/createdAt`] = now; updates[`${base}/name`] = String(user.name || 'Account').slice(0, 60); }
+    if (!profile || !profile.createdAt) { fresh.add(user.uid); updates[`${base}/createdAt`] = now; updates[`${base}/name`] = String(user.name || 'Account').slice(0, 60); }
     d.update(d.ref(fb.db), updates).catch((e) => log.warn('account', 'profile write failed', { code: e && e.code }));   // not awaited: it settles only when the server answers
     return 'active';
   } catch (e) {

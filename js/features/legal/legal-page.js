@@ -3,6 +3,7 @@
  * Purpose: /terms and /privacy, simple and honest. Public pages (indexable): one h1, short sections. The text describes what the app really does (guest mode stays on the device,
  *          accounts use Firebase, the Worker fetches page data and checks PINs, nothing is sold, no ads, no tracking scripts).
  * Page module: mount(container, ctx)
+ * UNUSED since v2.5.4 (owner): Documentation, Privacy and Terms are separate static pages now (js/features/public/public-render.js, written by gen-seo.mjs). The router no longer renders this page: a link to it opens the static page in a new tab. Kept, not deleted, so the older tests and the history stay readable; safe to remove in a later cleanup.
  */
 import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';

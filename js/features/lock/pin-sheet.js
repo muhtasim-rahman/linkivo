@@ -3,14 +3,14 @@
  * Purpose: popups that ask for a PIN. askPin: "enter your PIN" (the sensitive-action gate, turning the lock off, changing the PIN, deleting). createPin: choose a new PIN twice
  *          (a PIN that is all the same digit or a straight run is refused). Both return the PIN (or null when cancelled) and never keep it; checking it is the caller's job
  *          through core/lock.js, so the wrong-PIN and lockout messages come from one place (describeError).
- * API: askPin({ title, text, verify(pin) -> Promise }) -> Promise<string|null>      createPin({ title, text }) -> Promise<string|null>      describeError(e) -> { text, wait }
+ * API: askPin({ title, text, verify(pin) -> Promise, forgot = true }) -> Promise<string|null|PIN_RESET>      createPin({ title, text }) -> Promise<string|null>      describeError(e) -> { text, wait }
  */
 import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
 import { openSheet } from '../../ui/sheet.js';
 import { buildPinPad, isWeakPin } from './pin-pad.js';
 import { prefs } from '../../core/local-prefs.js';
-import { getPinLen } from '../../core/lock.js';
+import { getPinLen, forgetPinLen } from '../../core/lock.js';
 
 /** v2.5.2 (owner 7): Settings > Security > "PIN gate": 'auto' (default) checks as soon as the PIN length is reached, 'submit' waits for the Submit key. Only the gate popups, never the lock screen. */
 export const GATE_MODE_KEY = 'lock.gateMode';
@@ -29,23 +29,33 @@ export function describeError(e) {
   return { text: 'Something went wrong. Try again.', wait: 0 };
 }
 
-export async function askPin({ title = 'Enter your PIN', text = '', verify = null } = {}) {
+/** v2.5.4: askPin resolves with this value when the person used "Forgot PIN?" and finished it (the PIN was reset or, for a guest, erased). The caller treats it as "verified" and must not use it as a PIN. */
+export const PIN_RESET = '\u0000pin-reset';
+
+export async function askPin({ title = 'Enter your PIN', text = '', verify = null, forgot = true } = {}) {
   await loadCss('/css/pages/lock.css');
   return new Promise((resolve) => {
-    let sheet = null, done = false;
+    let sheet = null, done = false, leaving = false;
     const finish = (v) => { if (done) return; done = true; resolve(v); };
     const auto = gateMode() === 'auto';
-    const pad = buildPinPad({ submitLabel: 'Continue', autoAt: auto ? getPinLen : 0, autoMax: auto, onSubmit: async (pin) => {
+    // v2.5.4 (owner): a gate for a 4 digit PIN holds 4 digits, not up to 8 (unknown on this device: 4 to 8)
+    const pad = buildPinPad({ submitLabel: 'Continue', min: () => getPinLen() || 4, max: () => getPinLen() || 8, autoAt: auto ? getPinLen : 0, autoMax: auto, onSubmit: async (pin) => {
       if (!verify) { finish(pin); sheet && sheet.close(); return; }
       try { await verify(pin); finish(pin); sheet && sheet.close(); }
-      catch (e) { const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
+      catch (e) { if (e && e.code === 'wrong_pin') forgetPinLen(); const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
     } });
-    sheet = openSheet({ title, body: h('div', { class: 'pin-sheet' }, text ? h('p', { class: 'pin-text', text }) : null, pad.el), actions: [], onClose: () => { pad.destroy(); finish(null); } });
+    // v2.5.4 (owner): every PIN gate offers "Forgot PIN?" (the lock screen already did). The gate closes first (a popup on top of a popup closed the first one in v2.4.3), then the same reset flow as on the lock screen runs.
+    const forgotBtn = verify && forgot ? h('button', { type: 'button', class: 'lock-link pin-forgot', on: { click: async () => {
+      leaving = true; sheet && sheet.close();
+      try { const { getSession } = await import('../../core/session.js'); const m = await import('./forgot-pin.js'); finish((await m.runForgotPin({ session: getSession() })) ? PIN_RESET : null); }
+      catch { finish(null); }
+    } } }, 'Forgot PIN?') : null;
+    sheet = openSheet({ title, body: h('div', { class: 'pin-sheet' }, text ? h('p', { class: 'pin-text', text }) : null, pad.el, forgotBtn), actions: [], onClose: () => { pad.destroy(); if (!leaving) finish(null); } });
     requestAnimationFrame(() => pad.focus());
   });
 }
 
-export async function createPin({ title = 'Choose a PIN', text = 'Use 4 to 8 digits. Pick something others can not guess.' } = {}) {
+export async function createPin({ title = 'Choose a PIN', text = 'Use 4 to 8 digits. Pick something others can not guess. For extra privacy and security, install Linkivo as an app and also turn on your device\'s own app lock.' } = {}) {
   await loadCss('/css/pages/lock.css');
   return new Promise((resolve) => {
     let sheet = null, first = '', done = false;

@@ -44,7 +44,7 @@ test('guest lock: change PIN, lock now, turn off, forgot = erase', async () => {
   const { oldBox, newBox } = await L.changePin('4821', '2468'); assert.ok(oldBox && newBox && oldBox.verifier !== newBox.verifier);
   await L.lockNow(); assert.equal(L.isLocked(), true); assert.equal(L.getBox(), null);
   await assert.rejects(L.unlock('4821'), { code: 'wrong_pin' }); await L.unlock('2468'); assert.equal(L.isLocked(), false);
-  assert.equal(L.getLock().away, 60, 'default 1 minute'); await L.setAway(300); assert.equal(prefs.get('guest.lock').away, 300); assert.equal(L.getLock().away, 300); await assert.rejects(L.setAway(7), { code: 'bad_request' });
+  assert.equal(L.getLock().away, 120, 'default 2 minutes (v2.5.4)'); await L.setAway(300); assert.equal(prefs.get('guest.lock').away, 300); assert.equal(L.getLock().away, 300); await assert.rejects(L.setAway(7), { code: 'bad_request' });
   const old = await L.disableLock('2468'); assert.ok(old); assert.equal(L.getLock().enabled, false); assert.equal(prefs.get('guest.lock', null), null);
   await L.enableLock('2468'); L.eraseGuestLock(); assert.equal(L.getLock().enabled, false); assert.equal(prefs.get('guest.lock', null), null);
   L.resetLock(); assert.equal(L.getLock().scope, 'none');
@@ -87,7 +87,7 @@ test('profile helpers: birthday text, readable badge colour, ring and badge vari
 test('one ring and one admin shield colour in the CSS; the Edit popup has the live preview and no nested label fields; pronouns are gone from the card', () => {
   const nav = read('css/components/nav.css'), pages = read('css/pages/pages.css'), prof = read('css/pages/profile.css'), edit = read('js/features/profile/profile-edit.js'), page = read('js/features/shell/pages/profile-page.js');
   assert.match(nav, /background: var\(--avatar-ring/); assert.doesNotMatch(prof, /outline: 3px solid var\(--ring/);
-  assert.match(pages, /\.avatar-admin \{[^}]*var\(--accent\)/); assert.match(pages, /\.admin-chip \{[^}]*background: var\(--accent-soft\)/);
+  assert.match(nav, /\.avatar \.avatar-admin \{[^}]*var\(--admin-badge-bg, var\(--accent\)\)/);   // v2.5.4: the shield rules live in nav.css and follow the chosen colour assert.match(pages, /\.admin-chip \{[^}]*background: var\(--accent-soft\)/);
   assert.match(edit, /pe-prev/); assert.match(edit, /paintPreview/); assert.match(edit, /class: 'pe-f' \}, h\('label', \{ class: 'pe-l', for: id/); assert.doesNotMatch(edit, /h\('label', \{ class: 'pe-f' \}/);
   assert.doesNotMatch(page, /pronouns/); assert.match(page, /formatBirthday/); assert.match(page, /See more/);
   const order = ['pf2-bio', 'pf2-site', 'infoList()', 'uidBtn'].map((k) => page.indexOf(k, page.indexOf('pf2-bio is-empty')));

@@ -8,7 +8,8 @@
 
 /* background: a tinted disc grows from the left ring, plus one soft static glow (no animation: a big moving gradient costs frames) */
 .sp-expand { position: absolute; inset: 0; background: var(--bg-tint); clip-path: circle(0 at 50% 50%); will-change: clip-path; }
-.sp-orb { position: absolute; left: 50%; top: 50%; width: min(110vw, 720px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 13%, transparent) 0%, transparent 66%); }
+.sp-orb { position: absolute; left: 50%; top: 50%; width: min(110vw, 720px); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, color-mix(in srgb, var(--brand-a) 13%, transparent) 0%, transparent 66%); opacity: 0; }
+/* v2.5.4 (owner): no glow under the logo at the start. It fades in WITH the background disc (splash.js), and is simply there in the finished states (short, still). */
 
 /* boot ring: shown only until the script starts the real animation. It is the same ring-and-ripple idea, so the hand-over is not a jump. */
 .sp-boot { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 3px solid var(--brand-a); opacity: 0; animation: sp-boot 1.1s ease-out infinite; }
@@ -38,6 +39,7 @@
 .splash[data-mode='short'] .sp-mask, .splash[data-mode='still'] .sp-mask { stroke-dashoffset: 0; }
 .splash[data-mode='short'] #sp-lring-g, .splash[data-mode='still'] #sp-lring-g { transform: scale(1); }
 .splash[data-mode='short'] .sp-expand, .splash[data-mode='still'] .sp-expand { clip-path: circle(150vmax at 50% 50%); }
+.splash[data-mode='short'] .sp-orb, .splash[data-mode='still'] .sp-orb { opacity: 1; }
 .splash[data-mode='short'] .splash-stage { animation: lk-fade 520ms var(--ease) both; }
 
 /* v2.2.3: short version badge at the bottom of the splash (text is set by splash.js) */

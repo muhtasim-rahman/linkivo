@@ -80,6 +80,7 @@ function runFull() {
     at(900, () => {
       play($('sp-la'), [{ transform: 'translateY(0)' }, { transform: 'translateY(4px)' }, { transform: 'translateY(-2px)' }, { transform: 'translateY(0)' }], { duration: 350, easing: 'ease-out' });
       sparkles(259, 520); sparkles(447, 520);
+      play($('sp-orb'), [{ opacity: 0 }, { opacity: 1 }], { duration: 1000, easing: 'ease-out', fill: 'forwards' });   // v2.5.4: the soft glow arrives with the background disc, not before
       return play($('sp-expand'), [{ clipPath: `circle(0px at ${cx}px ${cy}px)` }, { clipPath: `circle(150vmax at ${cx}px ${cy}px)` }], { duration: 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
     }),
     at(1120, () => draw($('sp-bar-mask'), 520, { easing: 'cubic-bezier(0.4, 0, 0.2, 1)' })),

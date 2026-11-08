@@ -51,7 +51,7 @@ function colorRow({ get, set, label }) {
   paint(); return { el: row, paint, fade: attachFade(row) };
 }
 
-export function openProfileEdit({ session, adapter, profile = {}, now = () => Date.now(), isAdmin = false, onSaved = () => {} }) {
+export function openProfileEdit({ session, adapter, profile = {}, now = () => Date.now(), isAdmin = false, onSaved = () => {}, title = 'Edit profile', skipLabel = 'Cancel', onClosed = () => {} }) {   // v2.5.4: title, skipLabel and onClosed let the welcome flow (a new account) reuse this popup as its first step
   const u = session.user, draft = {};
   for (const k of TEXT_KEYS) draft[k] = profile[k] || '';
   draft.name = profile.name || u.name || ''; draft.banner = profile.banner || BANNERS[0];
@@ -133,20 +133,20 @@ export function openProfileEdit({ session, adapter, profile = {}, now = () => Da
         h('div', { class: 'pe-two' }, field('City', 'city', { max: 60, ph: 'City' }), field('Birthday', 'birthday', { max: 10, type: 'date' })),
         field('Languages', 'languages', { max: 80, ph: 'e.g. Bangla, English' }), field('Website', 'site', { max: 200, ph: 'https://' })),
       h('p', { class: 'pe-note', text: 'Your profile details are private. Only you and the Linkivo admin can see them.' }),
-      h('div', { class: 'pe-actions' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet && sheet.requestClose() } }, 'Cancel'), save)));
+      h('div', { class: 'pe-actions' }, h('button', { type: 'button', class: 'btn', on: { click: () => sheet && sheet.requestClose() } }, skipLabel), save)));
   paintPreview(); car.mark();
   const body = h('div', null, form, cropHost);
   // v2.5.1 (owner: "closing without a change still asks"): compare with the draft as it was when the popup opened, not with the saved profile. A profile without a banner or name starts
   // with defaults in the draft, which the old comparison counted as a change.
   const base = { ...profile, ...draft };
-  sheet = openSheet({ title: 'Edit profile', body, actions: [], wide: true,
+  sheet = openSheet({ title, body, actions: [], wide: true,
     // closing with unsaved changes (X, outside click, Escape, Cancel) asks first; while the crop window is open, closing only leaves the crop
     beforeClose: async () => {
       if (crop) { const c = crop; crop = null; cropHost.hidden = true; form.hidden = false; c.cancel(); return false; }
       if (saved || busy || !hasChanges(draft, base, photoChanged())) return true;
       return confirmDialog({ title: 'Discard your changes?', message: 'You have changes that are not saved. If you close now they are lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true });
     },
-    onClose: () => { country.destroy(); car.destroy(); ring.fade.destroy(); adminColor && adminColor.fade.destroy(); } });
+    onClose: () => { country.destroy(); car.destroy(); ring.fade.destroy(); adminColor && adminColor.fade.destroy(); try { onClosed({ saved }); } catch { /* the flow goes on */ } } });
   sheet.el.classList.add('pe-sheet');   // v2.5.1: wider on a PC (profile.css)
   return sheet;
 }

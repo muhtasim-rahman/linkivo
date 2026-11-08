@@ -72,6 +72,11 @@ html[data-theme='dark'] .pf2-badge.is-verified { background: #cbd5e1; color: #11
 /* ---- data, share, log out ---- */
 .pf2-card-list { display: grid; border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); overflow: hidden; }
 .pf2-kv { display: flex; align-items: center; gap: var(--s3); min-height: 48px; padding: 0 var(--s3); color: inherit; text-decoration: none; } .pf2-kv + .pf2-kv { border-top: 1px solid var(--line); }
+/* v2.5.4 (owner): the last row of Your data is a link: no underline on hover (the global a:hover rule), a row highlight instead, like every other row */
+.pf2-kv.is-link { cursor: pointer; transition: background var(--t-micro) var(--ease); }
+.pf2-kv.is-link:focus-visible { text-decoration: none; }
+@media (hover: hover) { .pf2-kv.is-link:hover { text-decoration: none; } }
+@media (hover: hover) { .pf2-kv.is-link:hover { background: var(--accent-soft); text-decoration: none; } .pf2-kv.is-link:hover .pf2-kv-v { color: var(--text); } }
 .pf2-kv-ic { display: grid; place-items: center; color: var(--sub); } .pf2-kv-k { flex: 1; font-size: var(--fs-sm); } .pf2-kv-v { color: var(--sub); font-size: var(--fs-sm); text-align: right; display: inline-flex; }
 .pf2-invite { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
 .pf2-invite-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); } .pf2-invite-tx { flex: 1; min-width: 180px; display: grid; gap: 2px; font-size: var(--fs-sm); } .pf2-invite-tx span { color: var(--sub); }
@@ -224,3 +229,12 @@ html[data-admin='true'] .pe-prev-chip.admin-chip { display: inline-block; }
 .pe-car-nav { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--text); }
 .pe-car-nav:disabled { opacity: 0.3; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .pe-car-track, .pe-car .pe-banner { transition: none; } }
+
+/* v2.5.4: the intro video popup (welcome flow) */
+.wl { display: grid; gap: var(--s3); }
+.wl-stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 16px; background: var(--surface-2); }
+.wl-stage iframe, .wl-play, .wl-play img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: cover; }
+.wl-play { display: block; padding: 0; }
+.wl-playic { position: absolute; inset: 0; display: grid; place-items: center; }
+.wl-playic svg { width: 64px; height: 64px; padding: 18px; border-radius: 50%; background: rgba(8, 14, 28, .62); color: #fff; }
+.wl-doc { justify-self: start; font-weight: 600; }

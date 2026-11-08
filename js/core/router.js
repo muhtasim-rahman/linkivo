@@ -14,6 +14,7 @@
  * API:     compileRoutes(table) resolveGuard(route, session) createRouter(options) -> router
  *   router: start() navigate(path, {from}) back() reevaluate() suspend() refreshCurrent() canRefresh() current() destroy() on(event, fn)   events: 'route' 'mounted'
  */
+import { isPublicPath, openPublic } from './public-paths.js';
 import { resolveBack } from './back-logic.js';
 import { closeTopLayer, layerCount, resetLayers, handlePop } from './nav-stack.js';   // v2.3.1: handlePop lets Back close an open overlay first
 import { closeAllOverlays } from './overlay-registry.js';   // v2.5.2: the lock must close every popup
@@ -110,9 +111,11 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     if (c && c.unmount) { try { const r = c.unmount(); if (r && r.catch) r.catch((e) => log.warn('router', 'unmount failed', e)); } catch (e) { log.warn('router', 'unmount failed', e); } }
   }
 
-  async function go(raw, { from = null, force = false, depth = 0, pop = false, replace = false } = {}) {
+  async function go(raw, { from = null, force = false, depth = 0, pop = false, replace = false, initial = false } = {}) {
     const url = new URL(raw, location.origin);
     const path = url.pathname.replace(/\/+$/, '') || '/';
+    // v2.5.4 (owner): Documentation, Privacy and Terms are separate static pages (no lock, no splash, no sidebar). Opened from the app they get a new tab; a start ON one of them goes to the real page.
+    if (isPublicPath(path)) { if (initial) location.replace(url.pathname + url.search + url.hash); else if (!pop) openPublic(url.pathname + url.search + url.hash); return; }
     const match = compiled.match(path);
     if (!match) { log.error('router', 'no route table match', { path }); return; }
     const { route, params } = match;
@@ -178,7 +181,8 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
     const u = new URL(a.href, location.href);
     if (u.origin !== location.origin || u.pathname.startsWith('/__/')) return;
     e.preventDefault();
-    go(u.pathname + u.search, { from: current ? current.path : null, replace: a.hasAttribute('data-replace') });
+    if (isPublicPath(u.pathname)) { openPublic(u.pathname + u.search + u.hash); return; }   // v2.5.4: a new tab, the app page stays as it is
+    go(u.pathname + u.search, { from: current ? fullPath() : null, replace: a.hasAttribute('data-replace') });   // v2.5.4: from keeps the search part too (Favourites, filters), so a preview returns to exactly that page
   }
 
   const router = {
@@ -186,9 +190,9 @@ export function createRouter({ routes, container, getSession, isWide = () => fal
       document.addEventListener('click', onClick);
       window.addEventListener('popstate', onPop);
       const first = location.pathname + location.search;
-      return go(first);
+      return go(first, { initial: true });
     },
-    navigate(path, opts = {}) { return go(path, { from: current ? current.path : null, ...opts }); },
+    navigate(path, opts = {}) { return go(path, { from: current ? fullPath() : null, ...opts }); },
     back() { history.back(); },
     reevaluate(opts = {}) { return reevaluateKeeping(opts); },
     /** v2.5.0 (app lock): removes the page on screen from the DOM at once (nothing of the library may stay in it while the app is locked). The path is kept: reevaluate() after the

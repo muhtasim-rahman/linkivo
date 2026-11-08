@@ -14,10 +14,9 @@ import { loadCss } from '../../core/css-loader.js';
 import { prefs } from '../../core/local-prefs.js';
 import { getEngine } from '../../core/app-data.js';
 import { getLock } from '../../core/lock.js';
-import { vaultOn, vaultCodeMatch, getVault, subscribeVault } from '../../core/vault.js';
+import { vaultOn, vaultCodeMatch, getVault, subscribeVault, VAULT_PREFIXES } from '../../core/vault.js';
 import { tryCode } from '../vault/vault-unlock.js';
 import { playUnlockBurst } from '../../ui/unlock-burst.js';
-import { toast } from '../../ui/toast.js';
 import { plural } from '../../core/format.js';
 import { registerShortcuts } from '../../core/shortcuts.js';
 import { faviconUrl, linkTitle, safeHref, folderTile } from '../library/folder-style.js';
@@ -34,8 +33,9 @@ let lastQuery = '';   // kept while the app stays open, so Back from a result re
 const index = createIndex();
 subscribeVault((v) => { if (!v.open) index.clear(); });   // v2.5.3: links of an open vault are searchable; when it closes their words leave the index at once
 
-/** v2.5.2 (owner 8): text that LOOKS like (the start of) a vault code. It still searches like any text, but it is never remembered (history, last query), so a typed code leaves no trace. */
-const codeLike = (t) => { if (!vaultOn()) return false; const p = getLock().vaultPrefix; return t.length > 1 && t[0] === p && /^\d{1,6}$/.test(t.slice(1)); };
+/** v2.5.4 (owner): once locked folders are set up, any search text that STARTS with one of the code symbols (@ # % $ !) is never remembered (not in the recent searches, not as the last query),
+ *  whether it is a real code, a wrong code or half typed. It still searches like any text. Before this (v2.5.2) only text shaped like a code was skipped. */
+const codeLike = (t) => vaultOn() && VAULT_PREFIXES.includes(String(t ?? '').trim()[0]);
 const marked = (text, words) => highlightParts(text, words).map((p) => (p.hit ? h('mark', { text: p.text }) : p.text));
 
 export async function mount(container, ctx) {
@@ -66,6 +66,8 @@ export async function mount(container, ctx) {
       more > 0 && h('button', { type: 'button', class: 'btn btn-sm sp-more', on: { click: () => { st.grow = { kind, from: shown }; st.shown[kind] += STEP; paint(); } } }, `See more (${Math.min(STEP, more)} of ${more})`));
   }
   const li = (...kids) => h('li', null, ...kids);
+  /** The "Nothing found" placeholder. A code typed in the box shows THIS too (v2.5.4), so a screen never tells a wrong code from a search without results; `ic` is the icon slot where the unlock animation plays. */
+  const nothingFound = () => { const ic = h('div', { class: 'sp-empty-ic' }, icon('search', { size: 28 })); return { ic, el: h('div', { class: 'sp-empty' }, ic, h('strong', { text: 'Nothing found' }), h('span', { text: 'Try fewer or different words. Every word you type must appear somewhere in the link, folder, page or setting.' })) }; };
 
   const pages = appPages(visibleSections());
   function paint({ fresh = false } = {}) {
@@ -89,7 +91,7 @@ export async function mount(container, ctx) {
         h('span', { class: 'sp-t' }, h('span', { class: 'sp-name' }, marked(linkTitle(l), ws)), h('span', { class: 'sp-sub' }, marked(l.host || l.url, ws), f ? ` \u00b7 ${f.name}` : '')));
       return li(a);
     }), 'links', st.shown.links));
-    out.replaceChildren(...(nodes.length ? nodes : [h('div', { class: 'sp-empty' }, icon('search', { size: 28 }), h('strong', { text: 'Nothing found' }), h('span', { text: 'Try fewer or different words. Every word you type must appear somewhere in the link, folder, page or setting.' }))]));
+    out.replaceChildren(...(nodes.length ? nodes : [nothingFound().el]));
     st.had = nodes.length > 0;
     staggerIn(added.map((x) => x.firstElementChild || x), { step: 22, max: 14 });
     st.grow = null; st.fresh = false;
@@ -108,18 +110,19 @@ export async function mount(container, ctx) {
   }
 
   let timer = 0;
-  // v2.5.3 (owner): the code (symbol + six digits, e.g. @000000) is recognised by its SHAPE only, locally, and tried when Enter is pressed. Until then it is an ordinary search text (never
-  // remembered, see codeLike). The box is emptied right away; a wrong code looks exactly like a search without results: no message, no sign that locked folders exist. The Worker counts the miss
-  // like any wrong PIN. A right code shows a toast and a short unlock animation on this page.
+  // v2.5.3 (owner): the code (symbol + six digits, e.g. %000000) is recognised by its SHAPE only, locally, and tried when Enter is pressed. Until then it is an ordinary search text (never remembered, see codeLike).
+  // v2.5.4 (owner): the box is emptied and the page shows the SAME "Nothing found" placeholder as for any search without results. A wrong code leaves it like that (no message, no sign that locked folders exist;
+  // the Worker counts the miss like any wrong PIN). A right code plays the unlock animation INSIDE that placeholder (no full-screen burst, no toast).
   async function tryVaultCode(code) {
-    if (getVault().open) { toast('Locked folders are already unlocked.'); return; }
-    if (await tryCode(code)) { toast('Locked folders are unlocked.'); playUnlockBurst(container); paint(); }
+    const nf = nothingFound(); out.replaceChildren(nf.el); st.had = false;
+    if (getVault().open) return;
+    if (await tryCode(code) && nf.ic.isConnected) playUnlockBurst(nf.ic, { inline: true });
   }
   input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => setQuery(input.value), 70); clear.hidden = !input.value; });
   input.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const code = vaultOn() ? vaultCodeMatch(input.value, getLock().vaultPrefix) : null;
-    if (code) { e.preventDefault(); clearTimeout(timer); input.value = ''; clear.hidden = true; setQuery(''); input.blur(); tryVaultCode(code); return; }
+    if (code) { e.preventDefault(); clearTimeout(timer); input.value = ''; clear.hidden = true; st.q = ''; lastQuery = ''; input.blur(); tryVaultCode(code); return; }
     clearTimeout(timer); setQuery(input.value); keep(input.value); input.blur();
   });
   const off = registerShortcuts([{ keys: 'mod+k', desc: 'Search', inInput: true, run: (e) => { e.preventDefault(); input.focus(); input.select(); } }, { keys: '/', desc: 'Focus the search field', run: (e) => { e.preventDefault(); input.focus(); } }]);

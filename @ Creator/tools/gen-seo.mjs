@@ -27,11 +27,18 @@ function head(p) {
   return L.join('\n');
 }
 const pages = publicPages(TOPICS);
+// v2.5.4: Documentation, Privacy and Terms are STANDALONE pages (own header, no splash, no app lock, no shell). They are built by js/features/public/public-render.js; the rest (home, login) is still the app shell.
+const { renderPublicPage } = await import(path.join(root, 'js/features/public/public-render.js'));
+
 const tpl = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const swap = (s, a, b, text) => { const i = s.indexOf(a), j = s.indexOf(b); if (i < 0 || j < i) throw new Error(`marker ${a} missing in index.html`); return s.slice(0, i + a.length) + '\n' + text + '\n  ' + s.slice(j); };
 const A = '<!-- seo:start (written by "@ Creator/tools/gen-seo.mjs": do not edit between the markers) -->';
 const out = new Map();
+const themeScript = (() => { const m = tpl.match(/<script>\s*\n\s*\(function \(\) \{\s*\n\s*var d = document\.documentElement[\s\S]*?<\/script>/); if (!m) throw new Error('theme script missing in index.html'); return m[0].replace(/^<script>/, '').replace(/<\/script>$/, ''); })();
+const standalone = (p) => (p.path === '/docs' ? { kind: 'docs-home' } : p.path.startsWith('/docs/') ? { kind: 'docs-topic', topic: TOPICS.find((t) => `/docs/${t.id}` === p.path) } : p.path === '/privacy' ? { kind: 'legal', legal: 'privacy' } : p.path === '/terms' ? { kind: 'legal', legal: 'terms' } : null);
 for (const p of pages) {
+  const sa = standalone(p);
+  if (sa) { out.set(p.file, renderPublicPage({ head: head(p), themeScript, version: app.version, buildDate: (app.buildDate || '').slice(0, 10), ...sa })); continue; }
   let html = swap(tpl, A, '<!-- seo:end -->', head(p));
   html = swap(html, '<!-- seo:body -->', '<!-- /seo:body -->', `  <noscript><main class="seo-noscript" style="max-width:720px;margin:40px auto;padding:0 20px;font:16px/1.6 system-ui,sans-serif">${p.noscript}</main></noscript>`);
   out.set(p.file, html);

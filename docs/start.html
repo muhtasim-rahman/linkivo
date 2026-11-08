@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <!-- seo:start (written by "@ Creator/tools/gen-seo.mjs": do not edit between the markers) -->
+  <!-- Search engine ownership checks (Google Search Console and Bing Webmaster Tools). Public by design. -->
+  <meta name="google-site-verification" content="1jRG-liPR6RdCjprv6saCLlbo9T5J3lyNPAXTm4mSl4" />
+  <meta name="msvalidate.01" content="53A15EBC0ADF54EC55B307032B3C8559" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Getting started - Linkivo documentation</title>
   <meta name="description" content="Linkivo keeps your links in folders you can search, preview and rediscover. Linkivo documentation.">
   <meta name="robots" content="index,follow">
@@ -28,16 +30,8 @@
   <meta name="twitter:url" content="https://linkivo.web.app/docs/start">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Getting started","description":"Linkivo keeps your links in folders you can search, preview and rediscover.","url":"https://linkivo.web.app/docs/start","image":"https://linkivo.web.app/assets/social/og-overview.jpg","inLanguage":"en","author":{"@type":"Person","name":"Muhtasim Rahman","alternateName":"Turzo","url":"https://mdturzo.web.app","sameAs":["https://github.com/muhtasim-rahman"]},"publisher":{"@type":"Person","name":"Muhtasim Rahman","alternateName":"Turzo","url":"https://mdturzo.web.app","sameAs":["https://github.com/muhtasim-rahman"]},"isPartOf":{"@type":"CollectionPage","name":"Linkivo documentation","url":"https://linkivo.web.app/docs"}}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Linkivo","item":"https://linkivo.web.app/"},{"@type":"ListItem","position":2,"name":"Documentation","item":"https://linkivo.web.app/docs"},{"@type":"ListItem","position":3,"name":"Getting started","item":"https://linkivo.web.app/docs/start"}]}</script>
-  <!-- seo:end -->
   <meta name="author" content="Muhtasim Rahman">
-  <meta name="keywords" content="link manager, bookmark manager, save links, organise links, link organiser, read later, private bookmarks, PWA">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
-  <meta name="application-name" content="Linkivo">
-  <meta name="apple-mobile-web-app-title" content="Linkivo">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="format-detection" content="telephone=no">
   <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
@@ -47,11 +41,7 @@
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Only what the splash needs blocks the first paint (v2.1.3): tokens, base, splash. The rest of the app CSS and the Google Fonts are added
-       by the script below at once; the splash covers the page until the app is ready, so nothing unstyled is ever seen. In v2.1.2 eleven
-       stylesheets plus Google Fonts blocked the first paint, so new visitors on a slow connection saw an empty background for a long time. -->
-  <!-- Look settings BEFORE the first paint (v2.1.4). Until core/appearance.js runs (after the module graph), <html> has no data-theme and tokens.css follows
-       the DEVICE theme, so a light-mode user on a dark phone saw a dark splash with light text. This mirrors appearance.js paint(): same keys, same values. -->
+  <!-- The look settings are applied before the first paint, exactly as in the app (same script, so the same theme and accent). -->
   <script>
     (function () {
       var d = document.documentElement, KEY = 'lk:', v = {};
@@ -69,87 +59,47 @@
   </script>
   <link rel="stylesheet" href="/css/core/tokens.css">
   <link rel="stylesheet" href="/css/core/base.css">
-  <link rel="stylesheet" href="/css/pages/splash.css">
-  <script>
-    (function () {
-      var h = document.head;
-      function css(href) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; h.appendChild(l); }
-      ['/css/core/layout.css', '/css/core/motion.css', '/css/components/buttons.css', '/css/components/forms.css', '/css/components/sheet.css', '/css/components/toast.css',
-        '/css/components/feedback.css', '/css/components/nav.css', '/css/components/tooltip.css', '/css/components/kit.css',
-        'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@600;700;800&display=swap'].forEach(css);
-    })();
-  </script>
-  <link rel="modulepreload" href="/js/features/splash/splash-start.js">
-  <link rel="modulepreload" href="/js/features/splash/splash.js">
-  <link rel="modulepreload" href="/js/core/local-prefs.js">
-  <link rel="modulepreload" href="/js/core/utils.js">
-  <link rel="modulepreload" href="/js/main.js">
+  <link rel="stylesheet" href="/css/pages/public.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@600;700;800&display=swap">
+  <script type="module" src="/js/public.js"></script>
 </head>
-<body>
-  <!-- seo:body -->
-  <noscript><main class="seo-noscript" style="max-width:720px;margin:40px auto;padding:0 20px;font:16px/1.6 system-ui,sans-serif"><h1>Getting started</h1><p>Linkivo keeps your links in folders you can search, preview and rediscover.</p><h3>Guest or account</h3><p>A guest keeps everything on this device only: if the browser data is cleared, nothing can be recovered. An account stores your data online so every device shows the same library. Guests can log in later and move everything into the account.</p><h3>Moving around</h3><ul><li>Phone: the floating bar at the bottom (Library, Random, Search, Menu). It hides while you scroll down.</li><li>Computer: the sidebar on the left. Collapse it with the arrow; when collapsed, the avatar opens the account menu.</li><li>Every page has its own address, and Back goes to the page above it.</li></ul><nav aria-label="Linkivo"><a href="/">Home</a> <a href="/docs">Documentation</a> <a href="/privacy">Privacy</a> <a href="/terms">Terms</a> <a href="/login">Sign in</a></nav></main></noscript>
-  <!-- /seo:body -->
-  <div id="app" data-chrome="none">
-    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
-    <div class="app-main">
-      <main id="page-root" tabindex="-1"></main>
+<body class="pub" data-page="docs-topic" data-built="2026-11-08">
+  <a class="pub-skip" href="#main">Skip to the content</a>
+<header class="pub-head">
+    <div class="pub-head-in">
+      <button type="button" class="pub-icon" data-pub="back" aria-label="Go back" title="Back"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
+      <a class="pub-brand" href="/" aria-label="Linkivo: open the app" title="Open the app"><span class="logo-mark" style="--w:30px" aria-hidden="true"></span><span class="wordmark">l<i>i</i>nk<i>i</i>vo</span></a>
+      <div class="pub-crumb" aria-hidden="true"><span class="pub-crumb-t">Documentation</span><span class="pub-crumb-s">Getting started</span></div>
+      <span class="pub-chip" title="This page is separate from the app: no sign-in needed">Version 2.5.4</span>
+      <button type="button" class="pub-icon" data-pub="theme" aria-label="Switch light or dark theme" title="Light or dark"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic pub-sun" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2"/><path d="M12 19v2"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="M5.600 5.600L7 7"/><path d="M17 17l1.400 1.400"/><path d="M5.600 18.400L7 17"/><path d="M17 7l1.400-1.400"/></svg><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic pub-moon" focusable="false" aria-hidden="true"><path d="M20 14.500A8 8 0 0 1 9.500 4a8 8 0 1 0 10.500 10.500z"/></svg></button>
     </div>
-    <nav class="bar" id="bar" aria-label="Main navigation"></nav>
+  </header>
+<div class="pub-wrap pub-grid">
+    <aside class="pub-side" aria-label="Documentation"><a class="pub-side-home" href="/docs"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><path d="M5 4.500h10.500A2.500 2.500 0 0 1 18 7v13H7.500A2.500 2.500 0 0 1 5 17.500z"/><path d="M5 17.500A2.500 2.500 0 0 1 7.500 15H18"/></svg><span>Documentation home</span></a>
+    <p class="pub-side-h">The tutorial</p><ol class="pub-side-list"><li><a href="/docs/start" class="is-now" aria-current="page"><span class="pub-side-n">1</span><span>Getting started</span></a></li><li><a href="/docs/install"><span class="pub-side-n">2</span><span>Install and updates</span></a></li><li><a href="/docs/account"><span class="pub-side-n">3</span><span>Account and sync</span></a></li><li><a href="/docs/library"><span class="pub-side-n">4</span><span>Library and folders</span></a></li><li><a href="/docs/import"><span class="pub-side-n">5</span><span>Import</span></a></li><li><a href="/docs/search"><span class="pub-side-n">6</span><span>Search</span></a></li><li><a href="/docs/preview"><span class="pub-side-n">7</span><span>Link preview</span></a></li><li><a href="/docs/random"><span class="pub-side-n">8</span><span>Random Discover</span></a></li><li><a href="/docs/history"><span class="pub-side-n">9</span><span>History, Activity and Stats</span></a></li><li><a href="/docs/export"><span class="pub-side-n">10</span><span>Export and backup</span></a></li><li><a href="/docs/security"><span class="pub-side-n">11</span><span>App lock and locked folders</span></a></li><li><a href="/docs/settings"><span class="pub-side-n">12</span><span>Settings</span></a></li><li><a href="/docs/shortcuts"><span class="pub-side-n">13</span><span>Keyboard shortcuts</span></a></li></ol>
+    <p class="pub-side-h">Also</p><ul class="pub-side-list is-plain"><li><a href="/privacy"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><path d="M12 3.500l7.500 3V12c0 4.500-3 7.800-7.500 9-4.500-1.200-7.500-4.500-7.500-9V6.500z"/></svg><span>Privacy</span></a></li><li><a href="/terms"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/></svg><span>Terms of use</span></a></li></ul></aside>
+    <main id="main" class="pub-main">
+      <nav class="pub-rail" aria-label="Tutorial steps"><ol><li class="is-now"><a href="/docs/start" aria-current="step" title="Getting started"><span class="pub-rail-n">1</span><span class="pub-rail-t">Getting started</span></a></li><li class=""><a href="/docs/install" title="Install and updates"><span class="pub-rail-n">2</span><span class="pub-rail-t">Install and updates</span></a></li><li class=""><a href="/docs/account" title="Account and sync"><span class="pub-rail-n">3</span><span class="pub-rail-t">Account and sync</span></a></li><li class=""><a href="/docs/library" title="Library and folders"><span class="pub-rail-n">4</span><span class="pub-rail-t">Library and folders</span></a></li><li class=""><a href="/docs/import" title="Import"><span class="pub-rail-n">5</span><span class="pub-rail-t">Import</span></a></li><li class=""><a href="/docs/search" title="Search"><span class="pub-rail-n">6</span><span class="pub-rail-t">Search</span></a></li><li class=""><a href="/docs/preview" title="Link preview"><span class="pub-rail-n">7</span><span class="pub-rail-t">Link preview</span></a></li><li class=""><a href="/docs/random" title="Random Discover"><span class="pub-rail-n">8</span><span class="pub-rail-t">Random Discover</span></a></li><li class=""><a href="/docs/history" title="History, Activity and Stats"><span class="pub-rail-n">9</span><span class="pub-rail-t">History, Activity and Stats</span></a></li><li class=""><a href="/docs/export" title="Export and backup"><span class="pub-rail-n">10</span><span class="pub-rail-t">Export and backup</span></a></li><li class=""><a href="/docs/security" title="App lock and locked folders"><span class="pub-rail-n">11</span><span class="pub-rail-t">App lock and locked folders</span></a></li><li class=""><a href="/docs/settings" title="Settings"><span class="pub-rail-n">12</span><span class="pub-rail-t">Settings</span></a></li><li class=""><a href="/docs/shortcuts" title="Keyboard shortcuts"><span class="pub-rail-n">13</span><span class="pub-rail-t">Keyboard shortcuts</span></a></li></ol></nav>
+      <article class="pub-article">
+        <p class="pub-eyebrow">Step 1 of 13</p>
+        <h1><span class="pub-h1-ic"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><path d="M13 3L5 13.500h6L10 21l8-10.500h-6z"/></svg></span>Getting started</h1>
+        <p class="pub-lead">Linkivo keeps your links in folders you can search, preview and rediscover.</p>
+        <div class="pub-progress" role="img" aria-label="Step 1 of 13"><i style="width:8%"></i></div>
+        <section id="guest-or-account" class="pub-part"><h2><span class="pub-part-n">1</span>Guest or account</h2><p>A guest keeps everything on this device only: if the browser data is cleared, nothing can be recovered. An account stores your data online so every device shows the same library. Guests can log in later and move everything into the account.</p></section>
+<section id="moving-around" class="pub-part"><h2><span class="pub-part-n">2</span>Moving around</h2><ul class="pub-list"><li>Phone: the floating bar at the bottom (Library, Random, Search, Menu). It hides while you scroll down.</li><li>Computer: the sidebar on the left. Collapse it with the arrow; when collapsed, the avatar opens the account menu.</li><li>Every page has its own address, and Back goes to the page above it.</li></ul></section>
+      </article>
+      <nav class="pub-steps" aria-label="Previous and next step"><span class="pub-step is-empty"></span><a class="pub-step is-next" href="/docs/install" rel="next">
+    <span class="pub-step-k">Next step 2</span>
+    <span class="pub-step-t"><b>Install and updates</b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic" focusable="false" aria-hidden="true"><path d="M9.500 5.500L16 12l-6.500 6.500"/></svg></span>
+    <span class="pub-step-l">Install Linkivo like an app; it updates itself.</span></a></nav>
+      
+    </main>
+    <div class="pub-right"><nav class="pub-toc" aria-label="On this page"><p class="pub-toc-h">On this page</p><ol><li><a href="#guest-or-account">Guest or account</a></li><li><a href="#moving-around">Moving around</a></li></ol></nav></div>
   </div>
-  <div class="toast-host" id="toast-host" aria-live="polite" aria-atomic="false"></div>
-
-  <!-- Splash (v2.1.3): the v1 logo-creation animation without the url badges, no grid. Until splash.js runs, a CSS-only ring pulses (data-mode pending). Driven by js/features/splash/splash.js; this markup is
-       inline on purpose (animated SVG that script drives, RULES section 9). data-mode: pending | full | short | still -->
-  <div class="splash" id="splash" data-mode="pending" role="status" aria-label="Loading Linkivo">
-    <div class="sp-expand" id="sp-expand"></div>
-    <div class="sp-orb"></div>
-    <div class="sp-boot" aria-hidden="true"></div>
-    <div class="splash-ver" id="sp-ver" aria-hidden="true"></div>
-    <div class="splash-stage">
-      <svg class="splash-mark" id="sp-svg" viewBox="180 210 680 630" aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:var(--brand-a)"/><stop offset="100%" style="stop-color:var(--brand-b)"/></linearGradient>
-          <mask id="sm-shackle"><path id="sp-shackle-mask" class="sp-mask" pathLength="1" d="M 259 520 L 259 340 A 94.35 94.35 0 0 1 447.7 340 L 447.7 520" fill="none" stroke="#fff" stroke-width="44" stroke-linecap="round"/></mask>
-          <mask id="sm-bar"><path id="sp-bar-mask" class="sp-mask" pathLength="1" d="M 310 648 L 725 648" fill="none" stroke="#fff" stroke-width="100" stroke-linecap="round"/></mask>
-        </defs>
-        <circle id="sp-pulse" cx="353" cy="648" r="0" fill="none" stroke="url(#sg)" stroke-width="6" opacity="0"/>
-        <g id="sp-sparks"></g>
-        <g id="sp-la">
-          <path mask="url(#sm-shackle)" fill="url(#sg)" d="M278.406189,320.430054 C276.850037,330.461884 277.226227,340.133789 277.224182,349.786865 C277.214233,396.775665 277.172058,443.764618 277.328613,490.752930 C277.343842,495.330170 276.050354,498.045868 271.834076,500.140533 C262.560791,504.747498 254.153976,510.776245 246.116409,517.307251 C244.866058,518.323181 243.763046,519.710449 241.832214,519.727234 C240.090759,518.355713 240.739273,516.377258 240.738708,514.666992 C240.718811,455.014587 240.540039,395.361053 240.873856,335.710388 C240.990280,314.905243 244.620911,294.608673 254.789886,276.031921 C266.652985,254.360306 285.134308,240.826324 308.570251,234.309402 C337.018555,226.398651 365.810089,226.206589 394.452454,233.431793 C432.030457,242.911041 454.000671,267.532928 462.208496,304.922150 C464.276123,314.340820 465.389038,323.911011 465.375793,333.620972 C465.315826,377.610260 465.350067,421.599854 465.444672,465.589111 C465.479401,481.746490 465.791595,497.903137 465.927765,514.060547 C465.943970,515.984924 466.441162,518.084412 464.754425,519.714478 C462.542999,519.509216 461.262726,517.835632 459.743774,516.606689 C452.210266,510.511169 444.347504,504.814514 435.627106,500.635193 C430.754944,498.300171 429.520386,495.229034 429.537933,490.148804 C429.710419,440.161255 429.698792,390.172882 429.621063,340.184906 C429.603943,329.171936 428.383301,318.245392 425.240784,307.637787 C418.497772,284.876740 403.458710,270.699249 380.424622,265.239563 C362.497589,260.990417 344.435181,260.885193 326.490723,265.174561 C299.734497,271.570190 284.748810,289.145111 279.345612,315.594421 C279.046082,317.060638 278.747040,318.527008 278.406189,320.430054z"/>
-          <g id="sp-lring-g"><path id="sp-ringl" class="sp-ring" pathLength="1" fill="url(#sg)" stroke="url(#sg)" stroke-width="3" d="M510.904144,685.617310 C494.182220,748.066223 455.364685,789.378540 393.227173,805.461731 C303.379089,828.717468 215.301636,773.236328 195.343140,682.937073 C175.955170,595.218994 233.806610,507.442719 322.149933,490.536896 C409.527008,473.815979 494.307587,529.849304 511.626404,615.633972 C512.450928,619.718079 511.606873,621.188110 507.489105,621.156433 C496.658905,621.073120 485.823425,620.971741 474.998596,621.232544 C470.577667,621.339050 469.959045,618.518738 468.966461,615.418213 C455.137726,572.220947 426.485016,543.875305 382.653412,532.389832 C316.032104,514.932739 248.667633,557.974609 235.263611,625.615417 C222.336761,690.848267 264.723663,754.333252 329.923279,767.391846 C390.564850,779.537598 451.578705,742.579224 468.754608,682.997803 C470.358734,677.433350 472.720337,675.520142 478.405762,675.815125 C487.379700,676.280640 496.395508,675.915771 505.393433,675.947815 C512.702148,675.973877 512.779846,676.100220 511.364075,683.247681 C511.234772,683.900574 511.139404,684.560181 510.904144,685.617310z"/></g>
-        </g>
-        <path mask="url(#sm-bar)" fill="url(#sg)" d="M620.000000,669.191040 C544.185852,669.188049 468.871643,669.213989 393.557617,669.111023 C388.940857,669.104736 385.678619,670.075806 382.492279,673.951782 C371.579254,687.226929 352.962189,691.189575 337.615997,684.180359 C322.284424,677.177979 312.766602,660.486267 315.176239,644.827332 C318.026794,626.303345 331.084717,612.772095 348.673065,610.891418 C362.312256,609.433044 374.003143,613.926697 382.931152,624.528992 C384.991699,626.976013 387.090637,627.890076 390.167572,627.887634 C474.979248,627.820557 559.790955,627.802734 644.602600,627.853638 C648.027649,627.855713 650.383667,626.928284 652.701721,624.177979 C663.584900,611.265320 681.905701,607.156799 697.193970,613.843872 C713.421570,620.941833 722.184082,636.314148 720.217102,654.234009 C718.448364,670.348206 705.640381,684.158447 688.870117,686.877380 C674.164062,689.261719 661.459900,684.814941 651.980774,672.959412 C649.748047,670.166931 647.476196,669.053284 643.992615,669.141235 C636.166260,669.338867 628.331421,669.195435 620.000000,669.191040z"/>
-        <path id="sp-ringr" class="sp-ring" pathLength="1" fill="url(#sg)" stroke="url(#sg)" stroke-width="3" d="M591.546875,728.458496 C615.914734,755.309570 645.946106,769.322571 681.835327,769.573853 C737.822998,769.965820 786.918457,730.646973 799.602173,675.958496 C815.286926,608.330322 769.652405,540.832397 701.065979,530.213745 C640.305725,520.806763 582.917114,557.315857 566.346130,616.080139 C565.226990,620.048645 563.459534,621.344543 559.398865,621.230225 C549.240662,620.944214 539.069153,621.145752 528.903076,621.118591 C523.135559,621.103210 522.637268,620.604614 523.857605,615.147583 C530.557861,585.185059 544.253113,558.900391 565.675354,536.828308 C593.866333,507.782196 628.339905,491.206390 668.543213,487.997711 C752.197815,481.321167 824.222900,537.032959 840.018127,615.682129 C851.814636,674.420288 835.524414,725.592651 792.203796,767.257446 C767.219116,791.287170 736.892578,805.041443 702.411377,809.413208 C618.439392,820.059814 542.622742,765.033386 524.226624,684.413391 C524.152527,684.088989 524.025940,683.776245 523.955994,683.451111 C522.356018,676.016418 522.426697,675.932983 530.061523,675.933350 C539.727661,675.933838 549.396729,676.067871 559.058411,675.860413 C563.012024,675.775513 565.008911,677.024597 566.068787,681.047363 C570.728699,698.734497 579.326904,714.389038 591.546875,728.458496z"/>
-        <circle id="sp-pulse2" cx="686" cy="648" r="0" fill="none" stroke="var(--brand-b)" stroke-width="5" opacity="0"/>
-      </svg>
-      <div class="splash-word wordmark" id="sp-word" aria-hidden="true"><span class="t-char">l</span><span class="t-char idot-wrap">ı<i class="idot"></i></span><span class="t-char">n</span><span class="t-char">k</span><span class="t-char idot-wrap">ı<i class="idot"></i></span><span class="t-char">v</span><span class="t-char">o</span></div>
-      <div class="splash-tag" id="sp-tag" aria-hidden="true">Manage your links</div>
-      <div class="dots splash-dots" id="splash-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="splash-fail" id="splash-fail" hidden>
-        <p>Linkivo could not start. Check your connection and try again.</p>
-        <a class="btn btn-primary" href="/" data-native>Reload</a>
-      </div>
-    </div>
-  </div>
-
-  <noscript>
-    <div style="position:fixed;inset:0;z-index:2000;margin:0;padding:24px;background:#fff;color:#0c1629;font:16px/1.5 system-ui">
-      <h1 style="font-size:22px;margin:0 0 8px">Linkivo</h1>
-      <p style="margin:0 0 8px">Linkivo is a fast, private link manager. It needs JavaScript to run, so please turn it on and reload this page.</p>
-      <p style="margin:0"><a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="https://github.com/muhtasim-rahman/linkivo">Source code</a></p>
-    </div>
-  </noscript>
-  <script>
-    // Safety net: if the app script fails to load (a missing file answered with index.html) or boot takes too long,
-    // show a visible way out instead of a blank screen. main.js sets data-boot="ok" when the first page is ready.
-    (function () {
-      var root = document.documentElement;
-      function fail() { if (root.dataset.boot === 'ok') return; var f = document.getElementById('splash-fail'); if (f) f.hidden = false; }
-      window.addEventListener('error', function (e) { if (e.target && e.target.tagName === 'SCRIPT') fail(); }, true);
-      setTimeout(fail, 15000);
-    })();
-  </script>
-  <script type="module" src="/js/features/splash/splash-start.js"></script>
-  <script type="module" src="/js/main.js"></script>
+<footer class="pub-foot"><div class="pub-wrap pub-foot-in">
+    <a class="pub-brand" href="/" aria-label="Open the app"><span class="logo-mark" style="--w:24px" aria-hidden="true"></span><span class="wordmark">l<i>i</i>nk<i>i</i>vo</span></a>
+    <nav aria-label="Linkivo pages"><a href="/docs">Documentation</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/">Open the app</a></nav>
+    <p>Free, private link manager by Muhtasim Rahman (Turzo). Version 2.5.4. <a href="mailto:linkivo.web@gmail.com">linkivo.web@gmail.com</a></p>
+  </div></footer>
 </body>
 </html>

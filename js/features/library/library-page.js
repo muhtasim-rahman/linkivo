@@ -67,7 +67,9 @@ export async function mount(container, ctx) {
   page.append(
     h('header', { class: 'page-head is-stack lib-head' }, h('div', { class: 'lib-headrow' }, h('h1', { class: 'page-title', text: 'Library' }),
       h('div', { class: 'page-actions' }, lockButton(), jobsButton({ queue: getQueue(), engine }), refreshButton(), viewBtn, (() => { const a = settingsShortcut('library', 'Library settings'); a.classList.add('is-wide-only'); return a; })(),   // v2.4.4 (owner): not on small screens   // v2.4.2: settings icon in every page header
-        h('button', { type: 'button', class: 'btn btn-primary btn-sm', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'))), sub),
+        // v2.5.4 (owner): on a phone the big "New folder" button is a round icon button (a folder with a plus in its top-right corner); wide screens keep the labelled button
+        h('button', { type: 'button', class: 'btn btn-primary btn-sm is-wide-only', on: { click: () => openFolderForm({ engine }) } }, icon('plus', { size: 18 }), 'New folder'),
+        h('button', { type: 'button', class: 'btn-icon lib-add is-phone', 'aria-label': 'New folder', 'data-tip': 'New folder', on: { click: () => openFolderForm({ engine }) } }, icon('folder-plus', { size: 22 })))), sub),
     h('div', { class: 'fp-tools' }, h('div', { class: 'fp-search' }, icon('search', { size: 18 }), search), sortSel), body);
 
   function card(f, wide) {

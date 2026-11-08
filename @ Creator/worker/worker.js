@@ -30,13 +30,14 @@
  * Secrets (Cloudflare > Settings > Variables and Secrets, type Secret; never in this file): PIN_PEPPER (long random string), FIREBASE_SERVICE_ACCOUNT (the service-account JSON), IMGBB_KEY (v2.4.3).
  * Nothing in this file is secret; the Firebase project id below is public.
  */
+// 2.5.4: auto lock allows 120 seconds and uses it as the default; the default vault code symbol is % (owner). Nothing else changed.
 // 2.5.0: PIN and unlock sessions (/pin/*, /lock*), account deletion and recovery (/account/*), background enrichment (/jobs/*) and the cron (scheduled). They need the secrets PIN_PEPPER and
 //        FIREBASE_SERVICE_ACCOUNT; without them those routes answer 503 not_configured and /meta, /check, /whoami, /img work as before.
 // 2.4.3: adds POST /img/upload and POST /img/delete (profile photo on imgbb, key in the secret IMGBB_KEY). /meta and /check are unchanged.
 // 2.2.2: adds GET /whoami (device location for the Account page). /meta is unchanged, so the app still accepts a 2.1.3 Worker and simply shows no location.
 // 2.1.3: version bump only, no behavior change. The app now compares this number with the one it expects and warns in Settings > App when the
 // deployed Worker is older (the owner's test run in v2.1.2 showed the OLD engine list, so the new worker.js had not been pasted).
-const VERSION = '2.5.2';
+const VERSION = '2.5.4';
 
 const CONFIG = {
   firebaseProject: 'linkivo',
@@ -617,14 +618,14 @@ const SEC = {
   deleteAfterMs: 15 * 86400000,
   purgePerRun: 3, jobUidsPerRun: 3, jobLinksPerRun: 3, maxJobIds: 500, maxActiveJobs: 4, jobKeepMs: 2 * 86400000,
   limit: { capacity: 40, perMs: 60000 }, pinLimit: { capacity: 12, perMs: 60000 },
-  awayChoices: [0, 30, 60, 300, 600, 900, 1800, -1],   // v2.5.1: the one Auto lock setting, in seconds the app may be away (0 = right after leaving, -1 = never)
-  defaultAway: 60,
+  awayChoices: [0, 30, 60, 120, 300, 600, 900, 1800, -1],   // v2.5.1: the one Auto lock setting, in seconds the app may be away (0 = right after leaving, -1 = never)
+  defaultAway: 120,   // v2.5.4 (owner): 2 minutes
   vaultTtlMs: 15 * 60000,             // v2.5.2: a vault session lasts 15 minutes and is extended while the vault is open on screen
   redeleteBlockMs: 0 * 86400000   // v2.5.1: after an account was reactivated it cannot be deleted again for this long. 0 days while the owner tests; set 7 * 86400000 for production
 };
 const PIN_RE = /^\d{4,8}$/;
 const VAULT_RE = /^\d{6}$/;                       // v2.5.2: the vault code is exactly six digits (the app shows it after a prefix symbol in the search box)
-const VAULT_PREFIXES = ['@', '#', '%', '$', '!'];
+const VAULT_PREFIXES = ['%', '@', '#', '$', '!'];   // 2.5.4: % is the default symbol
 const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const LID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const enc = (s) => new TextEncoder().encode(s);
@@ -693,7 +694,7 @@ async function checkPin(sec, uid, pin, scope, now = nowMs()) {
 
 async function readLock(sec, uid) {
   const v = (await dbGet(sec, `users/${uid}/lockState`)) || {};
-  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, vaultPrefix: VAULT_PREFIXES.includes(v.vaultPrefix) ? v.vaultPrefix : '@', away: SEC.awayChoices.includes(Number(v.away)) && v.away !== undefined && v.away !== null ? Number(v.away) : SEC.defaultAway };
+  return { pin: v.pin === true, app: v.app === true, vaultSep: v.vaultSep === true, hideVault: v.hideVault === true, vaultPrefix: VAULT_PREFIXES.includes(v.vaultPrefix) ? v.vaultPrefix : '%', away: SEC.awayChoices.includes(Number(v.away)) && v.away !== undefined && v.away !== null ? Number(v.away) : SEC.defaultAway };
 }
 // v2.5.1: the server session must outlive the time the app may be away (the app extends it every minute while it is on screen)
 const ttlOf = (lock) => (lock.away < 0 ? SEC.sessionDefaultMs : Math.max(15 * 60000, lock.away * 1000 + 5 * 60000));

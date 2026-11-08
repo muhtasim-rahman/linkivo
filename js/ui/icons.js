@@ -78,6 +78,8 @@ const I = {
   points: 'M12 3.500l7.500 8.500-7.500 8.500L4.500 12z|M12 8.500v7|M9 12h6',   // v2.3.1: a small diamond with a plus, the "points" mark in toasts
   rings: 'o:8.500,14,5.500|o:15.500,14,5.500|M8.500 8.500V6a3.500 3.500 0 0 1 7 0v2.500',
   // category icons (folder icon picker, v2.2.0)
+  // v2.5.4 (owner): a folder with a small plus in its top-right corner, the icon button for "New folder" on phones
+  'folder-plus': 'M3 9.500a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v6.500a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z|M18.500 2.500v5|M16 5h5',
   folder: 'M3.500 7a2 2 0 0 1 2-2h4l2 2.500h7a2 2 0 0 1 2 2V17.500a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z',
   star: 'M12 3.800l2.500 5.200 5.700.8-4.100 4 1 5.700-5.100-2.700-5.100 2.700 1-5.700-4.100-4 5.700-.8z',
   heart: 'M12 20s-7.500-4.600-7.500-10A4.300 4.300 0 0 1 12 7.200 4.300 4.300 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z',
@@ -132,6 +134,19 @@ const I = {
 export const ICON_NAMES = Object.keys(I);
 export const FOLDER_ICONS = ['folder', 'star', 'heart', 'bookmark', 'book', 'graduation', 'briefcase', 'code', 'terminal', 'palette', 'image', 'video', 'music', 'game', 'news', 'shopping', 'finance', 'health', 'food', 'travel', 'map', 'home', 'tool', 'flask', 'cpu', 'cloud', 'shield', 'lock', 'globe', 'chat', 'mail', 'calendar', 'clock', 'flag', 'fire', 'bulb', 'gift', 'user', 'users', 'mosque'];
 export const hasIcon = (name) => name in I;
+
+/** v2.5.4: the same icon as a plain SVG string (no DOM), for the static public pages made by gen-seo.mjs. Same shapes, same stroke. */
+export function iconSvg(name, size = 20, cls = '') {
+  const def = I[name] || I.info, num = (t) => t.split(',').map(Number);
+  const seg = (sg) => {
+    if (sg.startsWith('o:')) { const [cx, cy, r] = num(sg.slice(2)); return `<circle cx="${cx}" cy="${cy}" r="${r}"/>`; }
+    if (sg.startsWith('f:')) { const [cx, cy, r] = num(sg.slice(2)); return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="currentColor" stroke="none"/>`; }
+    if (sg.startsWith('r:')) { const [x, y, w, hh, rx] = num(sg.slice(2)); return `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="${rx}"/>`; }
+    if (sg.startsWith('l:')) { const [x1, y1, x2, y2] = num(sg.slice(2)); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
+    return `<path d="${sg}"/>`;
+  };
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="ic${cls ? ' ' + cls : ''}" focusable="false" aria-hidden="true">${def.split('|').map(seg).join('')}</svg>`;
+}
 
 function segment(seg) {
   const n = (s) => s.split(',').map(Number);

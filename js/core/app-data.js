@@ -4,7 +4,7 @@
  *          Features call getEngine() / getQueue(); nothing else decides which engine is used.
  * API: initData(session) -> Promise<void>   teardownData() -> Promise<void>   getEngine() getQueue() getImportLog() getHistory() recordOpen(link, src) dataReady() -> boolean
  */
-import { closeVaultLocal, bindVaultEngine } from './vault.js';
+import { closeVaultLocal, bindVaultEngine, subscribeVault } from './vault.js';
 import { registerVaultMoveJob } from '../features/vault/lock-job.js';   // v2.5.3
 import { toast } from '../ui/toast.js';
 import { createLocalEngine } from '../engine/local-engine.js';
@@ -73,6 +73,7 @@ function startHistory(session) {
     h.load().then(() => h.prune()).catch(() => {});
     prefs.onChange('history.where', () => { if (history === h) h.load().catch(() => {}); });   // another store is shown: read it
     prefs.onChange('history.keep', () => { if (history === h) h.prune().catch(() => {}); });
+    subscribeVault((v) => { if (history === h && (!v.open || v.quiet)) h.wipeLocked(); });   // v2.5.4: the history of locked links lives in memory only while they are unlocked
   } catch (e) { log.warn('data', 'history did not start', e); history = null; }
 }
 export const getHistory = () => history;

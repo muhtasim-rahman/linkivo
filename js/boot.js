@@ -113,7 +113,8 @@ export async function boot() {
   let stopClip = null, stopRemind = null;
   router.on('mounted', () => {
     document.documentElement.dataset.boot = 'ok'; stopWatchdog(); endSplash();
-    if (getSession().mode === 'account') import('./features/auth/guest-transfer.js').then((m) => m.offerGuestTransfer()).catch(() => {});   // v2.5.1: offer to move the guest links into the account (once per sign-in)
+    // v2.5.4 (owner): a brand-new account first gets the welcome flow (profile, then the intro video), and only after it the offer to move guest links
+    if (getSession().mode === 'account') import('./features/profile/welcome-flow.js').then((w) => w.maybeWelcome({ getEngine, getSession })).catch(() => {}).then(() => import('./features/auth/guest-transfer.js')).then((m) => m.offerGuestTransfer()).catch(() => {});   // v2.5.1: offer to move the guest links into the account (once per sign-in)
     if (!stopRemind) stopRemind = initBackupReminder({ engine: getEngine });   // v2.5.3: once per app start, after the page is up
     if (!stopClip) stopClip = initClipboardSuggest({ router });   // v2.2.2: after the app has loaded, suggest importing links found in the clipboard (needs the browser's permission)
   });

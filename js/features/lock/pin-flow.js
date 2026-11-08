@@ -15,6 +15,7 @@ import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
 import { openSheet } from '../../ui/sheet.js';
 import { buildPinPad, isWeakPin } from './pin-pad.js';
+import { getPinLen, forgetPinLen } from '../../core/lock.js';   // v2.5.4: a pad for the existing PIN holds exactly its length
 import { describeError } from './pin-sheet.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -39,17 +40,17 @@ export async function openPinFlow({ title = '' } = {}) {
   return flow;
 }
 
-export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue', check = null, digits = 0 } = {}) {   // digits: a fixed length (the 6-digit vault code, v2.5.2)
+export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue', check = null, digits = 0, known = false } = {}) {   // digits: a fixed length (the 6-digit vault code, v2.5.2). known (v2.5.4, owner): the pad asks for the EXISTING app PIN, so it holds exactly that many digits (4 stays 4)
   return new Promise((resolve) => {
     const lead = h('p', { class: 'pin-text', text });
     let settled = false;
     const end = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const pad = buildPinPad({ submitLabel, min: digits || 4, max: digits || 8, onSubmit: async (pin) => {
+    const pad = buildPinPad({ submitLabel, min: () => digits || (known ? getPinLen() : 0) || 4, max: () => digits || (known ? getPinLen() : 0) || 8, onSubmit: async (pin) => {
       try {
         const bad = check ? await check(pin) : '';
         if (bad) { pad.shake(); pad.message(bad, 'error'); return; }
         end(pin);
-      } catch (e) { const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
+      } catch (e) { if (known && e && e.code === 'wrong_pin') forgetPinLen(); const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
     } });
     flow.onClose(() => end(null));
     flow.show(h('div', { class: 'pin-sheet' }, lead, pad.el), pad);
@@ -58,17 +59,23 @@ export function stagePad(flow, { text = '', notice = '', submitLabel = 'Continue
   });
 }
 
-export async function stageCreate(flow, { text = 'Use 4 to 8 digits. Pick something others can not guess.', digits = 0 } = {}) {
+/** v2.5.4 (owner): said whenever an app PIN is chosen. */
+export const PRIVACY_NOTE = 'For extra privacy and security, install Linkivo as an app and also turn on your device\'s own app lock.';
+
+export async function stageCreate(flow, { text, digits = 0 } = {}) {
+  // v2.5.4 (owner): the folder-lock code is always six digits, so its popups never say "4 to 8 digits" (that belongs to the app PIN only)
+  if (text === undefined) text = digits ? 'Pick six digits that others can not guess.' : `Use 4 to 8 digits. Pick something others can not guess. ${PRIVACY_NOTE}`;
+  const noun = digits ? 'code' : 'PIN';
   let notice = '';
   for (;;) {
-    const first = await stagePad(flow, { text, notice, digits, check: async (p) => (isWeakPin(p) ? 'Choose a PIN that is harder to guess (not 1111 or 1234).' : '') });
+    const first = await stagePad(flow, { text, notice, digits, check: async (p) => (isWeakPin(p) ? `Choose a ${noun} that is harder to guess (not 111111 or 123456).` : '') });
     if (first === null) return null;
     notice = '';
     let mismatch = false;
-    const again = await stagePad(flow, { text: 'Enter the same PIN again to confirm it.', digits, check: async (p) => { if (p !== first) { mismatch = true; return ''; } return ''; } });
+    const again = await stagePad(flow, { text: `Enter the same ${noun} again to confirm it.`, digits, check: async (p) => { if (p !== first) { mismatch = true; return ''; } return ''; } });
     if (again === null) return null;
     if (!mismatch && again === first) return first;
-    notice = 'The two PINs were different. Start again.';
+    notice = `The two ${noun}s were different. Start again.`;
   }
 }
 

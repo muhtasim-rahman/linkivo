@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linkivo thumbnails v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="fontcss" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f8;--ink:#0c1629;--sub:#566d8a;--line:#d6dfed;--brand:#3b82f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Outfit,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:28px 16px;gap:20px;min-height:100vh}
+h1{font-size:20px;font-weight:600;margin:0}.sub{color:var(--sub);font-size:14px;margin-top:2px}
+.stage{width:min(1200px,100%);background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(12,22,41,.1);overflow:hidden;line-height:0;transition:opacity .16s}
+.stage.out{opacity:0}
+.stage:fullscreen{width:100vw;height:100vh;display:flex;align-items:center;border-radius:0;cursor:pointer}
+.stage:fullscreen svg{width:100%;height:100%}
+.stage svg{width:100%;height:auto;display:block}
+.prog{width:min(1200px,100%);height:4px;background:#dbe4f1;border-radius:2px;overflow:hidden;margin-top:-10px}.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3b82f6,#22d3ee);transition:width .3s}
+.cnt{font-weight:600;color:var(--sub);min-width:64px;text-align:center}
+.strip{width:min(1200px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.th{padding:0;line-height:0;overflow:hidden;border:2px solid transparent;border-radius:10px;background:#fff}.th.on{border-color:var(--brand)}.th svg{width:100%;height:auto}.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+button,select{font:inherit;font-size:15px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 18px;border-radius:12px;cursor:pointer}
+button:hover{border-color:var(--brand)}button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.hint{font-size:13px;color:var(--sub);text-align:center;max-width:620px}
+.cat{width:min(1200px,100%)}.cat h2{font-size:18px;font-weight:600;margin:6px 0 10px}.cat h2 span{color:var(--sub);font-weight:500;font-size:14px;margin-left:8px}
+</style></head><body>
+<div style="text-align:center"><h1>Linkivo thumbnails v2 (8 designs)</h1><div class="sub">Meta 1200 × 630 and YouTube 1280 × 720</div></div>
+<div class="stage" id="stage"></div>
+<div class="prog"><i id="prog"></i></div>
+<div class="bar">
+<button id="prev">←</button><span id="cnt" class="cnt"></span><button id="next">→</button>
+<button id="play" class="p">Play</button><button id="fs">Fullscreen</button>
+</div>
+<div class="cat"><h2>Meta<span>1200 × 630 · 2 designs</span></h2><div class="strip" id="s-meta"></div></div>
+<div class="cat"><h2>YouTube<span>1280 × 720 · 6 designs</span></h2><div class="strip" id="s-yt"></div></div>
+<div class="bar">
+<button class="p" data-f="svg">Download SVG</button>
+<button data-f="png">PNG</button><button data-f="webp">WebP</button><button data-f="jpg">JPG</button>
+<select id="scale" title="Raster size"><option value="1">1× (original size)</option><option value="2" selected>2× (double, recommended)</option></select>
+<select id="all-fmt" title="Download all format">
+  <option value="svg">Format: SVG</option>
+  <option value="png">Format: PNG</option>
+  <option value="webp">Format: WebP</option>
+  <option value="jpg">Format: JPG</option>
+</select>
+<button id="all">Download All</button>
+</div>
+<div class="hint" id="hint">Font load hocche…</div>
+<script>
+const MARK='<path fill="url(#g)" d="M510.904144,685.617310 C494.182220,748.066223 455.364685,789.378540 393.227173,805.461731 C303.379089,828.717468 215.301636,773.236328 195.343140,682.937073 C175.955170,595.218994 233.806610,507.442719 322.149933,490.536896 C409.527008,473.815979 494.307587,529.849304 511.626404,615.633972 C512.450928,619.718079 511.606873,621.188110 507.489105,621.156433 C496.658905,621.073120 485.823425,620.971741 474.998596,621.232544 C470.577667,621.339050 469.959045,618.518738 468.966461,615.418213 C455.137726,572.220947 426.485016,543.875305 382.653412,532.389832 C316.032104,514.932739 248.667633,557.974609 235.263611,625.615417 C222.336761,690.848267 264.723663,754.333252 329.923279,767.391846 C390.564850,779.537598 451.578705,742.579224 468.754608,682.997803 C470.358734,677.433350 472.720337,675.520142 478.405762,675.815125 C487.379700,676.280640 496.395508,675.915771 505.393433,675.947815 C512.702148,675.973877 512.779846,676.100220 511.364075,683.247681 C511.234772,683.900574 511.139404,684.560181 510.904144,685.617310z"/><path fill="url(#g)" d="M591.546875,728.458496 C615.914734,755.309570 645.946106,769.322571 681.835327,769.573853 C737.822998,769.965820 786.918457,730.646973 799.602173,675.958496 C815.286926,608.330322 769.652405,540.832397 701.065979,530.213745 C640.305725,520.806763 582.917114,557.315857 566.346130,616.080139 C565.226990,620.048645 563.459534,621.344543 559.398865,621.230225 C549.240662,620.944214 539.069153,621.145752 528.903076,621.118591 C523.135559,621.103210 522.637268,620.604614 523.857605,615.147583 C530.557861,585.185059 544.253113,558.900391 565.675354,536.828308 C593.866333,507.782196 628.339905,491.206390 668.543213,487.997711 C752.197815,481.321167 824.222900,537.032959 840.018127,615.682129 C851.814636,674.420288 835.524414,725.592651 792.203796,767.257446 C767.219116,791.287170 736.892578,805.041443 702.411377,809.413208 C618.439392,820.059814 542.622742,765.033386 524.226624,684.413391 C524.152527,684.088989 524.025940,683.776245 523.955994,683.451111 C522.356018,676.016418 522.426697,675.932983 530.061523,675.933350 C539.727661,675.933838 549.396729,676.067871 559.058411,675.860413 C563.012024,675.775513 565.008911,677.024597 566.068787,681.047363 C570.728699,698.734497 579.326904,714.389038 591.546875,728.458496z"/><path fill="url(#g)" d="M278.406189,320.430054 C276.850037,330.461884 277.226227,340.133789 277.224182,349.786865 C277.214233,396.775665 277.172058,443.764618 277.328613,490.752930 C277.343842,495.330170 276.050354,498.045868 271.834076,500.140533 C262.560791,504.747498 254.153976,510.776245 246.116409,517.307251 C244.866058,518.323181 243.763046,519.710449 241.832214,519.727234 C240.090759,518.355713 240.739273,516.377258 240.738708,514.666992 C240.718811,455.014587 240.540039,395.361053 240.873856,335.710388 C240.990280,314.905243 244.620911,294.608673 254.789886,276.031921 C266.652985,254.360306 285.134308,240.826324 308.570251,234.309402 C337.018555,226.398651 365.810089,226.206589 394.452454,233.431793 C432.030457,242.911041 454.000671,267.532928 462.208496,304.922150 C464.276123,314.340820 465.389038,323.911011 465.375793,333.620972 C465.315826,377.610260 465.350067,421.599854 465.444672,465.589111 C465.479401,481.746490 465.791595,497.903137 465.927765,514.060547 C465.943970,515.984924 466.441162,518.084412 464.754425,519.714478 C462.542999,519.509216 461.262726,517.835632 459.743774,516.606689 C452.210266,510.511169 444.347504,504.814514 435.627106,500.635193 C430.754944,498.300171 429.520386,495.229034 429.537933,490.148804 C429.710419,440.161255 429.698792,390.172882 429.621063,340.184906 C429.603943,329.171936 428.383301,318.245392 425.240784,307.637787 C418.497772,284.876740 403.458710,270.699249 380.424622,265.239563 C362.497589,260.990417 344.435181,260.885193 326.490723,265.174561 C299.734497,271.570190 284.748810,289.145111 279.345612,315.594421 C279.046082,317.060638 278.747040,318.527008 278.406189,320.430054z"/><path fill="url(#g)" d="M620.000000,669.191040 C544.185852,669.188049 468.871643,669.213989 393.557617,669.111023 C388.940857,669.104736 385.678619,670.075806 382.492279,673.951782 C371.579254,687.226929 352.962189,691.189575 337.615997,684.180359 C322.284424,677.177979 312.766602,660.486267 315.176239,644.827332 C318.026794,626.303345 331.084717,612.772095 348.673065,610.891418 C362.312256,609.433044 374.003143,613.926697 382.931152,624.528992 C384.991699,626.976013 387.090637,627.890076 390.167572,627.887634 C474.979248,627.820557 559.790955,627.802734 644.602600,627.853638 C648.027649,627.855713 650.383667,626.928284 652.701721,624.177979 C663.584900,611.265320 681.905701,607.156799 697.193970,613.843872 C713.421570,620.941833 722.184082,636.314148 720.217102,654.234009 C718.448364,670.348206 705.640381,684.158447 688.870117,686.877380 C674.164062,689.261719 661.459900,684.814941 651.980774,672.959412 C649.748047,670.166931 647.476196,669.053284 643.992615,669.141235 C636.166260,669.338867 628.331421,669.195435 620.000000,669.191040z"/>';
+const W=1200,H=630,FF="Outfit,'DM Sans',system-ui,sans-serif";
+let fontCSS='';
+const cv=document.createElement('canvas').getContext('2d');
+const tw=(t,s,w)=>{cv.font=`${w} ${s}px Outfit,system-ui,sans-serif`;return cv.measureText(t).width};
+const esc=s=>s.replace(/&/g,'&amp;');
+function pills(items,x,y,sz=15){let o='',cx=x;for(const t of items){const w=Math.ceil(tw(t,sz,500))+44;
+o+=`<rect x="${cx}" y="${y}" width="${w}" height="40" rx="20" fill="#f4f7fb" stroke="#d6dfed"/><circle cx="${cx+19}" cy="${y+20}" r="4" fill="#3b82f6"/><text x="${cx+32}" y="${y+26}" font-size="${sz}" font-weight="500" fill="#0c1629">${esc(t)}</text>`;cx+=w+10}return o}
+function chips(items,x,y){let o='',cx=x;items.forEach((t,i)=>{const w=Math.ceil(tw(t,15,600))+30;
+o+=i==0?`<rect x="${cx}" y="${y}" width="${w}" height="34" rx="17" fill="#3b82f6"/><text x="${cx+15}" y="${y+23}" font-size="15" font-weight="600" fill="#fff">${t}</text>`
+:`<rect x="${cx+.5}" y="${y+.5}" width="${w-1}" height="33" rx="16.5" fill="#fff" stroke="#d6dfed"/><text x="${cx+15}" y="${y+23}" font-size="15" font-weight="600" fill="#566d8a">${t}</text>`;cx+=w+8});return o}
+function row(y,c,l,t,d,star){return `<rect x="676" y="${y+10}" width="44" height="44" rx="12" fill="${c}"/><text x="698" y="${y+39}" text-anchor="middle" font-size="21" font-weight="800" fill="#fff">${l}</text>
+<text x="736" y="${y+30}" font-size="18" font-weight="600" fill="#0c1629">${t}</text><text x="736" y="${y+51}" font-size="14" font-weight="500" fill="#566d8a">${d}</text>
+<path d="M1068 ${y+22}l4.2 8.6 9.4 1.3-6.8 6.6 1.6 9.4-8.4-4.4-8.4 4.4 1.6-9.4-6.8-6.6 9.4-1.3z" fill="${star?'#f59e0b':'none'}" stroke="${star?'#f59e0b':'#c3cfe0'}" stroke-width="2" stroke-linejoin="round" transform="translate(-2 -2)"/>
+<line x1="676" y1="${y+68}" x2="1088" y2="${y+68}" stroke="#eef2f8" stroke-width="2"/>`}
+function d1(){
+const cta='linkivo.web.app',cw=Math.ceil(tw(cta,21,600))+92;
+const mw=Math.round(46*652.5/583);
+return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="${FF}">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0c1629" flood-opacity=".10"/></filter>
+<filter id="sh2" x="-30%" y="-40%" width="160%" height="220%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0c1629" flood-opacity=".12"/></filter></defs>
+<rect width="${W}" height="${H}" fill="#fff"/>
+<circle cx="1010" cy="300" r="380" fill="#f4f8ff"/>
+<!-- brand lockup -->
+<svg x="72" y="56" width="${mw}" height="46" viewBox="191.5 228 652.5 583">${MARK}</svg>
+<text x="${72+mw+14}" y="97" font-size="42" font-weight="800" letter-spacing="-0.5"><tspan fill="#0c1629">l</tspan><tspan fill="url(#g)">i</tspan><tspan fill="#0c1629">nk</tspan><tspan fill="url(#g)">i</tspan><tspan fill="#0c1629">vo</tspan></text>
+<!-- headline -->
+<text x="70" y="226" font-size="80" font-weight="800" letter-spacing="-2" fill="#0c1629">Your links,</text>
+<text x="70" y="308" font-size="80" font-weight="800" letter-spacing="-2" fill="#0c1629">organised.</text>
+<text x="72" y="360" font-size="25" font-weight="500" fill="#566d8a">A fast, private link manager for</text>
+<text x="72" y="392" font-size="25" font-weight="500" fill="#566d8a">people with thousands of links.</text>
+${pills(['Folders & tags','Import anywhere','9 export formats'],72,426)}
+${pills(['Random Discover','App lock & vault','Installable app'],72,474)}
+<rect x="72" y="532" width="${cw}" height="52" rx="26" fill="url(#g)"/>
+<text x="102" y="566" font-size="21" font-weight="600" fill="#fff">${cta}</text>
+<path d="M${72+cw-50} 558h20m-7-7l7 7-7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- app mock -->
+<rect x="640" y="60" width="540" height="520" rx="44" fill="#eaf1fc"/>
+<rect x="648" y="84" width="468" height="462" rx="28" fill="#fff" stroke="#d6dfed" filter="url(#sh)"/>
+<rect x="676" y="110" width="412" height="46" rx="23" fill="#f4f7fb"/>
+<circle cx="707" cy="132" r="7.5" fill="none" stroke="#566d8a" stroke-width="2.4"/><path d="M713 138l6 6" stroke="#566d8a" stroke-width="2.4" stroke-linecap="round"/>
+<text x="732" y="139" font-size="17" font-weight="500" fill="#8296b0">Search 1,284 links</text>
+${chips(['All','Dev','Read later','Design'],676,172)}
+${row(222,'#3b82f6','C','A complete guide to CSS grid','css-tricks.com',true)}
+${row(290,'#10b981','V','Vite: next generation tooling','vitejs.dev',false)}
+${row(358,'#8b5cf6','F','Firebase hosting overview','firebase.google.com',false)}
+${row(426,'#f43f5e','P','Bengali poetry, an open archive','poetry.example.org',false)}
+<!-- floating badges -->
+<g filter="url(#sh2)"><rect x="948" y="44" width="${Math.ceil(tw('Random Discover',15,600))+66}" height="46" rx="23" fill="#fff"/></g>
+<rect x="962" y="56" width="22" height="22" rx="6" fill="none" stroke="#3b82f6" stroke-width="2.2"/><circle cx="968.5" cy="62.5" r="1.8" fill="#3b82f6"/><circle cx="977.5" cy="71.5" r="1.8" fill="#3b82f6"/><circle cx="973" cy="67" r="1.8" fill="#3b82f6"/>
+<text x="994" y="73" font-size="15" font-weight="600" fill="#0c1629">Random Discover</text>
+<g filter="url(#sh2)"><rect x="624" y="494" width="${Math.ceil(tw('Vault locked',15,600))+66}" height="46" rx="23" fill="#fff"/></g>
+<rect x="640" y="511" width="18" height="14" rx="4" fill="#3b82f6"/><path d="M644 511v-4a5 5 0 0 1 10 0v4" fill="none" stroke="#3b82f6" stroke-width="2.2"/>
+<text x="670" y="522" font-size="15" font-weight="600" fill="#0c1629">Vault locked</text>
+</svg>`}
+const defs=()=>`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0c1629" flood-opacity=".10"/></filter>
+<filter id="sh2" x="-30%" y="-40%" width="160%" height="220%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0c1629" flood-opacity=".12"/></filter></defs>`;
+const open=()=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="${FF}">${defs()}<rect width="${W}" height="${H}" fill="#fff"/>`;
+const I={link:"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",folder:"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",star:"M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z",lock:"M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3",shuffle:"M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5",download:"M12 4v11m-5-5l5 5 5-5M5 20h14",search:"M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5"};
+const ic=(n,x,y,s,c,w=2)=>`<g transform="translate(${x} ${y}) scale(${s/24})" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${I[n]}"/></g>`;
+const mark=(x,y,h)=>`<svg x="${x}" y="${y}" width="${h*652.5/583}" height="${h}" viewBox="191.5 228 652.5 583">${MARK}</svg>`;
+const word=(x,y,fs)=>`<text x="${x}" y="${y}" font-size="${fs}" font-weight="800" letter-spacing="-0.5"><tspan fill="#0c1629">l</tspan><tspan fill="url(#g)">i</tspan><tspan fill="#0c1629">nk</tspan><tspan fill="url(#g)">i</tspan><tspan fill="#0c1629">vo</tspan></text>`;
+const lockup=(x,y)=>mark(x,y,46)+word(x+52+14,y+41,42);
+const cta=(x,y)=>{const t='linkivo.web.app',w=Math.ceil(tw(t,21,600))+92;return `<rect x="${x}" y="${y}" width="${w}" height="52" rx="26" fill="url(#g)"/><text x="${x+30}" y="${y+34}" font-size="21" font-weight="600" fill="#fff">${t}</text><path d="M${x+w-50} ${y+26}h20m-7-7l7 7-7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`};
+const tile=(x,y,r,c,n)=>`<rect x="${x-r}" y="${y-r}" width="${2*r}" height="${2*r}" rx="${r*.32}" fill="#fff" filter="url(#sh2)"/>`+ic(n,x-r*.4,y-r*.4,r*.8,c,2);
+
+Object.assign(I,{restore:"M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",trash:"M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",arrow:"M5 12h14m-6-6l6 6-6 6",file:"M7 3h7l5 5v13H7zM14 3v5h5",check:"M5 12l5 5L20 7",spark:"M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"});
+const markW=(x,y,h)=>mark(x,y,h).replace(/url\(#g\)/g,'#fff');
+const hd=(l,y,fs,lh)=>l.map((t,i)=>`<text x="70" y="${y+i*lh}" font-size="${fs}" font-weight="800" letter-spacing="${-fs*.02}" fill="#0c1629">${t}</text>`).join('');
+const card=(x,y,w,h,r=28,f='#fff',x2='stroke="#e3eaf5"')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${f}" ${x2}/>`;
+const fav=(x,y,s,c,n)=>`<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="${s*.3}" fill="${c}"/>`+(n?ic(n,x+s*.25,y+s*.25,s*.5,'#fff',2.2):'');
+const sk=(x,y,w,h=10,c='#dbe4f1')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h/2}" fill="${c}"/>`;
+const PAL=['#3b82f6','#10b981','#8b5cf6','#f43f5e','#f59e0b','#06b6d4'];
+
+// ---- v2: website-style badges, icons, and 2 layouts x 2 sizes ----
+Object.assign(I,{dice:"M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01",cloud:"M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18.4 9.8 4.1 4.1 0 0 1 17.5 18z",screen:"M3 5h18v11H3zM8 20h8M12 16v4",sliders:"M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6",eye:"M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",menu:"M4 7h16M4 12h16M4 17h16",plus:"M12 5v14M5 12h14"});
+const SF="'Instrument Serif',Georgia,serif";
+const XD=`<linearGradient id="bC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1330"/><stop offset="1" stop-color="#173a8a"/></linearGradient><radialGradient id="r3"><stop offset="0" stop-color="#3b82f6" stop-opacity=".65"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient><radialGradient id="r1"><stop offset="0" stop-color="#bcd5f8"/><stop offset="1" stop-color="#bcd5f8" stop-opacity="0"/></radialGradient><radialGradient id="r2"><stop offset="0" stop-color="#a6e6f1"/><stop offset="1" stop-color="#a6e6f1" stop-opacity="0"/></radialGradient><linearGradient id="bB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b36a8"/><stop offset=".55" stop-color="#2f6ff0"/><stop offset="1" stop-color="#27b5ea"/></linearGradient>`;
+const sc=(W,H,body,bg)=>{const s=Math.min(W/1200,H/630);return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="${FF}">${defs()}<defs>${XD}</defs>${bg}<g transform="translate(${(W-1200*s)/2} ${(H-630*s)/2}) scale(${s})">${body}</g></svg>`};
+// website-style badge: white pill + gradient icon circle
+const bw=(t,s)=>Math.ceil(tw(t,s,600))+Math.round(s*3.5);
+const bd=(x,y,t,n,s=15)=>{const h=Math.round(s*2.5),r=h*.33;return `<g filter="url(#sh2)"><rect x="${x}" y="${y}" width="${bw(t,s)}" height="${h}" rx="${h/2}" fill="#fff" stroke="#d6e3f7"/></g><circle cx="${x+h/2}" cy="${y+h/2}" r="${r}" fill="url(#g)"/>`+ic(n,x+h/2-r*.62,y+h/2-r*.62,r*1.24,'#fff',2.4)+`<text x="${x+h/2+r+8}" y="${y+h/2+s*.35}" font-size="${s}" font-weight="600" fill="#0c2a5c">${esc(t)}</text>`};
+const brow=(a,x,y,s,g=10)=>{let o='',c=x;for(const[t,n]of a){o+=bd(c,y,t,n,s);c+=bw(t,s)+g}return o};
+const FT=[['Folders','folder'],['Smart import','download'],['Preview in place','eye'],['Random Discover','dice'],['Locked folders','lock'],['Recycle Bin','trash'],['Guest or account','cloud'],['Every screen','screen'],['Customize','sliders'],['Export anywhere','file'],['Global search','search']];
+const pn=(x,y)=>{const w=300,h=660;let o=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="52" fill="#0c1629" filter="url(#sh)"/><rect x="${x+9}" y="${y+9}" width="${w-18}" height="${h-18}" rx="43" fill="#f6f9fe"/><rect x="${x+w/2-44}" y="${y+20}" width="88" height="24" rx="12" fill="#0c1629"/>`+mark(x+30,y+66,30)+`<text x="${x+74}" y="${y+90}" font-size="26" font-weight="800" fill="#0c1629">Library</text>`+chips(['All','Dev','Design'],x+30,y+114);
+[['Design','#8b5cf6',128,0],['Dev','#2563eb',64,0],['Private','#f59e0b',23,1],['Passwords','#f43f5e',12,1]].forEach(([t,c,n,l],i)=>{const v=y+168+i*66;o+=card(x+24,v,252,56,16,'#fff','stroke="#e3ecf8"')+fav(x+36,v+10,36,c,'folder')+`<text x="${x+84}" y="${v+26}" font-size="16" font-weight="700" fill="#0c1629">${t}</text><text x="${x+84}" y="${v+44}" font-size="12.5" font-weight="500" fill="#566d8a">${n} links</text>`+(l?ic('lock',x+242,v+19,18,'#8296b0',2):'')});
+o+=card(x+30,y+480,240,56,28,'#fff','stroke="#e3ecf8" filter="url(#sh2)"');
+['folder','shuffle','plus','search','menu'].forEach((n,i)=>{const cx=x+54+i*48,a=i==0,p=i==2;o+=(a?`<circle cx="${cx}" cy="${y+508}" r="19" fill="#dbeafe"/>`:'')+(p?`<circle cx="${cx}" cy="${y+508}" r="20" fill="#2563eb"/>`:'')+ic(n,cx-11,y+497,22,p?'#fff':a?'#2563eb':'#8296b0',2)});return o};
+
+// A: overview. App name + logo are the hero; tagline stays small
+function A(W,H){const X=440,cw=Math.ceil(tw('linkivo.web.app',21,600))+92;
+let o=`<circle cx="214" cy="420" r="300" fill="#d9e7fb" opacity=".85"/>`+pn(64,66)+mark(X,50,120)+word(X+160,157,110);
+o+=`<text x="${X}" y="228" font-size="32" font-weight="600" fill="#334155">Your links, organised.</text><text x="${X}" y="264" font-size="21" font-weight="500" fill="#566d8a">Folders, import, vault and more in one private app.</text>`;
+o+=brow(FT.slice(0,4),X,304,15)+brow(FT.slice(4,8),X,352,15)+brow(FT.slice(8),X,400,15)+cta(X,482)+`<text x="${X+cw+24}" y="514" font-size="19" font-weight="500" fill="#566d8a">Free to start. No sign-up needed.</text>`;
+return sc(W,H,o,`<rect width="${W}" height="${H}" fill="#eef4fc"/><circle cx="0" cy="0" r="620" fill="url(#r1)"/><circle cx="${W}" cy="${H}" r="560" fill="url(#r2)"/>`)}
+
+// B: thumbnail-first (big type, bold colour, one focal app window, straddling callouts)
+function B(W,H){let o=`<circle cx="1000" cy="290" r="400" fill="#fff" opacity=".07"/><circle cx="120" cy="640" r="260" fill="#fff" opacity=".06"/>`;
+const t='linkivo',lw=tw(t,42,800);
+o+=markW(60,50,46)+`<text x="125" y="91" font-size="42" font-weight="800" letter-spacing="-.5" fill="#fff">${t}</text><rect x="${125+lw+14}" y="60" width="52" height="30" rx="15" fill="#fff"/><text x="${125+lw+40}" y="81" text-anchor="middle" font-size="18" font-weight="800" fill="#1d4ed8">v2</text>`;
+o+=`<text x="58" y="254" font-size="92" font-weight="800" letter-spacing="-2.5" fill="#fff">Never lose</text><text x="58" y="352" font-size="92" font-weight="800" letter-spacing="-2.5" fill="#b9f2ff">a link again.</text>`+brow([['Smart import','download'],['Recycle Bin','trash'],['Every screen','screen']],60,396,19);
+const u='linkivo.web.app',cw=Math.ceil(tw(u,24,700))+104;
+o+=`<rect x="60" y="476" width="${cw}" height="62" rx="31" fill="#fff" filter="url(#sh)"/><text x="92" y="516" font-size="24" font-weight="700" fill="#1d4ed8">${u}</text><path d="M${60+cw-52} 507h22m-8-8l8 8-8 8" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+const C=[['Design','#8b5cf6',128],['Dev','#2563eb',64],['Read later','#f59e0b',212],['Recipes','#f43f5e',37],['Travel','#16a34a',91],['Music','#14b8a6',305]];
+o+=`<g transform="rotate(-5 940 280)"><rect x="730" y="100" width="420" height="350" rx="32" fill="#fff" filter="url(#sh)"/>`+mark(756,124,26)+`<text x="793" y="146" font-size="23" font-weight="800" fill="#0c1629">Library</text>`+chips(['All','Dev','Design'],756,166)+C.map(([n,c,k],i)=>{const x=756+(i%3)*128,y=220+Math.floor(i/3)*108;return card(x,y,112,96,20,'#f6f9fe','stroke="#e3ecf8"')+fav(x+12,y+12,34,c,'folder')+`<text x="${x+12}" y="${y+68}" font-size="15" font-weight="700" fill="#0c1629">${n}</text><text x="${x+12}" y="${y+85}" font-size="12.5" font-weight="500" fill="#566d8a">${k} links</text>`}).join('')+`</g>`;
+o+=`<rect x="684" y="388" width="124" height="124" rx="38" fill="#fff" filter="url(#sh)"/><rect x="694" y="398" width="104" height="104" rx="30" fill="url(#g)"/>`+[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]].map(([a,b])=>`<circle cx="${746+a*25}" cy="${450+b*25}" r="8" fill="#fff"/>`).join('')+bd(822,470,'Random Discover','dice',17)+bd(958,64,'Locked folders','lock',17)+bd(1040,236,'Preview','eye',17);
+return sc(W,H,o,`<rect width="${W}" height="${H}" fill="url(#bB)"/>`)}
+
+const lkW=(x,y,h=46)=>markW(x,y,h)+`<text x="${x+h*1.119+14}" y="${y+h*.89}" font-size="${h*.913}" font-weight="800" letter-spacing="-.5" fill="#fff">linkivo</text>`;
+const wc=(x,y,u='linkivo.web.app')=>{const w=Math.ceil(tw(u,24,700))+104;return `<rect x="${x}" y="${y}" width="${w}" height="62" rx="31" fill="#fff" filter="url(#sh)"/><text x="${x+32}" y="${y+40}" font-size="24" font-weight="700" fill="#1d4ed8">${u}</text><path d="M${x+w-52} ${y+31}h22m-8-8l8 8-8 8" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`};
+const lc=(x,y,r,c,t,d,n='link',w=214)=>`<g transform="rotate(${r} ${x+w/2} ${y+32})">`+card(x,y,w,64,18,'#fff','stroke="#e3ecf8" filter="url(#sh2)"')+fav(x+12,y+12,40,c,n)+`<text x="${x+62}" y="${y+30}" font-size="15" font-weight="700" fill="#0c1629">${t}</text><text x="${x+62}" y="${y+48}" font-size="12.5" font-weight="500" fill="#566d8a">${d}</text></g>`;
+const H2=(l,y,c1,c2,fs=90)=>`<text x="58" y="${y}" font-size="${fs}" font-weight="800" letter-spacing="${-fs*.028}" fill="${c1}">${l[0]}</text><text x="58" y="${y+fs*1.08}" font-size="${fs}" font-weight="800" letter-spacing="${-fs*.028}" fill="${c2}">${l[1]}</text>`;
+const dots=(cx,cy,g,r)=>[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]].map(([a,b])=>`<circle cx="${cx+a*g}" cy="${cy+b*g}" r="${r}" fill="#fff"/>`).join('');
+
+// 3: Random Discover on dark navy
+function C1(W,H){let o=`<circle cx="950" cy="300" r="340" fill="url(#r3)"/>`+lkW(60,50)+H2(['Roll the dice','on your links.'],258,'#fff','#7dd3fc')+bd(60,392,'Random Discover','dice',22)+wc(60,480);
+o+=`<g transform="rotate(12 950 300)"><rect x="825" y="175" width="250" height="250" rx="70" fill="#fff" filter="url(#sh)"/><rect x="839" y="189" width="222" height="222" rx="57" fill="url(#g)"/>${dots(950,300,58,19)}</g>`;
+return sc(W,H,o+lc(880,52,-6,'#f43f5e','Old recipe I saved','food.example')+lc(735,478,5,'#16a34a','Weekend trip ideas','trips.example')+lc(965,446,-4,'#f59e0b','Great talk on CSS','talks.example'),`<rect width="${W}" height="${H}" fill="url(#bC)"/>`)}
+
+// 4: Vault and PIN keypad on light
+function C2(W,H){let o=lockup(60,50)+H2(['Your vault.','Your PIN.'],262,'#0c1629','url(#g)',100)+bd(60,404,'Locked folders','lock',22)+cta(60,484);
+o+=`<g transform="rotate(4 940 300)"><rect x="760" y="76" width="360" height="450" rx="42" fill="#fff" stroke="#e3ecf8" filter="url(#sh)"/><text x="940" y="138" text-anchor="middle" font-size="28" font-weight="800" fill="#0c1629">Enter PIN</text>`+[0,1,2,3].map(i=>`<circle cx="${871+i*46}" cy="178" r="13" fill="${i<3?'#2563eb':'none'}" ${i<3?'':'stroke="#b8c7de" stroke-width="3"'}/>`).join('')+[1,2,3,4,5,6,7,8,9].map((n,i)=>{const cx=844+(i%3)*96,cy=262+Math.floor(i/3)*96,s=n==5;return `<circle cx="${cx}" cy="${cy}" r="35" fill="${s?'url(#g)':'#f1f5fb'}"/><text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="30" font-weight="600" fill="${s?'#fff':'#0c1629'}">${n}</text>`}).join('')+`</g>`;
+return sc(W,H,o+lc(640,452,-6,'#f59e0b','Private','23 links','lock')+lc(975,500,5,'#f43f5e','Passwords','12 links','lock'),`<rect width="${W}" height="${H}" fill="#eef4fc"/><circle cx="${W}" cy="0" r="560" fill="url(#r1)"/><circle cx="0" cy="${H}" r="520" fill="url(#r2)"/>`)}
+
+// 5: before / after split
+function C3(W,H){let o=`<text x="50" y="112" font-size="62" font-weight="800" letter-spacing="-1.5" fill="#0c1629">Too many tabs?</text>`;
+const T=[['React docs','react.dev'],['CSS grid guide','css-tricks.com'],['Recipe: kacchi','food.example'],['Great talk','talks.example'],['Typography','type.example'],['Vite docs','vitejs.dev'],['Design systems','material.io'],['Shell tricks','shell.example']];
+[[34,176,-12],[262,156,8],[48,262,5],[286,250,-8],[30,352,-4],[270,344,10],[56,440,9],[290,436,-6]].forEach(([x,y,r],i)=>o+=lc(x,y,r,PAL[i%6],T[i][0],T[i][1]));
+o+=lkW(650,44,60);
+[['Design',128],['Dev',64],['Read later',212],['Recipes',37],['Travel',91],['Music',305]].forEach(([n,k],i)=>{const x=650+(i%2)*244,y=146+Math.floor(i/2)*126;o+=card(x,y,226,114,26,'#fff','stroke="#e3ecf8" filter="url(#sh2)"')+fav(x+18,y+18,46,PAL[(i+2)%6],'folder')+`<text x="${x+18}" y="${y+86}" font-size="22" font-weight="700" fill="#0c1629">${n}</text><text x="${x+206}" y="${y+86}" text-anchor="end" font-size="15" font-weight="500" fill="#566d8a">${k} links</text>`});
+o+=`<circle cx="600" cy="330" r="54" fill="#fff" filter="url(#sh)"/><path d="M582 330h36m-14-14l14 14-14 14" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+return sc(W,H,o,`<rect width="${W}" height="${H}" fill="#e2e8f2"/><rect x="${W/2}" width="${W/2}" height="${H}" fill="url(#bB)"/>`)}
+
+// 6: Customize (dark window + accent panel)
+function C4(W,H){const AC=['#3b82f6','#10b981','#8b5cf6','#f43f5e','#f59e0b','#64748b'];
+let o=`<circle cx="900" cy="250" r="300" fill="#fbd9e4" opacity=".7"/>`+lockup(60,50)+H2(['Make it','yours.'],258,'#0c1629','url(#g)',112)+bd(60,412,'Customize','sliders',22)+cta(60,490);
+o+=`<g transform="rotate(4 880 240)"><rect x="620" y="80" width="480" height="320" rx="30" fill="#0f1b36" filter="url(#sh)"/>`+mark(646,104,28)+`<text x="686" y="127" font-size="24" font-weight="800" fill="#fff">Library</text><rect x="646" y="150" width="52" height="32" rx="16" fill="#f43f5e"/><text x="672" y="171" text-anchor="middle" font-size="15" font-weight="600" fill="#fff">All</text>`+['Dev','Design'].map((t,i)=>`<rect x="${706+i*66}" y="150" width="${i?76:56}" height="32" rx="16" fill="#1b2d57"/><text x="${706+i*66+(i?38:28)}" y="171" text-anchor="middle" font-size="15" font-weight="600" fill="#9db2d6">${t}</text>`).join('')+['Design','Dev','Read later','Recipes','Travel','Music'].map((n,i)=>{const x=646+(i%3)*148,y=204+Math.floor(i/3)*92;return `<rect x="${x}" y="${y}" width="136" height="80" rx="18" fill="#16264a"/>`+fav(x+12,y+12,32,PAL[(i+2)%6],'folder')+`<text x="${x+12}" y="${y+66}" font-size="14" font-weight="600" fill="#fff">${n}</text>`}).join('')+`</g>`;
+o+=card(700,330,360,140,26,'#fff','stroke="#e3ecf8" filter="url(#sh)"')+`<text x="726" y="380" font-size="18" font-weight="700" fill="#0c1629">Accent</text>`+AC.map((c,i)=>`<circle cx="${846+i*38}" cy="374" r="13" fill="${c}"/>`+(i==3?`<circle cx="${846+i*38}" cy="374" r="18" fill="none" stroke="${c}" stroke-width="3"/>`:'')).join('')+`<text x="726" y="434" font-size="18" font-weight="700" fill="#0c1629">Theme</text><rect x="836" y="410" width="214" height="36" rx="18" fill="#f1f5fb"/><rect x="905" y="413" width="68" height="30" rx="15" fill="#fff" stroke="#d6e3f7"/>`+['Light','Dark','Auto'].map((t,i)=>`<text x="${871+i*71}" y="433" text-anchor="middle" font-size="14" font-weight="600" fill="${i==1?'#0c1629':'#8296b0'}">${t}</text>`).join('');
+return sc(W,H,o,`<rect width="${W}" height="${H}" fill="#fdf5f8"/><circle cx="0" cy="0" r="560" fill="url(#r1)"/><circle cx="${W}" cy="${H}" r="520" fill="url(#r2)"/>`)}
+
+const D=[()=>A(1200,630),()=>B(1200,630),()=>A(1280,720),()=>B(1280,720),()=>C1(1280,720),()=>C2(1280,720),()=>C3(1280,720),()=>C4(1280,720)];
+const SZ=[[1200,630],[1200,630],[1280,720],[1280,720],[1280,720],[1280,720],[1280,720],[1280,720]];
+const NM=['Meta 1: Overview','Meta 2: Bold','YouTube 1: Overview','YouTube 2: Bold','YouTube 3: Roll the dice','YouTube 4: Vault and PIN','YouTube 5: Too many tabs','YouTube 6: Make it yours'];
+const FN=['meta-1-overview','meta-2-bold','youtube-1-overview','youtube-2-bold','youtube-3-dice','youtube-4-vault','youtube-5-tabs','youtube-6-customize'];
+const MAIN=D.length;
+let cur=0,timer=null;
+const $ = id => document.getElementById(id);
+
+const build = i => D[i === undefined ? cur : i]();
+
+function show() {
+  $('stage').innerHTML = build();
+  $('cnt').textContent = `${cur + 1} / ${MAIN}  ${NM[cur]}`;
+  $('prog').style.width = ((cur + 1) / MAIN * 100) + '%';
+  document.querySelectorAll('.th').forEach(b => b.classList.toggle('on', +b.dataset.i == cur));
+}
+
+function render() {
+  for (const [k, ids] of Object.entries({meta: [0, 1], yt: [2, 3, 4, 5, 6, 7]})) $('s-' + k).innerHTML = ids.map(i => `<button class="th" data-i="${i}">${D[i]()}</button>`).join('');
+  document.querySelectorAll('.th').forEach(b => b.onclick = () => go(+b.dataset.i));
+  show();
+}
+
+function go(i) {
+  cur = (i + D.length) % D.length;
+  const st = $('stage');
+  st.classList.add('out');
+  setTimeout(() => { show(); st.classList.remove('out'); }, 160);
+}
+
+function play(on) {
+  clearInterval(timer);
+  timer = on ? setInterval(() => go(cur + 1), 4000) : null;
+  $('play').textContent = on ? 'Pause' : 'Play';
+}
+
+$('prev').onclick = () => go(cur - 1);
+$('next').onclick = () => go(cur + 1);
+$('play').onclick = () => play(!timer);
+$('fs').onclick = () => {
+  const e = $('stage');
+  document.fullscreenElement ? document.exitFullscreen() : e.requestFullscreen && e.requestFullscreen();
+};
+
+$('stage').onclick = () => { if (document.fullscreenElement) go(cur + 1); };
+
+document.addEventListener('keydown', e => {
+  if (e.key == 'ArrowRight') go(cur + 1);
+  else if (e.key == 'ArrowLeft') go(cur - 1);
+  else if (e.key == ' ') { e.preventDefault(); play(!timer); }
+  else if (e.key == 'f') $('fs').onclick();
+});
+
+async function embedFont(){try{const css=await (await fetch(document.getElementById('fontcss').href)).text();let out=css;
+for(const u of [...new Set([...css.matchAll(/url\((https:[^)]+)\)/g)].map(m=>m[1]))]){const b=await (await fetch(u)).blob();
+const d=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});out=out.split(u).join(d)}fontCSS=out;return true}catch(e){return false}}
+
+function svgString(i){let s=build(i);if(fontCSS)s=s.replace('<defs>',`<defs><style>${fontCSS}.cat{width:min(1200px,100%)}.cat h2{font-size:18px;font-weight:600;margin:6px 0 10px}.cat h2 span{color:var(--sub);font-weight:500;font-size:14px;margin-left:8px}
+</style>`);return '<?xml version="1.0" encoding="UTF-8"?>\n'+s}
+function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+
+async function exp(f,i=cur){const s=svgString(i);
+if(f==='svg')return save(new Blob([s],{type:'image/svg+xml'}),`linkivo-${FN[i]}.svg`);
+const k=+document.getElementById('scale').value,img=new Image();
+img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);await img.decode();
+const c=document.createElement('canvas');c.width=SZ[i][0]*k;c.height=SZ[i][1]*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+const mime={png:'image/png',webp:'image/webp',jpg:'image/jpeg'}[f];
+c.toBlob(b=>save(b,`linkivo-${FN[i]}.${f}`),mime,.95)}
+
+document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>exp(b.dataset.f));
+
+document.getElementById('all').onclick = async () => {
+  const fmt = document.getElementById('all-fmt').value;
+  for (let i = 0; i < D.length; i++) {
+    await exp(fmt, i);
+    await new Promise(r => setTimeout(r, 350));
+  }
+};
+
+render();
+document.fonts.load('800 40px Outfit').then(()=>document.fonts.load('500 16px Outfit')).then(render).catch(()=>{});
+embedFont().then(ok=>{document.getElementById('hint').textContent=ok?'Font SVG-er moddhe embed hoyeche, tai SVG jekono jaygay same dekhabe.':'Offline: font embed hoyni. Internet on kore page reload dile SVG te font embed hobe.'});
+</script></body></html>

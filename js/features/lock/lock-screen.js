@@ -10,7 +10,7 @@ import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
 import { maskEmail } from '../../core/mask.js';
 import { shownUser } from '../../core/profile-data.js';
-import { unlock } from '../../core/lock.js';
+import { unlock, getPinLen, forgetPinLen } from '../../core/lock.js';
 import { buildPinPad } from './pin-pad.js';
 import { describeError } from './pin-sheet.js';
 
@@ -18,9 +18,10 @@ export async function showLockScreen({ session, onUnlocked, router = null }) {
   await loadCss('/css/pages/lock.css');
   document.getElementById('lock-screen')?.remove();
   const guest = session.mode === 'guest', who = guest ? 'This device' : `${shownUser(session.user).name} (${maskEmail(session.user.email)})`;
-  const pad = buildPinPad({ onSubmit: async (pin) => {
+    // v2.5.4: the lock screen of a 4 digit PIN holds 4 digits
+  const pad = buildPinPad({ min: () => getPinLen() || 4, max: () => getPinLen() || 8, onSubmit: async (pin) => {
     try { await unlock(pin); pad.message(''); dispose(true); onUnlocked(); }
-    catch (e) { const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
+    catch (e) { if (e && e.code === 'wrong_pin') forgetPinLen(); const d = describeError(e); pad.shake(); if (d.wait) pad.lockFor(d.wait, d.text); else pad.message(d.text, 'error'); }
   } });
   const forgot = h('button', { type: 'button', class: 'lock-link', on: { click: async () => { const m = await import('./forgot-pin.js'); if (await m.runForgotPin({ session, router })) { dispose(true); onUnlocked(); } } } }, 'Forgot PIN?');
   const out = h('button', { type: 'button', class: 'lock-link is-quiet', on: { click: async () => { const m = await import('../shell/shell-parts.js'); m.logOut(router, { guest, skipPin: true }); } } }, guest ? 'Leave guest mode' : 'Log out');

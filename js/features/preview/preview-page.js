@@ -50,7 +50,12 @@ export async function mount(container, ctx) {
   // so one step is enough), otherwise (a pasted address, a reload) straight into the link's folder, and only then the Library.
   const back = () => {
     if (emb) { emb.onClose(); return; }
-    if (ctx.from) history.back();
+    if (ctx.from) {
+      // v2.5.4 (owner): closing a preview returns to the page it was opened from (History, Profile, Favourites, a folder, Random, Search...). Back does that when the browser's entry before this one
+      // is that page; if it did not (a replaced entry, a reload, a different page), go there directly.
+      const want = ctx.from; history.back();
+      setTimeout(() => { try { const cur = location.pathname + location.search; if (cur.startsWith('/link/') || cur.split('?')[0] !== want.split('?')[0]) router.navigate(want, { replace: true }); } catch { /* the page is already gone */ } }, 500);
+    }
     else { const l0 = engine && engine.getLink(lid); router.navigate(l0 && l0.fid && engine.getFolder(l0.fid) ? `/folder/${encodeURIComponent(l0.fid)}` : '/library', { replace: true }); }
   };
   const link = () => engine && engine.getLink(lid);

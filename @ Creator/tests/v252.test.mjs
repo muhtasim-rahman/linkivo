@@ -175,8 +175,8 @@ test('Edit profile: the left column is wider than 270px and the carousel replace
 // ---- Owner 8 and A: the vault ------------------------------------------------------------------------------------------------------------
 test('vault code shape: <prefix> + exactly six digits, nothing else; one fixed prefix per person', async () => {
   const { vaultCodeMatch, VAULT_PREFIXES } = await import('../../js/core/vault.js');
-  assert.deepEqual(VAULT_PREFIXES, ['@', '#', '%', '$', '!']);
-  assert.equal(vaultCodeMatch('@482913', '@'), '482913'); assert.equal(vaultCodeMatch('#482913', '#'), '482913');
+  assert.deepEqual(VAULT_PREFIXES, ['%', '@', '#', '$', '!']);   // v2.5.4: % first = the default symbol
+  assert.equal(vaultCodeMatch('%482913'), '482913'); assert.equal(vaultCodeMatch('@482913', '@'), '482913'); assert.equal(vaultCodeMatch('#482913', '#'), '482913');
   for (const bad of ['@48291', '@4829133', '482913', '#482913', '@48291a', '@ 82913', ' @482913', '@482913 ', '@@82913', '', null, undefined, '@４８２９１３']) assert.equal(vaultCodeMatch(bad, '@'), null, String(bad));
 });
 
@@ -206,7 +206,7 @@ test('Documentation: every topic has a title, a lead and parts; ids are unique; 
   assert.ok(TOPICS.length >= 12); assert.equal(new Set(TOPICS.map((t) => t.id)).size, TOPICS.length);
   for (const t of TOPICS) { assert.ok(t.title && t.lead && t.parts.length, t.id); assert.doesNotMatch(JSON.stringify(t), /[\u{1F300}-\u{1FAFF}]/u, 'no emojis'); }
   assert.ok(findTopic('security')); assert.equal(findTopic('nope'), null);
-  const sec = JSON.stringify(findTopic('security')); assert.match(sec, /@000000/); assert.match(sec, /search box/);
+  const sec = JSON.stringify(findTopic('security')); assert.match(sec, /%000000/); assert.match(sec, /search box/);
   const { mount } = await import('../../js/features/docs/docs-page.js'); const c = document.createElement('div');
   await mount(c, { params: {} }); assert.equal(c.querySelectorAll('.dc-card').length, TOPICS.length);
   const c2 = document.createElement('div'); await mount(c2, { params: { topic: 'import' } }); assert.match(c2.textContent, /chunks of 100/); assert.equal(c2.querySelectorAll('h1').length, 1);

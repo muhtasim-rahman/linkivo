@@ -88,13 +88,11 @@
 
 /* ---- v2.3.2: admin badge. <html data-admin> is set by core/admin.js for accounts listed in `admins`. ---- */
 .avatar { position: relative; overflow: visible; }
-.avatar .avatar-admin { display: none; position: absolute; inset: auto -3px -3px auto; width: 16px; height: 16px; overflow: visible; border-radius: 50%; place-items: center; background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 0 2px var(--surface); }   /* beats `.avatar span` of nav.css */
-.avatar.is-lg .avatar-admin { width: 20px; height: 20px; }
-html[data-admin='true'] .avatar .avatar-admin { display: grid; }
+/* v2.5.4: the avatar shield rules moved to components/nav.css (always loaded). Here they only applied on pages that load this file, so elsewhere the shield took the avatar's own span rule and covered the photo. */
 .admin-chip { display: none; margin-left: var(--s2); padding: 1px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text);   /* v2.5.0: the word badge always follows the accent */ font: 650 var(--fs-xs) var(--font-brand); vertical-align: middle; }
 html[data-admin='true'] .admin-chip { display: inline-block; }
 /* v2.5.2 (owner 6): the shield badge: round, primary colour, the same as the avatar shield; it takes the admin badge colour when one was chosen */
-.admin-chip.is-shield { width: 16px; height: 16px; margin-left: 6px; padding: 0; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }   /* v2.5.3 (owner): small and calm, in the accent colour (was a solid 20px disc) */
+.admin-chip.is-shield { width: 16px; height: 16px; margin-left: 6px; padding: 0; border-radius: 50%; background: var(--admin-badge-bg, var(--accent-soft)); color: var(--admin-badge-fg, var(--accent-text)); }   /* v2.5.4: follows the colour chosen in Edit profile */   /* v2.5.3 (owner): small and calm, in the accent colour (was a solid 20px disc) */
 html[data-admin='true'] .admin-chip.is-shield { display: inline-grid; place-items: center; }
 .admin-chip.is-shield svg { display: block; width: 10px; height: 10px; }
 
@@ -167,16 +165,24 @@ button.vault-card { width: 100%; text-align: left; font: inherit; color: inherit
 .jobs-panel { display: grid; gap: var(--s4); padding-bottom: var(--s4); }
 .jobs-h { margin: 0 0 var(--s2); font: 650 var(--fs-xs) var(--font-brand); color: var(--sub); text-transform: uppercase; letter-spacing: .04em; }
 .jobs-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
-.jobs-row { display: grid; gap: var(--s2); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
-.jobs-head { display: flex; justify-content: space-between; gap: var(--s3); align-items: baseline; }
-.jobs-st { color: var(--sub); font-size: var(--fs-sm); white-space: nowrap; }
+.jobs-row { display: grid; gap: var(--s2); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }   /* v2.5.4: compact */
+.jobs-head { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.jobs-ic { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); color: var(--sub); }
+.jobs-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+.jobs-st { flex: none; color: var(--sub); font-size: var(--fs-xs); white-space: nowrap; }
 .jobs-row.is-failed .jobs-st { color: var(--danger); }
+.jobs-row.is-done .jobs-st { color: var(--success, var(--sub)); }
+.jobs-more { min-height: 32px; padding: 0 var(--s2); background: none; border: 0; color: var(--accent-text); font: 600 var(--fs-xs) var(--font-brand); cursor: pointer; margin-left: auto; }
+.jobs-dl { display: grid; gap: 2px; margin: 0; padding: var(--s2); border-radius: var(--r-ctl, 10px); background: var(--surface-2); font-size: var(--fs-xs); }
+.jobs-dl > div { display: flex; gap: var(--s3); justify-content: space-between; }
+.jobs-dl dt { color: var(--sub); }
+.jobs-dl dd { margin: 0; text-align: right; word-break: break-word; }
 .jobs-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .jobs-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 240ms var(--ease); }
 .jobs-bar i.is-busy { animation: jobs-slide 1.2s ease-in-out infinite; width: 40% !important; }
-.jobs-err { margin: 0; color: var(--danger); font-size: var(--fs-sm); }
-.jobs-sub { margin: 0; color: var(--sub); font-size: var(--fs-sm); }
-.jobs-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.jobs-err { margin: 0; color: var(--danger); font-size: var(--fs-xs); }
+.jobs-sub { margin: 0; color: var(--sub); font-size: var(--fs-xs); }
+.jobs-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .jobs-empty { display: grid; justify-items: center; gap: var(--s2); padding: var(--s8) var(--s4); text-align: center; color: var(--sub); }
 @keyframes jobs-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .jobs-bar i.is-busy { animation: none; width: 100% !important; opacity: .5; } }

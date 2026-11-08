@@ -21,7 +21,9 @@ export function isWeakPin(pin) {
 }
 
 const pads = [];   // every live pad, newest last (see docKey)
-export function buildPinPad({ onSubmit, min = 4, max = 8, submitLabel = 'Unlock', autoAt = 0, autoMax = true } = {}) {
+export function buildPinPad({ onSubmit, min: minIn = 4, max: maxIn = 8, submitLabel = 'Unlock', autoAt = 0, autoMax = true } = {}) {
+  // v2.5.4: min and max may be functions, so a pad that was built for a known PIN length opens up again (4 to 8) once that length turned out to be stale (the PIN was changed on another device)
+  const lo = () => (typeof minIn === 'function' ? minIn() : minIn), hi = () => (typeof maxIn === 'function' ? maxIn() : maxIn);
   let value = '', busy = false, until = 0, timer = 0, api = null;
   const dots = h('div', { class: 'pin-dots', role: 'img' });
   const msg = h('p', { class: 'pin-msg', role: 'status', 'aria-live': 'polite' });
@@ -34,18 +36,18 @@ export function buildPinPad({ onSubmit, min = 4, max = 8, submitLabel = 'Unlock'
   const el = h('div', { class: 'pin', tabindex: '-1' }, dots, msg, grid);
 
   function paint() {
-    const n = Math.max(min, value.length);
+    const n = Math.max(lo(), value.length);
     dots.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', { class: ['pin-dot', i < value.length && 'is-on'] })));
-    dots.setAttribute('aria-label', `${value.length} digit${value.length === 1 ? '' : 's'} entered, at least ${min}`);
+    dots.setAttribute('aria-label', `${value.length} digit${value.length === 1 ? '' : 's'} entered, at least ${lo()}`);
     const off = busy || until > Date.now();
     for (const k of keys) k.disabled = off;
-    go.disabled = off || value.length < min; back.disabled = off || !value.length;
+    go.disabled = off || value.length < lo(); back.disabled = off || !value.length;
   }
-  function add(d) { if (busy || until > Date.now() || value.length >= max) return; value += d; message(''); paint();
+  function add(d) { if (busy || until > Date.now() || value.length >= hi()) return; value += d; message(''); paint();
     const at = typeof autoAt === 'function' ? autoAt() : autoAt;   // v2.5.2: the PIN gate can check as soon as the known PIN length is reached
-    if ((at && value.length === at) || (autoMax && value.length === max)) submit(); }
+    if ((at && value.length === at) || (autoMax && value.length === hi())) submit(); }
   async function submit() {
-    if (busy || value.length < min || until > Date.now()) return;
+    if (busy || value.length < lo() || until > Date.now()) return;
     const pin = value; busy = true; paint();
     try { await onSubmit(pin); } finally { busy = false; value = ''; paint(); }   // the digits are dropped whatever happened
   }

@@ -9,6 +9,7 @@
 .lock-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2) var(--s4); margin-top: var(--s2); }
 .lock-link { min-height: 44px; padding: 0 var(--s2); background: none; border: 0; color: var(--accent-text); font: 600 var(--fs-sm) var(--font-brand); cursor: pointer; }
 .lock-link.is-quiet { color: var(--sub); }
+.pin-sheet .pin-forgot { display: block; margin: var(--s2) auto 0; }   /* v2.5.4: Forgot PIN? under the keypad of a PIN gate popup */
 @media (hover: hover) { .lock-link:hover { text-decoration: underline; } }
 .pin { display: grid; justify-items: center; gap: var(--s3); width: 100%; outline: none; }
 .pin-dots { display: flex; justify-content: center; align-items: center; gap: 14px; min-height: 22px; }

@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.5.3';
+const VERSION = '2.5.4';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -21,6 +21,24 @@ const FIREBASE_FILES = ['firebase-app.js', 'firebase-auth.js', 'firebase-databas
 const PRECACHE = [
   '/',
   '/index.html',
+  // v2.5.4: the public pages (separate from the app) are kept too, so they open offline
+  '/docs',
+  '/docs/start',
+  '/docs/library',
+  '/docs/import',
+  '/docs/export',
+  '/docs/preview',
+  '/docs/search',
+  '/docs/random',
+  '/docs/history',
+  '/docs/security',
+  '/docs/account',
+  '/docs/settings',
+  '/docs/shortcuts',
+  '/docs/install',
+  '/privacy',
+  '/terms',
+  '/assets/promo/linkivo-intro.jpg',
   '/manifest.webmanifest',
   '/app.json',
   '/assets/brand/logo.svg',
@@ -65,6 +83,7 @@ const PRECACHE = [
   '/css/pages/pages.css',
   '/css/pages/preview.css',
   '/css/pages/profile.css',
+  '/css/pages/public.css',
   '/css/pages/random.css',
   '/css/pages/search.css',
   '/css/pages/settings.css',
@@ -109,6 +128,7 @@ const PRECACHE = [
   '/js/core/page-meta.js',
   '/js/core/page-state.js',
   '/js/core/profile-data.js',
+  '/js/core/public-paths.js',
   '/js/core/rate-limiter.js',
   '/js/core/refresh.js',
   '/js/core/router.js',
@@ -216,6 +236,9 @@ const PRECACHE = [
   '/js/features/profile/country-picker.js',
   '/js/features/profile/image-crop.js',
   '/js/features/profile/profile-edit.js',
+  '/js/features/profile/welcome-flow.js',
+  '/js/features/public/legal-content.js',
+  '/js/features/public/public-render.js',
   '/js/features/random/random-filters.js',
   '/js/features/random/random-page.js',
   '/js/features/random/random-range.js',
@@ -261,6 +284,7 @@ const PRECACHE = [
   '/js/features/vault/vault-flows.js',
   '/js/features/vault/vault-unlock.js',
   '/js/main.js',
+  '/js/public.js',
   '/js/ui/admin-badge.js',
   '/js/ui/confirm.js',
   '/js/ui/dock.js',
@@ -332,6 +356,19 @@ async function networkFirst(request, cacheKey) {
   return Promise.race([network, new Promise((resolve) => setTimeout(() => resolve(cached), NET_TIMEOUT_MS))]).catch(() => cached);
 }
 
+/** v2.5.4: Documentation, Privacy and Terms are static pages of their own. They are kept under their OWN address (the app shell is kept under /index.html), network first like everything else.
+ *  When offline and a page was never opened, a tiny page says so; it must NOT fall back to the app shell, which would send the person back here in a loop. */
+const PUBLIC_PAGE = /^\/(docs(\/[a-z0-9-]+)?|privacy|terms)\/?$/;
+async function publicPage(request, url) {
+  const key = url.pathname.replace(/\/$/, '');
+  try { return await networkFirst(request, key); }
+  catch {
+    const hit = (await caches.match(key)) || (await caches.match(request));
+    if (hit) return hit;
+    return new Response('<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline - Linkivo</title><body style="font:16px/1.6 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 20px"><h1>You are offline</h1><p>This page was not saved on this device yet. Connect to the internet and open it once; after that it opens offline.</p><p><a href="/">Open Linkivo</a></p>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+}
+
 async function cacheFirst(request) {
   const cache = await caches.open(LIB_CACHE);
   const hit = await cache.match(request);
@@ -348,6 +385,7 @@ self.addEventListener('fetch', (event) => {
   if (isLib(url)) { event.respondWith(cacheFirst(request)); return; }
   if (url.origin !== self.location.origin) return;                 // Worker API, Firebase, anything else: straight to the network
   if (url.pathname === '/sw.js' || url.pathname.startsWith('/__/')) return;
+  if (request.mode === 'navigate' && PUBLIC_PAGE.test(url.pathname)) { event.respondWith(publicPage(request, url)); return; }   // v2.5.4: Documentation, Privacy, Terms are their own pages, not the app shell
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, '/index.html').catch(async () => (await caches.match('/index.html')) || Response.error()));
     return;

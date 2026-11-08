@@ -20,7 +20,7 @@ import { rescueMeta, isWeak } from './meta-fallback.js';
 // 6 per call (v2.1.2): every Worker call has its own budget of 50 subrequests; 25 URLs in one call starved each other and many came back empty.
 export const META_BATCH = 6;
 /** The Worker version this app build expects. A lower number means the owner has not pasted the newest worker.js yet. */
-export const EXPECTED_WORKER = '2.5.2';   // v2.5.1: one Auto lock setting (`away`) and the re-delete block arrived in Worker 2.5.1. v2.5.0: PIN, sessions, account and cron routes arrived in Worker 2.5.0 (2.3.0 added /check)
+export const EXPECTED_WORKER = '2.5.4';   // v2.5.4: auto lock allows 120 s (default). Before: 2.5.2   // v2.5.1: one Auto lock setting (`away`) and the re-delete block arrived in Worker 2.5.1. v2.5.0: PIN, sessions, account and cron routes arrived in Worker 2.5.0 (2.3.0 added /check)
 const vnum = (v) => String(v || '0').split('.').map((n) => parseInt(n, 10) || 0);
 export function isWorkerOutdated(version) { const a = vnum(version), b = vnum(EXPECTED_WORKER); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0); } return false; }
 let tokenProvider = async () => null;

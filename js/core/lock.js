@@ -18,13 +18,14 @@ import { securePost } from './worker-client.js';
 import { deriveBox, newSalt } from './crypto-box.js';
 import { lockoutMs } from './lockout.js';
 import { log } from './logger.js';
+import { withTimeout } from './utils.js';   // v2.5.4
 
 const GUEST = 'guest.lock', cacheKey = (uid) => `lock.cache.${uid}`, saltKey = (uid) => `lock.salt.${uid}`;
 /** Auto-lock choices in seconds (the Worker accepts the same list). 0 = right after the app is left, -1 = never. Default 1 minute. */
-export const AWAY_CHOICES = [0, 30, 60, 300, 600, 900, 1800, -1];
-export const DEFAULT_AWAY = 60;
+export const AWAY_CHOICES = [0, 30, 60, 120, 300, 600, 900, 1800, -1];   // v2.5.4: 120 added
+export const DEFAULT_AWAY = 120;   // v2.5.4 (owner): the default auto lock is 2 minutes (was 1)
 const normAway = (v) => (v !== undefined && v !== null && AWAY_CHOICES.includes(Number(v)) ? Number(v) : DEFAULT_AWAY);
-const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, vaultPrefix: '@', away: DEFAULT_AWAY, open: true });
+const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, vaultPrefix: '%', away: DEFAULT_AWAY, open: true });   // v2.5.4: default symbol %
 let box = null;
 export const getLock = () => store.get();
 export const subscribeLock = (fn) => store.subscribe(fn);
@@ -33,13 +34,15 @@ export const getBox = () => box;
 /** v2.5.2: the Worker answers every vault call with the lock view; this copies the vault fields (code exists, hidden entry, prefix) into the store and the device copy. */
 export function applyServerLock(l) {
   if (!l) return; const s = store.get(); if (s.scope !== 'account') return;
-  const next = { vaultSep: l.vaultSep === true, hideVault: l.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(l.vaultPrefix) ? l.vaultPrefix : '@' };
+  const next = { vaultSep: l.vaultSep === true, hideVault: l.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(l.vaultPrefix) ? l.vaultPrefix : '%' };
   store.set(next); const c = prefs.get(cacheKey(s.uid), null); if (c) prefs.set(cacheKey(s.uid), { ...c, vaultSep: next.vaultSep, hideVault: next.hideVault, vaultPrefix: next.vaultPrefix });
 }
 /** v2.5.2 (owner 7): the PIN gate can check by itself as soon as the PIN length is reached. The length is learned from every correct PIN, PIN set or PIN change and kept on THIS device only
  *  (local prefs, not on the server); until it is known the gate waits for the Submit key. */
 const lenKey = (s) => `lock.len.${s.scope === 'guest' ? 'guest' : s.uid}`;
 export const rememberPinLen = (pin) => { const s = store.get(), n = String(pin || '').length; if (s.scope !== 'none' && n >= 4 && n <= 8 && prefs.get(lenKey(s), 0) !== n) prefs.set(lenKey(s), n); };
+/** v2.5.4: a wrong PIN on a pad limited to the remembered length may mean the PIN was changed elsewhere: forget the length so the pad accepts 4 to 8 digits again. */
+export const forgetPinLen = () => { const s = store.get(); if (s.scope !== 'none') prefs.set(lenKey(s), 0); };
 export const getPinLen = () => { const s = store.get(); const n = Number(prefs.get(lenKey(s), 0)); return n >= 4 && n <= 8 ? n : 0; };
 const fail = (code, extra = {}) => Object.assign(new Error(code), { code }, extra);
 const guestRec = () => prefs.get(GUEST, null);
@@ -54,10 +57,13 @@ export async function loadLock(session, adapter = null) {
   }
   if (session.mode !== 'account') { store.set({ scope: 'none', uid: '', ready: true, enabled: false, hasPin: false, open: true }); return store.get(); }
   const uid = session.user.uid; let v = null;
-  try { v = adapter ? await adapter.get(`users/${uid}/lockState`) : null; if (v) prefs.set(cacheKey(uid), v); else if (adapter) prefs.remove(cacheKey(uid)); }
+  // v2.5.4 (owner: the installed app did not open offline and sat on the splash): the read of the lock state was awaited without a limit, and a Firebase read made while offline can wait for ever.
+  // Offline (or slower than 4 s) the copy kept on this device is used, which is also what the next line does after any failure.
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  try { if (offline && adapter) throw new Error('offline'); v = adapter ? await withTimeout(adapter.get(`users/${uid}/lockState`), 4000, 'lock state') : null; if (v) prefs.set(cacheKey(uid), v); else if (adapter) prefs.remove(cacheKey(uid)); }
   catch (e) { log.warn('lock', 'lock state not read, using the copy on this device', e); v = prefs.get(cacheKey(uid), null); }
   const L = v || {};
-  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(L.vaultPrefix) ? L.vaultPrefix : '@', away: normAway(L.away), open: L.app !== true });
+  store.set({ scope: 'account', uid, ready: true, enabled: L.app === true, hasPin: L.pin === true, vaultSep: L.vaultSep === true, hideVault: L.hideVault === true, vaultPrefix: ['@', '#', '%', '$', '!'].includes(L.vaultPrefix) ? L.vaultPrefix : '%', away: normAway(L.away), open: L.app !== true });
   return store.get();
 }
 

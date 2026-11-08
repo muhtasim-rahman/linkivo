@@ -135,7 +135,7 @@ test('Worker: photo routes need a signed-in account and answer 405 for a wrong m
   const worker = (await import(new URL('@ Creator/worker/worker.js', root))).default;
   const call = (path, method, headers = {}) => worker.fetch(new Request(`https://w.test${path}`, { method, headers: { origin: 'https://linkivo.web.app', ...headers }, body: method === 'POST' ? '{}' : undefined }), {});
   assert.equal((await call('/img/upload', 'POST')).status, 401); assert.equal((await call('/img/delete', 'POST')).status, 401); assert.equal((await call('/img/upload', 'GET')).status, 405);
-  const health = await (await call('/health', 'GET')).json(); assert.equal(health.version, '2.5.2');   // v2.5.0 Worker
+  const health = await (await call('/health', 'GET')).json(); assert.equal(health.version, '2.5.4');   // v2.5.0 Worker
   const src = fs.readFileSync(new URL('@ Creator/worker/worker.js', root), 'utf8'); assert.ok(!/IMGBB_KEY\s*[:=]\s*['"]/.test(src), 'the key is a secret, never in the file');
 });
 

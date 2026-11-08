@@ -4,6 +4,7 @@
  *          "it used to work") a free screenshot of the page itself (WordPress mShots, no quota, requested only for rows that scroll into view), then the site icon, which is always
  *          there underneath so a row never looks empty and nothing jumps. mShots answers a brand-new address with a placeholder picture first: only a picture of the asked width is
  *          accepted, anything else is dropped and the next paint asks again. Switch it off in Settings (ui.thumbs): then only the site icon shows.
+ * v2.5.4: the account's saved picture is read before the screenshot is used (see lookup()).
  * API: thumbSources(meta, url?) -> [url, ...]   (pure, tested)      thumbsOn() -> boolean      shotFallback(url) -> url | ''
  *      createThumb({ engine, id, host, url, favicon, variant: 'row'|'sm'|'card' }) -> Element
  */
@@ -19,10 +20,25 @@ export const thumbsOn = () => prefs.get('ui.thumbs', true) !== false;
 
 // the saved extra data is read once per link (a short memory); "no picture yet" is only remembered for a few seconds, so a picture saved by a preview shows up soon
 const found = new Map(), missed = new Map(), MISS_MS = 20000, MAX = 3000;
+// v2.5.4 (owner: a screenshot showed although the link HAS a thumbnail): the page picture lives in the account (linkMeta), and this device only has a copy of it after the link was fetched or previewed HERE.
+// With no local copy the row used to jump straight to the free screenshot. Now the account is asked once (4 reads at a time, only for rows that are on screen; the answer is kept on the device), and the
+// screenshot is only the last choice. An id the account has nothing for is not asked again in this session.
+const remoteNone = new Set();
+let active = 0; const waiting = [];
+const slot = () => new Promise((res) => { const go = () => { active++; res(); }; if (active < 4) go(); else waiting.push(go); });
+const release = () => { active--; const n = waiting.shift(); if (n) n(); };
+async function lookup(engine, id) {
+  let local = null;
+  try { local = engine && engine.peekLinkMeta ? await engine.peekLinkMeta(id) : null; } catch { local = null; }
+  if ((local && thumbSources(local).length) || !engine || !engine.getLinkMeta || remoteNone.has(id)) return local;
+  await slot();
+  try { const m = await engine.getLinkMeta(id); if (!m || !thumbSources(m).length) { if (remoteNone.size > MAX) remoteNone.clear(); remoteNone.add(id); } return m || local; }
+  catch { return local; } finally { release(); }
+}
 async function sourcesFor(engine, id, url) {
   if (found.has(id)) return found.get(id);
   const t = missed.get(id); if (t && Date.now() - t < MISS_MS) return thumbSources(null, url);
-  let meta = null; try { meta = engine && engine.peekLinkMeta ? await engine.peekLinkMeta(id) : null; } catch { meta = null; }
+  const meta = await lookup(engine, id);
   const saved = thumbSources(meta).length > 0, list = thumbSources(meta, url);
   if (saved) { if (found.size > MAX) found.clear(); found.set(id, list); } else { if (missed.size > MAX) missed.clear(); missed.set(id, Date.now()); }
   return list;

@@ -106,17 +106,18 @@ test('locked records: lists, links and menus show a lock mark; folder menu offer
 
 test('search box: Enter with a complete code unlocks (symbol + six digits), anything else is an ordinary search; the box is emptied; the unlock animation is on this page', () => {
   const s = read('js/features/search/search-page.js');
-  assert.match(s, /e\.key !== 'Enter'/); assert.match(s, /vaultCodeMatch\(input\.value, getLock\(\)\.vaultPrefix\)/); assert.match(s, /playUnlockBurst\(container\)/); assert.match(s, /input\.value = ''/);
+  assert.match(s, /e\.key !== 'Enter'/); assert.match(s, /vaultCodeMatch\(input\.value, getLock\(\)\.vaultPrefix\)/); assert.match(s, /playUnlockBurst\(nf\.ic, \{ inline: true \}\)/); assert.match(s, /input\.value = ''/);   // v2.5.4: the animation plays INSIDE the "Nothing found" placeholder
+  assert.match(s, /out\.replaceChildren\(nf\.el\)/, 'a code shows the same placeholder as any search without results');
   assert.doesNotMatch(s, /openVault\(/, 'the page does not call the vault directly: only the shared flow does');
   assert.match(read('js/features/vault/vault-unlock.js'), /catch \{ return false; \}/, 'a wrong code is silent');
   assert.match(read('css/components/unlock-burst.css'), /prefers-reduced-motion/);
 });
 
-test('unlock card: hidden for guests and without a code; "only through the search box" hides it while locked; open shows Lock now', async () => {
+test('unlock card (v2.5.4): only while the locked folders are unlocked (a Lock card); never while locked, for guests or without a code', async () => {
   const L = await import('../../js/core/lock.js'); const { unlockCard } = await import('../../js/features/vault/unlock-card.js');
   const card = unlockCard(); document.body.append(card);
   assert.equal(card.hidden, true, 'no code: nothing at all');
-  assert.match(read('js/features/vault/unlock-card.js'), /!open && getLock\(\)\.hideVault/);
+  assert.match(read('js/features/vault/unlock-card.js'), /!vaultOn\(\) \|\| !v\.open \|\| v\.quiet/); assert.doesNotMatch(read('js/features/vault/unlock-card.js'), /unlockFlow/);
   assert.match(read('js/features/shell/pages/menu-page.js'), /unlockCard\(\)/); assert.match(read('js/features/settings/settings-page.js'), /installCard\(\), unlockCard\(\)/);
   card.remove(); void L;
 });
@@ -201,7 +202,8 @@ test('SEO: static pages match the browser meta; sizes, images, structured data, 
     titles.add(p.title); descs.add(p.description); assert.ok(fs.existsSync(new URL('../..' + p.image, import.meta.url)), p.image + ' exists');
     assert.ok(fs.existsSync(new URL('../../' + p.file, import.meta.url)), p.file + ' is generated'); const html = read(p.file);
     assert.ok(html.includes(`<title>${p.title}</title>`), p.file + ' title'); assert.equal((html.match(/<title>/g) || []).length, 1); assert.equal((html.match(/rel="canonical"/g) || []).length, p.canonical ? 1 : 0);
-    assert.ok(html.includes('<noscript>') && /<h1>/.test(html), p.file + ' has crawler text with one h1'); assert.equal((html.match(/<h1>/g) || []).length, 1);
+    const standalone = /^\/(docs|privacy|terms)/.test(p.path);   // v2.5.4: these are their own pages with the text in the page (no noscript copy needed)
+    assert.ok(standalone ? html.includes('class="pub"') : html.includes('<noscript>'), p.file + ' has crawler text'); assert.ok(/<h1>/.test(html), p.file + ' has an h1'); assert.equal((html.match(/<h1>/g) || []).length, 1);
     for (const j of p.jsonLd) JSON.parse(JSON.stringify(j));
   }
   assert.equal(titles.size, pages.length); assert.equal(descs.size, pages.length);

@@ -160,13 +160,17 @@ test('packGroups never splits a group and respects the size', () => {
   assert.deepEqual(packGroups([g(7)], 5).map((c) => c.length), [7], 'an oversized group stays whole');
 });
 
-test('history: a locked link is never recorded, and locking makes the history forget it', async () => {
+test('history (v2.5.4): a locked link is listed in MEMORY only, never stored, gone when the folders lock; locking also forgets stored entries', async () => {
   const db = createMemoryDb(); let t = 1000; const h = createHistory({ db, now: () => (t += 20000), getKeep: () => 'forever' });
   await h.load();
-  assert.equal(await h.record({ link: { id: 'L1', url: 'https://a.com', lk: true }, src: 'click' }), null);
+  const e = await h.record({ link: { id: 'L1', url: 'https://a.com', lk: true }, src: 'click' });
+  assert.ok(e && e.lk === true, 'recorded for this unlocked session'); assert.deepEqual(h.list().map((x) => x.lid), ['L1']);
+  assert.equal((await db.getAll('history')).length, 0, 'nothing is written anywhere for a locked link');
   await h.record({ link: { id: 'L2', url: 'https://b.com' }, src: 'click' }); await h.record({ link: { id: 'L3', url: 'https://c.com' }, src: 'click' });
+  assert.deepEqual(h.list().map((x) => x.lid), ['L3', 'L2', 'L1'], 'newest first, locked and normal entries together');
   assert.equal(await h.forgetLinks(['L2']), 1);
-  assert.deepEqual(h.list().map((x) => x.lid), ['L3']); assert.equal((await db.getAll('history')).length, 1);
+  assert.deepEqual(h.list().map((x) => x.lid), ['L3', 'L1']); assert.equal((await db.getAll('history')).length, 1);
+  h.wipeLocked(); assert.deepEqual(h.list().map((x) => x.lid), ['L3'], 'locking again wipes the in-memory entries');
 });
 
 test('job queue: a handler that throws {pause} leaves the job paused (not failed) and it can resume', async () => {

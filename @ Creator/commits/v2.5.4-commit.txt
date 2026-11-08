@@ -1,0 +1,19 @@
+fix(v2.5.4): standalone Docs, Privacy and Terms pages, locked-folder and PIN fixes, jobs panel, offline and thumbnail fixes
+
+- Documentation, Privacy and Terms are separate static pages (own header with back, logo, title, theme switch; no splash, lock, sidebar or bottom bar; no sign-in); they open in a new tab from the app and work offline
+- Documentation: /docs is the home, 13 topics as a numbered tutorial with a step rail, On this page, Previous and Next cards and the intro video; Privacy and Terms rewritten in full from the real code
+- Google Search Console and Bing Webmaster verification tags on every page; new share image (linkivo-meta-1-overview) and replaced artwork folder
+- App lock: 2 minute default (Worker 2.5.4), no Lock now row in its popup, Forgot PIN on every PIN gate, keypad holds exactly the PIN length, note about the device's own app lock
+- Locked folders: default symbol %, unlock only by the search box with the animation inside the Nothing found placeholder, symbol-started searches are never remembered, Lock card only while unlocked, quiet session when locking (no flash), 2 minute away lock, memory-only history for locked links
+- Background jobs popup: no stray null, compact, times, Details, 24 hour clean-up, Retry
+- Fixes: avatar frame and admin shield colour, thumbnail before screenshot, preview returns to its page, offline start and write waits, Your data hover, PC settings gap fade and width, Library icon button, splash glow
+- New accounts: one welcome flow (profile, then intro video), both skippable
+- 11 new tests in v254.test.mjs, older tests updated
+
+Removed files:
+- none (js/features/docs/docs-page.js and js/features/legal/legal-page.js are unused now and kept with a note)
+- by hand: the old folders JPG, PNG, SVG, WEBP inside "@ Creator/reference/Linkivo images" (replaced by Meta Thumbnails and YT Thumbnail)
+
+Owner actions:
+- paste @ Creator/worker/worker.js (2.5.4) into the Cloudflare dashboard
+- firebase deploy --only hosting, then hard reload twice

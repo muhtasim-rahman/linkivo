@@ -38,7 +38,7 @@ export const TOPICS = [
   { id: 'shortcuts', title: 'Keyboard shortcuts', icon: 'terminal', lead: 'Press ? on most pages to see the list for that page.', parts: [
     { h: 'Common', items: ['Ctrl or Cmd + K: search.', '/ : focus the page\'s search field.', 'N: new folder (Library). A: add a link. I: import.', 'Esc: close a popup or leave selection.'] }] },
   { id: 'install', title: 'Install and updates', icon: 'install', lead: 'Install Linkivo like an app; it updates itself.', parts: [
-    { h: 'Install', p: 'Use the Install card in Menu or Settings, or your browser\'s install option. Linkivo works offline for pages you already opened.' },
+    { h: 'Install', p: 'Use the Install card in Menu or Settings, or your browser\'s install option. Linkivo also works offline: as a guest almost everything works; with an account Linkivo runs on the copy saved on the device and syncs later. With the app lock on, the PIN is checked on the device while offline. Locked folders, previews, title fetching and account changes need internet.' },
     { h: 'Updates', p: 'A new version is picked up when the app starts; a short notice offers to reload.' }] }
 ];
 /** v2.5.4: the order of the tutorial: what a new person needs first, then the rest. Every id exists in TOPICS (a test checks it). The docs pages show it as steps with Previous and Next. */

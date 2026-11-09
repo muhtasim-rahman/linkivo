@@ -11,11 +11,10 @@ import { icon } from '../../ui/icons.js';
 import { toast } from '../../ui/toast.js';
 import { openSheet } from '../../ui/sheet.js';
 import { createSelect } from '../../ui/select.js';
-import { getLock, subscribeLock, setAway, verifyPin } from '../../core/lock.js';   // v2.5.4: lockNow is no longer used here (the Lock now row left the App lock popup)
+import { getLock, subscribeLock, setAway, verifyPin, askOnReload, setAskOnReload } from '../../core/lock.js';   // v2.5.5: askOnReload, setAskOnReload   // v2.5.4: lockNow is no longer used here (the Lock now row left the App lock popup)
 import { requireSensitive } from '../../core/sensitive.js';
-import { prefs } from '../../core/local-prefs.js';
 import { markSecurityVerified, securityVerifiedRecently, resetSecurityGate } from '../../core/security-gate.js';
-import { VAULT_PREFIXES, KEEP_OPTIONS, KEEP_KEY, keepSetting, getVault, subscribeVault, vaultCall, closeVault } from '../../core/vault.js';
+import { VAULT_PREFIXES, getVault, subscribeVault, vaultCall, closeVault } from '../../core/vault.js';
 import { enableLockFlow, disableLockFlow, changePinFlow } from './lock-actions.js';
 import { askPin, describeError, PIN_RESET } from './pin-sheet.js';
 import { setupVaultFlow, changeVaultCodeFlow, removeVaultFlow, forgotVaultCodeFlow, codeExample } from '../vault/vault-flows.js';
@@ -66,6 +65,9 @@ function appLockPopup(row) {
     kids.push(row('Change PIN', 'Choose a new 4 to 8 digit PIN.', button('Change', () => guard(async () => { if (await requireSensitive('security') && await changePinFlow()) markSecurityVerified(); }))));
     const sel = createSelect({ options: AUTO_LOCK, value: String(s.away), label: 'Auto lock', align: 'end', onChange: (v) => guard(async () => { if (await requireSensitive('security')) { await setAway(Number(v)); toast('Auto lock saved.'); } }) });
     kids.push(row('Auto lock', 'Locks after Linkivo has been minimized or on another tab for this long. It follows your account on every device.', sel));
+    // v2.5.5 (owner): a switch for the PIN gate after a reload. ON (default): every reload or reopening asks for the PIN. OFF: within the Auto lock time a reload goes straight in. This device only.
+    const onReload = askOnReload();
+    kids.push(toggleRow(row, 'Ask for the PIN on every reload', onReload ? 'On: every reload or reopening of Linkivo asks for the PIN. Off (the default): a reload within the Auto lock time goes straight in; after that time the PIN is asked. This device only.' : 'Off (the default): a reload or reopening within the Auto lock time goes straight in; after that time the PIN is asked. Anyone using this unlocked browser within that time can open Linkivo. Turn on to always ask. This device only.', onReload, () => guard(async () => { if (await requireSensitive('security')) { setAskOnReload(!askOnReload()); toast(askOnReload() ? 'The PIN is asked on every reload.' : 'A reload within the Auto lock time skips the PIN.'); } })));
     // v2.5.4 (owner): the "Lock now" row was removed from this popup (the lock icon at the top of Library and the sidebar row still lock the app).
     return kids;
   } });
@@ -86,7 +88,8 @@ function folderLockPopup(row) {
     const open = getVault().open;
     kids.push(toggleRow(row, 'Folder lock', 'On. Lock a folder from its menu in Library. Locked folders show up everywhere once unlocked, with a small lock icon. Unlock them by typing your code into the search box.', true, () => guard(async () => { await removeVaultFlow(); })));
     kids.push(row('Locked folders', open ? 'Unlocked right now.' : 'Hidden right now.', open ? button('Lock now', () => guard(async () => { await closeVault(); toast('Locked folders are hidden again.'); })) : button('Unlock', () => guard(async () => { await unlockFlow(); }))));
-    kids.push(row('Stay unlocked for', 'How long locked folders stay open after you unlock them. The app lock, logging out and closing the app always lock them at once.', createSelect({ options: KEEP_OPTIONS, value: keepSetting(), label: 'Stay unlocked for', align: 'end', onChange: (v) => { prefs.set(KEEP_KEY, v); toast('Saved.'); guard(async () => {}); } })));
+    // v2.5.5 (owner): the "Stay unlocked for" row is gone. The vault locks when the app locks; without an app lock on this device it locks on a reload or after 15 minutes without use.
+    kids.push(h('p', { class: 'help', text: s.enabled ? 'Locked folders lock again whenever the app locks (the Auto lock time, Lock now, logging out) and always on a reload.' : 'The app lock is off on this device, so locked folders lock again after a reload or 15 minutes without use. Turn the app lock on to make them follow it.' }));
     // v2.5.4 (owner): the row "Unlock only through the search box" is gone: the Unlock card left Menu and Settings, so the choice has nothing left to switch.
     kids.push(row('Code symbol', 'The first character of the code. Only text with this symbol and six digits is treated as a code; everything else is a normal search (and is not remembered in recent searches).', createSelect({ options: VAULT_PREFIXES.map((p) => ({ value: p, label: `${p}  (${codeExample(p)})` })), value: s.vaultPrefix, label: 'Code symbol', align: 'end', onChange: (v) => gated(async () => { await save({ vaultPrefix: v }, 'Symbol saved.'); })() })));
     kids.push(row('Change code', 'Choose a new six-digit code.', button('Change', gated(changeVaultCodeFlow))));

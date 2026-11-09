@@ -10,6 +10,7 @@
  *          (ui/pick-tile.js); a day heading shows how many entries it holds.
  * Page module: mount(container, ctx) -> unmount
  */
+import { browserHistoryNote } from '../../ui/browser-history-note.js';   // v2.5.5
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import { loadCss } from '../../core/css-loader.js';
@@ -77,6 +78,7 @@ export async function mount(container, ctx) {
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to profile', on: { click: () => router.navigate('/profile') } }, icon('arrow-left', { size: 20 })),
       h('h1', { class: 'page-title', text: 'History' }), h('div', { class: 'page-actions' }, refreshButton(), selBtn, setBtn, clearHead)),
     card,
+    browserHistoryNote(),   // v2.5.5 (owner)
     h('div', { class: 'hs-tools' }, h('div', { class: 'hs-search' }, icon('search', { size: 18 }), search), filter), info, list));
 
   const rows = () => {
@@ -134,7 +136,8 @@ export async function mount(container, ctx) {
     clearHead.disabled = clearCard.disabled = total === 0;
   }
   async function clearAll() {
-    if (!(await confirmDialog({ title: 'Clear all history?', message: `Every entry ${whereText()} is removed. Your links and folders are not touched.`, confirmLabel: 'Clear history', danger: true }))) return;
+    // v2.5.5 (owner): the popup says what is NOT cleared (the browser's own history) and links to the steps
+    if (!(await confirmDialog({ title: 'Clear all history?', message: h('div', null, h('p', { text: `Every entry ${whereText()} is removed. Your links and folders are not touched.` }), browserHistoryNote()), confirmLabel: 'Clear history', danger: true }))) return;
     try { await hist.clear(); toast('History cleared.'); } catch { toast('Could not clear history. Try again.', { type: 'error' }); }
   }
   function paint() {

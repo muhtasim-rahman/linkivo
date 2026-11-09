@@ -144,3 +144,9 @@ html[data-kb='open'] .task-chip { transform: translateY(140%); }
 .pk.is-corner:not(.is-selecting):not(.is-on) .pk-box { pointer-events: none; }
 /* v2.5.1 (owner): in Settings on a PC the card is narrower than the Menu's, and the three perks squeezed the text. The one-row layout now needs a 900px wide card; below that the perks sit in a row under the text. */
 .set-top .icard-perks li { padding: 0 8px; } .set-top .icard-text span { overflow: hidden; text-overflow: ellipsis; }
+
+/* v2.5.5: the offline notice (what works, what needs internet) and the short "browser history" note under history clears */
+.off-body { display: grid; gap: var(--s2); }
+.off-h { margin-top: var(--s3); font: 800 var(--fs-md) var(--font-brand); }
+.off-list { display: grid; gap: var(--s2); } .off-list li { display: flex; gap: var(--s2); align-items: flex-start; line-height: 1.5; } .off-list svg { flex: none; margin-top: 3px; color: var(--accent-text); }
+.bh-note { margin-top: var(--s2); line-height: 1.5; } .bh-note a { color: var(--accent-text); font-weight: 600; text-decoration: underline; }

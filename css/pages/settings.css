@@ -26,8 +26,9 @@
      caption no longer pushes every toggle to the far right of a big screen */
   .settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: calc(var(--s8) + 24px); align-items: start; --set-bar-h: 0px; }
   .set-body { margin-top: 0; max-width: 760px; }
-  .set-navwrap::after { content: ''; position: absolute; top: 0; bottom: 0; right: calc(-12px - 12px); width: 1px; pointer-events: none; background: linear-gradient(to bottom, transparent, var(--line) 18%, var(--line) 82%, transparent); }
-  .set-navwrap::before { content: ''; position: absolute; top: 0; bottom: 0; right: -12px; width: 36px; pointer-events: none; z-index: -1; background: linear-gradient(to right, transparent, color-mix(in srgb, var(--accent) 5%, transparent)); border-radius: 0 var(--r-group) var(--r-group) 0; }
+  /* v2.5.5 (owner): the thin line between the category column and the settings is gone. The soft fade now sits on the RIGHT EDGE of the category column and ABOVE everything in it
+     (the buttons, their hover and active colour too): z-index over the list, clicks pass through (pointer-events: none). It fades to the page colour, so it reads as the edge of the column. */
+  .set-navwrap::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 34px; pointer-events: none; z-index: 3; background: linear-gradient(to right, transparent, var(--bg)); }
   .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
   .set-nav, .set-nav.fade-x { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
   .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }

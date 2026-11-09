@@ -3,9 +3,10 @@
  * Purpose: drives the splash defined in index.html + css/pages/splash.css (spec: DESIGN section 6). It is the v1 logo-creation
  *          animation the owner built (ripple, left ring pop, shackle lock with sparkles and background reveal, bar, second ring,
  *          typed wordmark) WITHOUT the url badges, the shrink and the spiral. Timeline is about 3.2 s.
- * Modes:   full  = the whole animation (the DEFAULT, every start)
+ * Modes:   full  = the whole animation
  *          short = the finished logo fades in (0.5 s)      still = finished logo at once (reduced motion)
- *          Setting "ui.splash": 'full' (default) | 'short'. v2.1.3: "Automatic" was removed; a stored 'auto' from v2.1.2 counts as 'full'.
+ *          Setting "ui.splash": 'auto' (DEFAULT, v2.5.5 owner) | 'full' | 'short'. Auto = the full animation on the very first start and then only on a start that comes 6 hours or more after the last
+ *          full animation; every other start (a reload, the app opened again) gets the short one. v2.1.3 had removed "Automatic"; it is back, now with this rule.
  * v2.1.3: no background grid, a slightly smaller logo, no blur filters (they stutter on phones; opacity and transform only), and the first
  *          frame is never blank (index.html shows a CSS ring until startSplash() runs, which now happens from splash-start.js).
  * The splash ends when BOTH the animation and the app are ready. If loading outlasts it, three loading dots appear.
@@ -21,9 +22,13 @@ const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 let el, mode = 'still', startedAt = 0, started = false, ended = false, timeline = Promise.resolve();
 
 /** Pure: which mode to run. Exported for the unit tests. */
-export function resolveMode({ setting = 'full', reduce = false } = {}) {
+export const AUTO_FULL_EVERY_MS = 6 * 60 * 60 * 1000;
+export function resolveMode({ setting = 'auto', reduce = false, lastFull = 0, now = Date.now() } = {}) {
   if (reduce) return 'still';
-  return setting === 'short' ? 'short' : 'full';
+  if (setting === 'short') return 'short';
+  if (setting === 'full') return 'full';
+  if (!lastFull || now - lastFull < 0) return 'full';             // auto: the very first start (or a clock that moved back)
+  return now - lastFull >= AUTO_FULL_EVERY_MS ? 'full' : 'short';   // the full animation at most once every 6 hours
 }
 
 const $ = (id) => document.getElementById(id);
@@ -97,7 +102,9 @@ export function startSplash() {
   if (!el) return;
   started = true;
   const reduce = (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) || prefs.get('ui.reduceMotion', 'system') === 'reduce';
-  mode = resolveMode({ setting: prefs.get('ui.splash', 'full'), reduce });
+  const now = Date.now();
+  mode = resolveMode({ setting: prefs.get('ui.splash', 'auto'), reduce, lastFull: Number(prefs.get('splash.lastFull', 0)) || 0, now });
+  if (mode === 'full') prefs.set('splash.lastFull', now);   // v2.5.5: the Auto rule counts from the last FULL animation
   // a browser that can not run the Web Animations API still gets the finished logo
   if (mode === 'full' && typeof el.animate !== 'function') mode = 'short';
   el.dataset.mode = mode;

@@ -17,7 +17,7 @@ test('public pages: every address has a static file with its own header, no app,
     const html = read(p === '/docs' ? 'docs.html' : p.slice(1) + '.html');
     assert.match(html, /class="pub"/, p); assert.match(html, /google-site-verification" content="1jRG-liPR6RdCjprv6saCLlbo9T5J3lyNPAXTm4mSl4"/, p + ' Google'); assert.match(html, /msvalidate\.01" content="53A15EBC0ADF54EC55B307032B3C8559"/, p + ' Bing');
     assert.doesNotMatch(html, /\/js\/main\.js|\/js\/boot\.js|id="splash"|class="sidebar"|class="bar"|firebasejs|firebase-loader/i, p + ' is not the app');
-    assert.match(html, /data-pub="back"/); assert.match(html, /data-pub="theme"/); assert.match(html, /<a class="pub-brand" href="\/"/, 'the logo goes to the app'); assert.match(html, /<script type="module" src="\/js\/public\.js">/);
+    assert.match(html, p === '/docs' ? /data-pub="back"/ : /class="pub-icon" href="\/docs"/, p + ' back arrow (v2.5.5: a link to the docs home; the home closes the tab)'); assert.match(html, /data-pub="theme"/); assert.match(html, /<a class="pub-brand" href="\/"/, 'the logo goes to the app'); assert.match(html, /<script type="module" src="\/js\/public\.js">/);
     assert.equal((html.match(/<h1>/g) || []).length, 1, p + ' one h1'); assert.match(html, /<link rel="canonical"/);
   }
   assert.match(read('index.html'), /google-site-verification/); assert.match(read('index.html'), /msvalidate\.01/); assert.match(read('login.html'), /google-site-verification/);
@@ -49,15 +49,18 @@ test('privacy and terms: detailed, real, and every outside service the code talk
   for (const w of ['firebase', 'cloudflare', 'favicon', 'youtube', 'fonts', 'pepper', '15 days', 'recycle bin', 'analytics', 'cookies', 'ip']) assert.ok(priv.includes(w), 'privacy mentions ' + w);
   for (const w of ['free', 'backup', 'as it is', 'delete your account', 'privacy page']) assert.ok(terms.includes(w), 'terms mention ' + w);
   assert.ok(!priv.includes('we never'), 'no absolute promises that the code cannot prove');
-  const html = read('privacy.html'); assert.ok(html.includes('pub-table') && html.includes('In short') && html.includes('Last updated 8 November 2026'));
+  const html = read('privacy.html'); assert.ok(html.includes('pub-table') && html.includes('In short') && html.includes('Last updated 9 November 2026'));
 });
 
 test('public paths: Documentation, Privacy and Terms are never routed inside the app; a link to them opens a new tab', async () => {
   const { isPublicPath, openPublic } = await import('../../js/core/public-paths.js');
   for (const p of ['/docs', '/docs/start', '/privacy', '/terms', '/terms/', '/docs/import?x=1', '/privacy#pin']) assert.equal(isPublicPath(p), true, p);
   for (const p of ['/', '/library', '/docs/a/b', '/privacyx', '/settings', '/link/abc', '/documentation']) assert.equal(isPublicPath(p), false, p);
-  const opened = []; const real = window.open; window.open = (u, t, f) => { opened.push([u, t, f]); return {}; };
-  openPublic('/docs'); window.open = real; assert.deepEqual(opened, [['/docs', '_blank', 'noopener']]);
+  // v2.5.5: ONE new tab through a target=_blank link; window.open(url, '_blank', 'noopener') returns null, which made the old code move the app's own tab too
+  const clicks = [], origClick = window.HTMLAnchorElement.prototype.click, realOpen = window.open; let opens = 0; window.open = () => { opens++; return null; };
+  window.HTMLAnchorElement.prototype.click = function () { clicks.push([this.getAttribute('href'), this.target, this.rel]); };
+  try { openPublic('/docs'); } finally { window.HTMLAnchorElement.prototype.click = origClick; window.open = realOpen; }
+  assert.deepEqual(clicks, [['/docs', '_blank', 'noopener']]); assert.equal(opens, 0); assert.doesNotMatch(read('js/core/public-paths.js'), /location\.assign/);
   const r = read('js/core/router.js'); assert.match(r, /isPublicPath\(u\.pathname\)\) \{ openPublic/); assert.match(r, /initial: true/);
   const sw = read('sw.js'); assert.match(sw, /PUBLIC_PAGE\.test\(url\.pathname\)/); for (const p of ["'/docs'", "'/privacy'", "'/terms'", "'/docs/start'"]) assert.ok(sw.includes(p), 'precached ' + p);
 });
@@ -104,9 +107,9 @@ test('history of locked links: memory only (see v253-vault); the vault wipe is w
 });
 
 test('vault: quiet open for locking (no folders loaded), the Lock card only while unlocked, away-time lock, default symbol %', async () => {
-  const v = read('js/core/vault.js'); assert.match(v, /openVault\(code, \{ quiet = false \} = \{\}\)/); assert.match(v, /if \(!quiet\) \{ try \{ await load\(eng\)/); assert.match(v, /VAULT_AWAY_MS = 120000/); assert.match(v, /addEventListener\('pageshow', visHandler\)/);
+  const v = read('js/core/vault.js'); assert.match(v, /openVault\(code, \{ quiet = false \} = \{\}\)/); assert.match(v, /if \(!quiet\) \{ try \{ await load\(eng\)/); assert.match(v, /VAULT_IDLE_MS = 15 \* 60 \* 1000/); assert.match(v, /addEventListener\('pageshow', visHandler\)/);
   assert.match(read('js/features/vault/vault-unlock.js'), /openVault\(code, \{ quiet: true \}\)/);
-  const { vaultCodeMatch, VAULT_PREFIXES, VAULT_AWAY_MS } = await import('../../js/core/vault.js'); assert.equal(VAULT_PREFIXES[0], '%'); assert.equal(vaultCodeMatch('%123456'), '123456'); assert.equal(VAULT_AWAY_MS, 120000);
+  const { vaultCodeMatch, VAULT_PREFIXES, VAULT_IDLE_MS } = await import('../../js/core/vault.js'); assert.equal(VAULT_PREFIXES[0], '%'); assert.equal(vaultCodeMatch('%123456'), '123456'); assert.equal(VAULT_IDLE_MS, 900000);
   const { codeExample } = await import('../../js/features/vault/vault-flows.js'); assert.match(codeExample(), /^%/);
   assert.doesNotMatch(read('js/features/lock/security-popups.js'), /row\('Unlock only through/);
   for (const f of ['js/features/shell/pages/menu-page.js', 'js/features/settings/settings-page.js']) assert.match(read(f), /unlockCard\(\)/, 'the card is still mounted (it shows itself only while unlocked)');

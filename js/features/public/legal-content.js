@@ -6,7 +6,7 @@
  * API: LEGAL_UPDATED  CONTACT  PRIVACY -> { title, lead, summary: [..], sections }   TERMS -> { title, lead, summary, sections }
  *      section = { id, h, p?: [text], items?: [text], table?: { head: [..], rows: [[..]] } }
  */
-export const LEGAL_UPDATED = '8 November 2026';
+export const LEGAL_UPDATED = '9 November 2026';
 export const CONTACT = 'linkivo.web@gmail.com';
 
 export const PRIVACY = {
@@ -54,8 +54,10 @@ export const PRIVACY = {
       'The app PIN and the locked-folder code are sent over HTTPS to a Cloudflare Worker that Linkivo runs. They are checked there and kept only as a hash made with a secret value (a pepper) that is not in the app or in this repository. Linkivo cannot read them back.',
       'Wrong guesses are counted on the server, and the wait between tries grows. This stops guessing even if someone has your device.',
       'With the app lock on, the database only opens for your account after the PIN was verified (a short server session). While the app is locked, the library is removed from the screen and from memory.',
-      'The library copy that is kept on a device is encrypted with a key made from your PIN while the app lock is on. The key stays in memory only. A short PIN (4 digits) is weaker against someone who copies the stored data and guesses offline; six or more digits are much better. For extra safety, also use your device\'s own app lock.',
-      'Locked folders live under their own path in the database that needs a separate server session. While they are locked they are not in memory, in the stored copy on the device, in search, in exports or in the history list. Opening a link from a locked folder is listed in History only while the folders stay unlocked, in memory, and is gone when they lock again.',
+      'The library copy that is kept on a device is encrypted with a key made from your PIN while the app lock is on. A short PIN (4 digits) is weaker against someone who copies the stored data and guesses offline; six or more digits are much better. For extra safety, also use your device\'s own app lock.',
+      'By default a reload does not ask for the PIN again while the Auto lock time has not passed. To allow that, the key of the stored copy is kept on this device in a form that can be used but never read out, together with the time you last used the app; it is deleted when the app locks, when the PIN or the lock changes, and when you log out. Turn on "Ask for the PIN on every reload" in Settings > Security > App lock to keep the key in memory only.',
+      'So that the PIN also works without internet, a signed-in device keeps a check value derived from your PIN (not the PIN). It lets someone who copies the stored data test PIN guesses offline, which the encrypted copy already allows. Without internet only the data on this device opens; locked folders do not. When the internet is back, the PIN is asked once more to open the server session.',
+      'Locked folders live under their own path in the database that needs a separate server session. They lock again when the app locks; where the app lock is off on a device they lock on a reload and after 15 minutes without use. While they are locked they are not in memory, in the stored copy on the device, in search, in exports or in the history list. Opening a link from a locked folder is listed in History only while the folders stay unlocked, in memory, and is gone when they lock again.',
       'A guest\'s PIN is checked on the device only, so a guest who forgets it has to erase the device data.',
       'Honest limit: Linkivo protects you against other people and other apps, not against the person who operates the database. The project owner has technical access to the project in the Firebase console, as any project owner has. Linkivo has no screen where one person can read another person\'s links.'] },
 
@@ -81,6 +83,25 @@ export const PRIVACY = {
       'It uses your browser\'s storage to work: local storage for settings, IndexedDB for the cached library and unfinished jobs, and the service worker\'s cache for the app files, so the app opens quickly and can open offline.',
       'Firebase Authentication keeps your sign-in in the browser\'s storage so you stay signed in.',
       'Clearing your browser data removes all of this. For a guest that also removes the library.'] },
+
+    { id: 'browser-history', h: 'Your browser\'s own history', p: [
+      'Linkivo can only clear what Linkivo recorded: the History list in the app, which holds the links you opened in the preview, from Random or by a click, and the things you delete or export. When you open a link in the browser or in a new tab, the browser itself remembers that page. Linkivo cannot see or clear it. To remove it, clear it in your browser (and in your Google account, if that is switched on).',
+      'The menu names below are the usual ones and can differ a little between versions.'], table: {
+      head: ['Browser', 'How to remove the history of pages you visited'],
+      rows: [
+        ['Chrome (computer)', 'Press Ctrl+H (Cmd+Y on a Mac), tick the pages and press Delete. Or press Ctrl+Shift+Delete (Cmd+Shift+Delete), choose a time range, tick Browsing history and press Delete data.'],
+        ['Chrome (Android, iPhone)', 'Menu (three dots) > History > Delete browsing data (or select single pages). Choose the time range and Browsing history.'],
+        ['Edge', 'Press Ctrl+H, or Ctrl+Shift+Delete, choose the time range, tick Browsing history and press Clear now.'],
+        ['Firefox', 'Press Ctrl+Shift+Delete (Cmd+Shift+Delete), choose the time range, tick Browsing & Download History and press OK. On a phone: Menu > History > Clear history.'],
+        ['Safari (iPhone and iPad)', 'Settings > Apps > Safari (older versions: Settings > Safari) > Clear History and Website Data. To remove single pages open the Bookmarks / History view in Safari and swipe a page left.'],
+        ['Safari (Mac)', 'Menu bar: History > Clear History, then choose the time range.'],
+        ['Samsung Internet', 'Menu > History > Delete (all, or select single pages).'],
+        ['Private or incognito windows', 'Do not keep a history in the browser. Linkivo\'s own History still records a link opened from Linkivo; clear it in the app.']] } },
+
+    { id: 'google-activity', h: 'Google account activity and syncing', items: [
+        'Google account: if you are signed in to Chrome or Google and Web & App Activity is on, pages may also be saved at myactivity.google.com. Open that page, pick the entries or choose Delete activity, and choose the time range. Turning the setting off there stops it from saving more.',
+        'If you use Chrome sync, clearing the history on one device clears it on the others; a device that is offline updates when it is online again.',
+        'Deleting your Linkivo account removes your Linkivo data. It does not remove anything from your browser or your Google account.'] },
 
     { id: 'keep', h: 'How long things are kept', table: {
       head: ['Thing', 'How long'],

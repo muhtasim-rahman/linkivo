@@ -15,6 +15,7 @@
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
 import app from '../../core/app-info.js';
+import { reportMailto, keepReportLinksFresh } from './report-mail.js';   // v2.5.5
 
 const HIGHLIGHTS = [
   ['user', 'Sign in with Google or email, or just visit as a guest'],
@@ -36,7 +37,9 @@ function developerBadge() {
 const ext = (href, label, iconName) => h('a', { class: 'btn btn-sm', href, target: '_blank', rel: 'noopener', 'data-native': '' }, icon(iconName, { size: 16 }), h('span', { text: label }));
 const linkRow = (iconName, label, desc, props) => h('a', { class: 'row', ...props }, h('span', { class: 'row-ic' }, icon(iconName)), h('span', { class: 'row-main' }, h('span', { class: 'row-label', text: label }), desc && h('span', { class: 'row-desc', text: desc })), h('span', { class: 'row-end' }, icon(props.target ? 'external' : 'chevron-right', { size: 18 })));
 
-const mailto = () => `mailto:${app.contact}?subject=${encodeURIComponent(`Linkivo ${app.version} feedback`)}`;
+// v2.5.5 (owner): the report email carries the account, device and other details under the person's message (report-mail.js)
+const mailto = () => { keepReportLinksFresh(); return reportMailto(); };
+// ! v2.5.4 version, no longer used: const mailto = () => `mailto:${app.contact}?subject=${encodeURIComponent(`Linkivo ${app.version} feedback`)}`;
 
 export function developerCard() {
   return h('section', { class: 'dev-section', 'aria-label': 'Developer' },

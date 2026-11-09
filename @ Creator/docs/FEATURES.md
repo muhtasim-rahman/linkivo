@@ -288,3 +288,14 @@ Admin panel (the data model stays admin-ready), profile picture upload, push not
 - **Thumbnails in lists**: page image, then screenshot, then a free screenshot of the page (shown only for rows in view), then the site icon.
 - **Testing** (formerly Advanced) and every other testing aid (points display, how details were found, service names) are **admin only**; admin badges are small and in the accent colour.
 - **SEO**: the home page `/` has its own title, description and canonical; every public page (home, docs and each topic, privacy, terms) has static HTML with its own tags and structured data (`@ Creator/tools/gen-seo.mjs`); share image `assets/social/og-default.jpg`; sitemap and robots; CSP in report-only mode (`gen-csp.mjs`).
+
+## v2.5.5 owner changes (appended)
+- **App lock, reload**: Settings > Security > App lock > "Ask for the PIN on every reload" (device setting, default OFF). OFF: a reload or reopening inside the Auto lock time goes straight in (a non-extractable key kept by `lock-resume.js`); after the time the PIN is asked. ON: every reload asks.
+- **Offline PIN**: an account keeps a PIN check value on the device after an online unlock; offline the device checks the PIN (own lockout), the app runs on the stored copy, and the PIN is asked once more when the connection is back.
+- **Vault**: no "Stay unlocked for". It locks when the app locks; where the app lock is off it locks on a reload and after 15 minutes without use.
+- **Start animation**: Auto (default): full on the first start and then at most every 6 hours; Full; Short.
+- **Lock buttons** (header, sidebar) are hidden while the app lock is off.
+- **Public pages**: Privacy and Terms are plain reading pages (one "In short" card, simple bullets, tables), index at the top on a phone, sidebar without scrollbar that follows the page; back arrow = docs home (home = close the tab); README card; steps heading icon without a box; section "Your browser's own history" on Privacy.
+- **404**: a stand-alone page (`404.html`, no app, lock or splash); index.html sends unknown addresses there.
+- **Offline notice**: a sheet says what works and what needs internet; service worker answers from the saved copy at once when offline or on a dead connection.
+- **Report email**: account, device, screen, language, time zone, page, library size and lock state are added under the message.

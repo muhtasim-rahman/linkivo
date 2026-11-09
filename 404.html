@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Page not found - Linkivo</title>
+  <meta name="description" content="This page does not exist. Go back to Linkivo.">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#eef2f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#060d1a" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/icons/favicon.ico" sizes="48x48">
+  <link rel="stylesheet" href="/css/core/tokens.css">
+  <link rel="stylesheet" href="/css/core/base.css">
+  <link rel="stylesheet" href="/css/pages/notfound.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap">
+  <script type="module" src="/js/notfound.js"></script>
+</head>
+<!--
+  v2.5.5 (owner): the "Page not found" page is a page of its own. No app lock, no splash, no sidebar or bottom bar, no sign-in, no Firebase: it is not part of the app.
+  index.html sends every address that is not a page of the app here (see the first script there); the buttons below are normal links into the app, which asks for the PIN
+  by itself when the app lock needs it. Only js/notfound.js runs here (theme, the address that was asked for, the Go back button).
+-->
+<body class="nf-body">
+  <header class="nf-top"><a class="nf-brand" href="/" aria-label="Linkivo: open the app"><span class="logo-mark" style="--w:28px" aria-hidden="true"></span><span class="wordmark">l<i>i</i>nk<i>i</i>vo</span></a></header>
+  <main class="nf-main" id="main">
+    <div class="nf-mark" aria-hidden="true"><span>4</span><img src="/assets/art/lost.svg" alt="" width="86" height="66"><span>4</span></div>
+    <h1>This page does not exist</h1>
+    <p class="nf-text">The address may be mistyped, or the page may have moved.</p>
+    <code class="nf-path" id="nf-path" hidden></code>
+    <div class="nf-actions"><a class="nf-btn is-primary" href="/library">Open Library</a><button type="button" class="nf-btn" id="nf-back">Go back</button></div>
+    <nav class="nf-links" aria-label="Places to go"><a href="/search">Search</a><a href="/random">Random</a><a href="/import">Import</a><a href="/settings">Settings</a><a href="/docs">Documentation</a></nav>
+  </main>
+</body>
+</html>

@@ -8,7 +8,7 @@
  *  - skipWaiting: a new worker takes over at once; the page reloads itself (js/core/update.js).
  * KEEP `VERSION` identical to app.json "version" and PRECACHE complete (both checked by @ Creator/tools/check.mjs).
  */
-const VERSION = '2.5.4';
+const VERSION = '2.5.5';
 const SHELL_CACHE = `linkivo-shell-${VERSION}`;
 const LIB_CACHE = 'linkivo-libs-v1';
 const NET_TIMEOUT_MS = 3000;
@@ -38,6 +38,7 @@ const PRECACHE = [
   '/docs/install',
   '/privacy',
   '/terms',
+  '/404',
   '/assets/promo/linkivo-intro.jpg',
   '/manifest.webmanifest',
   '/app.json',
@@ -80,6 +81,7 @@ const PRECACHE = [
   '/css/pages/history.css',
   '/css/pages/library.css',
   '/css/pages/lock.css',
+  '/css/pages/notfound.css',
   '/css/pages/pages.css',
   '/css/pages/preview.css',
   '/css/pages/profile.css',
@@ -117,6 +119,7 @@ const PRECACHE = [
   '/js/core/keyboard-safe.js',
   '/js/core/known-accounts.js',
   '/js/core/local-prefs.js',
+  '/js/core/lock-resume.js',
   '/js/core/lock.js',
   '/js/core/lockout.js',
   '/js/core/logger.js',
@@ -256,6 +259,7 @@ const PRECACHE = [
   '/js/features/settings/delete-account.js',
   '/js/features/settings/devices-sheet.js',
   '/js/features/settings/metadata-tester.js',
+  '/js/features/settings/report-mail.js',
   '/js/features/settings/settings-page.js',
   '/js/features/settings/sync-picker.js',
   '/js/features/share/share-model.js',
@@ -264,6 +268,7 @@ const PRECACHE = [
   '/js/features/shell/history-card.js',
   '/js/features/shell/install-banner.js',
   '/js/features/shell/install-card.js',
+  '/js/features/shell/offline-notice.js',
   '/js/features/shell/pages/admin-reset-page.js',
   '/js/features/shell/pages/menu-page.js',
   '/js/features/shell/pages/not-found-page.js',
@@ -284,8 +289,10 @@ const PRECACHE = [
   '/js/features/vault/vault-flows.js',
   '/js/features/vault/vault-unlock.js',
   '/js/main.js',
+  '/js/notfound.js',
   '/js/public.js',
   '/js/ui/admin-badge.js',
+  '/js/ui/browser-history-note.js',
   '/js/ui/confirm.js',
   '/js/ui/dock.js',
   '/js/ui/edge-fade.js',
@@ -341,9 +348,16 @@ self.addEventListener('message', (event) => { if (event.data && event.data.type 
 
 const isLib = (url) => url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/') || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 
+/** v2.5.5 (owner: offline the app stayed on the splash). With Wi-Fi but no internet a request does not fail, it hangs, and every file of the app waited the full timeout one after the other
+ *  (about 100 files in a chain of imports). Now: when the browser says it is offline, or a request timed out in the last 30 s, a saved copy is answered at once and refreshed in the background. */
+let netBadUntil = 0;
 async function networkFirst(request, cacheKey) {
   const cache = await caches.open(SHELL_CACHE);
   const cached = await cache.match(cacheKey || request, { ignoreSearch: false });
+  if (cached && ((self.navigator && self.navigator.onLine === false) || Date.now() < netBadUntil)) {
+    fetch(request).then((res) => { if (res.ok) cache.put(cacheKey || request, res.clone()).catch(() => {}); }).catch(() => {});   // refresh quietly; the answer does not wait for it
+    return cached;
+  }
   const network = fetch(request).then(async (res) => {
     // never cache an HTML page that answered a script/style request (hosting rewrite of a missing file)
     const type = res.headers.get('content-type') || '';
@@ -353,12 +367,12 @@ async function networkFirst(request, cacheKey) {
   });
   if (!cached) return network;
   // with a cached copy, do not make the user wait longer than the timeout for a slow network
-  return Promise.race([network, new Promise((resolve) => setTimeout(() => resolve(cached), NET_TIMEOUT_MS))]).catch(() => cached);
+  return Promise.race([network, new Promise((resolve) => setTimeout(() => { netBadUntil = Date.now() + 30000; resolve(cached); }, NET_TIMEOUT_MS))]).catch(() => cached);
 }
 
 /** v2.5.4: Documentation, Privacy and Terms are static pages of their own. They are kept under their OWN address (the app shell is kept under /index.html), network first like everything else.
  *  When offline and a page was never opened, a tiny page says so; it must NOT fall back to the app shell, which would send the person back here in a loop. */
-const PUBLIC_PAGE = /^\/(docs(\/[a-z0-9-]+)?|privacy|terms)\/?$/;
+const PUBLIC_PAGE = /^\/(docs(\/[a-z0-9-]+)?|privacy|terms|404)\/?$/;   // v2.5.5: /404 is a page of its own too
 async function publicPage(request, url) {
   const key = url.pathname.replace(/\/$/, '');
   try { return await networkFirst(request, key); }

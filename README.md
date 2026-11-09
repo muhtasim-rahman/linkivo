@@ -11,6 +11,10 @@ Free. Runs in the browser or as an installed app.</p>
 
 ---
 
+## Watch the introduction
+
+<p align="center"><a href="https://youtu.be/0HaYeR6w6k0"><img src="assets/promo/linkivo-intro.jpg" alt="Watch the Linkivo introduction video on YouTube" width="720"></a><br><sub>A short tour of Linkivo. Opens on YouTube.</sub></p>
+
 ## What it does
 
 | | |

@@ -4,10 +4,12 @@
  *          database rules require for everything under vault/<uid>. This module opens and closes that session and hands the data to the engine: open = the locked folders and links
  *          appear everywhere (Library, folder view, search, Random, Preview, Profile, Stats) with a small lock icon; closed = they are not in memory at all. The data is never written
  *          to this device (no cache, no index, no history, no export). Accounts only: a guest has no server to hold the session.
- *          How long it stays open is the person's choice (setting `vault.keep`): until the app is closed or reloaded, or 2 / 5 / 10 / 20 / 30 / 60 minutes. The app lock, logout and a
- *          failed keep-alive close it at once.
- * API: VAULT_AWAY_MS  VAULT_PREFIXES  KEEP_OPTIONS  keepSetting()  vaultCodeMatch(text, prefix) -> six digits | null   vaultOn() -> boolean   bindVaultEngine(engine)
- *      getVault() -> { open, exp }   subscribeVault(fn)   openVault(code) -> true (throws on a wrong code: callers must NOT say why)   closeVault({ remote })   closeVaultLocal()
+ *          v2.5.5 (owner): there is NO "stay unlocked for" setting any more. The vault locks WHEN THE APP LOCKS (the app lock, its Auto lock time, Lock now, logout, another device locking the account).
+ *          Where the app lock is OFF on this device the vault locks on a reload and after VAULT_IDLE_MS (15 minutes) without any touch, key or scroll (a hidden app counts as idle).
+ *          A reload always closes it: the data is memory only, and a session left open on the server by the old page is ended at the next start (closeStaleVaultSession).
+ *          A failed keep-alive (the server session is gone) also closes it at once.
+ * API: VAULT_IDLE_MS  VAULT_PREFIXES  closeStaleVaultSession()  vaultCodeMatch(text, prefix) -> six digits | null   vaultOn() -> boolean   bindVaultEngine(engine)
+ *      getVault() -> { open, reason }   subscribeVault(fn)   openVault(code) -> true (throws on a wrong code: callers must NOT say why)   closeVault({ remote })   closeVaultLocal()
  *      onVaultOpen(fn) -> off   (jobs that were waiting for the vault resume here)   vaultCall(path, body)
  */
 import { createStore } from './events.js';
@@ -17,17 +19,13 @@ import { prefs } from './local-prefs.js';
 import { log } from './logger.js';
 
 export const VAULT_PREFIXES = ['%', '@', '#', '$', '!'];   // v2.5.4 (owner): % is the default symbol (first in the list)
-export const KEEP_KEY = 'vault.keep';
-/** How long the vault stays open after the code (owner, v2.5.3). 'reload' = until the app is closed or reloaded. */
-export const KEEP_OPTIONS = [{ value: 'reload', label: 'Until I close, reload or leave the app' }, { value: '2', label: '2 minutes' }, { value: '5', label: '5 minutes' }, { value: '10', label: '10 minutes' }, { value: '20', label: '20 minutes' }, { value: '30', label: '30 minutes' }, { value: '60', label: '1 hour' }];
-export const keepSetting = () => { const v = String(prefs.get(KEEP_KEY, '10')); return KEEP_OPTIONS.some((o) => o.value === v) ? v : '10'; };
-
+/** ! v2.5.5: the old "Stay unlocked for" setting (stored as `vault.keep`) and its helper code were removed. The stored value is deleted at the first open. */
 const KEEP_ALIVE_MS = 60000;
-const mem = createStore({ open: false, exp: 0 });
+const mem = createStore({ open: false, reason: '' });   // v2.5.5: `reason` = 'idle' when the 15 minute rule closed it (boot.js says so once)
 const openHooks = new Set();
-let eng = null, keepAlive = null, expiryTimer = null, visHandler = null, hiddenAt = 0;
-/** v2.5.4 (owner): on a phone an installed app is paused, not closed. With "until I close the app" the vault now also closes after the app was away this long (the app lock, when on, has its own time). */
-export const VAULT_AWAY_MS = 120000;
+let eng = null, keepAlive = null, idleTimer = null, visHandler = null, lastActive = 0, actHandler = null;
+/** v2.5.5 (owner): without an app lock on this device the vault closes after this long without any use (a phone app that is paused or hidden counts as unused). */
+export const VAULT_IDLE_MS = 15 * 60 * 1000;
 export const getVault = () => mem.get();
 export const subscribeVault = (fn) => mem.subscribe(fn);
 export const onVaultOpen = (fn) => { openHooks.add(fn); return () => openHooks.delete(fn); };
@@ -46,21 +44,26 @@ export function vaultCodeMatch(text, prefix = '%') {
 }
 
 function stopTimers() {
-  clearInterval(keepAlive); keepAlive = null; clearTimeout(expiryTimer); expiryTimer = null;
-  if (visHandler && typeof document !== 'undefined') { document.removeEventListener('visibilitychange', visHandler); if (typeof window !== 'undefined') window.removeEventListener('pageshow', visHandler); visHandler = null; }
-  hiddenAt = 0;
+  clearInterval(keepAlive); keepAlive = null; clearInterval(idleTimer); idleTimer = null;
+  if (typeof document !== 'undefined') {
+    if (visHandler) { document.removeEventListener('visibilitychange', visHandler); if (typeof window !== 'undefined') window.removeEventListener('pageshow', visHandler); visHandler = null; }
+    if (actHandler) { for (const t of ACTIVITY) document.removeEventListener(t, actHandler, true); actHandler = null; }
+  }
 }
+const ACTIVITY = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'];
+/** True when this device has the app lock on: then the vault follows the app lock and has no timer of its own. */
+const followsAppLock = () => getLock().enabled === true;
 
 /** Forgets everything on this device (also called by the app lock and by logout). Does not talk to the server. */
-export function closeVaultLocal() {
+export function closeVaultLocal(reason = '') {
   stopTimers();
   if (eng) { try { eng.detachVault(); } catch (e) { log.warn('vault', 'detach failed', e); } }
-  mem.set({ open: false, exp: 0 });
+  mem.set({ open: false, reason });
 }
 
 /** Locks the vault: memory first (so nothing stays on screen while the network answers), then the server session. */
-export async function closeVault({ remote = true } = {}) {
-  const was = mem.get().open; closeVaultLocal();
+export async function closeVault({ remote = true, reason = '' } = {}) {
+  const was = mem.get().open; closeVaultLocal(reason);
   if (remote && was) { try { await securePost('/lock', { scope: 'vault' }); } catch (e) { log.warn('vault', 'vault session not closed on the server (it expires by itself)', e); } }
 }
 
@@ -77,20 +80,20 @@ export async function openVault(code, { quiet = false } = {}) {
   if (!eng) throw Object.assign(new Error('vault_unsupported'), { code: 'unsupported' });
   const r = await securePost('/vault/open', { code });
   if (!quiet) { try { await load(eng); } catch (e) { closeVaultLocal(); throw e; } }
-  stopTimers();
-  const keep = keepSetting(), exp = keep === 'reload' ? 0 : Date.now() + Number(keep) * 60000;
-  mem.set({ open: true, quiet, exp, serverExp: r.vaultExp || 0 });
-  if (exp) expiryTimer = setTimeout(() => closeVault(), exp - Date.now());
+  stopTimers(); prefs.remove('vault.keep');   // v2.5.5: the removed setting
+  mem.set({ open: true, quiet, reason: '', serverExp: r.vaultExp || 0 });
   keepAlive = setInterval(async () => { try { await securePost('/vault/extend'); } catch { closeVaultLocal(); } }, KEEP_ALIVE_MS);   // the session ends by itself when the app stops asking
   if (typeof document !== 'undefined') {
-    // a phone may suspend the timers: when the page is visible again the session is checked at once (a dead session closes the vault) and a passed expiry time is honoured
-    // v2.5.4 (owner): the time the app was away is measured too (an installed phone app is paused, so timers do not run): "until I close the app" ends after VAULT_AWAY_MS away, a timed setting after its time.
+    // v2.5.5 (owner): no timer of its own while the app lock is on. Without it: 15 minutes without use (touch, key, scroll) closes it. A phone may pause the timers of a hidden app, so the idle time is also
+    // measured when the page is visible again; a dead server session closes the vault in every case.
+    lastActive = Date.now();
+    actHandler = () => { lastActive = Date.now(); };
+    for (const t of ACTIVITY) document.addEventListener(t, actHandler, { capture: true, passive: true });
+    const idleCheck = () => { if (mem.get().open && !followsAppLock() && Date.now() - lastActive >= VAULT_IDLE_MS) { closeVault({ reason: 'idle' }); return true; } return false; };
+    idleTimer = setInterval(idleCheck, 30000);
     visHandler = async () => {
-      if (document.hidden) { if (!hiddenAt) hiddenAt = Date.now(); return; }
-      if (!mem.get().open) return;
-      const away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0;
-      const e = mem.get().exp;
-      if ((e && Date.now() >= e) || (!e && away >= VAULT_AWAY_MS)) { closeVault(); return; }
+      if (document.hidden || !mem.get().open) return;
+      if (idleCheck()) return;
       try { await securePost('/vault/extend'); } catch { closeVaultLocal(); }
     };
     document.addEventListener('visibilitychange', visHandler);
@@ -102,6 +105,12 @@ export async function openVault(code, { quiet = false } = {}) {
   }
   for (const fn of [...openHooks]) { try { fn(); } catch (e) { log.warn('vault', 'open hook failed', e); } }
   return true;
+}
+
+/** v2.5.5: a reload always ends the vault on this device (memory only), so a server session left open by the page that was reloaded is ended at the start. Best effort, never throws; offline it is skipped (the session expires by itself). */
+export async function closeStaleVaultSession() {
+  if (!vaultOn() || mem.get().open) return;
+  try { if (typeof navigator !== 'undefined' && navigator.onLine === false) return; await securePost('/lock', { scope: 'vault' }); } catch { /* it expires by itself */ }
 }
 
 /** The Worker call for every vault change that needs it; keeps the lock store in step. */

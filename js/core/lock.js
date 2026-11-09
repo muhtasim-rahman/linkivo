@@ -7,6 +7,10 @@
  *          GUEST    there is no server: the PIN is checked on the device (a derived verifier) and the device copy is encrypted with the same kind of key. A guest who forgets the PIN
  *                   loses the local data (the screen offers a backup first).
  *          Every page load starts LOCKED while the lock is on (the server session is shared by all devices of an account, so it alone can not tell that THIS tab has the PIN).
+ *          v2.5.5: unless "Ask for the PIN on every reload" is OFF (device setting, default OFF since the owner asked so). Then a reload (or reopening the app) within the Auto lock time resumes
+ *          without the PIN, from the key kept by lock-resume.js; after that time the PIN is asked. Accounts also keep a PIN VERIFIER on the device after every online unlock, so the PIN
+ *          can be checked OFFLINE (the Worker is not reachable): the app then runs on the stored copy only (`offline: true` = no server session yet) and asks for the PIN again once
+ *          the connection is back, to open the server session and sync.
  *          The key lives in memory only. State: { scope, ready, enabled, hasPin, vaultSep, hideVault, away, open }.
  * API: loadLock(session, adapter) -> state   getLock() subscribeLock(fn)   isLocked() getBox()
  *      unlock(pin)   verifyPin(pin)   lockNow()   extendSession()   enableLock(pin)   disableLock(pin) -> oldBox   changePin(current, next) -> { oldBox, newBox }   resetPin(next)   setAutoLock(min)
@@ -15,22 +19,39 @@
 import { createStore } from './events.js';
 import { prefs } from './local-prefs.js';
 import { securePost } from './worker-client.js';
-import { deriveBox, newSalt } from './crypto-box.js';
+import { deriveBox, newSalt, makeBox } from './crypto-box.js';
 import { lockoutMs } from './lockout.js';
 import { log } from './logger.js';
 import { withTimeout } from './utils.js';   // v2.5.4
+import { saveResume, readResume, touchResume, clearResume, resumeAllowed } from './lock-resume.js';   // v2.5.5
 
-const GUEST = 'guest.lock', cacheKey = (uid) => `lock.cache.${uid}`, saltKey = (uid) => `lock.salt.${uid}`;
+const ASK_KEY = 'lock.askOnReload', GUEST = 'guest.lock', verKey = (uid) => `lock.ver.${uid}`, offKey = (uid) => `lock.off.${uid}`, cacheKey = (uid) => `lock.cache.${uid}`, saltKey = (uid) => `lock.salt.${uid}`;
 /** Auto-lock choices in seconds (the Worker accepts the same list). 0 = right after the app is left, -1 = never. Default 1 minute. */
 export const AWAY_CHOICES = [0, 30, 60, 120, 300, 600, 900, 1800, -1];   // v2.5.4: 120 added
 export const DEFAULT_AWAY = 120;   // v2.5.4 (owner): the default auto lock is 2 minutes (was 1)
 const normAway = (v) => (v !== undefined && v !== null && AWAY_CHOICES.includes(Number(v)) ? Number(v) : DEFAULT_AWAY);
-const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, vaultPrefix: '%', away: DEFAULT_AWAY, open: true });   // v2.5.4: default symbol %
+const store = createStore({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, vaultPrefix: '%', away: DEFAULT_AWAY, open: true, offline: false });   // v2.5.4: default symbol %; v2.5.5: offline = unlocked without the server
 let box = null;
 export const getLock = () => store.get();
 export const subscribeLock = (fn) => store.subscribe(fn);
 export const isLocked = () => { const s = store.get(); return s.enabled && !s.open; };
 export const getBox = () => box;
+const scopeKey = (s) => (s.scope === 'guest' ? 'guest' : s.uid);
+/** v2.5.5: does a reload ask for the PIN? Device setting, default NO (owner). */
+export const askOnReload = () => prefs.get(ASK_KEY, false) === true;   // v2.5.5 (owner): the default is NO: a reload within the Auto lock time goes straight in
+/** v2.5.5: ONE place that changes the key. A new key is kept for a later reload only when the person chose not to be asked on every reload; no key = nothing kept. */
+function setBox(b) {
+  box = b;
+  const s = store.get();
+  if (b && s.scope !== 'none' && !askOnReload()) saveResume(scopeKey(s), b); else if (!b) clearResume();
+}
+export function setAskOnReload(on) {
+  prefs.set(ASK_KEY, on === true);
+  if (on === true) clearResume(); else { const s = store.get(); if (box && s.enabled && s.open && s.scope !== 'none') saveResume(scopeKey(s), box); }
+}
+/** The app is on screen (or was just left): remembers the time for a resume after a reload. Cheap, never throws. */
+export function touchSeen() { const s = store.get(); if (s.enabled && s.open && !askOnReload() && s.scope !== 'none') touchResume(scopeKey(s)); }
+const isNetworkError = (e) => !!e && !e.code && (e.status === undefined || e.status === 0 || e.name === 'TypeError');
 /** v2.5.2: the Worker answers every vault call with the lock view; this copies the vault fields (code exists, hidden entry, prefix) into the store and the device copy. */
 export function applyServerLock(l) {
   if (!l) return; const s = store.get(); if (s.scope !== 'account') return;
@@ -80,10 +101,50 @@ async function guestCheck(pin) {                         // a guest's PIN: locko
 /** Checks a PIN without changing anything (the 5-minute window of sensitive actions, changing settings). Same errors as unlock(). */
 export async function verifyPin(pin) {
   const s = store.get();
-  if (s.scope === 'guest') await guestCheck(pin); else await securePost('/pin/verify', { pin, scope: 'app' });
+  if (s.scope === 'guest') await guestCheck(pin);
+  else if (offlineNow()) await offlineCheck(pin);
+  else { try { await securePost('/pin/verify', { pin, scope: 'app' }); if (s.offline) store.set({ offline: false }); } catch (e) { if (isNetworkError(e) && hasVerifier()) await offlineCheck(pin); else throw e; } }
   rememberPinLen(pin);
   return true;
 }
+const offlineNow = () => typeof navigator !== 'undefined' && navigator.onLine === false && hasVerifier();
+const hasVerifier = () => { const s = store.get(); return s.scope === 'account' && !!prefs.get(verKey(s.uid), ''); };
+/** v2.5.5: the PIN of an ACCOUNT checked on this device (no connection): same lockout idea as the guest lock, kept apart from the server's count. Resolves with the key. */
+async function offlineCheck(pin) {
+  const s = store.get(), ver = prefs.get(verKey(s.uid), ''); if (!ver) throw fail('offline_no_verifier');
+  const rec = prefs.get(offKey(s.uid), {}) || {}, now = Date.now();
+  if ((rec.until || 0) > now) throw fail('locked_out', { retryAfter: Math.ceil((rec.until - now) / 1000) });
+  const b = await deriveBox(pin, accountSalt(s.uid));
+  if (b.verifier === ver) { if (rec.att || rec.until) prefs.remove(offKey(s.uid)); return b; }
+  const att = (rec.att || 0) + 1, w = wait(att); prefs.set(offKey(s.uid), { att, until: w ? now + w : 0 });
+  throw fail('wrong_pin', { attemptsLeft: att < 5 ? 5 - att : 0, retryAfter: Math.ceil(w / 1000) });
+}
+/** v2.5.5: after a reload with "Ask for the PIN on every reload" OFF: true when the stored key may be used (within the Auto lock time, same PIN as now). Never throws. */
+export async function tryResume() {
+  const s = store.get();
+  if (!s.enabled || s.open || s.scope === 'none' || askOnReload()) return false;
+  try {
+    const r = await readResume(scopeKey(s));
+    if (!r) return false;
+    if (!resumeAllowed({ away: s.away, seen: r.seen })) { clearResume(); return false; }
+    const known = s.scope === 'guest' ? (guestRec() || {}).verifier : prefs.get(verKey(s.uid), '');
+    if (known && known !== r.verifier) { clearResume(); return false; }   // the PIN was changed since: ask for it
+    let offline = false;
+    if (s.scope === 'account') {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) offline = true;
+      else { try { await securePost('/lock/extend'); } catch (e) { if (e && e.code === 'locked') { clearResume(); return false; } offline = isNetworkError(e); } }
+    }
+    box = makeBox(r.key, r.verifier); store.set({ open: true, offline }); touchResume(scopeKey(s)); return true;
+  } catch (e) { log.warn('lock', 'resume failed, the PIN is asked', e); return false; }
+}
+/** v2.5.5: back online after an offline unlock: opens the server session with the PIN (the Worker checks it). Throws like unlock(). */
+export async function openServerSession(pin) {
+  const s = store.get(); if (s.scope !== 'account') return true;
+  await securePost('/pin/verify', { pin, scope: 'app' });
+  store.set({ offline: false }); rememberPinLen(pin); return true;
+}
+/** v2.5.5: is the server session still alive? (back online after a resume that could not ask). Resolves true when open or unknown. */
+export async function serverSessionAlive() { try { await securePost('/lock/extend'); store.set({ offline: false }); return true; } catch (e) { return !(e && e.code === 'locked'); } }
 /** v2.5.1: the PIN of the GUEST lock, checked on this device only (used by the guest-to-account transfer while an account is signed in). Resolves with the key, throws wrong_pin / locked_out. */
 export const guestBoxFor = (pin) => guestCheck(pin);
 /** v2.5.1: is there a guest lock record on this device? (the guest copy is encrypted then) */
@@ -92,13 +153,18 @@ export const guestHasLock = () => !!(guestRec() && guestRec().verifier);
 export const dropGuestLockRecord = () => { prefs.remove(GUEST); };
 export async function unlock(pin) {
   const s = store.get();
-  if (s.scope === 'guest') box = await guestCheck(pin);
-  else { await securePost('/pin/verify', { pin, scope: 'app' }); box = await deriveBox(pin, accountSalt(s.uid)); }
-  rememberPinLen(pin); store.set({ open: true }); return true;
+  let offline = false, b;
+  if (s.scope === 'guest') b = await guestCheck(pin);
+  else if (offlineNow()) { b = await offlineCheck(pin); offline = true; }   // v2.5.5: no connection: the device checks the PIN
+  else {
+    try { await securePost('/pin/verify', { pin, scope: 'app' }); b = await deriveBox(pin, accountSalt(s.uid)); prefs.set(verKey(s.uid), b.verifier); }
+    catch (e) { if (isNetworkError(e) && hasVerifier()) { b = await offlineCheck(pin); offline = true; } else throw e; }
+  }
+  rememberPinLen(pin); store.set({ open: true, offline }); setBox(b); return true;
 }
 /** Ends the session on the server (best effort) and forgets the key. The caller clears the screen and the data layer. */
 export async function lockNow() {
-  const s = store.get(); box = null; store.set({ open: false });
+  const s = store.get(); setBox(null); store.set({ open: false, offline: false });
   if (s.scope === 'account') { try { await securePost('/lock', { scope: 'all' }); } catch (e) { log.warn('lock', 'the server session could not be ended', e); } }
 }
 export async function extendSession() {
@@ -108,27 +174,28 @@ export async function extendSession() {
 }
 export async function enableLock(pin) {
   const s = store.get();
-  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, away: s.away, att: 0, until: 0 }); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true }); return; }
+  if (s.scope === 'guest') { const salt = newSalt(); box = await deriveBox(pin, salt); prefs.set(GUEST, { salt, verifier: box.verifier, away: s.away, att: 0, until: 0 }); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true }); setBox(box); return; }
   if (!s.hasPin) await securePost('/pin/set', { pin, enable: true }); else { await securePost('/pin/verify', { pin, scope: 'app' }); await securePost('/lock/config', { app: true }); }
-  box = await deriveBox(pin, accountSalt(s.uid)); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true });
+  const nb = await deriveBox(pin, accountSalt(s.uid)); prefs.set(verKey(s.uid), nb.verifier); rememberPinLen(pin); store.set({ enabled: true, hasPin: true, open: true, offline: false }); setBox(nb);
 }
 export async function disableLock(pin) {
   const s = store.get(), old = box;
   if (s.scope === 'guest') { await guestCheck(pin); prefs.remove(GUEST); } else await securePost('/lock/config', { app: false, pin });
-  box = null; store.set({ enabled: false, open: true, ...(s.scope === 'guest' ? { hasPin: false } : {}) });
+  if (s.scope === 'account') { prefs.remove(verKey(s.uid)); prefs.remove(offKey(s.uid)); }
+  setBox(null); store.set({ enabled: false, open: true, offline: false, ...(s.scope === 'guest' ? { hasPin: false } : {}) });
   return old;
 }
 export async function changePin(current, next) {
   const s = store.get(), oldBox = box;
-  if (s.scope === 'guest') { await guestCheck(current); const salt = newSalt(); box = await deriveBox(next, salt); prefs.set(GUEST, { ...guestRec(), salt, verifier: box.verifier, att: 0, until: 0 }); rememberPinLen(next); return { oldBox, newBox: box }; }
+  if (s.scope === 'guest') { await guestCheck(current); const salt = newSalt(); box = await deriveBox(next, salt); prefs.set(GUEST, { ...guestRec(), salt, verifier: box.verifier, att: 0, until: 0 }); rememberPinLen(next); setBox(box); return { oldBox, newBox: box }; }
   await securePost('/pin/change', { kind: 'main', current, pin: next });
-  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); rememberPinLen(next); return { oldBox, newBox: box };
+  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); const nb = await deriveBox(next, salt); prefs.set(verKey(s.uid), nb.verifier); rememberPinLen(next); setBox(nb); return { oldBox, newBox: nb };
 }
 /** Forgot PIN (accounts): the Worker needs a fresh sign-in. The stored copy was made with the old key, so the device discards it and downloads again. */
 export async function resetPin(next) {
   const s = store.get(); if (s.scope !== 'account') throw fail('guest_cannot_reset');
   await securePost('/pin/reset', { pin: next });
-  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); box = await deriveBox(next, salt); rememberPinLen(next); store.set({ hasPin: true, open: true });
+  const salt = newSalt(); prefs.set(saltKey(s.uid), salt); const nb = await deriveBox(next, salt); prefs.set(verKey(s.uid), nb.verifier); rememberPinLen(next); store.set({ hasPin: true, open: true, offline: false }); setBox(nb);
 }
 /** v2.5.1 (owner): ONE auto-lock setting. `sec` = how long the app may be minimized or on another tab before it locks (0 = at once, -1 = never). Saved with the account (all devices) or this guest. */
 export async function setAway(sec) {
@@ -137,5 +204,5 @@ export async function setAway(sec) {
   store.set({ away: sec });
 }
 /** Signed out: forget the key and the state, so the next sign-in starts from a clean lock. */
-export function resetLock() { box = null; store.set({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, away: DEFAULT_AWAY, open: true }); }
-export function eraseGuestLock() { prefs.remove(GUEST); box = null; store.set({ enabled: false, hasPin: false, open: true }); }
+export function resetLock() { setBox(null); store.set({ scope: 'none', uid: '', ready: false, enabled: false, hasPin: false, vaultSep: false, hideVault: false, away: DEFAULT_AWAY, open: true, offline: false }); }
+export function eraseGuestLock() { prefs.remove(GUEST); setBox(null); store.set({ enabled: false, hasPin: false, open: true }); }

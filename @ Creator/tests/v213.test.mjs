@@ -9,10 +9,10 @@ const imp = (p) => import(new URL(p, root));
 const { prefs } = await imp('js/core/local-prefs.js');
 
 // ---------------------------------------------------------------- splash, settings registry
-test('splash: Full is the default and the Automatic option is gone', async () => {
+test('splash: Auto is the default again (v2.5.5), then Full and Short', async () => {
   const { CATALOG, findEntry } = await imp('js/features/settings/catalog.js');
   const splash = findEntry('splash');
-  assert.equal(splash.default, 'full'); assert.deepEqual(splash.options.map((o) => o.value), ['full', 'short']);
+  assert.equal(splash.default, 'auto'); assert.deepEqual(splash.options.map((o) => o.value), ['auto', 'full', 'short']);   // v2.5.5 (owner)
   const ids = CATALOG.map((e) => e.id);
   for (const gone of ['pullRefresh', 'blockContextMenu']) assert.ok(!ids.includes(gone), gone + ' was removed');
   assert.ok(ids.includes('appDetails') && ids.includes('metaBrowser'));   // v2.2.2: About and Developer became one App details row

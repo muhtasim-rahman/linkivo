@@ -1,0 +1,20 @@
+/* Linkivo: css/pages/notfound.css (v2.5.5): the stand-alone "Page not found" page (404.html). Minimal on purpose: one centred column, nothing of the app around it. */
+.nf-body { min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font-family: var(--font-body, system-ui, sans-serif); }
+.nf-top { padding: calc(var(--s4) + env(safe-area-inset-top)) var(--s5) 0; }
+.nf-brand { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; color: var(--text); font: 800 1.15rem var(--font-brand); }
+@media (hover: hover) { .nf-brand:hover { text-decoration: none; } }
+.nf-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s3); padding: var(--s6) var(--s5) calc(var(--s8) + env(safe-area-inset-bottom)); text-align: center; }
+.nf-mark { display: flex; align-items: center; gap: var(--s3); font: 800 clamp(4.5rem, 22vw, 8rem) / 1 var(--font-brand); letter-spacing: -0.04em; color: var(--accent); }
+.nf-mark img { width: clamp(56px, 16vw, 100px); height: auto; filter: var(--nf-art, none); opacity: .85; }
+:root[data-theme='dark'] .nf-mark img { filter: invert(1); }
+.nf-main h1 { font: 800 clamp(1.4rem, 5vw, 2rem) / 1.2 var(--font-brand); letter-spacing: -0.02em; }
+.nf-text { max-width: 36ch; color: var(--sub); line-height: 1.55; }
+.nf-path { max-width: min(92vw, 460px); padding: 6px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 10px; background: var(--surface-2); color: var(--sub); font: 500 .85rem var(--font-mono, monospace); }
+.nf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s3); margin-top: var(--s3); }
+.nf-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; min-width: 44px; padding: 0 var(--s5); border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: 700 1rem var(--font-brand); cursor: pointer; }
+.nf-btn.is-primary { border-color: transparent; background: var(--accent); color: var(--accent-fg); }
+@media (hover: hover) { .nf-btn:hover { text-decoration: none; } }
+.nf-btn:focus-visible, .nf-links a:focus-visible, .nf-brand:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.nf-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s5); margin-top: var(--s4); }
+.nf-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--sub); font-weight: 600; }
+@media (hover: hover) { .nf-links a:hover { color: var(--text); } }

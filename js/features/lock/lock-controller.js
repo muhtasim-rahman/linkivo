@@ -10,9 +10,9 @@
  * API: ensureUnlocked(session) -> Promise<boolean>   startLockWatch({ router, reinit }) -> stop()   installSensitiveGate()   lockApp()   markVerified()
  */
 import { subscribeSession, getSession } from '../../core/session.js';
-import { loadLock, getLock, subscribeLock, isLocked, lockNow, extendSession, verifyPin, resetLock } from '../../core/lock.js';
+import { loadLock, getLock, subscribeLock, isLocked, lockNow, extendSession, verifyPin, resetLock, tryResume, touchSeen, openServerSession, serverSessionAlive } from '../../core/lock.js';   // v2.5.5: tryResume, touchSeen, openServerSession, serverSessionAlive
 import { setSensitiveVerifier } from '../../core/sensitive.js';
-import { teardownData } from '../../core/app-data.js';
+import { teardownData, getEngine } from '../../core/app-data.js';
 import { loadFirebase } from '../../core/firebase-loader.js';
 import { createRtdbAdapter } from '../../engine/rtdb-adapter.js';
 import { toast } from '../../ui/toast.js';
@@ -39,6 +39,7 @@ export async function ensureUnlocked(session) {
     await loadLock(session, adapter); loadedKey = key;
   }
   if (!isLocked()) return true;
+  if (await tryResume()) { markVerified(); return true; }   // v2.5.5: "Ask for the PIN on every reload" is OFF and the Auto lock time has not passed
   endSplash();   // the lock screen is the first thing seen
   return new Promise((resolve) => {
     let settled = false, off = () => {};
@@ -68,6 +69,7 @@ export function startLockWatch({ router, reinit }) {
   // While it is on screen the server session is simply kept alive every minute (its length is the away time plus 5 minutes, set by the Worker).
   const tick = async () => {
     const s = getLock(); if (!s.enabled || !s.open || busy || document.visibilityState === 'hidden') return;
+    touchSeen();   // v2.5.5: the time a reload may resume from
     const now = Date.now();
     if (now - lastKeep >= KEEP_ALIVE_MS) { lastKeep = now; if (!(await extendSession())) await lockIt(); }   // the server session is gone: lock this tab too
   };
@@ -78,7 +80,7 @@ export function startLockWatch({ router, reinit }) {
     const s = getLock();
     if (document.visibilityState === 'hidden') {
       if (!s.enabled || !s.open || screen) return;
-      hiddenAt = Date.now();
+      hiddenAt = Date.now(); touchSeen();
       if (s.away === 0) lockIt();
       else if (s.away > 0) { clearAway(); awayTimer = setTimeout(() => { const t = getLock(); if (t.enabled && t.open && t.away > 0) lockIt(); }, s.away * 1000); }   // timers may be slowed down in the background: the check on return below is the safety net
       return;
@@ -86,11 +88,29 @@ export function startLockWatch({ router, reinit }) {
     clearAway();
     const away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0;
     if (s.enabled && s.open && !screen && s.away >= 0 && away >= s.away * 1000 && away > 0) { lockIt(); return; }
-    lastKeep = 0; tick();
+    lastKeep = 0; tick(); backOnline();
   };
   document.addEventListener('visibilitychange', onVis);
+  const onHide = () => touchSeen();   // v2.5.5: closing the tab or a reload also counts as "left the app"
+  window.addEventListener('pagehide', onHide);
+  // v2.5.5: unlocked OFFLINE (the device checked the PIN): once the connection is back the server session must be opened too, or nothing syncs. A resumed session is simply
+  // checked; only when the server says it is gone is the PIN asked, once, with a short note. A dismissed sheet is asked again at most every 5 minutes.
+  let askedAt = 0, asking = false;
+  const backOnline = async () => {
+    const s = getLock(); if (!s.enabled || !s.open || !s.offline || asking || screen || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+    if (Date.now() - askedAt < 300000) return;
+    asking = true;
+    try {
+      if (await serverSessionAlive()) { const e = getEngine(); if (e && e.syncNow) e.syncNow().catch(() => {}); return; }
+      askedAt = Date.now();
+      const pin = await askPin({ title: 'You are back online', text: 'Enter your PIN to sync your changes with your account.', verify: openServerSession, forgot: false });
+      if (pin) { const e = getEngine(); if (e && e.syncNow) e.syncNow().catch(() => {}); }
+    } finally { asking = false; }
+  };
+  window.addEventListener('online', backOnline);
+  setTimeout(backOnline, 3000);
   const offLock = subscribeLock((s, prev) => { if (prev && prev.open && !s.open && s.enabled && !screen) lockIt(); });   // lockNow() called from a Settings button
-  return () => { clearInterval(timer); clearAway(); document.removeEventListener('visibilitychange', onVis); offLock(); };
+  return () => { clearInterval(timer); clearAway(); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', onHide); window.removeEventListener('online', backOnline); offLock(); };
 }
 
 const REASONS = { logout: 'to log out', 'reset-settings': 'to reset your settings', 'clear-local': 'to clear data on this device', 'delete-account': 'to delete your account', 'password-change': 'to change your password', 'password-add': 'to add a password', 'email-change': 'to change your email', 'google-unlink': 'to unlink Google', 'password-reset': 'to reset your password', 'device-logout': 'to log out a device', 'delete-folder': 'to delete this folder', security: 'to change security settings' };

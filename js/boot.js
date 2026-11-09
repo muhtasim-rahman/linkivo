@@ -5,6 +5,7 @@
  *          (login, logout, guest entry, deleted account).
  * API: boot() -> Promise<void>
  */
+import { initOfflineNotice } from './features/shell/offline-notice.js';   // v2.5.5
 import { log } from './core/logger.js';
 import { getSession, setSession, subscribeSession } from './core/session.js';
 import { createRouter } from './core/router.js';
@@ -26,6 +27,7 @@ import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
 import { initBackupReminder } from './features/export/backup-reminder.js';
 import { initClipboardSuggest } from './features/import/clipboard-suggest.js';
+import { subscribeVault, closeStaleVaultSession } from './core/vault.js';   // v2.5.5
 
 /**
  * v2.4.2: safety net for the start screen. If the app is still not on screen after 15 s (a service that never answers, a blocked file), a small card with a
@@ -111,6 +113,9 @@ export async function boot() {
   });
 
   let stopClip = null, stopRemind = null;
+  // v2.5.5 (owner): the vault has no timer setting; say once when the 15 minute rule (app lock off) closed it, and end a server session that a reload left open
+  subscribeVault((v, prev) => { if (prev && prev.open && !v.open && v.reason === 'idle') toast('Locked folders were locked again after 15 minutes without use.', { duration: 4000 }); });
+  closeStaleVaultSession();
   router.on('mounted', () => {
     document.documentElement.dataset.boot = 'ok'; stopWatchdog(); endSplash();
     // v2.5.4 (owner): a brand-new account first gets the welcome flow (profile, then the intro video), and only after it the offer to move guest links
@@ -118,7 +123,8 @@ export async function boot() {
     if (!stopRemind) stopRemind = initBackupReminder({ engine: getEngine });   // v2.5.3: once per app start, after the page is up
     if (!stopClip) stopClip = initClipboardSuggest({ router });   // v2.2.2: after the app has loaded, suggest importing links found in the clipboard (needs the browser's permission)
   });
-  window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));
+  initOfflineNotice();   // v2.5.5: the offline toast with "What works?" and the notice when the app starts offline
+  // ! v2.5.4 offline toast, replaced by initOfflineNotice(): window.addEventListener('offline', () => toast('You are offline. Changes are saved on this device.', { duration: 3500 }));
   window.addEventListener('online', () => toast('Back online.'));
   await router.start();
 }

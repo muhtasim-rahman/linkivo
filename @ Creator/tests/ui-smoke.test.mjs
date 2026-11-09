@@ -185,7 +185,7 @@ test('pages mount without errors: stub, menu, profile, reactivate, login (guest 
   const router = mk({ routes: ROUTES, container, getSession }); pagesRouter = router;
   setSession({ mode: 'guest', user: null, status: 'active' });
   await router.start();
-  for (const p of ['/library', '/random', '/import', '/search', '/folder/x', '/link/y', '/terms', '/nope', '/menu', '/profile']) {
+  for (const p of ['/library', '/random', '/import', '/search', '/folder/x', '/link/y', '/terms', '/menu', '/profile']) {
     await router.navigate(p); await tick(5);
     assert.equal($$('.page', container).length, 1, p); assert.ok(container.textContent.length > 10, p);
   }

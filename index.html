@@ -70,6 +70,13 @@
       }
     })();
   </script>
+  <script>
+    // v2.5.5 (owner): an address that is not a page of the app goes to the stand-alone 404 page BEFORE anything else (no splash, no app lock). tests keep this list equal to js/features/shell/routes.js.
+    (function () {
+      var p = location.pathname.replace(/\/+$/, '') || '/';
+      if (!/^\/(?:|admin-reset|login|auth\/action|reactivate|library|folder\/[^\/]+|import|link\/[^\/]+|search|share|random|profile(?:\/(?:history|activity|stats))?|menu|settings(?:\/[^\/]+)?|terms|privacy|docs(?:\/[^\/]+)?)$/.test(p)) location.replace('/404?from=' + encodeURIComponent((location.pathname + location.search).slice(0, 80)));
+    })();
+  </script>
   <link rel="stylesheet" href="/css/core/tokens.css">
   <link rel="stylesheet" href="/css/core/base.css">
   <link rel="stylesheet" href="/css/pages/splash.css">

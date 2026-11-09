@@ -19,10 +19,14 @@ export const PUBLIC_PATHS = ['/docs', ...TOPICS.map((t) => `/docs/${t.id}`), '/p
 const ic = (n, s = 20, c = '') => iconSvg(n, s, c);
 const WORD = '<span class="wordmark">l<i>i</i>nk<i>i</i>vo</span>';
 
-function header({ title, crumb, version }) {
+/** v2.5.5 (owner): the arrow always goes ONE step up. On a step, Privacy or Terms it is a plain link to the documentation home; on the home it closes this tab (or, when the tab can not be closed, opens the app). */
+function header({ title, crumb, version, kind }) {
+  const back = kind === 'docs-home'
+    ? `<button type="button" class="pub-icon" data-pub="back" aria-label="Close this page" title="Close">${ic('arrow-left', 22)}</button>`
+    : `<a class="pub-icon" href="/docs" aria-label="Back to the documentation" title="Back to the documentation">${ic('arrow-left', 22)}</a>`;
   return `<header class="pub-head">
     <div class="pub-head-in">
-      <button type="button" class="pub-icon" data-pub="back" aria-label="Go back" title="Back">${ic('arrow-left', 22)}</button>
+      ${back}
       <a class="pub-brand" href="/" aria-label="Linkivo: open the app" title="Open the app"><span class="logo-mark" style="--w:30px" aria-hidden="true"></span>${WORD}</a>
       <div class="pub-crumb" aria-hidden="true"><span class="pub-crumb-t">${esc(title)}</span>${crumb ? `<span class="pub-crumb-s">${esc(crumb)}</span>` : ''}</div>
       <span class="pub-chip" title="This page is separate from the app: no sign-in needed">Version ${esc(version)}</span>
@@ -40,10 +44,10 @@ function footer(version) {
 }
 
 /** A list of paragraphs, bullets and a table, for a docs part or a legal section. */
-function blocks(sec) {
+function blocks(sec, plain = false) {
   const out = [];
   for (const p of [].concat(sec.p || [])) out.push(`<p>${esc(p)}</p>`);
-  if (sec.items) out.push(`<ul class="pub-list">${sec.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`);
+  if (sec.items) out.push(`<ul class="${plain ? 'pub-bullets' : 'pub-list'}">${sec.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`);
   if (sec.table) {
     const { head, rows } = sec.table;
     out.push(`<div class="pub-table-wrap"><table class="pub-table"><thead><tr>${head.map((x) => `<th scope="col">${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, i) => (i === 0 ? `<th scope="row" data-label="${esc(head[0] || '')}">${esc(c)}</th>` : `<td data-label="${esc(head[i] || '')}">${esc(c)}</td>`)).join('')}</tr>`).join('')}</tbody></table></div>`);
@@ -80,6 +84,10 @@ function videoCard() {
     <figcaption>${esc(INTRO_VIDEO.title)}. The video loads from YouTube only when you press play.</figcaption></figure>`;
 }
 
+/** v2.5.5 (owner): a card to the project README on GitHub (screenshots, the run and deploy commands, the project map). */
+export const README_URL = 'https://github.com/muhtasim-rahman/linkivo#readme';
+const readmeCard = () => `<a class="pub-readme" href="${README_URL}" target="_blank" rel="noopener">${ic('code', 22)}<span><b>README on GitHub</b><span>The project page: screenshots, how it is built, how to run and deploy it.</span></span>${ic('external', 18)}</a>`;
+
 function docsHome(version) {
   const steps = flowTopics(), first = steps[0];
   const feat = steps.slice(0, 3), rest = steps.slice(3);
@@ -94,7 +102,7 @@ function docsHome(version) {
       <div class="pub-start-grid">${feat.map((t, i) => `<a class="pub-tile is-t${i}" href="/docs/${t.id}"><span class="pub-tile-n">${i + 1}</span><span class="pub-tile-ic">${ic(t.icon, 26)}</span><b>${esc(t.title)}</b><span>${esc(t.lead)}</span></a>`).join('')}</div></section>
     <section class="pub-path" aria-labelledby="h-path"><h2 id="h-path" class="pub-h2">Then, step by step</h2>
       <ol class="pub-path-list">${rest.map((t, i) => `<li><a href="/docs/${t.id}"><span class="pub-path-n">${i + 4}</span><span class="pub-path-ic">${ic(t.icon, 20)}</span><span class="pub-path-tx"><b>${esc(t.title)}</b><span>${esc(t.lead)}</span></span>${ic('chevron-right', 18, 'pub-path-go')}</a></li>`).join('')}</ol></section>
-    <section class="pub-also" aria-label="Privacy and terms"><a href="/privacy">${ic('shield', 22)}<span><b>Privacy</b><span>What is stored, where it goes and how you take it back.</span></span></a><a href="/terms">${ic('info', 22)}<span><b>Terms of use</b><span>The simple rules for using Linkivo.</span></span></a></section>
+    <section class="pub-also" aria-label="Privacy and terms"><a href="/privacy">${ic('shield', 22)}<span><b>Privacy</b><span>What is stored, where it goes and how you take it back.</span></span></a><a href="/terms">${ic('info', 22)}<span><b>Terms of use</b><span>The simple rules for using Linkivo.</span></span></a>${readmeCard()}</section>
   </main>`;
 }
 
@@ -113,7 +121,7 @@ function docsTopic(topic) {
         ${parts.map((p, n) => `<section id="${esc(p.id)}" class="pub-part"><h2><span class="pub-part-n">${n + 1}</span>${esc(p.h)}</h2>${blocks(p)}</section>`).join('\n')}
       </article>
       <nav class="pub-steps" aria-label="Previous and next step">${stepCard(prev, i - 1, 'prev')}${stepCard(next, i + 1, 'next')}</nav>
-      ${i === steps.length - 1 ? `<p class="pub-done">${ic('check-circle', 20)} That is the whole tutorial. <a href="/docs">Back to the documentation home</a> or <a href="/">open the app</a>.</p>` : ''}
+      ${i === steps.length - 1 ? `<p class="pub-done">${ic('check-circle', 20)} That is the whole tutorial. <a href="/docs">Back to the documentation home</a> or <a href="/">open the app</a>.</p>${readmeCard()}` : ''}
     </main>
     <div class="pub-right">${toc(parts.map((p) => [p.id, p.h]))}</div>
   </div>`;
@@ -125,11 +133,13 @@ function legalPage(doc, key) {
     <aside class="pub-side" aria-label="${esc(doc.title)}"><a class="pub-side-home" href="/docs">${ic('book', 18)}<span>Documentation home</span></a>
       <p class="pub-side-h">Legal</p><ul class="pub-side-list is-plain"><li><a href="/privacy"${key === 'privacy' ? ' class="is-now" aria-current="page"' : ''}>${ic('shield', 16)}<span>Privacy</span></a></li><li><a href="/terms"${key === 'terms' ? ' class="is-now" aria-current="page"' : ''}>${ic('info', 16)}<span>Terms of use</span></a></li></ul>
       ${toc(secs.map((s) => [s.id, s.h]), 'On this page')}</aside>
-    <main id="main" class="pub-main"><article class="pub-article is-legal">
+    <main id="main" class="pub-main">
+      <details class="pub-toc-top"><summary>${ic('list', 18)}<span>On this page</span><span class="pub-toc-count">${secs.length} sections</span></summary><ol>${secs.map((s) => `<li><a href="#${esc(s.id)}">${esc(s.h)}</a></li>`).join('')}</ol></details>
+      <article class="pub-article is-legal">
       <p class="pub-eyebrow">Last updated ${esc(LEGAL_UPDATED)}</p>
       <h1>${esc(doc.title)}</h1><p class="pub-lead">${esc(doc.lead)}</p>
       <aside class="pub-summary" aria-label="In short"><p class="pub-summary-h">${ic('zap', 18)} In short</p><ul>${doc.summary.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></aside>
-      ${secs.map((s, n) => `<section id="${esc(s.id)}" class="pub-part"><h2><span class="pub-part-n">${n + 1}</span>${esc(s.h)}</h2>${blocks(s)}</section>`).join('\n')}
+      ${secs.map((s) => `<section id="${esc(s.id)}" class="pub-part is-plain"><h2>${esc(s.h)}</h2>${blocks(s, true)}</section>`).join('\n')}
       <p class="pub-done">${ic('mail', 18)} Questions? <a href="mailto:${CONTACT}">${CONTACT}</a>. See also <a href="${key === 'privacy' ? '/terms' : '/privacy'}">${key === 'privacy' ? 'Terms of use' : 'Privacy'}</a>.</p>
     </article></main>
   </div>`;
@@ -169,7 +179,7 @@ ${head}
 </head>
 <body class="pub" data-page="${esc(kind)}" data-built="${esc(buildDate)}">
   <a class="pub-skip" href="#main">Skip to the content</a>
-${header({ title, crumb, version })}
+${header({ title, crumb, version, kind })}
 ${body}
 ${footer(version)}
 </body>

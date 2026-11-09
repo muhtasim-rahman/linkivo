@@ -12,6 +12,9 @@ import { loadCss } from '../../../core/css-loader.js';
 const QUICK = [['library', 'Library', '/library'], ['search', 'Search', '/search'], ['random', 'Random', '/random'], ['settings', 'Settings', '/settings']];
 
 export async function mount(container, ctx) {
+  // v2.5.5 (owner): the 404 page is a page of its own (404.html: no app lock, no splash, no sidebar). index.html sends a first load there; this covers a link INSIDE the app.
+  // ! The page below is kept as a fallback (it shows only if this redirect is blocked) and is no longer the normal 404.
+  try { location.replace('/404?from=' + encodeURIComponent((location.pathname + location.search).slice(0, 80))); return; } catch { /* fall through to the page below */ }
   await loadCss('/css/pages/pages.css');
   const signedIn = getSession().mode !== 'none';
   const asked = (location.pathname + location.search).slice(0, 80);

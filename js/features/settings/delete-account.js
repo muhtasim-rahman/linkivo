@@ -21,6 +21,7 @@
 import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
 import { icon } from '../../ui/icons.js';
+import { browserHistoryNote } from '../../ui/browser-history-note.js';   // v2.5.5
 import { openSheet } from '../../ui/sheet.js';
 import { swapContent } from '../../ui/motion.js';
 import { toast } from '../../ui/toast.js';
@@ -125,6 +126,7 @@ export async function openDeleteAccount() {
       h('div', { class: 'da-stats' }, h('div', {}, h('b', { text: String(c.folders) }), h('span', { text: c.folders === 1 ? 'folder' : 'folders' })), h('div', {}, h('b', { text: String(c.links) }), h('span', { text: c.links === 1 ? 'link' : 'links' }))),
       h('dl', { class: 'kv da-kv' }, kv.flatMap(([k, v]) => [h('dt', { text: k }), h('dd', { text: v })])),
       h('ul', { class: 'da-list' }, WHAT.map((t) => h('li', null, icon('x-circle', { size: 16 }), h('span', { text: t })))),
+      browserHistoryNote(),   // v2.5.5 (owner): deleting the account does not touch the browser's own history
       btn('download', 'Back up my data first', () => import('../export/export-sheet.js').then((m) => m.openExport({ engine: getEngine(), scope: { type: 'all' }, title: 'Back up first' })), { attrs: { class: 'btn btn-sm da-btn da-backup' } }),
       h('label', { class: 'da-check', for: 'da-ok' }, ok, h('span', { text: 'I understand that my links and folders will be lost.' }))],
       foot(btn('arrow-left', 'Back', () => stepVerify()), next));

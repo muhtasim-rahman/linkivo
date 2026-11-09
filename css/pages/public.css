@@ -31,7 +31,7 @@ body.pub { height: auto; min-height: 100%; overflow: visible; overscroll-behavio
 .pub-lead { max-width: 62ch; margin-top: var(--s3); color: var(--sub); font-size: var(--fs-lg); line-height: 1.55; }
 .pub-h2 { margin-bottom: var(--s4); font: 800 var(--fs-xl) / 1.2 var(--font-brand); letter-spacing: -0.01em; }
 .pub-article h1, .pub-hero h1 { font: 800 clamp(1.7rem, 5.2vw, 2.7rem) / 1.12 var(--font-brand); letter-spacing: -0.025em; text-wrap: balance; }
-.pub-h1-ic { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-right: var(--s3); border-radius: 14px; vertical-align: middle; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); color: #fff; }
+.pub-h1-ic { display: inline-grid; place-items: center; margin-right: var(--s3); vertical-align: middle; color: var(--accent); }   /* v2.5.5 (owner): only the icon, accent colour, no box behind it */
 .pub-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5); border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: 700 var(--fs) var(--font-brand); transition: transform var(--t-micro) var(--ease), background var(--t-micro) var(--ease); }
 @media (hover: hover) { .pub-btn:hover { text-decoration: none; transform: translateY(-1px); } }
 .pub-btn.is-primary { border-color: transparent; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); color: #fff; }
@@ -42,13 +42,11 @@ body.pub { height: auto; min-height: 100%; overflow: visible; overscroll-behavio
 .pub-cta { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }
 @media (min-width: 900px) { .pub-hero { grid-template-columns: 1.05fr 1fr; gap: calc(var(--s8) + 16px); padding: calc(var(--s8) + 8px) 0 calc(var(--s8) + 16px); } }
 .pub-video { margin: 0; }
-.pub-video-btn { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 20px; background: var(--surface-2); box-shadow: var(--shadow-float); transform: rotate(-0.6deg); transition: transform .3s var(--ease); }
-@media (hover: hover) { .pub-video-btn:hover { transform: rotate(0) scale(1.012); } }
+.pub-video-btn { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 20px; background: var(--surface-2); box-shadow: var(--shadow-float); }   /* v2.5.5 (owner): no tilt, no zoom, no frosted overlay on the video */
 .pub-video-btn img, .pub-video iframe { width: 100%; height: 100%; object-fit: cover; border: 0; }
 .pub-video iframe { position: absolute; inset: 0; }
 .pub-play { position: absolute; inset: 0; display: grid; place-items: center; }
-.pub-play svg { width: 68px; height: 68px; padding: 20px; border-radius: 50%; background: rgba(8, 14, 28, .62); color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: transform .2s var(--ease); }
-@media (hover: hover) { .pub-video-btn:hover .pub-play svg { transform: scale(1.1); } }
+.pub-play svg { width: 68px; height: 68px; padding: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); box-shadow: 0 6px 20px rgba(0, 0, 0, .28); }
 .pub-video figcaption { margin-top: var(--s2); color: var(--sub); font-size: var(--fs-xs); }
 .pub-start, .pub-path { margin-top: var(--s8); }
 .pub-start-grid { display: grid; gap: var(--s3); }
@@ -73,25 +71,29 @@ body.pub { height: auto; min-height: 100%; overflow: visible; overscroll-behavio
 .pub-also { display: grid; gap: var(--s3); margin-top: var(--s8); }
 .pub-also a { display: flex; align-items: center; gap: var(--s4); padding: var(--s4) var(--s5); border-radius: 18px; border: 1px dashed var(--line-strong); color: var(--text); }
 @media (hover: hover) { .pub-also a:hover { text-decoration: none; border-style: solid; border-color: var(--accent); } }
-.pub-also a > span { display: grid; } .pub-also a span span { color: var(--sub); font-size: var(--fs-sm); }
+.pub-also a > span { display: grid; flex: 1; min-width: 0; } .pub-also a span span { color: var(--sub); font-size: var(--fs-sm); }
 .pub-also svg { color: var(--accent-text); }
-@media (min-width: 700px) { .pub-also { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 700px) { .pub-also { grid-template-columns: 1fr 1fr; } .pub-also .pub-readme { grid-column: 1 / -1; } }
+.pub-also .pub-readme > svg:last-child { flex: none; color: var(--sub); }
+.pub-article + .pub-steps + .pub-done + .pub-readme, .pub-main > .pub-readme { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s3); padding: var(--s4) var(--s5); border-radius: 18px; border: 1px dashed var(--line-strong); color: var(--text); }
+.pub-main > .pub-readme > span { display: grid; flex: 1; min-width: 0; } .pub-main > .pub-readme span span { color: var(--sub); font-size: var(--fs-sm); } .pub-main > .pub-readme svg { color: var(--accent-text); }
+@media (hover: hover) { .pub-main > .pub-readme:hover { text-decoration: none; border-style: solid; border-color: var(--accent); } }
 
 /* ---- topic and legal layout ---- */
 .pub-grid { display: grid; gap: var(--s5); flex: 1; padding-top: var(--s4); padding-bottom: calc(var(--s8) * 2); }
 .pub-side { display: none; }
 .pub-right { display: none; }
-.pub-grid.is-legal .pub-side { display: block; order: 2; }
-.pub-grid.is-legal .pub-side .pub-side-home, .pub-grid.is-legal .pub-side .pub-side-h, .pub-grid.is-legal .pub-side .pub-side-list { display: none; }
+.pub-grid.is-legal .pub-side { display: none; }   /* v2.5.5 (owner): the index was at the bottom of the page on a phone; it is the collapsible list at the TOP now (.pub-toc-top) */
 .pub-grid.is-legal .pub-main { order: 1; }
 @media (min-width: 900px) {
   .pub-grid { grid-template-columns: 250px minmax(0, 1fr); gap: calc(var(--s8) + 8px); padding-top: var(--s6); }
-  .pub-side { display: block; position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow: auto; padding-right: var(--s2); }
-  .pub-grid.is-legal .pub-side { order: 0; } .pub-grid.is-legal .pub-side .pub-side-home, .pub-grid.is-legal .pub-side .pub-side-h, .pub-grid.is-legal .pub-side .pub-side-list { display: block; }
+  .pub-side { display: block; position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: none; padding-right: var(--s2); }   /* v2.5.5 (owner): no scrollbar; public.js scrolls the list by itself while the page is read */
+  .pub-side::-webkit-scrollbar, .pub-right::-webkit-scrollbar { display: none; }
+  .pub-grid.is-legal .pub-side { display: block; order: 0; } .pub-grid.is-legal .pub-side .pub-side-home, .pub-grid.is-legal .pub-side .pub-side-h, .pub-grid.is-legal .pub-side .pub-side-list { display: block; }
   .pub-grid.is-legal .pub-side .pub-side-home { display: flex; }
   .pub-grid.is-legal .pub-side .pub-side-list.is-plain { display: grid; margin-bottom: var(--s5); }
 }
-@media (min-width: 1200px) { .pub-grid:not(.is-legal) { grid-template-columns: 250px minmax(0, 1fr) 210px; } .pub-right { display: block; position: sticky; top: 84px; align-self: start; } }
+@media (min-width: 1200px) { .pub-grid:not(.is-legal) { grid-template-columns: 250px minmax(0, 1fr) 210px; } .pub-right { display: block; position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: none; } }
 .pub-side-home { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border-radius: 12px; color: var(--text); font-weight: 600; }
 .pub-side-home.is-now { background: var(--accent-soft); text-decoration: none; }
 @media (hover: hover) { .pub-side-home:hover { background: var(--accent-soft); text-decoration: none; } }
@@ -174,3 +176,14 @@ body.pub { height: auto; min-height: 100%; overflow: visible; overscroll-behavio
 
 @media (prefers-reduced-motion: reduce) { .pub-video-btn, .pub-tile, .pub-step, .pub-btn { transition: none; transform: none !important; } :root:has(body.pub) { scroll-behavior: auto; } }
 @media print { .pub-head, .pub-foot, .pub-side, .pub-right, .pub-rail, .pub-steps, .pub-video { display: none !important; } body.pub { display: block; } }
+
+/* ---- v2.5.5: Privacy and Terms are plain reading pages: headings with paragraphs, simple bullets, tables where a table helps. One card only: the "In short" box. ---- */
+.pub-part.is-plain h2 { display: block; margin-bottom: var(--s2); }
+.pub-bullets { margin-top: var(--s3); padding-left: calc(var(--s4) + 4px); list-style: disc; display: grid; gap: var(--s2); max-width: 70ch; }
+.pub-bullets li { padding-left: 2px; line-height: 1.65; font-size: var(--fs-md); } .pub-bullets li::marker { color: var(--accent); }
+.pub-toc-top { margin: 0 0 var(--s4); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.pub-toc-top summary { display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s4); cursor: pointer; font-weight: 700; list-style: none; }
+.pub-toc-top summary::-webkit-details-marker { display: none; }
+.pub-toc-top summary svg { color: var(--accent-text); } .pub-toc-count { margin-left: auto; color: var(--sub); font-weight: 500; font-size: var(--fs-sm); }
+.pub-toc-top ol { display: grid; padding: 0 var(--s4) var(--s3); } .pub-toc-top li a { display: block; padding: 10px 0; border-top: 1px solid var(--line); color: var(--text); }
+@media (min-width: 900px) { .pub-toc-top { display: none; } }

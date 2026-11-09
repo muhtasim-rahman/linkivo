@@ -14,18 +14,19 @@ test('the old locked-folder page, entry and settings rows are gone; the routes /
   assert.doesNotMatch(read('js/features/library/library-page.js'), /mountVaultEntry|vault-entry/);
 });
 
-test('vault.js: no data of the vault is written to the device (only the keep-time preference); code shape and the example', async () => {
+test('vault.js: no data of the vault is written to the device (v2.5.5: the old keep-time preference is only deleted); code shape and the example', async () => {
   const src = read('js/core/vault.js');
-  assert.doesNotMatch(src, /indexedDB|openDbSafe|localStorage|sessionStorage/); assert.equal((src.match(/\bprefs\.(get|set|remove)/g) || []).length, 1, 'prefs is read once: the keep-time setting');
+  assert.doesNotMatch(src, /indexedDB|openDbSafe|localStorage|sessionStorage/); assert.equal((src.match(/\bprefs\.(get|set|remove)/g) || []).length, 1, 'prefs is used once: it removes the old keep-time setting');
   const V = await import('../../js/core/vault.js'); const F = await import('../../js/features/vault/vault-flows.js');
   assert.equal(V.vaultCodeMatch('@123456', '@'), '123456'); assert.equal(V.vaultCodeMatch('@12345', '@'), null); assert.equal(V.vaultCodeMatch('#123456', '@'), null); assert.equal(V.vaultCodeMatch('@12345a', '@'), null);
   assert.equal(F.codeExample('@'), '@000000'); assert.equal(F.codeExample('#'), '#000000');
-  assert.deepEqual(V.KEEP_OPTIONS.map((o) => o.value), ['reload', '2', '5', '10', '20', '30', '60']);
+  assert.equal(V.KEEP_OPTIONS, undefined, 'v2.5.5: the "Stay unlocked for" setting was removed'); assert.equal(V.keepSetting, undefined);
 });
 
-test('vault keep time: default 10 minutes, an unknown value falls back, "reload" means no timer', async () => {
-  const { prefs } = await import('../../js/core/local-prefs.js'); const V = await import('../../js/core/vault.js');
-  prefs.remove('vault.keep'); assert.equal(V.keepSetting(), '10'); prefs.set('vault.keep', '45'); assert.equal(V.keepSetting(), '10'); prefs.set('vault.keep', 'reload'); assert.equal(V.keepSetting(), 'reload'); prefs.remove('vault.keep');
+test('vault (v2.5.5): no keep-time setting; 15 minutes of idle time only matters where the app lock is off', async () => {
+  const V = await import('../../js/core/vault.js'); assert.equal(V.VAULT_IDLE_MS, 15 * 60 * 1000);
+  const src = read('js/core/vault.js'); assert.match(src, /followsAppLock\(\)/); assert.match(src, /closeVault\(\{ reason: 'idle' \}\)/); assert.doesNotMatch(src, /keepSetting|KEEP_OPTIONS|expiryTimer/);
+  assert.doesNotMatch(read('js/features/lock/security-popups.js'), /row\('Stay unlocked for'/);
 });
 
 test('security popups: the 30 second gate asks the PIN once, then not again for 30 seconds, then again; nothing is asked without the lock', async () => {

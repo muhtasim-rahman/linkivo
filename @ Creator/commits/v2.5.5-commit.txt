@@ -1,0 +1,22 @@
+fix(v2.5.5): reload PIN switch, offline PIN, vault without a timer, Auto splash, 404 page, public page redesign
+
+- App lock: "Ask for the PIN on every reload" (default off). Off: a reload inside the Auto lock time skips the PIN (non-extractable key kept on the device, lock-resume.js); on: every reload asks
+- App lock offline: an account keeps a PIN check value after an online unlock; the device checks the PIN when there is no connection, the PIN is asked again when the connection is back
+- Vault: "Stay unlocked for" removed; locks with the app lock; without an app lock it locks on a reload and after 15 minutes without use; a reload ends a leftover server session
+- Start animation: Auto is the default (full on the first start, then at most every 6 hours)
+- Header and sidebar lock buttons stay hidden while the app lock is off
+- Docs/Privacy/Terms links open ONE new tab (window.open noopener returned null and moved the app tab too)
+- Report email carries account, device and other details under the message (report-mail.js)
+- Public pages: no fade or tilt on the video, sidebar without scrollbar that follows the page, plain Privacy and Terms with the index on top, back arrow to the docs home, README card, steps icon without a box, section about the browser's own history
+- History clear popup, History page and account delete explain that the browser keeps its own history, with Learn more
+- Settings: no line between the columns, the fade sits above the category column
+- 404: stand-alone page (404.html), no app lock, splash or sidebar; index.html redirects unknown addresses
+- Offline: notice of what works and what does not; service worker answers from the saved copy at once when offline or on a dead connection
+- README: introduction video link; 12 new tests in v255.test.mjs, older tests updated
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting (new 404.html, CSP header, static pages). Hard reload twice.
+- No Worker change.

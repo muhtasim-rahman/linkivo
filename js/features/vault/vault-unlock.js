@@ -6,6 +6,7 @@
  */
 import { toast } from '../../ui/toast.js';
 import { getVault, openVault } from '../../core/vault.js';
+import { getLock } from '../../core/lock.js';   // v2.5.5
 import { openPinFlow, stagePad } from '../lock/pin-flow.js';
 
 /** v2.5.4: "open" for the person = the locked folders are loaded. A quiet session (locking a folder) is open for the server only. */
@@ -36,10 +37,8 @@ export async function tryCode(code) {
   try { await openVault(code); return true; } catch { return false; }
 }
 
-/** "Unlocked until 14:32" / "Unlocked until you close the app". */
+/** v2.5.5 (owner): there is no timer setting. Says when the locked folders close again. */
 export function remainingText() {
   const v = getVault(); if (!v.open) return '';
-  if (!v.exp) return 'Stays unlocked until you close or reload the app.';
-  const m = Math.max(1, Math.ceil((v.exp - Date.now()) / 60000));
-  return `Locks again in about ${m} minute${m === 1 ? '' : 's'}.`;
+  return getLock().enabled ? 'Locked again when the app locks.' : 'Locked again after a reload or 15 minutes without use.';
 }

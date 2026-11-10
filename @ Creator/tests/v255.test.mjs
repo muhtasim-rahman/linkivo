@@ -97,10 +97,10 @@ test('history: the clear popup, the page and the account delete say that the bro
 });
 
 test('settings page: no line between the columns, the fade is above the category column; lock buttons stay hidden while the app lock is off', async () => {
-  const css = read('css/pages/settings.css'); assert.doesNotMatch(css, /width: 1px; pointer-events: none; background: linear-gradient\(to bottom/); assert.match(css, /\.set-navwrap::after \{[^}]*z-index: 3/);
+  const css = read('css/pages/settings.css'); assert.doesNotMatch(css, /width: 1px; pointer-events: none; background: linear-gradient\(to bottom/); assert.doesNotMatch(css, /\.set-navwrap::after/);   // v2.5.6 (owner): no fade at all on the category column
   const nav = read('css/components/nav.css'); assert.match(nav, /\.lock-btn\[hidden\] \{ display: none !important/); assert.match(nav, /\.lock-row\[hidden\] \{ display: none !important/);
 });
 
 test('service worker: offline or on a dead connection a saved copy answers at once', async () => {
-  const sw = read('sw.js'); assert.match(sw, /netBadUntil/); assert.match(sw, /self\.navigator\.onLine === false/); assert.match(sw, /const VERSION = '2\.5\.5'/);
+  const sw = read('sw.js'); assert.match(sw, /netBadUntil/); assert.match(sw, /self\.navigator\.onLine === false/); assert.match(sw, /const VERSION = '\d+\.\d+\.\d+'/);   // (v2.5.6: not pinned to one release; check.mjs keeps it equal to app.json)
 });

@@ -77,3 +77,55 @@ If the console answers "An error occurred updating action URL", check Authentica
 5. `firebase deploy --only hosting`. The database rules did not change in v2.5.0.
 6. Hard reload twice (the service worker updates itself), then Settings > Security > App lock.
 
+## J. v2.5.6 deploy steps and the default-settings node (owner)
+1. `firebase deploy --only hosting,database` (the database rules CHANGED in v2.5.6: `users/<uid>/meta/purgeEpoch` may now be written by its own account, and the new node `appDefaults` is public to read and closed to every client write). If your project deploys rules another way, paste `@ Creator/rules/database.rules.json` into Firebase console > Realtime Database > Rules > Publish. The Worker did NOT change (still 2.5.4).
+2. Hard reload twice (the service worker updates itself). The first start after the update does a one-time clean-up of this device's cache (needs a connection; with the app lock on it runs after the unlock).
+3. Default settings from the database (optional). Firebase console > Realtime Database > Data. Add a node `appDefaults` and, under it, one child per setting: the NAME is the key from the table below, the VALUE is one of the listed values (true / false without quotes for switches; a number for the numeric options). Example: name `ui_theme`, value `dark`.
+   - A person who has never changed that setting gets your value (guests too). A person who changed it keeps their own choice; a later change of your default never overrides it. Settings > Danger zone > reset settings brings back YOUR default.
+   - New values reach an open app within about 30 minutes (or on the next start). Delete the child to go back to the built-in default.
+   - Anything not in the table, and any value the setting does not have, is ignored by the app. Security, Account, Admin, Danger zone, App and Testing settings can not be set this way.
+   - Only you can edit it (the console ignores the rules; no app user can write the node). An admin panel can write the same node later.
+
+| Section | Name (key) | Setting | Allowed values | Built-in default |
+|---|---|---|---|---|
+| appearance | ui_theme | Theme | system, light, dark | system |
+| appearance | ui_accent | Accent color | blue, emerald, violet, rose, amber, slate | blue |
+| appearance | ui_fontSize | Text size | small, medium, large | medium |
+| appearance | ui_density | Density | compact, comfortable | compact |
+| appearance | ui_reduceMotion | Motion | system, reduce | system |
+| appearance | ui_splash | Start animation | auto, full, short | auto |
+| appearance | ui_thumbs | Show thumbnails in lists | true / false | true |
+| behavior | ui_sidebarCollapsed | Collapse the sidebar | true / false | false |
+| behavior | ui_hideBar | Hide bottom bar on scroll | true / false | true |
+| behavior | toast_duration | Toast time | 1000, 2000, 2500, 3000, 3500, 4000, 5000, 10000 | 2000 |
+| behavior | lib_clipboard | Look in the clipboard for links | true / false | true |
+| library | lib_view | Library layout | grid, list | grid |
+| library | lib_sort | Folder order | manual, name, recent, links | manual |
+| library | folder_view | Link layout | list, grid | list |
+| library | lib_openIn | Open links in | preview, tab | preview |
+| library | lib_showUrl | Show the domain on links | true / false | true |
+| library | lib_confirmDelete | Type the name to delete a folder with links | true / false | true |
+| search | search_recent | Remember recent searches | true / false | true |
+| search | search_pages | Find app pages and settings | true / false | true |
+| random | random_mode | How links are picked | balanced, points, equal, underdog, fresh | balanced |
+| random | random_avoid | Avoid links opened recently | off, 6h, 24h, 72h, 7d | 24h |
+| random | random_skipDead | Skip links that look dead | true / false | true |
+| random | random_remember | Remember my folders and filters | true / false | true |
+| random | random_microlink | Use Microlink in Random | true / false | false |
+| random | random_thum | Use thum.io in Random | true / false | false |
+| preview | preview_defaultTab | Tab that opens first | last, page, photo, shot, video, pdf, details | last |
+| preview | preview_related | Show related links | true / false | true |
+| preview | meta_microlink | Use Microlink first | true / false | true |
+| preview | preview_thum | Use thum.io for screenshots | true / false | true |
+| preview | meta_browserFallback | Use extra metadata services from this device | true / false | true |
+| history | history_where | Where history is kept | local, account | local |
+| history | profile_thumbs | Show thumbnails in Profile | true / false | true |
+| data | import_speed | Import speed | gentle, normal, fast | normal |
+| data | import_skipIcons | Ignore favicons and icon files | true / false | true |
+| data | import_keepAwake | Keep the screen on while importing | true / false | true |
+| data | import_bare | Also find domains without https | true / false | false |
+| data | import_dedupe | Skip links that are already saved | true / false | true |
+| data | import_clean | Remove tracking parameters | true / false | false |
+| data | import_enrich | Fetch titles after importing | true / false | true |
+| data | import_autoClear | Auto delete recent imports | true / false | false |
+| data | backup_remind | Backup reminder | off, 7, 14, 30 | 30 |

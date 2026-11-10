@@ -28,7 +28,7 @@
   .set-body { margin-top: 0; max-width: 760px; }
   /* v2.5.5 (owner): the thin line between the category column and the settings is gone. The soft fade now sits on the RIGHT EDGE of the category column and ABOVE everything in it
      (the buttons, their hover and active colour too): z-index over the list, clicks pass through (pointer-events: none). It fades to the page colour, so it reads as the edge of the column. */
-  .set-navwrap::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 34px; pointer-events: none; z-index: 3; background: linear-gradient(to right, transparent, var(--bg)); }
+  /* v2.5.6 (owner): the fade on the right edge of the category column is gone for good (the ::after rule that stood here). No fade, mask or overlay is used on this column on wide screens. */
   .set-navwrap { position: sticky; top: var(--s6); height: auto; margin: 0; background: none; border: 0; }
   .set-nav, .set-nav.fade-x { display: grid; gap: 2px; align-content: start; height: auto; margin: 0; padding: 0; overflow: visible; -webkit-mask-image: none; mask-image: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; -webkit-mask-image: none; mask-image: none; overflow: visible; }
   .set-nav-item { display: flex; gap: var(--s3); min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--r-group); background: none; font-size: var(--fs); text-align: left; }

@@ -11,7 +11,9 @@
  *      reconcileVault(engine) -> n                 finishes a move that was interrupted: normal links whose folder is locked go into the vault
  *      vaultEntries(engine) -> { folders: n, links: n }
  * Safety rules: a record is written to its new tree in the SAME multi-path update that removes it from the old one, so an interrupted move never loses a link; the old folder
- *      record is removed only after every chunk worked. Page data (linkMeta) of a locked link is deleted when it is locked and kept in memory only while open.
+ *      record is removed only after every chunk worked. Page data (linkMeta: title, picture, description) moves WITH its link (v2.5.6): into vault/<uid>/linkMeta
+ *      when locked, back into linkMeta/<uid> when unlocked, in the same atomic update; while the vault is open it is read on demand and held in memory only.
+ *      (Until v2.5.5 it was deleted at lock time, so a link came back from the vault without its saved picture.)
  */
 import { runParallel } from './chunker.js';
 import { packGroups, CHUNK_SIZE } from './engine.js';
@@ -37,6 +39,25 @@ export function detachVault(engine, { silent = false } = {}) {
   if (!silent) engine.bus.emit('event', { type: 'vault', open: false });
 }
 
+/** v2.5.6: the page-data half of a move, as two entries (write, remove) that `withMeta` turns into real ones just before the chunk is saved (the data is read per chunk, not for all links up front). */
+const metaMove = (id, toVault) => [{ tree: 'linkMeta', id, rec: null, _mv: toVault }, { tree: 'linkMeta', id, rec: null, from: toVault ? 'normal' : 'vault' }];
+/** Reads the page data of the placeholder entries (small parallel batches), swaps each for a real write into the other tree, and keeps the memory copy (vmeta) in step. */
+export async function withMeta(engine, entries) {
+  const want = entries.filter((e) => '_mv' in e);
+  if (!want.length) return entries;
+  const found = new Map();
+  for (let i = 0; i < want.length; i += 8) await Promise.all(want.slice(i, i + 8).map(async (e) => { const m = await engine._metaIn(e.id, e._mv ? 'normal' : 'vault'); if (m) found.set(e.id, m); }));
+  const out = [];
+  for (const e of entries) {
+    if (!('_mv' in e)) { out.push(e); continue; }
+    const m = found.get(e.id); if (!m) continue;               // this link had no page data: only the removal entry remains
+    const { lk, ...plain } = m;
+    if (e._mv) { engine.vmeta.set(e.id, plain); out.push({ tree: 'linkMeta', id: e.id, rec: { ...plain, lk: true } }); }
+    else { engine.vmeta.delete(e.id); out.push({ tree: 'linkMeta', id: e.id, rec: plain }); }
+  }
+  return out;
+}
+
 export const vaultEntries = (engine) => ({ folders: engine.lk.folders.size, links: engine.lk.links.size });
 
 /** Shared body of both moves. `toVault` true = lock. Returns the number of links moved. */
@@ -60,17 +81,15 @@ async function moveFolders(engine, fids, toVault, onProgress = () => {}) {
     const rec = toVault ? { ...l, lk: true, up: t } : { ...strip(l), up: t };
     if (toVault) engine.lk.links.add(l.id); else engine.lk.links.delete(l.id);
     engine._indexLink(rec);
-    const g = [{ tree: 'links', id: l.id, rec }, { tree: 'links', id: l.id, rec: null, from: toVault ? 'normal' : 'vault' }];
-    if (toVault) g.push({ tree: 'linkMeta', id: l.id, rec: null, from: 'normal' });   // its page data would be a readable trace of a locked link
-    groups.push(g);
+    groups.push([{ tree: 'links', id: l.id, rec }, { tree: 'links', id: l.id, rec: null, from: toVault ? 'normal' : 'vault' }, ...metaMove(l.id, toVault)]);   // v2.5.6: page data travels with its link
   }
   engine.bus.emit('event', { type: 'change', folders: [...set], links: moving.map((l) => l.id), vault: true });
-  // 2) (a link is 3 entries: copy, removal, page data: 100 links = 300 entries per chunk) the folder record goes to its new tree first (idempotent), the old one is removed LAST
+  // 2) (a link is 4 entries: copy, removal, page data copy, page data removal: 100 links = 400 entries per chunk) the folder record goes to its new tree first (idempotent), the old one is removed LAST
   await engine._persistChunk(folderRecs.map((f) => ({ tree: 'folders', id: f.id, rec: f.rec })));
-  const res = await runParallel(packGroups(groups, CHUNK_SIZE * 3), async (c) => { await engine._persistChunk(c); done += c.filter((e) => e.rec).length; onProgress(done, total); }, { concurrency: 4, sleep: engine.sleep });
+  const res = await runParallel(packGroups(groups, CHUNK_SIZE * 4), async (c) => { await engine._persistChunk(await withMeta(engine, c)); done += c.filter((e) => e.tree === 'links' && e.rec).length; onProgress(done, total); }, { concurrency: 4, sleep: engine.sleep });
   if (res.failed.length) throw Object.assign(new Error('move_failed'), { code: 'move_failed', failed: res.failed.length });
   await engine._persistChunk(folderRecs.map((f) => ({ tree: 'folders', id: f.id, rec: null, from: f.from })));
-  if (toVault) engine.bus.emit('event', { type: 'change', folders: [...set], links: [], vault: true });
+  if (toVault) { engine.bus.emit('event', { type: 'change', folders: [...set], links: [], vault: true }); if (typeof engine.bumpEpoch === 'function') await engine.bumpEpoch(); }   // v2.5.6: tell the other devices the normal tree lost these records
   return total;
 }
 
@@ -83,10 +102,11 @@ export async function reconcileVault(engine) {
   const dup = engine._dupNormalFolders || []; engine._dupNormalFolders = [];
   if (!stray.length && !dup.length) return 0;
   const t = engine.now(), groups = [];
-  for (const l of stray) { const rec = { ...l, lk: true, up: t }; engine.lk.links.add(l.id); engine._indexLink(rec); groups.push([{ tree: 'links', id: l.id, rec }, { tree: 'links', id: l.id, rec: null, from: 'normal' }, { tree: 'linkMeta', id: l.id, rec: null, from: 'normal' }]); }
+  for (const l of stray) { const rec = { ...l, lk: true, up: t }; engine.lk.links.add(l.id); engine._indexLink(rec); groups.push([{ tree: 'links', id: l.id, rec }, { tree: 'links', id: l.id, rec: null, from: 'normal' }, ...metaMove(l.id, true)]); }
   if (stray.length) engine.bus.emit('event', { type: 'change', folders: [], links: stray.map((l) => l.id), vault: true });
-  const res = await runParallel(packGroups(groups, CHUNK_SIZE * 3), (c) => engine._persistChunk(c), { concurrency: 4, sleep: engine.sleep });
+  const res = await runParallel(packGroups(groups, CHUNK_SIZE * 4), async (c) => engine._persistChunk(await withMeta(engine, c)), { concurrency: 4, sleep: engine.sleep });
   if (res.failed.length) throw Object.assign(new Error('move_failed'), { code: 'move_failed' });
   if (dup.length) await engine._persistChunk(dup.map((id) => ({ tree: 'folders', id, rec: null, from: 'normal' })));
+  if (typeof engine.bumpEpoch === 'function') await engine.bumpEpoch();   // v2.5.6
   return stray.length;
 }

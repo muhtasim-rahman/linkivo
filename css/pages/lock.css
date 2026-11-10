@@ -34,3 +34,10 @@
 .pf-actions { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; }
 .pf-work { display: grid; justify-items: center; gap: var(--s3); padding: var(--s5) 0; color: var(--sub); font-size: var(--fs-sm); text-align: center; }
 .pf-ask { display: grid; gap: var(--s2); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-md, 12px); background: var(--surface-2); font-size: var(--fs-sm); } .pf-ask p { margin: 0; }
+
+/* ---- v2.5.6 (owner): the red popup of "Unlock all locked folders?" (flow.tone('danger')). The whole sheet is tinted red, not only the button, so it can not be mistaken for an ordinary step. ---- */
+.sheet.is-tone-danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); background: color-mix(in srgb, var(--danger) 9%, var(--surface)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent), var(--shadow-lg, 0 24px 60px -24px rgba(0, 0, 0, 0.5)); }
+.sheet.is-tone-danger .sheet-title { color: var(--danger); }
+.sheet.is-tone-danger .pf-body .pin-text { color: var(--text); }
+.sheet.is-tone-danger .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+@media (hover: hover) { .sheet.is-tone-danger .btn-danger:hover { background: color-mix(in srgb, var(--danger) 88%, #000); } }

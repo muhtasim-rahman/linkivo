@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://linkivo.web.app"><img src="assets/showcase/hero.webp" alt="Linkivo: save, organise, rediscover your links" width="100%"></a>
+  <a href="https://linkivo.web.app"><img src="assets/social/og-default.jpg" alt="Linkivo: save, organise, rediscover your links" width="100%"></a>
 </p>
 
 <h1 align="center">Linkivo</h1>
@@ -13,7 +13,7 @@ Free. Runs in the browser or as an installed app.</p>
 
 ## Watch the introduction
 
-<p align="center"><a href="https://youtu.be/0HaYeR6w6k0"><img src="assets/promo/linkivo-intro.jpg" alt="Watch the Linkivo introduction video on YouTube" width="720"></a><br><sub>A short tour of Linkivo. Opens on YouTube.</sub></p>
+<p align="center"><a href="https://youtu.be/0HaYeR6w6k0"><img src="assets/promo/linkivo-intro-play.jpg" alt="Play: watch the Linkivo introduction video on YouTube" width="720"></a><br><sub>A short tour of Linkivo. Opens on YouTube.</sub></p>
 
 ## What it does
 
@@ -31,20 +31,20 @@ Free. Runs in the browser or as an installed app.</p>
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/showcase/library.webp" alt="Your library: folders and links"><br><sub>Library and folders</sub></td>
-    <td width="50%"><img src="assets/showcase/import.webp" alt="Smart import"><br><sub>Smart import</sub></td>
+    <td width="50%" align="center" valign="top"><img src="assets/showcase/library.webp" alt="Your library: folders and links" width="100%"><br><sub><b>Library and folders</b></sub><br>&nbsp;</td>
+    <td width="50%" align="center" valign="top"><img src="assets/showcase/import.webp" alt="Smart import" width="100%"><br><sub><b>Smart import</b></sub><br>&nbsp;</td>
   </tr>
   <tr>
-    <td><img src="assets/showcase/search.webp" alt="Search everything"><br><sub>Search everything</sub></td>
-    <td><img src="assets/showcase/preview.webp" alt="Preview in place"><br><sub>Preview in place</sub></td>
+    <td align="center" valign="top"><img src="assets/showcase/search.webp" alt="Search everything" width="100%"><br><sub><b>Search everything</b></sub><br>&nbsp;</td>
+    <td align="center" valign="top"><img src="assets/showcase/preview.webp" alt="Preview in place" width="100%"><br><sub><b>Preview in place</b></sub><br>&nbsp;</td>
   </tr>
   <tr>
-    <td><img src="assets/showcase/random.webp" alt="Random Discover"><br><sub>Random Discover</sub></td>
-    <td><img src="assets/showcase/vault.webp" alt="Locked folders behind a code"><br><sub>Locked folders</sub></td>
+    <td align="center" valign="top"><img src="assets/showcase/random.webp" alt="Random Discover" width="100%"><br><sub><b>Random Discover</b></sub><br>&nbsp;</td>
+    <td align="center" valign="top"><img src="assets/showcase/vault.webp" alt="Locked folders behind a code" width="100%"><br><sub><b>Locked folders</b></sub><br>&nbsp;</td>
   </tr>
   <tr>
-    <td><img src="assets/showcase/export.webp" alt="Export in many formats"><br><sub>Export and backup</sub></td>
-    <td><img src="assets/showcase/light-dark.webp" alt="Light and dark theme"><br><sub>Light and dark</sub></td>
+    <td align="center" valign="top"><img src="assets/showcase/export.webp" alt="Export in many formats" width="100%"><br><sub><b>Export and backup</b></sub><br>&nbsp;</td>
+    <td align="center" valign="top"><img src="assets/showcase/light-dark.webp" alt="Light and dark theme" width="100%"><br><sub><b>Light and dark</b></sub><br>&nbsp;</td>
   </tr>
 </table>
 

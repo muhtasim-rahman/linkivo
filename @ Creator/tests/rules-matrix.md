@@ -172,3 +172,17 @@ Worker (tested with a fake Firebase, owner must try on the real one): `/vault/se
 | W6 | owner | vault session ended (after Lock now or expiry) | `vault/u1/links`, `vault/u1/folders` | read | deny (closing the vault closes the data on the server too) |
 | W7 | owner | any | a path `vault/u1/linkMeta/<id>` | write | not used by the client (page data of a locked link is kept in memory only) |
 Owner check on the live database (Rules Playground): W3 and W6 are the two that matter, simulate a read of `/vault/<your uid>/links` as yourself with the vault locked: it must be denied.
+
+### v2.5.6 additions (rules file changed: `purgeEpoch` write, new `appDefaults` node)
+| # | who | state | path | op | expect |
+|---|---|---|---|---|---|
+| E1 | owner | lock off, or lock on with a live app session | `users/u1/meta/purgeEpoch` = a positive number below 1e14 | write | allow (the signal other devices use to drop records that left the normal tree: locking a folder, delete forever) |
+| E2 | owner | lock on, no live app session | `users/u1/meta/purgeEpoch` | write | deny |
+| E3 | another account, signed out | `users/u1/meta/purgeEpoch` | write | deny |
+| E4 | owner | any | `users/u1/meta/purgeEpoch` = text, a negative number or 1e15 | write | deny (validate) |
+| E5 | owner | any | `users/u1/meta/<anything else>` | write | deny |
+| E6 | anyone, also signed out | any | `appDefaults`, `appDefaults/ui_theme` | read | allow (public, holds no private data; guests and the login page need it) |
+| E7 | anyone, also the owner's app | any | `appDefaults/<key>` | write | deny (only the Firebase console, which ignores rules, edits it) |
+| E8 | owner | vault session open | `vault/u1/linkMeta/<id>` | write | allow (v2.5.6: page data of a locked link lives here; replaces W7, which said the client never writes it) |
+| E9 | owner | no vault session | `vault/u1/linkMeta/<id>` | read, write | deny |
+Owner check in the Rules Playground: E6 as an unauthenticated read of `/appDefaults` must be allowed; E7 a write as yourself must be denied; E9 a read of `/vault/<your uid>/linkMeta` with the vault locked must be denied.

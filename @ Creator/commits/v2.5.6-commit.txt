@@ -1,0 +1,19 @@
+fix(v2.5.6): locked page data, purge signal, default settings from Firebase, unlock-all popup, thin Random card, pull-and-hold reload, README
+
+- Locked links keep their picture: page data moves with the link into vault/<uid>/linkMeta and back; thumbnail memory is cleared when the vault opens or closes
+- Other devices drop records that left the normal tree (locking a folder, delete forever): purgeEpoch signal plus a one-time cache clean-up per device (fixes the PWA total count)
+- Default settings from the database: public node appDefaults, edited in the Firebase console, validated against the settings catalog; a person's own choice always wins
+- Turning folder lock off: red "Unlock all locked folders?" popup, then everything is unlocked and the lock turned off (one code entry, no Worker change)
+- Random Discover on phones: thin sticky Surprise card appears when the big card scrolls away
+- Pull to refresh: pull all the way and hold 5 seconds (countdown ring), release to reload the app
+- Settings: fade of the category column removed; Docs: step timeline line centred under the numbers
+- README: hero is the meta thumbnail (same file), video poster with a play button, centred captions
+- Rules: purgeEpoch write, appDefaults node (rules matrix E1-E9); tests: v256.test.mjs, older tests updated
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting,database (rules changed), hard reload twice
+- optional: add appDefaults in the Firebase console (SETUP-GUIDE section J)
+- no Worker change

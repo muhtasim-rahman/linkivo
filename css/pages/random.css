@@ -179,3 +179,18 @@ html[data-rnd] .rnd-head { display: none; }
   .rnd-hub:not([hidden]), .rnd-stage:not([hidden]), .rnd-strip:not([hidden]), .rf-none:not([hidden]), .rf-more:not([hidden]), .rnd-info:not([hidden]) { animation: rnd-swap var(--t-std) var(--ease) both; }
 }
 .rnd-s-time, .rnd-s-off, .rnd-s-n, .rnd-ab { transition: opacity var(--t-std) var(--ease), color var(--t-std) var(--ease), background-color var(--t-std) var(--ease); }
+
+/* ---- v2.5.6 (owner): the thin Surprise bar on phones. A zero-height sticky host (it takes no room, so nothing jumps); the bar slides in under the top edge once the big card has
+   scrolled away and slides out when the card is back (js/features/random/mini-card.js). Wide screens: never shown (the left column is sticky there). ---- */
+.rnd-minihost { display: none; }
+@media (max-width: 899px) {
+  .rnd-minihost { display: block; position: sticky; top: 0; z-index: 6; height: 0; margin-inline: calc(var(--pad) * -1); pointer-events: none; }
+  .rnd-mini { position: absolute; left: 0; right: 0; top: calc((var(--safe-t) + var(--s3)) * -1); display: flex; align-items: center; gap: var(--s3); padding: calc(var(--safe-t) + 4px) var(--pad) 4px; border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 6px 18px -12px rgba(0, 0, 0, 0.35);
+    transform: translateY(-110%); opacity: 0; visibility: hidden; transition: transform var(--t-std) var(--ease), opacity var(--t-std) var(--ease), visibility 0s linear var(--t-std); }
+  .rnd-minihost.is-on .rnd-mini { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .rnd-mini-die { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 10px; color: #fff; background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #7c3aed)); }
+  .rnd-mini-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); color: var(--sub); } .rnd-mini-n { color: var(--text); }
+  .rnd-mini-go { flex: none; min-height: 44px; padding-inline: var(--s4); gap: var(--s2); }
+}
+@media (prefers-reduced-motion: reduce) { .rnd-mini { transition: none; } }

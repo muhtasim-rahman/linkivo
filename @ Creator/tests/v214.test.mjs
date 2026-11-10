@@ -56,7 +56,7 @@ test('the inline script sits before every stylesheet, so no CSS is evaluated wit
 // ------------------------------------------------ 2. pull to refresh
 const { initPullRefresh, pullDistance, indicatorY, THRESHOLD, REST } = await imp('js/ui/pull-refresh.js');
 const touch = (el, type, y, x = 100) => { const e = new window.Event(type, { bubbles: true }); e.touches = type === 'touchend' ? [] : [{ clientY: y, clientX: x }]; el.dispatchEvent(e); };
-const chipY = (chip) => parseFloat(/translate3d\(0,\s*(-?[\d.]+)px/.exec(chip.style.transform)[1]);
+const chipY = (chip) => parseFloat(/translate3d\(0(?:px)?,\s*(-?[\d.]+)px/.exec(chip.style.transform)[1]);   // (v2.5.6: the pattern had doubled backslashes, so it never matched; this was one of the three tests that failed since v2.5.5)
 
 // v2.2.1 (owner request): the PAGE stays still; only the round indicator slides down from above the screen.
 test('pull to refresh: only the indicator moves, the ring fills, and nothing happens below the threshold', async () => {

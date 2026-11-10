@@ -110,12 +110,13 @@ test('an interrupted lock is finished by reconcile: stray links follow their loc
   assert.ok(!(`folders/u1/${f.id}` in fake.tree), 'the normal copy of the folder is removed');
 });
 
-test('page data of a locked link is memory only and is dropped on close', async () => {
+test('page data of a locked link: in memory while open, never on the device, in the vault tree at rest (v2.5.6)', async () => {
   const { fake, db, e, f, added } = await setup();
-  await e.lockFolders([f.id]); const before = Object.keys(fake.tree).length;
+  await e.lockFolders([f.id]);
   await e.saveLinkMeta([[added[0].id, { image: 'https://a.com/i.png', site: 'A' }]]);
   assert.equal((await e.getLinkMeta(added[0].id)).site, 'A');
-  assert.equal(Object.keys(fake.tree).length, before, 'nothing written to the database');
+  assert.ok(`vault/u1/linkMeta/${added[0].id}` in fake.tree, 'saved under the vault tree');
+  assert.ok(!(`linkMeta/u1/${added[0].id}` in fake.tree), 'never in the normal tree');
   assert.equal(await db.get('linkMeta', added[0].id), undefined, 'nothing written to the device');
   e.detachVault(); assert.equal(e.vmeta.size, 0);
 });
@@ -180,4 +181,48 @@ test('job queue: a handler that throws {pause} leaves the job paused (not failed
   assert.equal(q.get(j.id).status, 'paused'); assert.match(q.get(j.id).error, /Unlock/);
   open = true; q.resume(j.id); await q.whenIdle(); await new Promise((r) => setTimeout(r, 5));
   assert.equal(q.get(j.id).status, 'done'); assert.equal(runs, 2);
+});
+
+// ---- v2.5.6: page data (the saved picture) travels with its link --------------------------------------------------------------------------------------------------
+test('v2.5.6: lock moves the page data into the vault tree and unlock brings it back to the normal tree and the device cache', async () => {
+  const { fake, db, e, f, added } = await setup();
+  await e.saveLinkMeta([[added[0].id, { image: 'https://a.com/i.png', site: 'A' }]]); await e.flush();
+  await e.lockFolders([f.id]);
+  assert.ok(!(`linkMeta/u1/${added[0].id}` in fake.tree), 'gone from the normal tree'); assert.equal(await db.get('linkMeta', added[0].id), undefined, 'gone from the device cache');
+  assert.equal(fake.tree[`vault/u1/linkMeta/${added[0].id}`].image, 'https://a.com/i.png');
+  assert.ok(!('lk' in fake.tree[`vault/u1/linkMeta/${added[0].id}`]) && !('id' in fake.tree[`vault/u1/linkMeta/${added[0].id}`]), 'marker and id are not stored');
+  await e.unlockFolders([f.id]);
+  assert.ok(!(`vault/u1/linkMeta/${added[0].id}` in fake.tree), 'gone from the vault tree');
+  assert.equal(fake.tree[`linkMeta/u1/${added[0].id}`].image, 'https://a.com/i.png', 'back in the normal tree');
+  assert.equal((await db.get('linkMeta', added[0].id)).image, 'https://a.com/i.png', 'and in the device cache');
+  assert.equal(e.vmeta.size, 0);
+});
+
+test('v2.5.6: after the vault was closed and opened again the page data is read from the vault tree', async () => {
+  const { fake, e, f, added } = await setup();
+  await e.saveLinkMeta([[added[0].id, { image: 'https://a.com/i.png', site: 'A' }]]); await e.flush();
+  await e.lockFolders([f.id]);
+  e.detachVault(); assert.equal(e.vmeta.size, 0, 'closed: nothing in memory');
+  const folders = [{ ...e.folders.get(f.id) }]; // attach again the way the lock layer does (records come from the vault tree)
+  const lrec = fake.tree[`vault/u1/links/${added[0].id}`];
+  e.attachVault({ folders: [{ id: f.id, ...fake.tree[`vault/u1/folders/${f.id}`] }], links: Object.entries(fake.tree).filter(([k]) => k.startsWith('vault/u1/links/')).map(([k, v]) => ({ id: k.split('/').pop(), ...v })) });
+  assert.ok(lrec && folders.length);
+  assert.equal((await e.getLinkMeta(added[0].id)).image, 'https://a.com/i.png');
+});
+
+test('v2.5.6: a link without page data locks and unlocks without error and without an empty record', async () => {
+  const { fake, e, f, added } = await setup();
+  await e.lockFolders([f.id]);
+  assert.ok(!(`vault/u1/linkMeta/${added[0].id}` in fake.tree));
+  await e.unlockFolders([f.id]);
+  assert.ok(!(`linkMeta/u1/${added[0].id}` in fake.tree));
+});
+
+test('v2.5.6: purging a locked link also removes its page data from the vault tree', async () => {
+  const { fake, e, f, added } = await setup();
+  await e.lockFolders([f.id]);
+  await e.saveLinkMeta([[added[0].id, { image: 'https://a.com/i.png', site: 'A' }]]);
+  assert.ok(`vault/u1/linkMeta/${added[0].id}` in fake.tree);
+  await e.deleteLinks([added[0].id]); await e.purgeLinks([added[0].id]);
+  assert.ok(!(`vault/u1/linkMeta/${added[0].id}` in fake.tree));
 });

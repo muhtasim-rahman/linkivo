@@ -30,6 +30,7 @@ import { onRandomOpen } from '../../engine/points.js';
 import { buildFilterPanel, loadFilters, saveFilters, poolCount } from './random-filters.js';
 import { createSelect } from '../../ui/select.js';
 import { settingsShortcut } from '../../ui/settings-shortcut.js';
+import { createMiniCard } from './mini-card.js';   // v2.5.6: the thin Surprise bar on phones
 
 const MODE_LABEL = { balanced: 'Balanced', points: 'Points only', equal: 'Equal chance', underdog: 'Low points first', fresh: 'Never opened first' };
 
@@ -65,9 +66,11 @@ export async function mount(container, ctx) {
   const restart = (box) => { box.classList.remove('rnd-swap'); void box.offsetWidth; box.classList.add('rnd-swap'); };
   for (const box of [hubCard, recent, strip]) { const orig = box.replaceChildren.bind(box); box.replaceChildren = (...n) => { orig(...n); restart(box); }; }
   let autoSig = '';
+  // v2.5.6 (owner): on phones a thin version of the card sticks to the top once the big card has scrolled away (it leaves again when you scroll back up)
+  const mini = createMiniCard({ scroller: container, card: hubCard, hub, onGo: () => next(true) });
   const page = h('div', { class: 'page rnd is-wide page-enter' },
     h('header', { class: 'page-head rnd-head' }, h('h1', { class: 'page-title', text: 'Random Discover' }), h('div', { class: 'page-actions' }, lockButton(), settingsShortcut('random', 'Random settings'))),
-    hub, stage, strip);   // the strip comes after the stage: at the bottom on phones (css puts it on top on wide screens)
+    mini.el, hub, stage, strip);   // the strip comes after the stage: at the bottom on phones (css puts it on top on wide screens)
   container.appendChild(page);
 
   // ---- quick options (also shown in a popup while a link is open) -----------------------------------------------------------------------------
@@ -109,6 +112,7 @@ export async function mount(container, ctx) {
 
   function paintCard() {
     const n = pool(), chips = describeFilters(filters, nameOf);
+    mini.paint(n, seen.size);
     const go = h('button', { type: 'button', class: 'btn btn-primary rnd-go', disabled: n === 0, on: { click: () => next(true) } }, icon('random', { size: 22 }), h('span', { text: seen.size ? 'Surprise me again' : 'Surprise me' }));
     hubCard.replaceChildren(...[
       h('div', { class: 'rnd-art' }, h('span', { class: 'rnd-ring r1', 'aria-hidden': 'true' }), h('span', { class: 'rnd-ring r2', 'aria-hidden': 'true' }), h('button', { type: 'button', class: 'rnd-die', disabled: n === 0, 'aria-label': 'Surprise me', 'data-tip': 'Surprise me', on: { click: () => next(true) } }, icon('random', { size: 34 }))),   // v2.4.3: the dice starts it too
@@ -139,7 +143,7 @@ export async function mount(container, ctx) {
   async function openPreview(lid) {
     stopAuto();
     try { stopPreview && stopPreview(); } catch { /* ignore */ }
-    stage.replaceChildren(); hub.hidden = true; stage.hidden = false; strip.hidden = false;
+    stage.replaceChildren(); hub.hidden = true; stage.hidden = false; strip.hidden = false; mini.sync();
     document.documentElement.dataset.rnd = '1'; setBar(false);
     // v2.5.1 (owner): Back from the playing preview returns to the Random hub, not to the page before Random. The playing view is a back layer, like a popup.
     if (!playLayer) playLayer = pushLayer(() => { playLayer = null; showHub(); });
@@ -161,7 +165,7 @@ export async function mount(container, ctx) {
     if (playLayer) { const l = playLayer; playLayer = null; l.remove(); }   // v2.5.1: leaving the playing view by a button also drops its history entry
     stopAuto(); fabEl = null; placeStrip();
     try { stopPreview && stopPreview(); } catch { /* ignore */ } stopPreview = null;
-    stage.replaceChildren(); stage.hidden = true; strip.hidden = true; hub.hidden = false;
+    stage.replaceChildren(); stage.hidden = true; strip.hidden = true; hub.hidden = false; mini.sync();
     delete document.documentElement.dataset.rnd; setBar(true);
     panel.refresh(); paintCard(); paintRecent(); document.title = 'Random Discover | Linkivo';
   }
@@ -227,5 +231,5 @@ export async function mount(container, ctx) {
   paintCard(); paintQuick(); paintRecent();
   if (presetFolder) next(true);   // "Random from this folder": no panel stop, a link opens straight away
   document.title = 'Random Discover | Linkivo';
-  return () => { disposed = true; if (playLayer) { const l = playLayer; playLayer = null; l.remove(); } stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
+  return () => { disposed = true; mini.destroy(); if (playLayer) { const l = playLayer; playLayer = null; l.remove(); } stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
 }

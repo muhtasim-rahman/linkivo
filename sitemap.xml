@@ -2,119 +2,119 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://linkivo.web.app/</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-default.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-overview.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/privacy</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-vault.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/terms</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-default.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/start</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-overview.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/library</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-folders.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/import</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-import.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/export</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-export.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/preview</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-preview.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/search</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-search.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/random</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-random.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/history</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-dashboard.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/security</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-vault.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/account</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-screens.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/settings</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-themes-custom.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/shortcuts</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-library.jpg</image:loc></image:image>
   </url>
   <url>
     <loc>https://linkivo.web.app/docs/install</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
     <image:image><image:loc>https://linkivo.web.app/assets/social/og-screens.jpg</image:loc></image:image>

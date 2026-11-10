@@ -5,11 +5,11 @@
  *          chaining several of them (close one, open the next 160 ms later, re-start the app in between) raced with those entries. One popup = one entry, and the work that
  *          restarts the page happens only after the popup is gone and its history entry has settled (flow.finish()).
  * API: openPinFlow({ title }) -> Promise<flow>
- *        flow.setTitle(text)  flow.show(node)  flow.working(text)  flow.closed (Promise, resolves with the popup's end)  flow.isOpen()
+ *        flow.setTitle(text)  flow.tone('danger'|null)  flow.show(node)  flow.working(text)  flow.closed (Promise, resolves with the popup's end)  flow.isOpen()
  *        flow.finish() -> Promise  closes the popup and waits until it is gone and the history entry has settled (use before restarting the page)
  *      stagePad(flow, { text, notice, submitLabel, check(pin) -> Promise<string|''> }) -> Promise<string|null>   (null = the popup was closed)
  *      stageCreate(flow, { text }) -> Promise<string|null>    choose a PIN twice; weak PINs are refused
- *      stageForm(flow, { text, kids, go: { label, onClick(api) }, cancelLabel }) -> Promise<boolean>   a text step with Continue / Cancel (true = Continue pressed and onClick passed)
+ *      stageForm(flow, { text, kids, go: { label, onClick(api) }, cancelLabel, danger }) -> Promise<boolean>   a text step with Continue / Cancel (true = Continue pressed and onClick passed)
  */
 import { h } from '../../core/dom.js';
 import { loadCss } from '../../core/css-loader.js';
@@ -31,6 +31,8 @@ export async function openPinFlow({ title = '' } = {}) {
   const flow = {
     closed, isOpen: () => open,
     setTitle(t) { const el = sheet.el.querySelector('.sheet-title'); if (el) el.textContent = t; },
+    /** v2.5.6: colour the whole popup for a step that must not be taken lightly ('danger' = red). `tone(null)` goes back to normal. Pure styling, see lock.css. */
+    tone(name = null) { sheet.el.classList.toggle('is-tone-danger', name === 'danger'); },
     onClose(fn) { if (open) listeners.push(fn); else fn(); },
     /** Replaces the content. `pad` (optional) is a PIN pad to destroy when the content is replaced or the popup ends. */
     show(node, pad = null) { if (current) current.destroy(); current = pad; locked = false; body.replaceChildren(node); },
@@ -79,12 +81,12 @@ export async function stageCreate(flow, { text, digits = 0 } = {}) {
   }
 }
 
-export function stageForm(flow, { text = '', kids = [], go, cancelLabel = 'Cancel' }) {
+export function stageForm(flow, { text = '', kids = [], go, cancelLabel = 'Cancel', danger = false }) {   // v2.5.6: danger = the main button is red
   return new Promise((resolve) => {
     let settled = false; const end = (v) => { if (!settled) { settled = true; resolve(v); } };
     const err = h('p', { class: 'help is-error', role: 'alert' });
     const api = { error: (m) => { err.textContent = m || ''; }, busy: (b) => { for (const x of node.querySelectorAll('button')) x.disabled = !!b; } };
-    const goBtn = h('button', { type: 'button', class: 'btn btn-primary pf-go', text: go.label, on: { click: async () => {
+    const goBtn = h('button', { type: 'button', class: danger ? 'btn btn-danger pf-go' : 'btn btn-primary pf-go', text: go.label, on: { click: async () => {
       err.textContent = ''; api.busy(true);
       try { const r = await go.onClick(api); if (r !== false) { end(true); return; } } catch (e) { err.textContent = (e && e.message) || 'Something went wrong. Try again.'; }
       api.busy(false);

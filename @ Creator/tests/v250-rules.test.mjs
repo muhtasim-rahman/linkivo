@@ -41,7 +41,7 @@ test('lock on: the lock screen can still read what it needs (lockState, session,
 
 test('a client can never write the Worker-only paths, not even with the lock off or a live session', () => {
   for (const [name, d] of Object.entries(state)) {
-    for (const [p, v] of [['users/u1/lockState/app', false], ['users/u1/lockState', { app: false }], ['session/u1/app', NOW + 9e9], ['session/u1/vault', NOW + 9e9], ['secure/u1/pinHash', 'x'], ['secure/u1/att', 0], ['jobs/u1/j1', { type: 'enrich' }], ['deletedAccounts/u1', { deleteAt: 1 }], ['users/u1/profile/status', 'active'], ['users/u1/meta/purgeEpoch', 1], ['admins/u1', true]])
+    for (const [p, v] of [['users/u1/lockState/app', false], ['users/u1/lockState', { app: false }], ['session/u1/app', NOW + 9e9], ['session/u1/vault', NOW + 9e9], ['secure/u1/pinHash', 'x'], ['secure/u1/att', 0], ['jobs/u1/j1', { type: 'enrich' }], ['deletedAccounts/u1', { deleteAt: 1 }], ['users/u1/profile/status', 'active'], ['admins/u1', true]])   // v2.5.6: purgeEpoch left this list: the owner's own device writes it now (see v256.test.mjs)
       assert.equal(R.write(p, v, as(u1, d)), false, `${name}: ${p}`);
   }
   assert.equal(R.read('secure/u1/pinHash', as(u1, state.open)), false); assert.equal(R.read('secure/u1', as(u1, state.open)), false);

@@ -53,6 +53,7 @@ export class CloudEngine extends Engine {
     const metas = await this.db.getAll('meta');
     for (const m of metas) if (m.key.startsWith('since.')) this.since[m.key.slice(6)] = m.value;
     this.purgeEpoch = (metas.find((m) => m.key === 'purgeEpoch') || {}).value ?? null;
+    this.repaired = metas.some((m) => m.key === 'repair256');   // v2.5.6: the one-time clean-up of records that left this account's normal tree while this device was closed
     this.pending = (await this.db.getAll('outbox')).length;
     if (typeof window !== 'undefined') window.addEventListener('online', this._onOnline);
     this._syncPromise = this._startSync(); // background: the UI does not wait for the network
@@ -69,24 +70,53 @@ export class CloudEngine extends Engine {
 
   /** v2.3.0: extra page data is not synced down with the lists (it is heavy): read it from the database when this device has none, then keep it locally. */
   async getLinkMeta(id) {
-    if (this.lk.links.has(id)) return this.vmeta.get(id) || null;   // v2.5.3: a locked link's page data never touches the cache or the normal tree
+    // v2.5.3: a locked link's page data never touches the cache or the normal tree. v2.5.6: it now lives in vault/<uid>/linkMeta (readable only with a vault session), is read
+    // from there on demand while the vault is open and kept in memory only (vmeta) until the vault closes, so the saved picture survives a lock and an unlock.
+    if (this.lk.links.has(id)) {
+      const m = this.vmeta.get(id); if (m) return m;
+      const rec = await this._metaIn(id, 'vault'); if (rec && this.lk.links.has(id)) this.vmeta.set(id, rec);
+      return rec;
+    }
     const local = await super.getLinkMeta(id); if (local) return local;
     if (!this.links.has(id) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return null;
     try { const v = await this.adapter.get(`linkMeta/${this.uid}/${id}`); if (!v || typeof v !== 'object') return null; const rec = { id, ...v }; await this.db.put('linkMeta', rec).catch(() => {}); return rec; } catch { return null; }
   }
 
+  /** v2.5.6: the page data of a link in ONE named tree ('normal' | 'vault'), whatever the lk sets say right now (they flip before the chunks run while a link changes trees).
+   *  Normal: this device's cache first, then the database. Vault: memory, then the database (needs the open session; null when it is not there). Never throws. */
+  async _metaIn(id, tree) {
+    try {
+      if (tree === 'vault') {
+        const m = this.vmeta.get(id); if (m) return m;
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+        const v = await this.adapter.get(`vault/${this.uid}/linkMeta/${id}`);
+        return v && typeof v === 'object' ? { id, ...v } : null;
+      }
+      const local = await this.db.get('linkMeta', id); if (local) return local;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
+      const v = await this.adapter.get(`linkMeta/${this.uid}/${id}`);
+      return v && typeof v === 'object' ? { id, ...v } : null;
+    } catch { return null; }
+  }
+
   async peekLinkMeta(id) { return this.lk.links.has(id) ? (this.vmeta.get(id) || null) : super.peekLinkMeta(id); }
   async saveLinkMeta(entries) {
     const mine = entries.filter(([id]) => this.lk.links.has(id)), rest = entries.filter(([id]) => !this.lk.links.has(id));
-    let n = 0;
-    for (const [id, raw] of mine) { if (!this.links.has(id)) continue; const { set } = sanitizePatch(LINK_META, { ...raw, checkedAt: this.now() }); if (Object.keys(set).length > 1) { this.vmeta.set(id, { id, ...set }); n++; } }
+    let n = 0; const vrecs = [];
+    for (const [id, raw] of mine) { if (!this.links.has(id)) continue; const { set } = sanitizePatch(LINK_META, { ...raw, checkedAt: this.now() }); if (Object.keys(set).length > 1) { const rec = { id, ...set }; this.vmeta.set(id, rec); n++; vrecs.push({ tree: 'linkMeta', id, rec: { ...rec, lk: true } }); } }
+    if (vrecs.length) { try { await this._persistChunk(vrecs); } catch (e) { log.warn('cloud-engine', 'locked page data kept in memory only (could not save it in the vault)', e); } }   // v2.5.6: also at rest in the vault tree
     return n + (rest.length ? await super.saveLinkMeta(rest) : 0);
   }
-  async _dropLinkMeta(ids) { for (const id of ids) this.vmeta.delete(id); await super._dropLinkMeta(ids.filter((id) => !this.lk.links.has(id))); }
+  async _dropLinkMeta(ids) {
+    const locked = ids.filter((id) => this.lk.links.has(id));
+    for (const id of ids) this.vmeta.delete(id);
+    if (locked.length) { try { await this._persistChunk(locked.map((id) => ({ tree: 'linkMeta', id, rec: null, from: 'vault' }))); } catch (e) { log.warn('cloud-engine', 'could not remove locked page data', e); } }   // v2.5.6: purge also clears the vault copy
+    await super._dropLinkMeta(ids.filter((id) => !this.lk.links.has(id)));
+  }
 
   // ---- writes ------------------------------------------------------------------------------------------------------
   /** v2.5.3: where does this entry go? `from` is explicit for the removal half of a cross-tree move; a write follows its own marker; a removal follows the lk sets. */
-  _dest(e) { return e.from || (e.rec ? (e.rec.lk ? 'vault' : 'normal') : (this.lk[e.tree] && this.lk[e.tree].has(e.id) ? 'vault' : 'normal')); }
+  _dest(e) { return e.from || (e.rec ? (e.rec.lk ? 'vault' : 'normal') : (((e.tree === 'linkMeta' ? this.lk.links : this.lk[e.tree]) || { has: () => false }).has(e.id) ? 'vault' : 'normal')); }
   _path(e, dest) { return dest === 'vault' ? `vault/${this.uid}/${e.tree}/${e.id}` : `${e.tree}/${this.uid}/${e.id}`; }
 
   async _persistChunk(entries) {
@@ -189,6 +219,7 @@ export class CloudEngine extends Engine {
       }
       this.offs.push(this.adapter.watchValue(`users/${this.uid}/meta/purgeEpoch`, (v) => this._checkEpoch(v)));
       if (this.pending === 0) this._setState('idle');
+      if (!this.repaired) this._repairOnce();   // v2.5.6: in the background, never blocks the start
     } catch (e) {
       log.warn('cloud', 'sync failed', { message: e && e.message, code: e && e.code });
       this._setState(e && e.code === 'PERMISSION_DENIED' ? 'error' : 'offline');
@@ -226,20 +257,50 @@ export class CloudEngine extends Engine {
     }, 0);
   }
 
+  /** Removes from this device every normal-tree record the account no longer has (a shallow key list per tree: ids only, a few bytes each). Locked records (lk) are never touched. */
+  async _reconcileAll() {
+    for (const tree of TREES) {
+      const keys = new Set(await this.adapter.shallowKeys(`${tree}/${this.uid}`));
+      const map = tree === 'folders' ? this.folders : this.links;
+      for (const id of [...map.keys()]) if (!keys.has(id)) this._applyRemoteRemoval(tree, id);
+    }
+  }
+
   async _checkEpoch(value) {
     if (value == null) return;
-    if (this.purgeEpoch === null) { this.purgeEpoch = value; await this.db.put('meta', { key: 'purgeEpoch', value }); return; }
     if (value === this.purgeEpoch) return;
+    // v2.5.6: a device that has NEVER seen a signal (stored value null) but already holds records can not know what happened before this first signal, so it reconciles once, like for any change.
+    // (Until v2.5.5 it just adopted the value, which is exactly how a stale cache survived the first lock or purge on another device.) An empty device has nothing to clean.
+    if (this.purgeEpoch === null && !this.folders.size && !this.links.size) { this.purgeEpoch = value; await this.db.put('meta', { key: 'purgeEpoch', value }); return; }
     try {
-      for (const tree of TREES) {
-        const keys = new Set(await this.adapter.shallowKeys(`${tree}/${this.uid}`));
-        const map = tree === 'folders' ? this.folders : this.links;
-        for (const id of [...map.keys()]) if (!keys.has(id)) this._applyRemoteRemoval(tree, id);
-      }
+      await this._reconcileAll();
       this.purgeEpoch = value;
       await this.db.put('meta', { key: 'purgeEpoch', value });
     } catch (e) { log.warn('cloud', 'purge reconcile failed', e); }
   }
+
+  /**
+   * v2.5.6 (owner: after locking folders the PWA still counted the locked links in its total). A folder that moves into the vault, or a hard purge, REMOVES records from the normal tree.
+   * A device that was closed at that moment never hears about a removal (delta sync only sees records that exist), so its cache kept them. The writer now bumps users/<uid>/meta/purgeEpoch;
+   * every other device compares it on start and while open (watchValue) and runs _reconcileAll. The new value is also remembered here, so this device does not reconcile for its own change.
+   * It goes through the outbox like any write (offline-safe) and is last in line, after the changes it announces.
+   */
+  async bumpEpoch() {
+    const v = Math.max(this.now(), (Number(this.purgeEpoch) || 0) + 1);
+    this.purgeEpoch = v;
+    await this.db.put('meta', { key: 'purgeEpoch', value: v }).catch(() => {});
+    const item = { id: `${String(this.now()).padStart(14, '0')}-${++this.seq}`, updates: { [`users/${this.uid}/meta/purgeEpoch`]: v } };
+    try { await this.db.put('outbox', item); this.pending++; } catch (e) { log.warn('cloud', 'could not queue the purge signal', e); return; }
+    this._sendOutboxItem(item).catch(() => {});
+  }
+  /** One-time repair for caches that already hold records the account lost earlier (v2.5.5 and before never sent the signal). Marked done only when it worked. */
+  async _repairOnce() {
+    try { await this._reconcileAll(); this.repaired = true; await this.db.put('meta', { key: 'repair256', value: 1 }); this.bus.emit('event', { type: 'change', folders: [], links: [], repair: true }); }
+    catch (e) { log.warn('cloud', 'one-time clean-up not possible now, will retry next start', { code: e && e.code }); }
+  }
+
+  async purgeFolders(ids) { const n = await super.purgeFolders(ids); if (ids.length) await this.bumpEpoch(); return n; }   // v2.5.6: other devices drop them too
+  async purgeLinks(ids) { const n = await super.purgeLinks(ids); if (ids.length) await this.bumpEpoch(); return n; }
 }
 
 export async function createCloudEngine({ uid, adapter, db, sleep }) {

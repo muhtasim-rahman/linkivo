@@ -24,6 +24,9 @@ const found = new Map(), missed = new Map(), MISS_MS = 20000, MAX = 3000;
 // With no local copy the row used to jump straight to the free screenshot. Now the account is asked once (4 reads at a time, only for rows that are on screen; the answer is kept on the device), and the
 // screenshot is only the last choice. An id the account has nothing for is not asked again in this session.
 const remoteNone = new Set();
+/** v2.5.6: forget every remembered picture and every "nothing there" answer. Called when the vault opens or closes: a locked link's picture must not stay in memory after the lock,
+ *  and an earlier "no picture" answer (asked while the link was not readable) must not block the real one after the unlock. */
+export function forgetThumbs() { found.clear(); missed.clear(); remoteNone.clear(); }
 let active = 0; const waiting = [];
 const slot = () => new Promise((res) => { const go = () => { active++; res(); }; if (active < 4) go(); else waiting.push(go); });
 const release = () => { active--; const n = waiting.shift(); if (n) n(); };

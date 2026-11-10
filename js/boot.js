@@ -27,6 +27,8 @@ import { sleep } from './core/utils.js';
 import { toast } from './ui/toast.js';
 import { initBackupReminder } from './features/export/backup-reminder.js';
 import { initClipboardSuggest } from './features/import/clipboard-suggest.js';
+import { forgetThumbs } from './ui/thumb.js';   // v2.5.6
+import { refreshServerDefaults } from './core/app-defaults.js';   // v2.5.6
 import { subscribeVault, closeStaleVaultSession } from './core/vault.js';   // v2.5.5
 
 /**
@@ -114,8 +116,14 @@ export async function boot() {
 
   let stopClip = null, stopRemind = null;
   // v2.5.5 (owner): the vault has no timer setting; say once when the 15 minute rule (app lock off) closed it, and end a server session that a reload left open
-  subscribeVault((v, prev) => { if (prev && prev.open && !v.open && v.reason === 'idle') toast('Locked folders were locked again after 15 minutes without use.', { duration: 4000 }); });
+  subscribeVault((v, prev) => { if (prev && !!prev.open !== !!v.open) forgetThumbs();   // v2.5.6: pictures of locked links are not kept in memory after the lock; no stale "no picture" after the unlock
+    if (prev && prev.open && !v.open && v.reason === 'idle') toast('Locked folders were locked again after 15 minutes without use.', { duration: 4000 }); });
   closeStaleVaultSession();
+  // v2.5.6 (owner): default settings from the database (appDefaults). Background, after the first screen is up; then again when the tab comes back after 30 minutes.
+  let defaultsAt = 0;
+  const loadDefaults = async () => { defaultsAt = Date.now(); try { const { CATALOG } = await import('./features/settings/catalog.js'); await refreshServerDefaults({ catalog: CATALOG }); } catch (e) { log.warn('boot', 'server defaults failed', e); } };
+  setTimeout(loadDefaults, 1500);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - defaultsAt > 30 * 60 * 1000) loadDefaults(); });
   router.on('mounted', () => {
     document.documentElement.dataset.boot = 'ok'; stopWatchdog(); endSplash();
     // v2.5.4 (owner): a brand-new account first gets the welcome flow (profile, then the intro video), and only after it the offer to move guest links

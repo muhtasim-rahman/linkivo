@@ -138,7 +138,7 @@ test('welcome flow: only a brand-new account sees it, once, profile first and th
 test('defaults and fixes: 2 minute auto lock (client and Worker), settings width, avatar shield, link row hover, splash glow, Library icon button, social image', async () => {
   const L = await import('../../js/core/lock.js'); assert.equal(L.DEFAULT_AWAY, 120); assert.ok(L.AWAY_CHOICES.includes(120));
   const w = read('@ Creator/worker/worker.js'); assert.match(w, /awayChoices: \[0, 30, 60, 120, 300, 600, 900, 1800, -1\]/); assert.match(w, /defaultAway: 120/); assert.match(w, /const VERSION = '2\.5\.4'/); assert.match(w, /VAULT_PREFIXES\.includes\(v\.vaultPrefix\) \? v\.vaultPrefix : '%'/);
-  const set = read('css/pages/settings.css'); assert.match(set, /\.set-body \{ margin-top: 0; max-width: 760px; \}/); assert.match(set, /gap: calc\(var\(--s8\) \+ 24px\)/); assert.match(set, /\.set-navwrap::after/);
+  const set = read('css/pages/settings.css'); assert.match(set, /\.set-body \{ margin-top: 0; max-width: 760px; \}/); assert.match(set, /gap: calc\(var\(--s8\) \+ 24px\)/); assert.doesNotMatch(set, /set-navwrap::after/)   /* v2.5.6 (owner): the fade at the right of the category column was removed */;
   const nav = read('css/components/nav.css'); assert.match(nav, /\.avatar > span:not\(\.avatar-admin\)/); assert.match(nav, /var\(--admin-badge-bg, var\(--accent\)\)/); assert.doesNotMatch(read('css/pages/pages.css'), /\.avatar \.avatar-admin \{/);
   assert.match(read('css/pages/profile.css'), /\.pf2-kv\.is-link:hover \{ background: var\(--accent-soft\); text-decoration: none; \}/);
   assert.match(read('css/pages/splash.css'), /\.sp-orb \{[^}]*opacity: 0; \}/); assert.match(read('js/features/splash/splash.js'), /play\(\$\('sp-orb'\)/);

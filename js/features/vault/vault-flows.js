@@ -8,7 +8,9 @@
 import { toast } from '../../ui/toast.js';
 import { getSession } from '../../core/session.js';
 import { getLock, verifyPin } from '../../core/lock.js';
-import { vaultCall, closeVault } from '../../core/vault.js';
+import { vaultCall, closeVault, openVault } from '../../core/vault.js';
+import { getEngine } from '../../core/app-data.js';
+import { vaultEntries } from '../../engine/vault-layer.js';
 import { describeError } from '../lock/pin-sheet.js';
 import { h } from '../../core/dom.js';
 import { VAULT_PREFIXES } from '../../core/vault.js';
@@ -19,6 +21,8 @@ import { confirmItsYou } from '../lock/forgot-pin.js';
 export const codeExample = (prefix = '%') => `${prefix}000000`;
 const message = (e) => {
   if (e && e.code === 'vault_not_empty') return 'Move every locked folder out first, then turn locked folders off.';
+  if (e && e.code === 'sync_first') return 'Linkivo is still saving changes. Wait a moment and try again.';
+  if (e && e.code === 'unlock_failed') return 'Not every folder could be unlocked, so folder lock stays on. Try again.';
   if (e && e.code === 'reauth_required') return 'Please try again: confirm it is you once more.';
   if (e && e.code === 'bad_pin') return 'That code is not allowed. Use six digits that are not all the same and not a straight run.';
   return describeError(e).text;
@@ -61,12 +65,49 @@ export async function changeVaultCodeFlow() {
 
 export async function removeVaultFlow() {
   const flow = await openPinFlow({ title: 'Turn off folder lock' });
-  const code = await stagePad(flow, { digits: 6, text: 'Enter your code. Locked folders must be empty: move every folder out first.' }); if (!code) return false;
+  const code = await stagePad(flow, { digits: 6, text: 'Enter your code to turn off folder lock.' }); if (!code) return false;
   flow.working('Turning off...');
-  try { await vaultCall('/vault/remove', { code }); }
-  catch (e) { await flow.finish(); toast(message(e), { type: 'error' }); return false; }
+  let moved = 0;
+  try {
+    try { await vaultCall('/vault/remove', { code }); }
+    catch (e) {
+      if (!(e && e.code === 'vault_not_empty')) throw e;
+      // v2.5.6 (owner): no more "move every folder out yourself". The code is already right (the Worker checks it BEFORE it looks inside), so open the vault with it, show ONE red popup and,
+      // on confirm, unlock everything and turn the lock off. The code is used again from memory for the last step; the person types it once and it is never stored.
+      moved = await unlockEverything(flow, code);
+      if (moved < 0) return false;                                  // cancelled: the vault was closed again
+      flow.working('Turning off...');
+      await vaultCall('/vault/remove', { code });
+    }
+  } catch (e) { await flow.finish(); toast(message(e), { type: 'error' }); return false; }
   await closeVault({ remote: false });
-  await flow.finish(); toast('Folder lock is off.'); return true;
+  await flow.finish(); toast(moved ? `Folder lock is off. ${plural(moved, 'folder')} back in your library.` : 'Folder lock is off.'); return true;
+}
+
+const plural = (n, w) => `${n} ${w}${n === 1 ? ' is' : 's are'}`;
+
+/**
+ * The red step of turning folder lock off. Opens the vault, tells the person exactly what happens, then moves every locked folder (with its links and their pictures) back to the library.
+ * Returns the number of folders moved, or -1 when the person chose to keep folder lock (the vault is closed again). Throws when the move fails; the vault is then left on and open.
+ */
+async function unlockEverything(flow, code) {
+  const engine = getEngine();
+  flow.working('Opening locked folders...');
+  await openVault(code);
+  const fids = [...engine.lk.folders], { links } = vaultEntries(engine);
+  flow.tone('danger'); flow.setTitle('Unlock all locked folders?');
+  const yes = await stageForm(flow, {
+    text: `Turning folder lock off unlocks ${fids.length === 1 ? '1 locked folder' : `all ${fids.length} locked folders`} (${links === 1 ? '1 link' : `${links} links`}). They move back to your library and show up everywhere again: Library, search, Random Discover and every other page. Nothing is deleted.`,
+    go: { label: 'Unlock all and turn off', onClick: async () => true }, cancelLabel: 'Keep folder lock', danger: true
+  });
+  if (!yes) { flow.tone(null); await closeVault(); return -1; }
+  let last = 0;
+  const progress = (done, total) => { if (Date.now() - last < 250 && done < total) return; last = Date.now(); flow.working(`Unlocking... ${done} of ${total} links`); };
+  progress(0, links);
+  try { await engine.unlockFolders(fids, progress); }
+  catch (e) { flow.tone(null); throw Object.assign(e || new Error('move_failed'), { code: (e && e.code) === 'sync_first' ? 'sync_first' : 'unlock_failed' }); }
+  flow.tone(null);
+  return fids.length;
 }
 
 /** Forgot the code: sign in again (password or Google), choose a new code. Every locked folder and link is kept. */

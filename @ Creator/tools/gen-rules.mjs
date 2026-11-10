@@ -81,7 +81,9 @@ export function buildRules() {
           devices: { '.read': `${OWN} && ${ACTIVE}`, $did: recordRule(DEVICE, `${OWN} && ${ACTIVE}`) },
           lockState: { '.read': `${OWN}` },                       // Worker writes it; readable before unlock so the lock screen can render
           vaultCount: { '.read': `${OWN} && ${ACTIVE}`, '.write': VAULT_GATE, '.validate': 'newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000' },
-          meta: { purgeEpoch: { '.read': GATE } }                  // Worker writes
+          // v2.5.6: the device that moves records out of the normal tree (lock a folder, delete forever) writes a new timestamp here; every other device reconciles when it sees it change.
+          // Same gate as the data it announces (own, active account, app lock open). It carries no data: a wrong value can only make other devices do one extra key-list check.
+          meta: { purgeEpoch: { '.read': GATE, '.write': GATE, '.validate': 'newData.isNumber() && newData.val() > 0 && newData.val() < 100000000000000' } }
         }
       },
 
@@ -98,6 +100,9 @@ export function buildRules() {
       session: { $uid: { '.read': OWN } },
       jobs: { $uid: { '.read': `${OWN} && ${ACTIVE}` } },
       deletedAccounts: { '.indexOn': ['deleteAt'], $uid: { summary: { '.read': OWN } } },
+      // v2.5.6 (owner): default values of the ordinary settings, edited by the owner in the Firebase console (the console ignores rules). Public read (guests and the login page need it, and it holds
+      // nothing private); no client can write it. The app ignores any key or value that the settings catalog does not allow (js/core/app-defaults.js).
+      appDefaults: { '.read': true, '.write': false },
       admins: { $uid: { '.read': 'auth != null && auth.uid === $uid' } }
     }
   };

@@ -48,9 +48,9 @@ test('the halves of a move: the removal from the normal tree needs no vault sess
   assert.equal(R.read('vault/u1/links', as(u1, vaultEnded)), false, 'closing the vault closes the data on the server too');
 });
 
-test('page data of a locked link never has a vault path (it is memory only), and nothing else was added to the rules in v2.5.3', () => {
+test('page data of a locked link has a vault path only inside the engine (v2.5.6: it moves with its link; before it was memory only)', () => {
   const rules = JSON.parse(fs.readFileSync(path.join(dir, '../rules/database.rules.json'), 'utf8')).rules;
-  void rules;   // (an unused vault/<uid>/linkMeta path may exist in the rules: harmless, closed without the session)
-  const src = fs.readdirSync(path.join(dir, '../../js'), { recursive: true }).filter((f) => String(f).endsWith('.js')).map((f) => fs.readFileSync(path.join(dir, '../../js', String(f)), 'utf8')).join('\n');
-  assert.ok(!/vault\/\$\{[^}]*\}\/linkMeta/.test(src), 'no client code reads or writes page data under vault/');
+  assert.ok(rules.vault.$uid.linkMeta, 'the vault tree has a linkMeta branch');
+  const users = fs.readdirSync(path.join(dir, '../../js'), { recursive: true }).filter((f) => String(f).endsWith('.js')).filter((f) => /vault\/\$\{[^}]*\}\/linkMeta/.test(fs.readFileSync(path.join(dir, '../../js', String(f)), 'utf8'))).map(String);
+  assert.deepEqual(users, [path.join('engine', 'cloud-engine.js')], 'only the cloud engine touches vault page data');
 });

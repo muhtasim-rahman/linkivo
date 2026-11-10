@@ -58,7 +58,7 @@ body.pub { height: auto; min-height: 100%; overflow: visible; overscroll-behavio
 .pub-tile-n { position: absolute; right: var(--s4); top: var(--s2); color: var(--accent); opacity: .16; font: 800 76px / 1 var(--font-brand); }
 @media (min-width: 760px) { .pub-start-grid { grid-template-columns: 1.3fr 1fr 1fr; } .pub-tile.is-t0 { grid-row: span 1; background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%); } .pub-tile.is-t1 { margin-top: var(--s5); } .pub-tile.is-t2 { margin-top: calc(var(--s5) * 2); } }
 .pub-path-list { position: relative; display: grid; gap: var(--s2); }
-.pub-path-list::before { content: ''; position: absolute; left: 23px; top: 20px; bottom: 20px; width: 2px; background: linear-gradient(to bottom, var(--accent), var(--line) 40%, var(--line)); border-radius: 2px; }
+.pub-path-list::before { content: ''; position: absolute; left: calc(var(--s2) + 8px + 16px - 1px); top: 20px; bottom: 20px; width: 2px; background: linear-gradient(to bottom, var(--accent), var(--line) 40%, var(--line)); border-radius: 2px; }
 .pub-path-list a { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: 64px; padding: var(--s2) var(--s4) var(--s2) var(--s2); border-radius: 18px; color: var(--text); transition: background .2s var(--ease); }
 @media (hover: hover) { .pub-path-list a:hover { text-decoration: none; background: var(--surface); } }
 .pub-path-n { z-index: 1; display: grid; place-items: center; flex: none; width: 32px; height: 32px; margin-left: 8px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); color: var(--accent-text); font: 800 var(--fs-sm) var(--font-brand); }

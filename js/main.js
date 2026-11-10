@@ -5,6 +5,7 @@
  */
 import { installGlobalHandlers, log } from './core/logger.js';
 import { applyAppearance } from './core/appearance.js';
+import { applyCachedDefaults } from './core/app-defaults.js';   // v2.5.6: the owner's default settings (cached copy) BEFORE the first screen
 import { startSplash } from './features/splash/splash.js';
 import { initInstall } from './core/install.js';
 import { installInputGuards } from './core/input-guards.js';
@@ -13,6 +14,7 @@ import { initImageMenu } from './ui/image-menu.js';
 import { initKeyboardSafe } from './core/keyboard-safe.js';
 
 installGlobalHandlers();
+applyCachedDefaults();   // v2.5.6: must come before applyAppearance (the default theme / accent / text size are read there)
 applyAppearance();
 startSplash();
 // The browser fires `beforeinstallprompt` soon after load, often BEFORE boot.js has been imported. In v2.1.0 the listener was added

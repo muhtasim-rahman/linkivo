@@ -204,7 +204,9 @@
         },
         "meta": {
           "purgeEpoch": {
-            ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)"
+            ".read": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+            ".write": "auth != null && auth.uid === $uid && root.child('users').child($uid).child('profile').child('status').val() !== 'deleted' && (root.child('users').child($uid).child('lockState').child('app').val() !== true || root.child('session').child($uid).child('app').val() > now)",
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100000000000000"
           }
         }
       }
@@ -715,6 +717,10 @@
           ".read": "auth != null && auth.uid === $uid"
         }
       }
+    },
+    "appDefaults": {
+      ".read": true,
+      ".write": false
     },
     "admins": {
       "$uid": {

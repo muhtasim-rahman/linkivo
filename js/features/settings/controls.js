@@ -49,6 +49,9 @@ function shell(entry, control, stack = false) {
 
 export function renderControl(entry) {
   const get = () => prefs.get(entry.key, entry.default);
+  // v2.5.7 (owner): a setting that changes while the page is open (it arrived from another device through settings sync, or from another tab) shows the new value at once, no reload.
+  // The watcher removes itself when its row has left the page.
+  const follow = (el, sync) => { const off = prefs.onChange(entry.key, () => { if (!el.isConnected) { off(); return; } sync(); }); return el; };
   if (entry.type === 'switch') {
     const flip = () => { const next = !get(); prefs.set(entry.key, next); sync(); if (next && entry.onOn === 'clipboard') askClipboard(); };
     // the switch button stops its click here: the row below handles every other tap, so one tap never flips twice
@@ -58,11 +61,11 @@ export function renderControl(entry) {
     const row = shell(entry, sw);
     row.classList.add('is-toggle');   // v2.3.0 (owner): the whole row is the switch
     row.addEventListener('click', (e) => { if (!e.target.closest('a, input, select')) flip(); });
-    return row;
+    return follow(row, sync);
   }
   if (entry.type === 'seg' && entry.options.length > 3) {
     const sel = createSelect({ options: entry.options, value: get(), label: entry.label, align: 'end', onChange: (v) => prefs.set(entry.key, v) });
-    return shell(entry, sel);
+    return follow(shell(entry, sel), () => sel.setValue(get()));
   }
   if (entry.type === 'seg') {
     // v2.2.2: one dropdown for tablets and PCs, the segmented control for phones. Same pref, both kept in step.
@@ -73,13 +76,13 @@ export function renderControl(entry) {
     sync();
     const row = shell(entry, sel);
     row.classList.add('is-dual'); row.appendChild(seg);
-    return row;
+    return follow(row, sync);
   }
   if (entry.type === 'swatch') {
     const wrap = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': entry.label }, entry.options.map((o) => h('button', { type: 'button', role: 'radio', class: 'swatch', 'aria-label': o.label, 'data-tip': o.label + ' accent', 'data-v': o.value, style: { '--c': o.color }, on: { click: () => { prefs.set(entry.key, o.value); sync(); } } }, h('i'))));
     const sync = () => wrap.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === get())));
     sync();
-    return shell(entry, wrap, true);
+    return follow(shell(entry, wrap, true), sync);
   }
   return h('div');
 }

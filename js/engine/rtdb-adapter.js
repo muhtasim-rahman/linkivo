@@ -9,6 +9,7 @@
  *   sync(path, sinceUp, { onUpsert(key, val), onRemove(key) }) -> Promise<{ unsubscribe() }>
  *            delivers every child with up >= sinceUp, resolves when that initial load is done, then keeps streaming changes
  *   watchValue(path, cb(value)) -> unsubscribe
+ *   watchRecent(path, child, n, cb(value), onError?) -> unsubscribe   (v2.5.7: live version of recent(): History follows the account on every device)
  *   get(path) -> Promise<value|null>   (v2.2.2: one read, used for the devices list)
  *   recent(path, child, n) -> Promise<object|null>   (v2.4.1: the n children with the highest `child` value, newest first by the caller; History list)
  *   shallowKeys(path) -> Promise<string[]>   (REST "?shallow=true": keys only, tiny download)
@@ -37,7 +38,9 @@ export function createRtdbAdapter({ firebase }) {
     },
     async get(path) { const snap = await d.get(d.ref(db, path)); return snap.val(); },
     async recent(path, child, n) { const snap = await d.get(d.query(d.ref(db, path), d.orderByChild(child), d.limitToLast(n))); return snap.val(); },
-    watchValue(path, cb) { return d.onValue(d.ref(db, path), (s) => cb(s.val())); },
+    // v2.5.7: `onError` is called when the database cancels the listener (for example the app lock closed the data); the caller decides when to listen again
+    watchValue(path, cb, onError) { return d.onValue(d.ref(db, path), (s) => cb(s.val()), (e) => { if (onError) onError(e); }); },
+    watchRecent(path, child, n, cb, onError) { return d.onValue(d.query(d.ref(db, path), d.orderByChild(child), d.limitToLast(n)), (s) => cb(s.val()), (e) => { if (onError) onError(e); }); },
     async shallowKeys(path) {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`${FIREBASE_CONFIG.databaseURL}/${path}.json?shallow=true&auth=${encodeURIComponent(token)}`);

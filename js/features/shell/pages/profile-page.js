@@ -57,7 +57,7 @@ export async function mount(container, ctx) {
     if (guest) badges.push(h('span', { class: 'pf2-badge' }, 'Guest mode'));
     const uidBtn = guest ? null : h('button', { type: 'button', class: 'pf2-uid', 'aria-label': 'Copy your account id', 'data-tip': 'Tap to copy', on: { click: copyUid } }, h('span', { class: 'pf2-uid-k', text: 'ID' }), h('code', { text: uid }), icon('copy', { size: 14 }));
     hero.replaceChildren(...[banner, edit, h('div', { class: 'pf2-id' }, avatar(name, true, photo, !guest),
-      h('div', { class: 'pf2-who' }, h('h1', { class: 'pf2-name', text: name }), h('p', { class: 'pf2-mail', text: guest ? 'Stored only on this device' : maskEmail(me.user.email) }))),
+      h('div', { class: 'pf2-who' }, h('h1', { class: 'pf2-name' + ([...String(name)].length > 16 ? ' is-long' : ''), title: name, text: name }), h('p', { class: 'pf2-mail', text: guest ? 'Stored only on this device' : maskEmail(me.user.email) }))),
       profile.headline ? h('p', { class: 'pf2-headline', text: profile.headline }) : null,
       h('div', { class: 'pf2-badges' }, ...badges),
       profile.bio ? h('p', { class: 'pf2-bio', text: profile.bio }) : (guest ? null : h('button', { type: 'button', class: 'pf2-bio is-empty', on: { click: openEdit } }, 'Add a short bio')),

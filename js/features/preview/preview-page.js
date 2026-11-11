@@ -31,7 +31,7 @@ import { faviconUrl, linkTitle, safeHref } from '../library/folder-style.js';
 import { bulk, linkMenuItems, copyText } from '../library/link-actions.js';
 import { TABS, TAB_LABELS, TAB_ICONS, availableTabs, pickTab, needsFetch, relatedLinks } from './preview-model.js';
 import { buildPanel } from './preview-tabs.js';
-import { ensureMeta, fetchStatus, wantsMicrolink } from './preview-meta.js';
+import { ensureMeta, fetchStatus } from './preview-meta.js';   // v2.5.7: wantsMicrolink is no longer used here (no automatic refetch)
 import { setInRandom } from './preview-ctx.js';
 import { quota as mlQuota, mlEnabled } from '../../core/microlink.js';
 import { shotQuota, isAdminView } from '../../core/admin.js';
@@ -166,7 +166,7 @@ export async function mount(container, ctx) {
 
   // ---- metadata: opened from the cache, fetched once when the link was never looked up ------------------------------------------------------
   async function load(force = false) {
-    if (!force && !needsFetch(link(), meta) && !wantsMicrolink(meta, lid)) return;   // v2.3.2: also when only Microlink has not answered yet
+    if (!force && !needsFetch(link(), meta)) return;   // v2.5.7 (owner): a link that was looked up before is never fetched again on open; Details > Refresh details does it on request
     const res = await ensureMeta(engine, lid, { force });
     if (disposed) return;
     if (res.error) { toast(res.error, { type: 'error' }); panelNode?.update?.({ link: link(), meta, error: res.error }); return; }

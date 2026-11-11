@@ -19,18 +19,18 @@ const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
 const { holdState, FULL, SLACK, HOLD_MS, initPullRefresh } = await imp('js/ui/pull-refresh.js');
 const touch = (el, type, y, x = 100) => { const e = new window.Event(type, { bubbles: true }); e.touches = type === 'touchend' ? [] : [{ clientY: y, clientX: x }]; el.dispatchEvent(e); };
 
-test('hold rule: starts at the full pull, is cancelled by a small raise, finishes after 5 seconds', () => {
-  assert.equal(HOLD_MS, 5000);
+test('hold rule: starts at the full pull, is cancelled by a small raise, finishes after 3.5 seconds', () => {
+  assert.equal(HOLD_MS, 3500);   // v2.5.7: was 5000
   assert.deepEqual(holdState({ pull: FULL - 1 }), { holding: false, progress: 0, done: false }, 'not pulled all the way: nothing starts');
   assert.deepEqual(holdState({ pull: FULL }), { holding: true, progress: 0, done: false }, 'full pull starts it');
-  assert.equal(holdState({ pull: FULL, holding: true, elapsed: 2500 }).progress, 0.5);
+  assert.equal(holdState({ pull: FULL, holding: true, elapsed: 1750 }).progress, 0.5);
   assert.equal(holdState({ pull: FULL - SLACK, holding: true, elapsed: 1000 }).holding, true, 'a tiny wobble inside the slack keeps it');
   assert.deepEqual(holdState({ pull: FULL - SLACK - 1, holding: true, elapsed: 1000 }), { holding: false, progress: 0, done: false }, 'a small raise cancels it');
   assert.equal(holdState({ pull: FULL, holding: true, elapsed: HOLD_MS }).done, true);
   assert.equal(holdState({ pull: FULL, holding: true, elapsed: HOLD_MS * 9 }).progress, 1, 'progress never passes 1');
 });
 
-test('pull and hold: letting go before 5 seconds is the normal refresh, after 5 seconds it reloads', async () => {
+test('pull and hold: letting go before 3.5 seconds is the normal refresh, after that it reloads', async () => {
   const realNow = Date.now; let t = 1_000_000; Date.now = () => t;
   try {
     const scroller = document.createElement('div'); document.body.appendChild(scroller);
@@ -43,7 +43,7 @@ test('pull and hold: letting go before 5 seconds is the normal refresh, after 5 
     touch(scroller, 'touchend', 600); await tick(5);
     assert.equal(refresh, 1); assert.equal(reload, 0); assert.ok(!chip.classList.contains('is-holding'));
     await tick(40);
-    // b) full pull, hold 5 seconds, let go: reload (and no ordinary refresh)
+    // b) full pull, hold 3.5 seconds, let go: reload (and no ordinary refresh)
     touch(scroller, 'touchstart', 50); touch(scroller, 'touchmove', 600);
     t += 2600; await sleepMs(120); assert.ok(parseFloat(chip.style.getPropertyValue('--h')) > 0.4 && !chip.classList.contains('is-holdready'), 'the ring fills while held');
     t += 2600; await sleepMs(120); assert.ok(chip.classList.contains('is-holdready'), 'ready: let go now to reload');
@@ -53,7 +53,7 @@ test('pull and hold: letting go before 5 seconds is the normal refresh, after 5 
   } finally { Date.now = realNow; }
 });
 
-test('pull and hold: raising the finger a little cancels the countdown, even after 5 seconds', async () => {
+test('pull and hold: raising the finger a little cancels the countdown, even after 3.5 seconds', async () => {
   const realNow = Date.now; let t = 2_000_000; Date.now = () => t;
   try {
     const scroller = document.createElement('div'); document.body.appendChild(scroller);

@@ -20,6 +20,7 @@ export function createFakeRtdb({ clockOffset = 0 } = {}) {
         }
         for (const w of watchers) if (w.path === path) w.cb(value);
       }
+      for (const w of watchers) if (w.recent && Object.keys(updates).some((p) => p.startsWith(w.path + '/'))) w.cb(await adapter.recent(w.path, w.recent.child, w.recent.n));   // v2.5.7: live recent()
     },
     async sync(prefix, since, { onUpsert, onRemove }) {
       for (const [path, value] of Object.entries(tree)) if (path.startsWith(prefix + '/') && (value.up || 0) >= since) onUpsert(path.slice(prefix.length + 1), structuredClone(value));
@@ -34,7 +35,8 @@ export function createFakeRtdb({ clockOffset = 0 } = {}) {
       return any ? out : null;
     },
     async recent(path, child, n) { const all = (await adapter.get(path)) || {}; const top = Object.entries(all).sort((a, b) => (a[1][child] || 0) - (b[1][child] || 0)).slice(-n); return top.length ? Object.fromEntries(top) : null; },
-    watchValue(path, cb) { const w = { path, cb }; watchers.push(w); if (path in tree) cb(tree[path]); return () => watchers.splice(watchers.indexOf(w), 1); },
+    watchValue(path, cb, onError) { const w = { path, cb, onError }; watchers.push(w); if (path in tree) cb(tree[path]); return () => watchers.splice(watchers.indexOf(w), 1); },
+    watchRecent(path, child, n, cb, onError) { const w = { path, cb, recent: { child, n }, onError }; watchers.push(w); adapter.recent(path, child, n).then((v) => { if (v) cb(v); }); return () => { const i = watchers.indexOf(w); if (i >= 0) watchers.splice(i, 1); }; },   // v2.5.7
     async shallowKeys(prefix) { return Object.keys(tree).filter((p) => p.startsWith(prefix + '/')).map((p) => p.slice(prefix.length + 1)); }
   };
   return { adapter, tree, log, setFail: (e) => { fail = e; }, subs };

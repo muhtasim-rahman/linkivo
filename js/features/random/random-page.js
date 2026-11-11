@@ -67,7 +67,7 @@ export async function mount(container, ctx) {
   for (const box of [hubCard, recent, strip]) { const orig = box.replaceChildren.bind(box); box.replaceChildren = (...n) => { orig(...n); restart(box); }; }
   let autoSig = '';
   // v2.5.6 (owner): on phones a thin version of the card sticks to the top once the big card has scrolled away (it leaves again when you scroll back up)
-  const mini = createMiniCard({ scroller: container, card: hubCard, hub, onGo: () => next(true) });
+  const mini = createMiniCard({ scroller: container, card: hubCard, hub, onGo: () => next(true), trigger: () => hubCard.querySelector('.rnd-go') });   // v2.5.7: shows once the big Surprise button is above the top edge
   const page = h('div', { class: 'page rnd is-wide page-enter' },
     h('header', { class: 'page-head rnd-head' }, h('h1', { class: 'page-title', text: 'Random Discover' }), h('div', { class: 'page-actions' }, lockButton(), settingsShortcut('random', 'Random settings'))),
     mini.el, hub, stage, strip);   // the strip comes after the stage: at the bottom on phones (css puts it on top on wide screens)
@@ -101,6 +101,9 @@ export async function mount(container, ctx) {
       flip('Skip dead links', 'random.skipDead', true, 'Leaves out links the dead-link checker found to be gone.'), flip('Let points drift to 100', 'random.drift', false, 'A link you have not touched for a long time slowly counts as 100 points again (1 point per 14 days). Stored points never change.'));
   }
   function paintQuick() { quick.replaceChildren(h('h2', { class: 'rnd-panel-h', text: 'Options' }), optionsEl()); }
+  // v2.5.7 (owner): Random's options that arrive from another device (settings sync) show at once, no reload
+  const liveKeys = ['random.mode', 'random.avoid', 'random.auto', 'random.gamma', 'random.skipDead', 'random.drift'];
+  let liveT = 0; const offLive = liveKeys.map((k) => prefs.onChange(k, () => { clearTimeout(liveT); liveT = setTimeout(() => { paintQuick(); paintCard(); }, 60); }));
   function paintRecent() {
     recent.hidden = !picked.length;
     recent.replaceChildren(h('h2', { class: 'rnd-panel-h', text: 'Picked this time' }), h('ol', { class: 'rnd-rec' }, picked.slice(0, 6).map((p) => h('li', null, h('button', { type: 'button', class: 'rnd-rec-b', title: p.title, on: { click: () => openPreview(p.id) } }, h('span', { class: 'rnd-rec-t', text: p.title }), h('span', { class: 'rnd-rec-h', text: p.host }))))));
@@ -231,5 +234,5 @@ export async function mount(container, ctx) {
   paintCard(); paintQuick(); paintRecent();
   if (presetFolder) next(true);   // "Random from this folder": no panel stop, a link opens straight away
   document.title = 'Random Discover | Linkivo';
-  return () => { disposed = true; mini.destroy(); if (playLayer) { const l = playLayer; playLayer = null; l.remove(); } stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
+  return () => { disposed = true; clearTimeout(liveT); offLive.forEach((o) => o()); mini.destroy(); if (playLayer) { const l = playLayer; playLayer = null; l.remove(); } stopAuto(); off(); document.removeEventListener('keydown', onKey); wideMq.removeEventListener && wideMq.removeEventListener('change', placeStrip); try { stopPreview && stopPreview(); } catch { /* ignore */ } try { filterSheet && filterSheet.close(); } catch { /* ignore */ } try { optSheet && optSheet.close(); } catch { /* ignore */ } delete document.documentElement.dataset.rnd; setBar(true); };
 }

@@ -7,11 +7,14 @@
  *          v2.3.2 (owner: "the sync list itself must sync"): the choice is stored as ONE pref per setting, `sync.c.<id>` = true | false, written only when the person
  *          changes it (no value = the default). These prefs are always part of the synced keys, so a choice made on one device reaches the others, and the
  *          other devices then rebuild their list of synced keys (core/app-data.js). Arrays were too long for the 200-character limit of a synced value.
- * API: choiceKey(entry) -> 'sync.c.<id>'      choiceKeys(catalog) -> string[] (every setting that can be chosen)
+ * API: EXTRA_SYNC_KEYS (v2.5.7)     choiceKey(entry) -> 'sync.c.<id>'      choiceKeys(catalog) -> string[] (every setting that can be chosen)
  *      isSynced(entry, store) -> boolean      setSynced(entry, on, store)      syncedEntries(catalog, store) -> entries that sync
  *      syncedKeySet(catalog, store) -> string  (stable text of the synced keys, to detect a change)
  *      syncGroups(catalog, sections, store) -> [{ section, entries:[{ entry, on }] }]   (rows with `key` only; custom rows hold no value)
  */
+/** v2.5.7 (owner: "settings do not sync"): preferences that are changed on a page and are not rows of the Settings catalog (Random's Options panel: next link by itself, point influence,
+ *  points drift). They were never sent to the account. They always sync, with no row in the sync popup (the catalog keeps its six Random defaults, owner decision v2.4.2). */
+export const EXTRA_SYNC_KEYS = Object.freeze(['random.auto', 'random.gamma', 'random.drift']);
 export const choiceKey = (entry) => 'sync.c.' + entry.id;
 const choosable = (e) => !!(e && e.key && !e.device);
 export const choiceKeys = (catalog) => catalog.filter(choosable).map(choiceKey);

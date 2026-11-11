@@ -4,8 +4,10 @@
  *          slides in under the top edge and stays there (sticky). Scrolling back up makes the big card reappear and the thin one slides out again. Wide screens never show it
  *          (the left column is already sticky there; css hides the host).
  *          The bar holds the number of links in play and the same start button. It takes no space in the page (a zero-height sticky host), so nothing jumps when it appears.
+ * v2.5.7 (owner): the thin bar now appears when the big card's SURPRISE BUTTON has scrolled past the top edge (not when the whole card has), and never while a link is
+ *          being shown (the hub is hidden). `trigger()` returns the button (the card is rebuilt on every repaint, so it is looked up each time); a missing or zero-size button counts as "not gone".
  * API: miniShouldShow({ cardBottom, rootTop, hubHidden }) -> boolean   (pure, tested)
- *      createMiniCard({ scroller, card, hub, onGo }) -> { el, paint(n, seen), sync(), destroy() }
+ *      createMiniCard({ scroller, card, hub, onGo, trigger? }) -> { el, paint(n, seen), sync(), destroy() }
  */
 import { h } from '../../core/dom.js';
 import { icon } from '../../ui/icons.js';
@@ -14,7 +16,7 @@ import { icon } from '../../ui/icons.js';
 export const MINI_SLACK = 4;
 export const miniShouldShow = ({ cardBottom, rootTop, hubHidden = false }) => !hubHidden && cardBottom < rootTop + MINI_SLACK;
 
-export function createMiniCard({ scroller, card, hub, onGo }) {
+export function createMiniCard({ scroller, card, hub, onGo, trigger = null }) {
   const count = h('strong', { class: 'rnd-mini-n', text: '0' });
   const label = h('span', { class: 'rnd-mini-l', text: ' links in play' });
   const go = h('button', { type: 'button', class: 'btn btn-primary rnd-mini-go', on: { click: () => onGo() } }, icon('random', { size: 18 }), h('span', { text: 'Surprise me' }));
@@ -27,8 +29,9 @@ export function createMiniCard({ scroller, card, hub, onGo }) {
 
   /** Shows or hides the bar from the card's position. Cheap: one rect read per scroll frame. */
   function sync() {
-    const c = card.getBoundingClientRect(), r = scroller.getBoundingClientRect();
-    const want = miniShouldShow({ cardBottom: c.bottom, rootTop: r.top, hubHidden: !!hub.hidden });
+    const t = trigger ? trigger() : null, c = (t || card).getBoundingClientRect(), r = scroller.getBoundingClientRect();
+    const measured = !trigger || (t && (c.height > 0 || c.width > 0));   // v2.5.7: the button is not there (mid-repaint) or not laid out: do not show the bar
+    const want = measured && miniShouldShow({ cardBottom: c.bottom, rootTop: r.top, hubHidden: !!hub.hidden });
     if (want === on) return;
     on = want; el.classList.toggle('is-on', want);
     setInert(!want); if (want) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', 'true');   // a hidden bar can not take focus or be read out

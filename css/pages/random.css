@@ -185,7 +185,7 @@ html[data-rnd] .rnd-head { display: none; }
 .rnd-minihost { display: none; }
 @media (max-width: 899px) {
   .rnd-minihost { display: block; position: sticky; top: 0; z-index: 6; height: 0; margin-inline: calc(var(--pad) * -1); pointer-events: none; }
-  .rnd-mini { position: absolute; left: 0; right: 0; top: calc((var(--safe-t) + var(--s3)) * -1); display: flex; align-items: center; gap: var(--s3); padding: calc(var(--safe-t) + 4px) var(--pad) 4px; border-bottom: 1px solid var(--line);
+  .rnd-mini { position: absolute; left: 0; right: 0; top: calc((var(--safe-t) + var(--s3)) * -1);   /* v2.5.7 (owner): a little more room above the bar (padding-top 10px, was 4px) */ display: flex; align-items: center; gap: var(--s3); padding: calc(var(--safe-t) + 10px) var(--pad) 6px; border-bottom: 1px solid var(--line);
     background: color-mix(in srgb, var(--bg) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 6px 18px -12px rgba(0, 0, 0, 0.35);
     transform: translateY(-110%); opacity: 0; visibility: hidden; transition: transform var(--t-std) var(--ease), opacity var(--t-std) var(--ease), visibility 0s linear var(--t-std); }
   .rnd-minihost.is-on .rnd-mini { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }

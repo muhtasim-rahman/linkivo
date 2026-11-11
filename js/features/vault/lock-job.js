@@ -16,7 +16,7 @@ export function registerVaultMoveJob({ queue, engine, getHistory }) {
     if (dir === 'lock') {
       await engine.lockFolders(fids, (d, t) => ctx.progress({ done: d, total: t }));
       const h = getHistory(); if (h) await h.forgetLinks(lids);
-    } else await engine.unlockFolders(fids, (d, t) => ctx.progress({ done: d, total: t }));
+    } else { await engine.unlockFolders(fids, (d, t) => ctx.progress({ done: d, total: t })); const h = getHistory(); if (h) await h.restoreLinks(lids); }   // v2.5.7: their history goes back to the normal list
     ctx.progress({ done: total, total });
     if (closeAfter) await closeVault();
   });

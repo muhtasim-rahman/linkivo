@@ -51,6 +51,7 @@ export const CATALOG = [
   // one real setting; v2.2.0 onward adds the library and import behavior settings here.
   // v2.2.2 (owner): "Collapse the sidebar" moved here from Appearance, it is about behavior.
   { id: 'sidebarCollapsed', local: true, section: 'behavior', type: 'switch', key: 'ui.sidebarCollapsed', label: 'Collapse the sidebar', desc: 'Wide screens only.', default: false, keywords: ['navigation', 'sidebar'], since: '2.1.0' },
+  { id: 'pullReload', local: true, section: 'behavior', type: 'switch', key: 'ui.pullReload', label: 'Pull and hold to reload', desc: 'Phones only. Hold a full pull for 3.5 seconds to reload.', default: true, keywords: ['pull', 'refresh', 'reload', 'hold', 'gesture'], since: '2.5.7' },
   { id: 'hideBar', section: 'behavior', type: 'switch', key: 'ui.hideBar', label: 'Hide bottom bar on scroll', desc: 'Phones only. The bar returns when you scroll up.', default: true, keywords: ['navigation', 'bottom bar', 'scroll'], since: '2.1.0' },
 
   // ---- Library and links (v2.2.0)
@@ -134,7 +135,7 @@ export const CATALOG = [
 /** v2.5.2: the ONE place that says which category a setting lives in and in which order. A setting missing here (or listed twice) is caught by the tests, so none can get lost. */
 export const LAYOUT = {
   appearance: ['theme', 'accent', 'fontSize', 'density', 'reduceMotion', 'splash', 'uiThumbs'],
-  behavior: ['sidebarCollapsed', 'hideBar', 'toastTime', 'clipboard'],
+  behavior: ['sidebarCollapsed', 'pullReload', 'hideBar', 'toastTime', 'clipboard'],
   library: ['libView', 'libSort', 'folderView', 'openIn', 'showUrl', 'showPoints', 'confirmDelete'],
   search: ['searchRecent', 'searchPages'],
   random: ['rndMode', 'rndAvoid', 'rndSkipDead', 'rndRemember', 'rndMicrolink', 'rndThum'],

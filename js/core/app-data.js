@@ -73,7 +73,7 @@ function startHistory(session) {
     h.load().then(() => h.prune()).catch(() => {});
     prefs.onChange('history.where', () => { if (history === h) h.load().catch(() => {}); });   // another store is shown: read it
     prefs.onChange('history.keep', () => { if (history === h) h.prune().catch(() => {}); });
-    subscribeVault((v) => { if (history === h && (!v.open || v.quiet)) h.wipeLocked(); });   // v2.5.4: the history of locked links lives in memory only while they are unlocked
+    subscribeVault((v) => { if (history !== h) return; if (!v.open || v.quiet) h.wipeLocked(); else h.loadLocked().catch(() => {}); });   // v2.5.4/2.5.7: the history of locked links is stored in the vault; it is on screen only while they are unlocked
   } catch (e) { log.warn('data', 'history did not start', e); history = null; }
 }
 export const getHistory = () => history;
@@ -84,12 +84,12 @@ export const recordOpen = (link, src) => { try { return history ? history.record
 async function startSettingsSync(uid) {
   try {
     const { CATALOG } = await import('../features/settings/catalog.js');
-    const { syncedEntries, syncedKeySet, choiceKeys } = await import('./sync-choice.js');
+    const { syncedEntries, syncedKeySet, choiceKeys, EXTRA_SYNC_KEYS } = await import('./sync-choice.js');
     const entries = syncedEntries(CATALOG, prefs);   // v2.3.1: the person's choice (Settings > Account > Select which settings to sync); `device: true` and `local: true` settings start off
     const defaults = Object.fromEntries(entries.map((e) => [e.key, e.default]));
     if (!engine || scope !== uid || !engine.adapter) return;
     // v2.3.2: the choices themselves (sync.c.<id>) are always synced, so every device sees the same list
-    settingsSync = createSettingsSync({ adapter: engine.adapter, uid, store: prefs, keys: [...entries.map((e) => e.key), ...choiceKeys(CATALOG)], defaults });
+    settingsSync = createSettingsSync({ adapter: engine.adapter, uid, store: prefs, keys: [...entries.map((e) => e.key), ...choiceKeys(CATALOG), ...EXTRA_SYNC_KEYS], defaults });   // v2.5.7: + the Random panel's own options
     settingsSync.start();
     // a choice that arrives from another device changes WHICH keys are synced here: rebuild the sync with the new list (only when the list really changed)
     const was = syncedKeySet(CATALOG, prefs); let t = 0;
@@ -130,7 +130,7 @@ export async function teardownData() {
   try { devices?.stop(); } catch { /* ignore */ }
   devices = null;
   try { importLog?.dispose(); } catch { /* ignore */ }
-  importLog = null; history = null;
+  importLog = null; try { history?.dispose(); } catch { /* ignore */ } history = null;   // v2.5.7: stops the live history listener
   if (engine) { try { engine.dispose(); engine.db.close(); } catch { /* ignore */ } }
   engine = null; queue = null; scope = null;
 }

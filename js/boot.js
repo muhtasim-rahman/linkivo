@@ -10,7 +10,7 @@ import { log } from './core/logger.js';
 import { getSession, setSession, subscribeSession } from './core/session.js';
 import { createRouter } from './core/router.js';
 import { initUpdates } from './core/update.js';
-import { initData, teardownData, getQueue, getEngine } from './core/app-data.js';
+import { initData, teardownData, getQueue, getEngine, getSettingsSync } from './core/app-data.js';
 import { loadFirebase } from './core/firebase-loader.js';
 import { initAuth } from './features/auth/auth-service.js';
 import { loadAccountStatus } from './features/auth/account-status.js';
@@ -107,10 +107,11 @@ export async function boot() {
   // Pull down at the top of a page that can change (library, folder, history, profile: route flag `refresh`) = in-app refresh of that page's
   // data. No setting, no app reload, no splash, no update check (updates have their own checks). Pages without the flag ignore the gesture.
   initPullRefresh({ scroller: container, enabled: () => getSession().mode !== 'none' && router.canRefresh(),
-    onRefresh: () => refreshApp() });
+    onRefresh: () => refreshApp(), holdEnabled: () => prefs.get('ui.pullReload', true) !== false });   // v2.5.7: the hold-to-reload part has a setting
   // v2.5.3 (owner): ONE refresh for the gesture, the header icon and the menus: sync the account, then rebuild the page from the current data (like a reload of that page)
   setRefreshHandler(async () => {
-    await Promise.all([(async () => { const e = getEngine(); if (e && e.syncNow) await e.syncNow().catch(() => {}); })(), sleep(450)]);
+    forgetThumbs();   // v2.5.7 (owner): a refresh makes every row ask for its saved picture and page data again (a picture that did not load, or an old one, comes back right)
+    await Promise.all([(async () => { const e = getEngine(); if (e && e.syncNow) await e.syncNow().catch(() => {}); })(), (async () => { try { await getSettingsSync()?.pull(); } catch { /* ignore */ } })(), sleep(450)]);   // v2.5.7: a refresh also reads the account's settings
     if (router.canRefresh()) await router.refreshCurrent();
   });
 

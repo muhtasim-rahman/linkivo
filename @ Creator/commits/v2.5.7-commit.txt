@@ -1,0 +1,17 @@
+fix(v2.5.7): settings sync, live History, locked history kept, pull-hold 3.5 s, no refetch, History layout, Random card
+
+- Settings sync: a setting reset on one device is reset on the others (it came back before); the live listener restarts after a cancel; settings are re-read when the app comes to the front and on pull-down refresh; waiting changes of another account are dropped; Random's own options (auto, point influence, drift) now sync
+- Live settings: Settings rows, Library, Folder and Random update at once when a change arrives, no reload
+- History (account): live across devices (watchRecent); history of locked links is stored in vault/<uid>/history, loaded when the locked folders open, moved on lock and back on unlock (no rules change)
+- Preview: data fetched once is never fetched again on open; Details > Refresh details does it on request
+- Pull to refresh: hold is 3.5 s with a one-line hint (3, 2, 1); new setting Behavior > Pull and hold to reload; refresh also re-asks thumbnails and settings
+- History page: no summary card; one small Clear all button and an info button for the browser-history note
+- Random: thin card appears when the Surprise button leaves the top, with more top padding
+- Profile: the name sits under the banner and grows downward (2 lines max)
+- Tests: v257.test.mjs; v230-preview, v231, v253-vault, v254, v256 updated; fake RTDB gets watchRecent
+
+Removed files:
+- none
+
+Owner actions:
+- firebase deploy --only hosting (rules and Worker unchanged), hard reload twice on every device

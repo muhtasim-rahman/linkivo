@@ -8,6 +8,9 @@
  *          while its switch is on and lookups are left; a link that was already looked up only gets Microlink's answer added. What is running right now is
  *          published in `fetchStatus` (a small store) so the page can say "Data Fetching (Microlink)". Every attempt, also a failed or skipped one, is
  *          written into the link's log so the Details tab can show it.
+ *          v2.5.7 (owner): data that was fetched once is part of the link for good. Opening a link that already has a lookup (`checkedAt`) NEVER calls Microlink or the Worker again,
+ *          not even to add Microlink's answer; only a link that was never looked up is fetched on open. To fetch again the person presses "Refresh details" in the Details tab
+ *          (force: true). `wantsMicrolink` is still exported for the pages that show Microlink's state, but nothing starts a fetch from it any more.
  * API: ensureMeta(engine, linkId, { force?, fetch? }) -> Promise<{ ok, cached?, error? }>   (one request per link at a time)
  *      fetchStatus -> store { lid, engine } | null      wantsMicrolink(meta) -> boolean
  */
@@ -57,7 +60,7 @@ async function run(engine, lid, force, fetch) {
   if (!link) return { ok: false, error: 'This link is no longer here.' };
   const cur = await engine.getLinkMeta(lid);
   const looked = !!(cur && cur.checkedAt);
-  if (!force && looked && !wantsMicrolink(cur, lid)) return { ok: true, cached: true };
+  if (!force && looked) return { ok: true, cached: true };   // v2.5.7: stored data is final until the person asks for a refresh (was: also asked Microlink once for links it never answered)
   const mlOnly = !force && looked;                  // already looked up by the normal chain: only Microlink's extra answer is wanted
   if (mlOnly) tried.add(lid);
   let r;

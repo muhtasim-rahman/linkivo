@@ -4,16 +4,14 @@
 .hs-clear { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 38%, var(--line)); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
 @media (hover: hover) { .hs-clear:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); } }
 .hs-clear:disabled { opacity: 0.5; }
-.hs-clear-head { display: none; margin-left: var(--s2); }
-.hs-card { display: grid; gap: var(--s3); padding: var(--s3) var(--s4); margin-bottom: var(--s3); border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface); }
-.hs-card-top { display: flex; align-items: center; gap: var(--s3); }
-.hs-card-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 14px; background: var(--accent-soft); color: var(--accent-text); }
-.hs-card-tx { display: grid; min-width: 0; } .hs-card-tx strong { font: 650 var(--fs-md) / 1.25 var(--font-brand); } .hs-card-tx span { font-size: var(--fs-sm); color: var(--sub); }
-.hs-card .hs-clear { min-height: 44px; }
+/* v2.5.7 (owner): no summary card. One line under the tools: the count on the left, an info button and ONE small Clear all button on the right (all screen sizes) */
+.hs-meta { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); min-height: 44px; }
+.hs-meta-act { display: flex; align-items: center; gap: 2px; flex: none; }
+.hs-clear { min-height: 36px; }
 .hs-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); }
 .hs-search { position: relative; flex: 1 1 220px; min-width: 0; } .hs-search svg { position: absolute; left: 12px; top: 50%; translate: 0 -50%; color: var(--sub); pointer-events: none; } .hs-search .input { padding-left: 38px; width: 100%; }
 .hs-filter { flex: 0 1 auto; max-width: 100%; overflow-x: auto; scrollbar-width: none; } .hs-filter::-webkit-scrollbar { display: none; } .hs-filter button { white-space: nowrap; }
-.hs-info { display: none; margin: 0 0 var(--s3); font-size: var(--fs-sm); color: var(--sub); }
+.hs-info { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-sm); color: var(--sub); }
 .hs-group { margin-bottom: var(--s4); }
 .hs-day { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: var(--s2); margin: 0; padding: 8px 2px 6px; font: 650 var(--fs-sm) / 1.2 var(--font-brand); letter-spacing: 0.02em; color: var(--sub); background: var(--bg); }
 .hs-day-n { min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: var(--fs-xs); font-weight: 600; text-align: center; }
@@ -30,8 +28,3 @@
 .hs-src { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); color: var(--sub); }
 .hs-more { flex: none; margin-right: 4px; }
 .hs-more-btn { display: block; margin: 0 auto var(--s6); }
-@media (min-width: 900px) {
-  .hs-clear-head { display: inline-flex; }
-  .hs-card { display: none; }
-  .hs-info { display: block; }
-}

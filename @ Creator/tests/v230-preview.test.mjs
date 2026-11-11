@@ -112,7 +112,7 @@ test('link click: opens the Preview by default; Ctrl-click, middle click or the 
   prefs.set('lib.openIn', 'tab'); assert.equal(openInPreview(ev(), { id: 'L1' }, router), false); prefs.remove('lib.openIn');
 });
 
-test('ensureMeta (v2.3.2): Microlink is asked by itself once for a link it never answered, the old details stay, and the attempt is logged', async () => {
+test('ensureMeta (v2.5.7): a link that was looked up is never fetched again on open; Refresh details (force) asks Microlink first', async () => {
   prefs.set('meta.microlink', true); prefs.remove('ml.d25');
   const e = await mkEngine(); const { ids } = await seed(e);
   const { fetchStatus } = await import('../../js/features/preview/preview-meta.js');
@@ -123,9 +123,10 @@ test('ensureMeta (v2.3.2): Microlink is asked by itself once for a link it never
   const realFetch = globalThis.fetch; let ml = 0;
   globalThis.fetch = async (u) => { ml++; return { status: 200, ok: true, headers: { get: (k) => ({ 'x-rate-limit-limit': '5', 'x-rate-limit-remaining': '4' })[k.toLowerCase()] ?? null }, json: async () => ({ status: 'success', data: { title: 'ML title', image: { url: 'https://i.test/ml.png' }, video: { url: 'https://v.test/v.mp4' } } }) }; };
   try {
-    const r = await ensureMeta(e, ids[0]); assert.equal(r.ok, true); assert.equal(ml, 1);
-    const meta = await e.getLinkMeta(ids[0]); assert.ok(meta.ml, 'Microlink answered, marked'); assert.equal(meta.video, 'https://v.test/v.mp4'); assert.match(meta.log, /direct/); assert.match(meta.log, /microlink/);
-    assert.equal((await ensureMeta(e, ids[0])).cached, true); assert.equal(ml, 1, 'never asked twice for the same link');
+    const r = await ensureMeta(e, ids[0]); assert.equal(r.cached, true); assert.equal(ml, 0, 'v2.5.7: stored data is final, opening never calls Microlink or the Worker');
+    const f = await ensureMeta(e, ids[0], { force: true }); assert.equal(f.ok, true); assert.equal(ml, 1, 'Refresh details asks Microlink');
+    const meta = await e.getLinkMeta(ids[0]); assert.ok(meta.ml, 'Microlink answered, marked'); assert.equal(meta.video, 'https://v.test/v.mp4');
+    assert.equal((await ensureMeta(e, ids[0])).cached, true); assert.equal(ml, 1, 'a plain open still asks nothing');
   } finally { globalThis.fetch = realFetch; }
   assert.ok(seen.includes('Microlink'), 'the page can say Data Fetching (Microlink)'); assert.equal(fetchStatus.get().lid, null, 'status cleared afterwards');
   prefs.set('meta.microlink', false);

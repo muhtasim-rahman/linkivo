@@ -13,10 +13,11 @@
 .pf2-edit { position: absolute; top: var(--s3); right: var(--s3); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; color: #fff; font-size: var(--fs-sm); font-weight: 600; background: rgb(15 23 42 / 0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgb(255 255 255 / 0.25); cursor: pointer; }
 .pf2-edit::after { content: ''; position: absolute; inset: -4px; }
 @media (hover: hover) { .pf2-edit:hover { background: rgb(15 23 42 / 0.72); } }
-.pf2-id { display: flex; align-items: flex-end; gap: var(--s3); margin-top: -40px; min-width: 0; }
+.pf2-id { display: flex; align-items: flex-start; gap: var(--s3); margin-top: -40px; min-width: 0; }   /* v2.5.7: top-aligned, so a long name grows DOWNWARD and can never climb over the banner */
 .pf2-id .avatar { flex: none; width: 88px; height: 88px; padding: 4px; font-size: 32px; box-shadow: 0 0 0 4px var(--surface), 0 2px 12px rgb(0 0 0 / 0.18); }   /* v2.5.0: ONE ring (the avatar's own); the 4px surface gap only separates it from the banner */
-.pf2-who { min-width: 0; padding-bottom: 4px; }
-.pf2-name { margin: 0; font: 700 var(--fs-xl) / 1.15 var(--font-brand); overflow-wrap: anywhere; }
+.pf2-who { min-width: 0; flex: 1; padding-top: 46px; }   /* v2.5.7: the text starts just under the banner edge (the avatar overlaps it by 40px) */
+.pf2-name { margin: 0; font: 700 var(--fs-xl) / 1.18 var(--font-brand); overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.pf2-name.is-long { font-size: var(--fs-lg); }   /* v2.5.7: a longer name steps down one size so two lines look calm (the page sets the class) */
 .pf2-mail { margin: 2px 0 0; color: var(--sub); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .pf2-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .pf2-badge, .pf2-badges .admin-chip { align-items: center; gap: 4px; height: 26px; margin: 0; padding: 0 10px; border-radius: 999px; font: 600 12px / 1 var(--font-brand); background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }

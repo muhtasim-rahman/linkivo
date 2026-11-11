@@ -100,6 +100,11 @@ export async function mount(container, ctx) {
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
     viewBtn.addEventListener('click', () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.view, st.view); update(); });
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready' || ev.type === 'sync') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
+  // v2.5.7 (owner): Library layout and folder order that arrive from another device (settings sync) apply at once, without a reload
+  const offPrefs = [
+    prefsStore.onChange(LIB.view, () => { const v = pref(LIB.view); if (v !== st.view) { st.view = v; update(); } }),
+    prefsStore.onChange(LIB.sort, () => { const v = pref(LIB.sort); if (v !== st.sort) { st.sort = v; try { sortSel.setValue(v); } catch { /* ignore */ } update(); } })
+  ];
   // ---- keyboard (v2.2.1) ----
   const keys = [
     { keys: '/', desc: 'Search folders', run: () => search.focus() },
@@ -115,7 +120,7 @@ export async function mount(container, ctx) {
   update();
   // v2.2.3 (owner): the install suggestion shows HERE only (not on other pages), as a dock that follows the bottom bar
   const suggest = mountInstallSuggest({ mountDock, page });
-  return () => { off(); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
+  return () => { off(); offPrefs.forEach((o) => o()); offKeys(); cancelAnimationFrame(raf); clearTimeout(t); suggest.remove(); };
 }
 
 export async function refresh() { /* v2.5.3: the router rebuilds the page after the app-wide refresh (core/refresh.js); nothing page-specific is left to do */ }

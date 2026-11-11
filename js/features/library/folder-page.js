@@ -37,6 +37,7 @@ import { runCheck } from '../check/check-sheet.js';
 import { folderMenuItems } from './folder-actions.js';
 import { openQuickAdd } from './quick-add.js';
 import { pref, setPref, LIB } from './lib-prefs.js';
+import { prefs as prefsStore } from '../../core/local-prefs.js';   // v2.5.7: live settings
 import { savePageState, takePageState } from '../../core/page-state.js';   // v2.4.1: Back from a preview returns to the same filters and scroll position
 
 /** v2.3.2 (owner): the title's font size follows its length so a long name does not crowd the header; CSS keeps at most 2 lines with an ellipsis. */
@@ -173,6 +174,11 @@ export async function mount(container, ctx) {
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; update(); }, 120); });
   const toggleView = () => { st.view = st.view === 'grid' ? 'list' : 'grid'; setPref(LIB.fview, st.view); vl?.destroy(); vl = null; update(); };
   viewBtn.addEventListener('click', toggleView);
+  // v2.5.7 (owner): layout and display settings that arrive from another device (settings sync) apply at once, without a reload
+  const offPrefs = [
+    prefsStore.onChange(LIB.fview, () => { const v = pref(LIB.fview); if (v !== st.view) { st.view = v; vl?.destroy(); vl = null; update(); } }),
+    ...[LIB.showUrl, LIB.showPoints, LIB.showAdded].map((k) => prefsStore.onChange(k, () => { vl?.destroy(); vl = null; update(); }))
+  ];
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
   moreBtn.addEventListener('click', () => {
     const f = folder();
@@ -222,7 +228,7 @@ export async function mount(container, ctx) {
   let raf = 0; const off = engine.subscribe((ev) => { if (ev.type === 'change' || ev.type === 'ready') { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); } });
   update();
   if (saved && saved.scroll > 0) requestAnimationFrame(() => requestAnimationFrame(() => { scroller.scrollTop = saved.scroll; }));   // after the list has laid out
-  return () => { savePageState(stateKey, { q: st.q, domain: st.domain, scope: st.scope, sort: st.sort, view: st.view, scroll: scroller.scrollTop, limit: pager.limit() }); reshuffle = null; pager.destroy(); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
+  return () => { offPrefs.forEach((o) => o()); savePageState(stateKey, { q: st.q, domain: st.domain, scope: st.scope, sort: st.sort, view: st.view, scroll: scroller.scrollTop, limit: pager.limit() }); reshuffle = null; pager.destroy(); off(); offKeys(); removeDock(); detachChips(); cancelAnimationFrame(raf); clearTimeout(t); vl?.destroy(); };
 }
 
 let reshuffle = null;   // set by the mounted page: a Refresh gives the Random sort a new order (owner)

@@ -101,8 +101,8 @@ test('jobs panel: finished jobs are removed after 24 hours, a job shows when it 
   assert.match(read('js/features/jobs/jobs-panel.js'), /\.filter\(Boolean\)\)/);
 });
 
-test('history of locked links: memory only (see v253-vault); the vault wipe is wired; search never keeps text that starts with a code symbol', () => {
-  assert.match(read('js/core/app-data.js'), /subscribeVault\(\(v\) => \{ if \(history === h && \(!v\.open \|\| v\.quiet\)\) h\.wipeLocked\(\)/);
+test('history of locked links: stored in the vault since v2.5.7 (see v257); the vault wipe is wired; search never keeps text that starts with a code symbol', () => {
+  assert.match(read('js/core/app-data.js'), /subscribeVault\(\(v\) => \{ if \(history !== h\) return; if \(!v\.open \|\| v\.quiet\) h\.wipeLocked\(\)/);
   const s = read('js/features/search/search-page.js'); assert.match(s, /const codeLike = \(t\) => vaultOn\(\) && VAULT_PREFIXES\.includes\(String\(t \?\? ''\)\.trim\(\)\[0\]\)/);
 });
 

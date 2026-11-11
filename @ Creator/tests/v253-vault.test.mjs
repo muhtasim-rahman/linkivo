@@ -170,7 +170,7 @@ test('history (v2.5.4): a locked link is listed in MEMORY only, never stored, go
   await h.record({ link: { id: 'L2', url: 'https://b.com' }, src: 'click' }); await h.record({ link: { id: 'L3', url: 'https://c.com' }, src: 'click' });
   assert.deepEqual(h.list().map((x) => x.lid), ['L3', 'L2', 'L1'], 'newest first, locked and normal entries together');
   assert.equal(await h.forgetLinks(['L2']), 1);
-  assert.deepEqual(h.list().map((x) => x.lid), ['L3', 'L1']); assert.equal((await db.getAll('history')).length, 1);
+  assert.deepEqual(h.list().map((x) => x.lid), ['L3', 'L2', 'L1'], 'v2.5.7: the entry MOVES to the locked (vault) list, it is not thrown away'); assert.equal((await db.getAll('history')).length, 1, 'and it left the normal store');
   h.wipeLocked(); assert.deepEqual(h.list().map((x) => x.lid), ['L3'], 'locking again wipes the in-memory entries');
 });
 

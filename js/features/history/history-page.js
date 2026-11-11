@@ -1,5 +1,5 @@
 /**
- * Linkivo — js/features/history/history-page.js  (v2.4.1)
+ * Linkivo — js/features/history/history-page.js  (v2.4.1, layout v2.5.7)
  * Purpose: the History page (route /profile/history, reached from Profile and Settings). Every link you opened, newest first, grouped by day
  *          (Today, Yesterday, then dates). Search over title, address and site; a filter for how it was opened (Preview, Opened site, Random);
  *          a three-dot menu per entry; multi-select with Remove; Clear history in the page menu. The list is read from where the History setting keeps it
@@ -19,6 +19,7 @@ import { getEngine, getHistory } from '../../core/app-data.js';
 import { openMenu } from '../../ui/popover.js';
 import { toast } from '../../ui/toast.js';
 import { confirmDialog } from '../../ui/confirm.js';
+import { openSheet } from '../../ui/sheet.js';   // v2.5.7: the "about clearing" note opens from an info button
 import { emptyState } from '../../ui/empty-state.js';
 import { mountDock } from '../../ui/dock.js';
 import { selBarContent } from '../../ui/sel-bar.js';
@@ -68,18 +69,17 @@ export async function mount(container, ctx) {
   const search = h('input', { class: 'input', type: 'search', placeholder: 'Search history', 'aria-label': 'Search history', autocomplete: 'off' });
   const filter = h('div', { class: 'seg hs-filter', role: 'radiogroup', 'aria-label': 'How it was opened' });
   const setBtn = h('a', { class: 'btn-icon', href: '/settings/history', 'aria-label': 'History settings', 'data-tip': 'History settings' }, icon('settings', { size: 20 }));   // v2.4.2: replaces the three-dot menu
-  const clearHead = h('button', { type: 'button', class: 'btn btn-sm hs-clear hs-clear-head', 'aria-label': 'Clear history' }, icon('trash', { size: 18 }), h('span', { text: 'Clear history' }));
-  const clearCard = h('button', { type: 'button', class: 'btn btn-block hs-clear', 'aria-label': 'Clear history' }, icon('trash', { size: 18 }), h('span', { text: 'Clear history' }));
-  const card = h('section', { class: 'hs-card', 'aria-label': 'History summary' });   // phones: summary and the Clear history button above the list
+  // v2.5.7 (owner): ONE small Clear button (no big card, same on phones and wide screens) and the note about the browser's own history behind an info button
+  const clearBtn = h('button', { type: 'button', class: 'btn btn-sm hs-clear', 'aria-label': 'Clear all history' }, icon('trash', { size: 16 }), h('span', { text: 'Clear all' }));
+  const noteBtn = h('button', { type: 'button', class: 'btn-icon hs-note-btn', 'aria-label': 'About clearing history', 'data-tip': 'About clearing history' }, icon('info', { size: 18 }));
   const selBtn = h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Select entries', 'aria-pressed': 'false' }, icon('check-square', { size: 20 }));
 
   container.appendChild(h('div', { class: 'page hs page-enter' },
     h('header', { class: 'page-head hs-head' },
       h('button', { type: 'button', class: 'btn-icon', 'aria-label': 'Back to profile', on: { click: () => router.navigate('/profile') } }, icon('arrow-left', { size: 20 })),
-      h('h1', { class: 'page-title', text: 'History' }), h('div', { class: 'page-actions' }, refreshButton(), selBtn, setBtn, clearHead)),
-    card,
-    browserHistoryNote(),   // v2.5.5 (owner)
-    h('div', { class: 'hs-tools' }, h('div', { class: 'hs-search' }, icon('search', { size: 18 }), search), filter), info, list));
+      h('h1', { class: 'page-title', text: 'History' }), h('div', { class: 'page-actions' }, refreshButton(), selBtn, setBtn)),
+    h('div', { class: 'hs-tools' }, h('div', { class: 'hs-search' }, icon('search', { size: 18 }), search), filter),
+    h('div', { class: 'hs-meta' }, info, h('div', { class: 'hs-meta-act' }, noteBtn, clearBtn)), list));
 
   const rows = () => {
     const q = st.q.trim().toLowerCase();
@@ -129,12 +129,7 @@ export async function mount(container, ctx) {
   }
   function setSelecting(on) { st.selecting = on; if (!on) st.selected.clear(); selBtn.setAttribute('aria-pressed', String(on)); paint(); }
 
-  function paintCard(n, keep) {
-    const total = hist.list().length;
-    card.replaceChildren(h('div', { class: 'hs-card-top' }, h('span', { class: 'hs-card-ic', 'aria-hidden': 'true' }, icon('history', { size: 22 })),
-      h('div', { class: 'hs-card-tx' }, h('strong', { text: keep === 0 ? 'History is off' : plural(total, 'entry', 'entries') }), h('span', { text: keep === 0 ? 'Nothing is being recorded.' : `${keepText()} \u00b7 ${whereText()}` }))), clearCard);
-    clearHead.disabled = clearCard.disabled = total === 0;
-  }
+  const paintClear = () => { clearBtn.disabled = hist.list().length === 0; };   // v2.5.7: replaces the summary card
   async function clearAll() {
     // v2.5.5 (owner): the popup says what is NOT cleared (the browser's own history) and links to the steps
     if (!(await confirmDialog({ title: 'Clear all history?', message: h('div', null, h('p', { text: `Every entry ${whereText()} is removed. Your links and folders are not touched.` }), browserHistoryNote()), confirmLabel: 'Clear history', danger: true }))) return;
@@ -145,7 +140,7 @@ export async function mount(container, ctx) {
     pager.setTotal(all.length);
     paintFilter(); paintBar();
     const keep = keepMs(prefs.get('history.keep', '7d'), isAdminView());
-    paintCard(all.length, keep);
+    paintClear();
     info.textContent = keep === 0 ? 'History is off. Nothing is being recorded.' : `${all.length ? plural(all.length, 'entry', 'entries') : 'No entries'} \u00b7 ${keepText()} \u00b7 ${whereText()}`;
     if (!all.length) {
       list.replaceChildren(emptyState({ art: 'search', title: st.q || st.src !== 'all' ? 'Nothing matches' : keep === 0 ? 'History is off' : 'No history yet',
@@ -161,7 +156,8 @@ export async function mount(container, ctx) {
 
   let t = 0; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = search.value; pager.reset(); paint(); }, 120); });
   selBtn.addEventListener('click', () => setSelecting(!st.selecting));
-  clearHead.addEventListener('click', clearAll); clearCard.addEventListener('click', clearAll);
+  clearBtn.addEventListener('click', clearAll);
+  noteBtn.addEventListener('click', () => openSheet({ title: 'About clearing history', body: browserHistoryNote(), actions: [{ label: 'Got it', variant: 'primary' }] }));
   const off = hist.subscribe(() => paint());
   hist.load().then(() => hist.prune()).catch(() => {});   // reads the chosen store again (the account list may have grown on another device) and applies the keep time
   paint();
